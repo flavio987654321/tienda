@@ -40,6 +40,7 @@ const ESTILO_POR_DEFECTO =
 export default function CampoAuto({
   value, onChange, onEnter, onBlur, placeholder, className = "", id, maxLength, ariaLabel, disabled,
   innerRef, autoFocus, required, estilo,
+  autoCapitalize, autoCorrect, spellCheck, inputMode,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -69,6 +70,22 @@ export default function CampoAuto({
    *  `className` sigue existiendo para lo de siempre: sumar un margen, un ancho,
    *  un `flex-1`. Cosas que no chocan con nada. */
   estilo?: string;
+  /* ── Las mañas del teclado del teléfono ────────────────────────────────────
+   *
+   * Un `<textarea>` las acepta igual que un `<input>`, pero acá no se pasaban y
+   * eso lo notaba SÓLO quien escribe desde un celular: en una dirección web,
+   * el teclado arranca en mayúscula y el corrector cambia palabras que no son
+   * palabras. Se agregaron el 08/09/26 al pasar la dirección del producto y el
+   * dominio propio a este componente — dos campos donde escribir "Mecanica" con
+   * mayúscula es exactamente lo que no se quiere.
+   *
+   * ⚠️ `inputMode` NO reemplaza al input nativo cuando el valor es un número o
+   * una fecha: ahí siguen valiendo los controles propios del tipo. Ver el
+   * comentario de arriba sobre cuándo usar este componente. */
+  autoCapitalize?: "none" | "off" | "sentences" | "words" | "characters";
+  autoCorrect?: "on" | "off";
+  spellCheck?: boolean;
+  inputMode?: "text" | "url" | "email" | "search" | "numeric" | "decimal" | "tel";
 }) {
   const propio = useRef<HTMLTextAreaElement>(null);
   // El de afuera manda si lo pasaron: así el autoajuste de alto y quien inserta
@@ -95,6 +112,10 @@ export default function CampoAuto({
       required={required}
       aria-label={ariaLabel}
       maxLength={maxLength}
+      autoCapitalize={autoCapitalize}
+      autoCorrect={autoCorrect}
+      spellCheck={spellCheck}
+      inputMode={inputMode}
       onBlur={onBlur}
       onChange={(e) => onChange(e.target.value.replace(/\s*\n+\s*/g, " "))}
       onKeyDown={(e) => {

@@ -1443,6 +1443,55 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     !/replace\(\/\[\^d[.,]/.test(pantallaProductos) &&
     (pantallaProductos.match(/replace\(\/\[\^\\d\.,\]\/g, ""\)/g) ?? []).length === 3);
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ LOS CAMPOS LARGOS DE UNA LÍNEA VAN CON `CampoAuto`, NO CON `<input>`.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Un `<input type="text">` NO puede pasar a renglón nuevo: es lo que el
+     elemento es, no algo que se arregle con CSS. El texto se corre hacia la
+     derecha y en 360 se pierde de vista casi todo lo escrito.
+
+     `CampoAuto` ya existía y el panel de digitales no lo estaba usando. Son los
+     cuatro campos donde el valor puede pasar el ancho visible: el título del
+     producto (140 caracteres, el que más se llena), el título de la ficha (70,
+     y encima se edita porque lo escribió la IA), la dirección (40 con el
+     dominio comiéndole lugar al lado) y el dominio propio (253, el peor de
+     todos).
+
+     ⚠️ Los que NO se tocaron y es a propósito: precios, correos y códigos de
+     medición siguen con el input nativo. Ahí importa más el teclado que abre el
+     teléfono que el desborde, y esos valores no son largos. */
+  for (const [archivo, cuantos] of [
+    ["src/app/digitales/productos/ProductosClient.tsx", 1],
+    ["src/app/digitales/productos/FichaIA.tsx", 1],
+    ["src/app/digitales/productos/[id]/direccion/DireccionClient.tsx", 1],
+    ["src/app/digitales/productos/[id]/direccion/DominioPropio.tsx", 1],
+  ] as const) {
+    const src = readFileSync(archivo, "utf8");
+    chequear(`${archivo.split("/").pop()} usa CampoAuto en su campo largo`,
+      /import CampoAuto from "@\/components\/CampoAuto";/.test(src) &&
+      (src.match(/<CampoAuto/g) ?? []).length >= cuantos);
+  }
+
+  /* ⚠️ Y CADA UNO CON SU ETIQUETA ATADA. La dirección tenía un `<label>` suelto
+     —sin `htmlFor`— y el dominio no tenía ninguno: un lector de pantalla los
+     anunciaba como "campo de texto" sin nombre, y tocar el texto no enfocaba el
+     campo. Se ve sólo probando con teclado, que es cuando ya es tarde. */
+  chequear("los dos campos de la dirección tienen su etiqueta atada",
+    /htmlFor="direccion-del-producto"[\s\S]{0,900}id="direccion-del-producto"/.test(
+      readFileSync("src/app/digitales/productos/[id]/direccion/DireccionClient.tsx", "utf8")) &&
+    /htmlFor="dominio-propio"[\s\S]{0,900}id="dominio-propio"/.test(
+      readFileSync("src/app/digitales/productos/[id]/direccion/DominioPropio.tsx", "utf8")));
+
+  /* ⚠️ Y LOS TRES BOTONES DEL SITIO DICEN EL VERBO. Eran "Página de venta",
+     "Elegí tu dirección" y "Ver página": dos de los tres nombraban *la página* y
+     ninguno decía qué le hace. Uno abre el editor y el otro abre la página
+     publicada en otra pestaña, y desde el rótulo no se sabía cuál era cuál. */
+  chequear("los tres botones del sitio dicen qué hacen, no sólo sobre qué",
+    /Editar la página/.test(pantallaProductos) &&
+    /Ver cómo quedó/.test(pantallaProductos) &&
+    !/> Ver página/.test(pantallaProductos));
+
   /* ⚠️ Y EL BOTÓN DEL EBOOK DICE QUÉ ESCRIBE. Decía "Escribir con IA" a secas:
      el verbo y el método, sin la cosa. Al lado de "Subir PDF" —que sí nombra lo
      que sube— se leía como el botón de escribir cualquier cosa, y en la tarjeta

@@ -6,6 +6,7 @@ import {
   Loader2, Check, AlertTriangle, Globe, Lock, Copy, RefreshCw, Clock, ArrowRight,
 } from "lucide-react";
 import { validarDominio, normalizarDominio, LARGO_DOMINIO } from "@/lib/configuracion-digital";
+import CampoAuto from "@/components/CampoAuto";
 
 /**
  * El dominio propio del producto: `mecanicafacil.com`.
@@ -341,9 +342,25 @@ export default function DominioPropio({
         El dominio lo comprás vos donde quieras. Nosotros no lo vendemos ni lo cobramos.
       </p>
 
-      <input
+      {/* ⚠️ SIN ETIQUETA NO TENÍA NOMBRE. Arriba hay párrafos que explican el
+          dominio, pero un párrafo no nombra a un campo: un lector de pantalla
+          anunciaba "campo de texto" a secas, y tocar el texto no lo enfocaba. */}
+      <label
+        htmlFor="dominio-propio"
+        className="mt-3 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300"
+      >
+        Tu dominio
+      </label>
+
+      {/* ⚠️ `CampoAuto` y no un `<input>`: éste acepta 253 caracteres —el largo
+          máximo de un dominio— en un solo renglón, así que era el que peor se
+          corría hacia la derecha de todo el panel. Un input no puede pasar a
+          renglón nuevo; esto crece hacia abajo y sigue siendo un valor de una
+          línea. */}
+      <CampoAuto
+        id="dominio-propio"
         value={valor}
-        onChange={(e) => setValor(e.target.value.slice(0, LARGO_DOMINIO))}
+        onChange={(v) => setValor(v.slice(0, LARGO_DOMINIO))}
         maxLength={LARGO_DOMINIO}
         disabled={trabajando !== null}
         placeholder="mecanicafacil.com"
@@ -351,7 +368,8 @@ export default function DominioPropio({
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className="mt-3 w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3.5 py-2.5 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-orange-400 disabled:opacity-60"
+        estilo="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3.5 py-2.5 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-orange-400 disabled:opacity-60"
+        className="mt-1.5"
       />
 
       {/* Lo que se va a conectar de verdad. La gente pega `https://…/` de la

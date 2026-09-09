@@ -5,6 +5,7 @@ import { Loader2, Sparkles, X, AlertTriangle, Gift, TrendingUp, RotateCcw, Check
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import { LARGO_TITULO_IA, LARGO_BAJADA_IA } from "@/lib/embudo-ia";
 import { LARGO_DESCRIPCION, PRECIO_MAXIMO } from "@/lib/productos-digitales";
+import CampoAuto from "@/components/CampoAuto";
 
 /**
  * Pedirle a la IA UN bono o UN upsell para un producto que ya existe.
@@ -283,15 +284,24 @@ export default function FichaIA({
                 Esto es lo que propongo. Cambiá lo que quieras: todavía no se creó nada.
               </p>
 
-              <label className="mt-4 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+              <label
+                htmlFor="ficha-titulo"
+                className="mt-4 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300"
+              >
                 Título
               </label>
-              <input
+              {/* ⚠️ `CampoAuto`: un título de 70 caracteres no entra en el
+                  renglón de esta ventana y se corría hacia la derecha. Y es un
+                  texto que la persona VA a corregir —lo escribió la IA—, así que
+                  tiene que poder leerlo entero mientras lo edita. */}
+              <CampoAuto
+                id="ficha-titulo"
                 value={titulo}
-                onChange={(e) => setTitulo(e.target.value.slice(0, LARGO_TITULO_IA))}
+                onChange={(v) => setTitulo(v.slice(0, LARGO_TITULO_IA))}
                 maxLength={LARGO_TITULO_IA}
                 disabled={trabajando}
-                className="mt-1.5 w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3.5 py-2.5 text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:outline-none disabled:opacity-60"
+                estilo="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3.5 py-2.5 text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:outline-none disabled:opacity-60"
+                className="mt-1.5"
               />
 
               <label className="mt-3 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">

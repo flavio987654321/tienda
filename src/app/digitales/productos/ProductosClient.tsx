@@ -23,6 +23,7 @@ import { COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import EmbudoIA from "./EmbudoIA";
 import FichaIA from "./FichaIA";
 import EbookIA from "./EbookIA";
+import CampoAuto from "@/components/CampoAuto";
 
 export type ProductoEnPantalla = {
   id: string;
@@ -614,7 +615,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   href={`/digitales/productos/${p.id}/pagina`}
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
-                  <LayoutTemplate className="h-3.5 w-3.5" /> Página de venta
+                  <LayoutTemplate className="h-3.5 w-3.5" /> Editar la página
                 </Link>
                 <Link
                   href={`/digitales/productos/${p.id}/direccion`}
@@ -628,7 +629,18 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   }
                 >
                   <Globe className="h-3.5 w-3.5" />
-                  {p.slugDigital ? "Dirección" : "Elegí tu dirección"}
+                  {/* ⚠️ LOS TRES BOTONES DE ESTE RENGLÓN DECÍAN CASI LO MISMO.
+                      Eran "Página de venta", "Elegí tu dirección" y "Ver
+                      página": dos de los tres nombraban *la página*, y ninguno
+                      decía qué le hace. Uno abre el editor, el otro abre la
+                      página publicada en otra pestaña — y desde el rótulo no
+                      había forma de saber cuál era cuál.
+
+                      Ahora cada uno dice el VERBO: editar, elegir, ver. Es la
+                      misma corrección que se le hizo a "A mano" y a "Escribir
+                      con IA": el botón nombra lo que hace, no la cosa sobre la
+                      que trabaja. */}
+                  {p.slugDigital ? "Su dirección" : "Elegí tu dirección"}
                 </Link>
                 <Link
                   href={`/p/${p.id}`}
@@ -636,7 +648,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" /> Ver página
+                  <ExternalLink className="h-3.5 w-3.5" /> Ver cómo quedó
                 </Link>
               </div>
           )}
@@ -1482,13 +1494,20 @@ export default function ProductosClient({
 
               <div>
                 <label htmlFor="titulo" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Título</label>
-                <input
+                {/* ⚠️ `CampoAuto` y no un `<input>`: acepta 140 caracteres en un
+                    renglón, y el título es el campo que MÁS se llena de todo el
+                    panel. Un input no puede pasar a renglón nuevo —es lo que el
+                    elemento es— así que el texto se corría hacia la derecha y
+                    quien escribía un título largo dejaba de ver el principio.
+                    Esto crece hacia abajo. Sigue siendo un valor de una línea:
+                    los saltos se sacan al escribir y al pegar. */}
+                <CampoAuto
                   id="titulo"
                   value={borrador.name}
                   maxLength={LARGO_TITULO}
-                  onChange={(e) => setBorrador({ ...borrador, name: e.target.value })}
+                  onChange={(v) => setBorrador({ ...borrador, name: v })}
                   placeholder="Guía práctica de mecánica del automotor"
-                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                  estilo="px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                 />
               </div>
 

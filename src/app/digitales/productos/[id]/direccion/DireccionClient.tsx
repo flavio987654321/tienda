@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Check, AlertTriangle, Globe } from "lucide-react";
 import { normalizarSlug, SLUG_MAXIMO } from "@/lib/configuracion-digital";
+import CampoAuto from "@/components/CampoAuto";
 
 /**
  * La dirección de un producto.
@@ -163,21 +164,34 @@ export default function DireccionClient({
         </p>
       )}
 
-      <label className="mt-5 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+      {/* ⚠️ `htmlFor` + `id`. La etiqueta estaba suelta: no enfocaba el campo al
+          tocarla, y un lector de pantalla anunciaba "campo de texto" sin nombre.
+          Se ve sólo probando con teclado, que es cuando ya es tarde. */}
+      <label
+        htmlFor="direccion-del-producto"
+        className="mt-5 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300"
+      >
         {guardado ? "Cambiar la dirección" : "Elegí tu dirección"}
       </label>
 
       <div className="mt-1.5 flex items-stretch rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 overflow-hidden focus-within:border-orange-400">
-        <input
+        {/* ⚠️ `CampoAuto` y no un `<input>`: un input NO puede pasar a renglón
+            nuevo —es lo que el elemento es, no algo que se arregle con CSS— así
+            que una dirección larga se corría hacia la derecha y en 360 no se
+            veía ni la mitad de lo escrito. Esto crece hacia abajo. Sigue siendo
+            un valor de una línea: los saltos se sacan al escribir y al pegar. */}
+        <CampoAuto
+          id="direccion-del-producto"
           value={valor}
-          onChange={(e) => setValor(e.target.value.slice(0, SLUG_MAXIMO))}
+          onChange={(v) => setValor(v.slice(0, SLUG_MAXIMO))}
           maxLength={SLUG_MAXIMO}
           disabled={guardando}
           placeholder="mecanica"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:outline-none disabled:opacity-60"
+          estilo="bg-transparent px-3.5 py-2.5 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:outline-none disabled:opacity-60"
+          className="min-w-0 flex-1"
         />
         {/* `shrink-0` + texto chico: en 360 el dominio no puede empujar al campo
             hasta dejarlo sin ancho. */}
