@@ -12,14 +12,13 @@ import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
 import {
   LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO, CAPITULOS_MIN, CAPITULOS_MAX,
   LARGO_TITULO_EBOOK, LARGO_TITULO_CAPITULO, LARGO_RESUMEN_CAPITULO, LARGO_FOTO,
-  type CapituloPlaneado, type CapituloEscrito,
+  type CapituloPlaneado,
 } from "@/lib/ebook-ia";
 /* ⚠️ LA MISMA FUNCIÓN QUE USA EL SERVIDOR PARA DECIDIR SI EL TEMARIO SIRVE.
    No es un ahorro de código: es lo que hace imposible que la pantalla habilite
    el botón y el servidor conteste que no, o que los dos digan cosas distintas
    sobre el mismo capítulo. `ebook-temario` no toca la base a propósito. */
 import { revisarTemario, sePuedeEditarElTemario } from "@/lib/ebook-temario";
-import EbookTexto from "./EbookTexto";
 import {
   FORMATOS, TEMAS, QUE_ES_CADA_FORMATO, QUE_ES_CADA_TEMA,
   OPCIONES_DE_FABRICA, FORMATOS_LISTOS, RECETAS_OPCIONES, COMO_SE_LLAMA,
@@ -79,15 +78,17 @@ import { useSalida } from "@/app/digitales/SalidaSinGuardar";
  * largo: se armaban diez capítulos sobre un temario que nadie había leído.
  */
 /**
- * ── Y el paso "texto", que está del otro lado de la escritura ──────────────
+ * ── Y corregir el texto NO es un paso de acá ───────────────────────────────
  *
- * "revisar" es barato porque de una línea sale un capítulo entero; "texto" es
- * barato porque **no llama al modelo**. Es el botón que le faltaba al cartel de
- * "leelo antes de publicarlo": hasta hoy, quien lo leía y encontraba una macana
- * tenía un solo camino —"Rehacerlo"—, que tira el ebook entero y cobra otra
- * generación por arreglar una palabra. Ver `ebook-texto`.
+ * Estuvo un rato: fue un quinto paso adentro de esta ventana, y estaba mal. Un
+ * modal de 576 px es para decidir una cosa —"¿lo escribo?", "¿lo rehago?"—, no
+ * para sentarse a corregir diez capítulos de novecientas palabras en una
+ * ventana que se cierra con un clic al costado.
+ *
+ * Se mudó a `productos/[id]/ebook`, que es una pantalla entera con su "volver",
+ * igual que el editor de la página de venta. Desde acá se linkea, nada más.
  */
-type Paso = "contar" | "revisar" | "escribiendo" | "texto" | "listo";
+type Paso = "contar" | "revisar" | "escribiendo" | "listo";
 
 /** Cada cuánto se le pregunta al servidor cómo viene. */
 const MIRAR_CADA_MS = 4_000;
@@ -110,17 +111,6 @@ type TemarioEnPantalla = {
   escritos: number;
   formato: FormatoDeEbook;
   /** Lo decide el servidor: con todo escrito, el temario ya no dirige nada. */
-  editable: boolean;
-};
-
-/** El texto escrito, como lo devuelve la ruta que lo entrega. */
-type TextoEnPantalla = {
-  titulo: string;
-  capitulos: CapituloEscrito[];
-  /** Cuántos capítulos tiene el ebook entero, escritos o no. */
-  total: number;
-  formato: FormatoDeEbook;
-  /** Lo decide el servidor: un recetario son campos, no párrafos. */
   editable: boolean;
 };
 
@@ -178,11 +168,6 @@ export default function EbookIA({
   /* Si se entró al editor desde la pantalla de escritura, hay a dónde volver
      sin guardar. Recién armado no: ahí "volver" no significa nada. */
   const [vengoDeEscribir, setVengoDeEscribir] = useState(false);
-
-  /* El texto escrito, cuando se abre a corregirlo. Se busca en el momento y no
-     viaja con el estado: son decenas de miles de caracteres que la barra de
-     progreso no usa para nada. Ver `estadoDelBorrador`. */
-  const [texto, setTexto] = useState<TextoEnPantalla | null>(null);
 
   /* ⚠️ Hay algo escrito a mano que se pierde si se cierra.
      Esta ventana se cierra con el fondo, y hasta acá eso no tenía nada que
@@ -473,123 +458,6 @@ export default function EbookIA({
     if (vivo.current) void seguir();
   }, [pedir, seguir]);
 
-  /* ── Abrir el texto escrito ───────────────────────────────────────────────
-     Mismo criterio que el temario: se busca al abrirlo. Acá pesa más todavía —
-     son los capítulos enteros, el producto que se vende— y por eso no viaja en
-     cada vuelta del reloj. */
-  const abrirTexto = useCallback(async () => {
-    if (enVuelo.current) return;
-    enVuelo.current = true;
-    setTrabajando(true);
-    setError(null);
-
-    try {
-      const res = await fetch(
-        `/api/digitales/ia/ebook/texto?productoId=${encodeURIComponent(producto.id)}`,
-      );
-      const datos = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-      if (!vivo.current) return;
-
-      if (!res.ok || !datos?.ok) {
-        setError(typeof datos?.error === "string" ? datos.error : "No pudimos abrir el texto.");
-        return;
-      }
-
-      /* ⚠️ Manda lo que dice el SERVIDOR, igual que con el temario: la pantalla
-         puede estar mirando un estado viejo. */
-      if (datos.editable !== true) {
-        setError("Este ebook no se puede corregir a mano.");
-        return;
-      }
-      if (!Array.isArray(datos.capitulos) || datos.capitulos.length === 0) {
-        setError("Todavía no hay nada escrito para corregir.");
-        return;
-      }
-
-      setTexto(datos as unknown as TextoEnPantalla);
-      setPaso("texto");
-    } catch {
-      if (vivo.current) setError("Se cortó la conexión. Probá de nuevo.");
-    } finally {
-      enVuelo.current = false;
-      if (vivo.current) setTrabajando(false);
-    }
-  }, [producto.id]);
-
-  /* ── Guardar lo corregido y rehacer el PDF ────────────────────────────────
-     ══════════════════════════════════════════════════════════════════════════
-     ⚠️ SON DOS PEDIDOS Y TIENEN QUE SER DOS, PERO UN SOLO BOTÓN
-     ══════════════════════════════════════════════════════════════════════════
-
-     Guardar el texto **no cambia el archivo**: el PDF que está colgado del
-     producto es el de antes, y es el que va a recibir quien compre. Por eso el
-     guardado baja el ebook de `LISTO` a `COMPLETO` —que es lo que de verdad es,
-     escrito y sin archivo— y acá se arma de nuevo enseguida.
-
-     Si el armado falla, el texto YA quedó guardado y se dice: se vuelve al
-     editor con el motivo, y el ebook queda en `COMPLETO`, que es un estado del
-     que se sale con el botón de siempre. Nada se pierde y nada miente. */
-  const guardarTexto = useCallback(async (capitulos: CapituloEscrito[]) => {
-    if (enVuelo.current) return;
-    enVuelo.current = true;
-    setTrabajando(true);
-    setError(null);
-
-    try {
-      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { capitulos });
-      if (!vivo.current) return;
-
-      if (!ok) {
-        /* Se queda en el editor con el motivo escrito: lo corregido sigue en
-           pantalla y se puede arreglar y volver a intentar. */
-        setError(typeof datos.error === "string" ? datos.error : "No pudimos guardar el texto.");
-        return;
-      }
-
-      /* La tarjeta de atrás quedó vieja aunque el armado falle: el texto cambió
-         y el estado también. Cerrar tiene que recargar. */
-      setHuboAlgo(true);
-      setTexto(datos as unknown as TextoEnPantalla);
-      const estado = datos.ebook as EstadoDelBorrador | undefined;
-      if (estado) setEbook(estado);
-
-      if (datos.hayQueArmar === true) {
-        const armado = await pedir("/api/digitales/ia/ebook/armar", {});
-        if (!vivo.current) return;
-
-        if (!armado.ok) {
-          setError(
-            typeof armado.datos.error === "string"
-              ? `Los cambios quedaron guardados, pero no pudimos rehacer el PDF: ${armado.datos.error}`
-              : "Los cambios quedaron guardados, pero no pudimos rehacer el PDF. Probá de nuevo.",
-          );
-          /* ⚠️ Y NO SE VUELVE A "listo", que diría "ya está cargado como el
-             archivo de este producto" señalando el PDF viejo. El ebook quedó en
-             COMPLETO —escrito y sin archivo— y ésa es justamente la pantalla
-             que sabe mostrarlo: dice cuántos capítulos hay y trae el botón que
-             vuelve a intentar el armado. */
-          setPaso("escribiendo");
-          return;
-        }
-
-        const nuevo = armado.datos.ebook as EstadoDelBorrador | undefined;
-        if (nuevo) setEbook(nuevo);
-        setPaso("listo");
-        return;
-      }
-
-      /* No había PDF que rehacer porque el ebook todavía se está escribiendo:
-         la cadena lo va a armar sola cuando termine el último capítulo. Se
-         vuelve a la pantalla del avance, que es donde de verdad está. Mandarlo
-         a "listo" sería decirle que ya tiene el archivo. */
-      setPaso("escribiendo");
-    } catch {
-      if (vivo.current) setError("Se cortó la conexión. Probá de nuevo.");
-    } finally {
-      enVuelo.current = false;
-      if (vivo.current) setTrabajando(false);
-    }
-  }, [pedir]);
 
   const cerrar = () => {
     if (trabajando) return;
@@ -643,16 +511,12 @@ export default function EbookIA({
           <p className="flex items-center gap-2 font-black text-gray-900 panel-oscuro:text-gray-100">
             {paso === "revisar"
               ? <ListChecks className="h-4 w-4 text-orange-500" />
-              : paso === "texto"
-                ? <Pencil className="h-4 w-4 text-orange-500" />
-                : <BookOpen className="h-4 w-4 text-orange-500" />}
+              : <BookOpen className="h-4 w-4 text-orange-500" />}
             {paso === "listo"
               ? "Tu ebook está listo"
               : paso === "revisar"
                 ? "Revisá el temario"
-                : paso === "texto"
-                  ? "Corregí el texto"
-                  : "Escribí tu ebook con IA"}
+                : "Escribí tu ebook con IA"}
           </p>
           <button
             onClick={cerrar}
@@ -927,33 +791,6 @@ export default function EbookIA({
             </>
           ))}
 
-          {/* ── Corregir el texto escrito ───────────────────────────────── */}
-          {paso === "texto" && (texto ? (
-            <EbookTexto
-              inicial={texto}
-              guardando={trabajando}
-              error={error}
-              onCambio={setSinGuardar}
-              onGuardar={guardarTexto}
-              /* A donde de verdad está el ebook, no siempre a "listo": si se
-                 entró a corregir uno que todavía se escribe, esa pantalla diría
-                 que ya tiene el archivo. */
-              onVolver={() => { setError(null); setPaso(ebook?.estado === "LISTO" ? "listo" : "escribiendo"); }}
-            />
-          ) : (
-            /* No debería pasar —se entra acá con el texto en la mano— pero una
-               ventana en blanco arriba de un ebook pagado no es una opción. */
-            <>
-              <Aviso>No pudimos mostrar el texto.</Aviso>
-              <button
-                onClick={() => { setError(null); setPaso(ebook?.estado === "LISTO" ? "listo" : "escribiendo"); }}
-                className="mt-3 w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white hover:bg-orange-500 transition-colors"
-              >
-                Volver
-              </button>
-            </>
-          ))}
-
           {/* ── Escribiendo ─────────────────────────────────────────────── */}
           {paso === "escribiendo" && (
             <>
@@ -1131,15 +968,18 @@ export default function EbookIA({
                     que no cuesta nada, y tiene que ser el primero que se ve.
                     Rehacer —que tira el ebook y cobra otra generación— queda en
                     su propio renglón, donde no se aprieta sin querer. */}
+                {/* ⚠️ Un enlace de verdad, no un botón que cambia de paso: el
+                    editor es OTRA PANTALLA. Y por eso lleva a una dirección que
+                    se puede guardar, compartir y recargar — un paso adentro de
+                    un modal no tiene ninguna de las tres. */}
                 {puedeCorregir && (
-                  <button
-                    onClick={abrirTexto}
-                    disabled={trabajando}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 px-4 py-3 text-sm font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
+                  <a
+                    href={`/digitales/productos/${producto.id}/ebook`}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 px-4 py-3 text-sm font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
                   >
-                    {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-                    Corregir el texto
-                  </button>
+                    <Pencil className="h-4 w-4" />
+                    Editar el contenido
+                  </a>
                 )}
               </div>
 

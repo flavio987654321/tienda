@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, X } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import EbookTexto from "../EbookTexto";
 import type { CapituloEscrito } from "@/lib/ebook-ia";
 
@@ -23,10 +23,10 @@ import type { CapituloEscrito } from "@/lib/ebook-ia";
  *
  * Vive detrás de `NODE_ENV` en la página de al lado: no viaja al build.
  *
- * ⚠️ La caja de afuera es una COPIA de la ventana de `EbookIA` —el fondo negro,
- * el panel redondeado, el encabezado pegado— para que lo que se ve acá sea lo
- * que se va a ver ahí. Si aquella cambia de forma, ésta queda vieja: es para
- * mirar, no es la ventana de verdad.
+ * ⚠️ La caja de afuera imita la de `productos/[id]/ebook` —el ancho, el título
+ * arriba, la tarjeta blanca— para que lo que se ve acá sea lo que se va a ver
+ * ahí. Si aquella cambia de forma, ésta queda vieja: es para mirar, no es la
+ * pantalla de verdad.
  */
 
 /* Un ebook creíble: capítulos de largo distinto, párrafos largos de los que se
@@ -108,36 +108,36 @@ export default function PruebaEditor() {
   const [guardado, setGuardado] = useState<string | null>(null);
 
   return (
-    <div className="fixed inset-0 z-[85] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+    <div className="p-4 sm:p-6 lg:p-8">
+      <p className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 panel-oscuro:text-gray-400">
+        <ArrowLeft className="h-4 w-4" />
+        Volver a productos
+      </p>
 
-      <div className="relative w-full sm:max-w-xl max-h-[92vh] overflow-y-auto bg-white panel-oscuro:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl">
-        <div className="sticky top-0 z-10 bg-white panel-oscuro:bg-gray-900 border-b border-gray-100 panel-oscuro:border-gray-800 px-6 py-4 flex items-center justify-between gap-3">
-          <p className="flex items-center gap-2 font-black text-gray-900 panel-oscuro:text-gray-100">
-            <Pencil className="h-4 w-4 text-orange-500" />
-            Corregí el texto
+      <div className="max-w-3xl">
+        <div className="mb-4">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
+            Producto de prueba
           </p>
-          <span
-            aria-hidden
-            className="w-8 h-8 shrink-0 rounded-xl bg-gray-100 panel-oscuro:bg-gray-800 flex items-center justify-center text-gray-500 panel-oscuro:text-gray-400"
-          >
-            <X className="h-4 w-4" />
-          </span>
+          <h1 className="mt-0.5 flex items-center gap-2 text-xl font-black text-gray-900 panel-oscuro:text-gray-100">
+            <Pencil className="h-4 w-4 text-orange-500" />
+            Editar el contenido
+          </h1>
         </div>
 
-        <div className="px-6 py-5">
-          <p className="mb-4 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
-            <strong>Esto es una prueba, sólo en desarrollo.</strong> El ebook está inventado
-            acá adentro: no toca la base, no gasta cupo y guardar no manda nada.
-            {sinGuardar ? " Hay cambios sin guardar." : ""}
+        <p className="mb-4 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
+          <strong>Esto es una prueba, sólo en desarrollo.</strong> El ebook está inventado
+          acá adentro: no toca la base, no gasta cupo y guardar no manda nada.
+          {sinGuardar ? " Hay cambios sin guardar." : ""}
+        </p>
+
+        {guardado && (
+          <p className="mb-4 rounded-xl bg-emerald-50 panel-oscuro:bg-emerald-500/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-emerald-900 panel-oscuro:text-emerald-300">
+            {guardado}
           </p>
+        )}
 
-          {guardado && (
-            <p className="mb-4 rounded-xl bg-emerald-50 panel-oscuro:bg-emerald-500/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-emerald-900 panel-oscuro:text-emerald-300">
-              {guardado}
-            </p>
-          )}
-
+        <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
           <EbookTexto
             inicial={{
               titulo: "Vendé tu conocimiento: de la idea al primer cobro",
@@ -154,7 +154,7 @@ export default function PruebaEditor() {
                 `Se habría guardado: ${nuevos.length} capítulos, ${pedazos} pedazos. Y después se rehacía el PDF.`,
               );
             }}
-            onVolver={() => setGuardado("Acá volvería a la pantalla del ebook.")}
+            onVolver={() => setGuardado("Acá volvería a la lista de productos.")}
           />
         </div>
       </div>

@@ -2961,6 +2961,27 @@ El segundo de los dos, del otro lado de la escritura. **La quinta ruta del ebook
 y la segunda que no gasta un peso**: acá no vuelve a escribir la IA, corrige la
 persona.
 
+**Es una pantalla, no una ventanita — y esto se corrigió el mismo día.** Nació
+como un quinto paso adentro del modal del ebook y estaba mal: un modal de 576 px
+es para decidir una cosa —*"¿lo escribo?"*, *"¿lo rehago?"*—, no para sentarse a
+corregir diez capítulos de novecientas palabras en algo que se cierra con un clic
+al costado. Vive en **`productos/[id]/ebook`**, con su "volver" y la barra
+lateral al lado, que es el mismo molde del editor de la página de venta. Y por
+eso el texto se lee **del lado del servidor**, en el mismo viaje en que se arma
+la página: pedirlo desde el navegador era una pantalla en blanco con un reloj
+girando mientras viajaban decenas de miles de caracteres.
+
+**Y antes que nada: el archivo ahora se puede bajar.** En la tarjeta había un
+renglón de texto gris —*"Archivo: guia.pdf · 2,1 MB"*— y nada más. O sea que
+cuando la IA terminaba de escribir un ebook, lo que acababa de costar una
+generación aparecía como una línea entre otras y **la única forma de ver el
+propio ebook era comprárselo** — mientras la ventana pedía "leelo antes de
+publicarlo". Ahora es una caja con las dos cosas que se hacen con un archivo:
+**Descargar** y **Editar el contenido**. La descarga va por
+`/api/digitales/productos/[id]/archivo`, que **no es la ruta de entrega**: pide
+sesión, el dueño va adentro del `where`, no descuenta ninguna de las cinco
+descargas del comprador y devuelve un enlace firmado de cinco minutos, sin caché.
+
 Existe porque la ventana termina diciendo *"leelo antes de publicarlo, quien
 vende es quien responde por lo que dice"* — y hasta ayer, quien lo leía y
 encontraba una macana no tenía con qué arreglarla: el único botón era

@@ -228,11 +228,21 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
 {
   const ruta = readFileSync("src/app/api/digitales/ia/ebook/texto/route.ts", "utf8");
 
-  /* El dueño adentro del `where`, en las dos puntas. Acá adentro está el texto
-     entero del ebook, que ES el producto que se vende. */
-  const dueños = ruta.match(/store:\s*\{\s*ownerId:\s*user\.id\s*\}/g) ?? [];
-  check("TXT-X", dueños.length >= 2,
+  /* ⚠️ El dueño adentro del `where`, en las DOS puntas — y las dos puntas ya no
+     están en el mismo archivo: guardar es esta ruta, leer es la pantalla, que
+     lee del lado del servidor. Acá adentro está el texto entero del ebook, que
+     ES el producto que esa persona vende. */
+  const pagina = readFileSync("src/app/digitales/productos/[id]/ebook/page.tsx", "utf8");
+  const dueño = /store:\s*\{\s*ownerId:\s*user\.id\s*\}/;
+  check("TXT-X", dueño.test(ruta) && dueño.test(pagina),
     "leer y guardar el texto piden que el producto sea de esta cuenta");
+
+  /* Y la de bajar el archivo, que es la más cara de todas si se olvida: sin el
+     dueño adentro del `where`, mandando el id de otro se baja gratis el
+     producto que esa persona vende. */
+  const bajar = readFileSync("src/app/api/digitales/productos/[id]/archivo/route.ts", "utf8");
+  check("TXT-X2", dueño.test(bajar),
+    "bajar el archivo propio pide que el producto sea de esta cuenta");
 
   /* El candado, y la relectura con el candado en la mano: `/paso` puede estar
      escribiendo el capítulo que sigue justo ahora. */
@@ -281,21 +291,39 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
   check("TXT-AE", /rehace el PDF/.test(pantalla),
     "la pantalla avisa que el archivo se rehace con los cambios");
 
-  const ventana = readFileSync("src/app/digitales/productos/EbookIA.tsx", "utf8");
+  const alrededor = readFileSync("src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");
 
-  /* Que la ventana arme el PDF después de guardar, y no lo deje para nunca.
+  /* Que se arme el PDF después de guardar, y no se deje para nunca.
      ⚠️ Los dos tienen que ESTAR: `indexOf` devuelve -1 cuando no encuentra, y
      -1 es menor que cualquier cosa — el chequeo daría que sí justo el día que
      alguien borre el guardado. */
-  const guarda = ventana.indexOf('pedir("/api/digitales/ia/ebook/texto"');
-  const arma = ventana.indexOf("datos.hayQueArmar === true");
+  const guarda = alrededor.indexOf('pedir("/api/digitales/ia/ebook/texto"');
+  const arma = alrededor.indexOf("datos.hayQueArmar === true");
   check("TXT-AF", guarda >= 0 && arma >= 0 && guarda < arma,
-    "después de guardar el texto, la ventana rehace el PDF");
+    "después de guardar el texto, la pantalla rehace el PDF");
+
+  const tarjeta = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
 
   /* Y que un recetario no ofrezca el botón: sus recetas son campos. */
   check("TXT-AG",
-    /ebook\.opciones\.formato !== "recetario"/.test(ventana),
+    /p\.ebook\.opciones\.formato !== "recetario"/.test(tarjeta),
     "el recetario no ofrece el editor del texto, que dibuja párrafos");
+
+  /* ⚠️ Que se llegue por una DIRECCIÓN y no por un paso adentro del modal.
+     Estuvo así un rato y estaba mal: un modal de 576 px es para decidir una
+     cosa, no para corregir diez capítulos de novecientas palabras en una
+     ventana que se cierra con un clic al costado. */
+  const ventana = readFileSync("src/app/digitales/productos/EbookIA.tsx", "utf8");
+  check("TXT-AK",
+    !/paso === "texto"/.test(ventana) && /\/ebook`/.test(ventana),
+    "el editor es una pantalla propia, no un paso adentro de la ventana");
+
+  /* Y que desde la tarjeta se pueda BAJAR el archivo. Sin esto, el ebook que
+     acaba de costar una generación es un renglón de texto gris: la única forma
+     de ver el propio ebook era comprárselo. */
+  check("TXT-AL",
+    /\/api\/digitales\/productos\/\$\{p\.id\}\/archivo/.test(tarjeta),
+    "la tarjeta deja bajar el archivo que se entrega");
 }
 
 /* ── La página para mirarlo ───────────────────────────────────────────────── */

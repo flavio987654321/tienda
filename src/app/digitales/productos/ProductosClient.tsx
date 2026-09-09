@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
+  FileText, Download,
 } from "lucide-react";
 import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -20,6 +21,8 @@ import type { EstadoDelCupo } from "@/lib/cupo-ia";
 /* `import type` se borra al compilar: no arrastra prisma al navegador. */
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
 import { COMO_SE_LLAMA } from "@/lib/ebook-opciones";
+/* La misma función con la que el servidor decide si hay texto para corregir. */
+import { sePuedeEditarElTexto } from "@/lib/ebook-texto";
 import EmbudoIA from "./EmbudoIA";
 import FichaIA from "./FichaIA";
 import EbookIA from "./EbookIA";
@@ -314,11 +317,77 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </div>
           )}
 
-          {p.tieneArchivo && p.archivoNombre && (
-            <p className="mt-2 text-xs text-gray-500 panel-oscuro:text-gray-400 truncate">
-              Archivo: {p.archivoNombre}
-              {p.archivoPeso ? ` · ${Math.round(p.archivoPeso / 1024 / 1024 * 10) / 10} MB` : ""}
-            </p>
+          {/* ══════════════════════════════════════════════════════════════════
+              EL ARCHIVO, QUE ES LO QUE SE ENTREGA
+              ══════════════════════════════════════════════════════════════════
+
+              ⚠️ Acá había UN RENGLÓN DE TEXTO: "Archivo: guia.pdf · 2,1 MB". Se
+              podía leer el nombre y nada más. O sea que cuando la IA terminaba
+              de escribir un ebook —lo que acaba de costar una generación— el
+              resultado aparecía como una línea gris entre otras, sin forma de
+              abrirlo. **La única manera de ver el propio ebook era comprárselo.**
+              Y la ventana, encima, pide "leelo antes de publicarlo".
+
+              Ahora es una caja con las dos cosas que se hacen con un archivo:
+              bajarlo y corregirlo. Es el único bloque de la tarjeta que aparece
+              sólo cuando hay algo para entregar, y por eso se distingue del
+              resto: es el estado que la persona está persiguiendo. */}
+          {p.tieneArchivo && (
+            <div className="mt-3 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/40 px-3 py-2.5">
+              <div className="flex items-start gap-2.5">
+                <FileText aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-gray-400 panel-oscuro:text-gray-500" />
+                <div className="min-w-0 flex-1">
+                  {/* `break-words` y no `truncate`: un nombre de archivo cortado
+                      en "Guia definitiva de pa…" no identifica cuál es. */}
+                  <p className="text-xs font-bold text-gray-800 panel-oscuro:text-gray-200 break-words">
+                    {p.archivoNombre ?? "El archivo del producto"}
+                  </p>
+                  <p className="text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                    {p.archivoPeso
+                      ? `${Math.round(p.archivoPeso / 1024 / 1024 * 10) / 10} MB · `
+                      : ""}
+                    {/* De dónde salió. Importa porque explica por qué al lado
+                        hay —o no hay— un botón para corregirlo. */}
+                    {p.ebook && p.ebook.estado === "LISTO"
+                      ? "Lo escribió la IA"
+                      : "Lo subiste vos"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-2.5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                {/* ⚠️ Un `<a>` común y no un `<Link>`: esto no navega a una
+                    pantalla nuestra, se va a un enlace firmado de Supabase que
+                    baja el archivo. Con el router de Next quedaría a mitad de
+                    camino. `rel` porque abre en otra pestaña. */}
+                <a
+                  href={`/api/digitales/productos/${p.id}/archivo`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800 transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar
+                </a>
+
+                {/* Sólo si hay texto de la IA para corregir. Un PDF que subió la
+                    persona no se puede editar acá —no tenemos su contenido, sólo
+                    el archivo— y un recetario son campos, no párrafos. La regla
+                    la decide la misma función que el servidor. */}
+                {p.ebook
+                  && p.ebook.opciones.formato !== "recetario"
+                  && p.ebook.escritos > 0
+                  && sePuedeEditarElTexto(p.ebook.estado) && (
+                  <Link
+                    href={`/digitales/productos/${p.id}/ebook`}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 px-3 py-2 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar el contenido
+                  </Link>
+                )}
+              </div>
+            </div>
           )}
 
           {/* ⚠️ El aviso del peso vive ACÁ, calculado del peso guardado, y no en

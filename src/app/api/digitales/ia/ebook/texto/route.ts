@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { leerIndice, leerCapitulos } from "@/lib/ebook-ia";
+import { leerCapitulos } from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import { revisarTexto, sePuedeEditarElTexto } from "@/lib/ebook-texto";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Leer y corregir el texto ya escrito.
+ * Guardar el texto corregido.
  *
  * ══════════════════════════════════════════════════════════════════════════
  * LA QUINTA RUTA, Y LA SEGUNDA QUE NO GASTA UN PESO
@@ -21,7 +21,15 @@ export const dynamic = "force-dynamic";
  *   2. `/indice` — lo muestra y lo deja corregir ANTES de escribir. Gratis.
  *   3. `/paso`   — escribe un capítulo.
  *   4. `/armar`  — hace el PDF.
- *   5. **ESTA**  — corrige lo escrito DESPUÉS. Gratis, y no llama al modelo.
+ *   5. **ESTA**  — guarda lo corregido DESPUÉS. Gratis, y no llama al modelo.
+ *
+ * ── Sólo guarda: no hay `GET` ──────────────────────────────────────────────
+ *
+ * Lo hubo un rato y se sacó. El editor es una pantalla —`productos/[id]/ebook`—
+ * y una pantalla lee sus datos del lado del SERVIDOR, en el mismo viaje en que
+ * se arma. Pedir el texto desde el navegador al abrir era una pantalla en
+ * blanco con un reloj girando mientras viajaban decenas de miles de caracteres
+ * que ya estaban a mano.
  *
  * Existe porque la ventana termina diciendo *"leelo antes de publicarlo, quien
  * vende es quien responde"* — y hasta hoy quien lo leía y encontraba una macana
@@ -50,57 +58,6 @@ export const dynamic = "force-dynamic";
  * compre recibe el de antes. Un ebook con una falta de ortografía es mejor que
  * un producto cobrado sin nada que entregar.
  */
-
-/** Lo que el editor necesita para dibujarse. */
-function loQueSeEdita(fila: {
-  estado: string;
-  titulo: string;
-  indice: string;
-  capitulos: string;
-}) {
-  const opciones = leerOpciones(fila.indice);
-  const esRecetario = opciones.formato === "recetario";
-
-  return {
-    titulo: fila.titulo,
-    /* Vacío en un recetario: sus recetas no son capítulos y este editor no las
-       sabe dibujar. Ver `editable` acá abajo. */
-    capitulos: esRecetario ? [] : leerCapitulos(fila.capitulos),
-    /* Cuántos capítulos son en total, para poder decir "vas por 6 de 10". */
-    total: leerIndice(fila.indice).length,
-    formato: opciones.formato,
-    /* ⚠️ Lo decide el servidor, no la pantalla. */
-    editable: !esRecetario && sePuedeEditarElTexto(fila.estado),
-  };
-}
-
-export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  if (user.role !== "DIGITAL") {
-    return NextResponse.json({ error: "Tu cuenta no es de Productos Digitales." }, { status: 403 });
-  }
-
-  const productoId = req.nextUrl.searchParams.get("productoId") ?? "";
-  if (!productoId) {
-    return NextResponse.json({ error: "Falta decir de qué producto es el ebook." }, { status: 400 });
-  }
-
-  /* El dueño va adentro del `where`, igual que en las otras cuatro: sin esto,
-     mandando el id de otro se le lee el ebook entero a un producto ajeno — y
-     acá adentro está el texto completo, que es el producto que vende. */
-  const producto = await prisma.product.findFirst({
-    where: { id: productoId, deletedAt: null, store: { ownerId: user.id } },
-    select: {
-      ebookIA: { select: { estado: true, titulo: true, indice: true, capitulos: true } },
-    },
-  });
-  if (!producto?.ebookIA) {
-    return NextResponse.json({ error: "Este producto todavía no tiene un ebook empezado." }, { status: 404 });
-  }
-
-  return NextResponse.json({ ok: true, ...loQueSeEdita(producto.ebookIA) });
-}
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -208,12 +165,14 @@ export async function POST(req: NextRequest) {
 
   const fila = { ...fresco, capitulos, estado, trabajandoDesde: null, error: null };
 
+  /* ⚠️ NO vuelve el texto guardado, y es a propósito: son decenas de miles de
+     caracteres que la pantalla ya tiene en la mano —los acaba de mandar— y que
+     viajarían en cada guardado. Lo que necesita saber de vuelta es una sola
+     cosa: si hay que rehacer el PDF. El resto lo vuelve a leer del servidor la
+     propia pantalla, que es una dirección y se refresca sola. */
   return NextResponse.json({
     ok: true,
-    /* Que la pantalla sepa si hay que rehacer el PDF, sin tener que deducirlo
-       del estado. Es la única consecuencia de guardar acá que se ve afuera. */
     hayQueArmar: estado === "COMPLETO",
     ebook: estadoDelBorrador(fila),
-    ...loQueSeEdita(fila),
   });
 }
