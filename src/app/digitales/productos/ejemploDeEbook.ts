@@ -79,3 +79,20 @@ export const CAPITULOS_DE_EJEMPLO: CapituloEscrito[] = [
     ],
   },
 ];
+
+/**
+ * Con qué se busca la foto de cada capítulo, en el mismo orden.
+ *
+ * Son frases que describen UNA ESCENA, no el título del capítulo: es lo que le
+ * pedimos al modelo y es lo que hace la diferencia en el banco de imágenes.
+ * Buscando por título, "Primeros pasos para arrancar esta semana" trajo una
+ * guitarra acústica. Ver `CapituloPlaneado.foto`.
+ */
+export const FOTOS_DE_EJEMPLO: string[] = [
+  "escritorio con anotador y birome, luz de mañana",
+  "manos contando billetes sobre una mesa de madera",
+  "pantalla de computadora con una página web abierta",
+  "dos personas conversando en un café",
+  "caja de regalo abierta con papel de seda",
+  "calendario de pared con días marcados",
+];

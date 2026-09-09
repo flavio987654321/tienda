@@ -55,6 +55,7 @@ export default function VistaPreviaEbook({
   promesa,
   autor,
   capitulos,
+  fotos,
   paleta,
   modo,
 }: {
@@ -62,6 +63,20 @@ export default function VistaPreviaEbook({
   promesa: string;
   autor: string;
   capitulos: CapituloEscrito[];
+  /**
+   * Con qué se busca la foto de cada capítulo, en el mismo orden.
+   *
+   * ⚠️ Están acá porque **el PDF lleva fotos y esta previa no las tenía**: la
+   * tapa se lleva la mitad de la hoja y cada capítulo abre con una banda de 350
+   * puntos. Dibujando sólo color, la previa mostraba un ebook que no es el que
+   * sale — y encima escondía el dato que más le sirve a quien corrige: que la
+   * foto se busca **con una frase**, y que esa frase se puede cambiar en el
+   * temario. Ver `CapituloPlaneado.foto`.
+   *
+   * Puede venir vacía —los ebooks guardados antes del 07/09/26 no la tienen— y
+   * ahí la búsqueda cae al título, igual que en el armado.
+   */
+  fotos: string[];
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
 }) {
@@ -69,75 +84,93 @@ export default function VistaPreviaEbook({
   const margen = `${((MARGEN_PT / HOJA_PT) * 100).toFixed(2)}%`;
 
   return (
-    <div className="pv-caja overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5">
+    /* ⚠️ DOS CAJAS, Y NO ES DECORACIÓN: la de afuera declara el contenedor y la
+       de adentro es la que mide contra él. Estaban en una sola y la previa salía
+       con un zoom enorme — `1cqw` adentro del PROPIO contenedor no puede
+       medirse contra sí mismo (sería circular), así que el navegador lo mide
+       contra el ancestro que haya, y si no hay ninguno, contra la ventana. En
+       una pantalla de 1920 px eso daba una letra de 37 px donde tenían que ser
+       9. La regla es: quien declara `container-type` nunca puede usar `cqw`. */
+    <div className="pv-marco overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5">
       {/* El cuerpo atado al ancho de la hoja. La regla fija va primero: si el
           navegador no entiende `cqw`, se queda con ella y no con nada. */}
       <style>{`
-        .pv-caja { font-size: 13px; }
+        .pv-hoja { font-size: 13px; }
         @supports (container-type: inline-size) {
-          .pv-caja { container-type: inline-size; font-size: ${((CUERPO_PT / HOJA_PT) * 100).toFixed(3)}cqw; }
+          .pv-marco { container-type: inline-size; }
+          .pv-hoja { font-size: ${((CUERPO_PT / HOJA_PT) * 100).toFixed(3)}cqw; }
         }
         /* El texto del ebook va en serif, igual que el archivo: el PDF usa Lora
            para leer y Playfair para los títulos. Acá no se cargan esas dos
            —serían dos tipografías más para bajar, en una previa— pero la
            familia sí es la que corresponde: con la del panel, que es sin serif,
            la previa se veía como un formulario y no como un libro. */
-        .pv-caja, .pv-caja * { font-family: Georgia, "Times New Roman", serif; }
+        .pv-hoja, .pv-hoja * { font-family: Georgia, "Times New Roman", serif; }
       `}</style>
 
-      <div style={{ background: t.fondo, color: t.tinta }}>
+      <div className="pv-hoja" style={{ background: t.fondo, color: t.tinta }}>
         {/* ── La tapa ──────────────────────────────────────────────────────
             Una hoja entera, con la proporción de una A4: es lo primero que ve
             quien compra, así que es lo primero que tiene que poder mirar quien
             vende. */}
         <div
-          className="flex flex-col justify-between"
-          style={{
-            aspectRatio: "595.28 / 841.89",
-            padding: margen,
-            background: t.caja,
-          }}
+          className="flex flex-col"
+          style={{ aspectRatio: "595.28 / 841.89", background: t.fondo }}
         >
-          <div style={{ width: em(48), height: em(3.5), background: t.acento }} />
+          {/* La foto se lleva el 52 % de arriba, igual que en el archivo: ver
+              `tapa` en `ebook-pdf`. Con el tema oscuro va a sangre, tapando la
+              hoja entera; acá se dibuja el corte del tema claro, que es el que
+              usa casi todo el mundo. */}
+          <HuecoDeFoto busca={titulo} t={t} alto="52%" />
 
-          <div>
-            <p
-              style={{
-                fontSize: em(34), lineHeight: 1.12, fontWeight: 700, color: t.tinta,
-              }}
-            >
-              {titulo || "Sin título"}
-            </p>
-            {promesa && (
+          <div
+            className="flex flex-1 flex-col justify-between"
+            style={{ padding: margen }}
+          >
+            <div>
+              <div style={{ width: em(48), height: em(3.5), background: t.acento }} />
               <p
                 style={{
-                  marginTop: em(14), fontSize: em(12.5), lineHeight: 1.45, color: t.suave,
+                  marginTop: em(18), fontSize: em(34), lineHeight: 1.12,
+                  fontWeight: 700, color: t.tinta,
                 }}
               >
-                {promesa}
+                {titulo || "Sin título"}
               </p>
-            )}
-          </div>
+              {promesa && (
+                <p
+                  style={{
+                    marginTop: em(14), fontSize: em(12.5), lineHeight: 1.45, color: t.suave,
+                  }}
+                >
+                  {promesa}
+                </p>
+              )}
+            </div>
 
-          <p style={{ fontSize: em(10), letterSpacing: "0.08em", color: t.suave }}>
-            {autor ? autor.toUpperCase() : ""}
-          </p>
+            <p style={{ fontSize: em(10), letterSpacing: "0.08em", color: t.suave }}>
+              {autor ? autor.toUpperCase() : ""}
+            </p>
+          </div>
         </div>
 
         {/* ── Los capítulos ────────────────────────────────────────────────── */}
         {capitulos.map((c, i) => (
           <div key={i}>
-            {/* La portadilla: la franja, el número grande y el título con su
-                rayita. Es lo que hace que se lea como un libro. */}
+            {/* La portadilla: la foto, el número grande encima, y abajo el
+                título con su rayita. En el archivo la banda mide 350 puntos de
+                una hoja de 841,89 — el 41,6 % — y el número se apoya en el
+                borde de abajo. Ver `portadilla` en `ebook-pdf`. */}
             <div
-              style={{
-                background: t.caja,
-                paddingLeft: margen, paddingRight: margen,
-                paddingTop: em(28), paddingBottom: em(6),
-                marginTop: i === 0 ? 0 : em(26),
-              }}
+              style={{ position: "relative", marginTop: i === 0 ? 0 : em(26) }}
             >
-              <p style={{ fontSize: em(72), lineHeight: 0.9, fontWeight: 700, color: t.acento }}>
+              <HuecoDeFoto busca={fotos[i] || c.titulo} t={t} proporcion="595.28 / 350" />
+              <p
+                style={{
+                  position: "absolute", left: margen, bottom: em(6),
+                  fontSize: em(72), lineHeight: 0.9, fontWeight: 700, color: t.acento,
+                }}
+              >
                 {String(i + 1).padStart(2, "0")}
               </p>
             </div>
@@ -157,6 +190,57 @@ export default function VistaPreviaEbook({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Dónde va una foto, y con qué se busca.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ES UN HUECO A PROPÓSITO, NO UNA FOTO SIN CARGAR
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Las fotos las busca el ARMADO en el banco de imágenes, con la frase que se ve
+ * acá adentro, y las trae recién cuando hace el archivo. Traerlas también acá
+ * sería pedirle al banco una foto por capítulo **cada vez que alguien abre el
+ * editor** —y varias veces, porque la frase se puede cambiar—: un montón de
+ * pedidos para adornar una previa.
+ *
+ * Y mostrar el hueco con la frase adentro dice algo que la foto no diría: que
+ * **la foto se elige con esas palabras**, y que esas palabras se cambian en el
+ * temario. Alguien que ve una foto que no le gusta y no sabe de dónde salió, no
+ * puede hacer nada; leyendo "manos amasando harina" sabe exactamente qué tocar.
+ */
+function HuecoDeFoto({
+  busca,
+  t,
+  alto,
+  proporcion,
+}: {
+  busca: string;
+  t: ReturnType<typeof coloresDelEbook>;
+  alto?: string;
+  proporcion?: string;
+}) {
+  return (
+    <div
+      className="flex items-center justify-center"
+      style={{
+        height: alto, aspectRatio: proporcion,
+        background: t.caja,
+        padding: `${em(14)} ${em(28)}`,
+      }}
+    >
+      <p
+        style={{
+          fontSize: em(9), lineHeight: 1.5, textAlign: "center",
+          letterSpacing: "0.06em", color: t.suave,
+        }}
+      >
+        <span style={{ fontWeight: 700 }}>FOTO</span>
+        {busca ? ` · se busca “${busca}”` : ""}
+      </p>
     </div>
   );
 }

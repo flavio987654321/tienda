@@ -51,6 +51,7 @@ export default function EditorDeEbook({
   promesa,
   autor,
   capitulos: guardadosIniciales,
+  fotos,
   total,
   paleta,
   modo,
@@ -62,6 +63,8 @@ export default function EditorDeEbook({
   promesa: string;
   autor: string;
   capitulos: CapituloEscrito[];
+  /** Con qué se busca la foto de cada capítulo. Ver `VistaPreviaEbook`. */
+  fotos: string[];
   total: number;
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
@@ -287,6 +290,7 @@ export default function EditorDeEbook({
                 promesa={promesa}
                 autor={autor}
                 capitulos={capitulos}
+                fotos={fotos}
                 paleta={paleta}
                 modo={modo}
               />

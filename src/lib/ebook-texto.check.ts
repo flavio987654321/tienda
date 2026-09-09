@@ -307,6 +307,31 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
     /coloresDelEbook\(/.test(previa) && !/#[0-9a-fA-F]{6}/.test(previa),
     "la vista previa usa los colores del PDF, no una copia");
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ QUIEN DECLARA `container-type` NO PUEDE USAR `cqw`
+     ══════════════════════════════════════════════════════════════════════════
+
+     Estaban los dos en la misma regla y la previa salía con un zoom enorme:
+     `1cqw` adentro del PROPIO contenedor no se puede medir contra sí mismo
+     —sería circular— así que el navegador lo mide contra el ancestro que haya,
+     y si no hay ninguno, contra la ventana. En una pantalla de 1920 px eso daba
+     una letra de 37 px donde tenían que ser 9.
+
+     Y no falla en ningún lado: se ve enorme y listo. Por eso hay un chequeo. */
+  const reglas = previa.match(/\.[a-z-]+\s*\{[^}]*\}/g) ?? [];
+  const laQueDeclara = reglas.filter((r) => r.includes("container-type"));
+  check("TXT-AO",
+    laQueDeclara.length > 0 && laQueDeclara.every((r) => !r.includes("cqw")),
+    "el que declara el contenedor no se mide contra sí mismo: si no, la previa sale con zoom");
+
+  /* Y que la previa muestre DÓNDE van las fotos. El PDF lleva una en la tapa y
+     una por capítulo; sin los huecos, la previa muestra un ebook que no es el
+     que sale, y esconde que la foto se busca con una frase que se puede
+     cambiar en el temario. */
+  check("TXT-AP",
+    /HuecoDeFoto/.test(previa) && /fotos\[i\]/.test(previa),
+    "la vista previa muestra dónde va cada foto y con qué se busca");
+
   const alrededor = readFileSync("src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");
 
   /* Que se arme el PDF después de guardar, y no se deje para nunca.

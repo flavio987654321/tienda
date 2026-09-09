@@ -9,7 +9,7 @@ import { PALETAS } from "@/lib/pagina-venta";
 import BotonVolver from "../../../BotonVolver";
 import EditorDeEbook from "./EditorClient";
 import { ID_DEL_EJEMPLO, PRODUCTO_DE_EJEMPLO } from "../../ejemploDeTarjeta";
-import { CAPITULOS_DE_EJEMPLO } from "../../ejemploDeEbook";
+import { CAPITULOS_DE_EJEMPLO, FOTOS_DE_EJEMPLO } from "../../ejemploDeEbook";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +82,7 @@ export default async function EditorDeEbookPage({ params }: Props) {
           promesa="Cómo pasar de tener algo para enseñar a la primera venta cobrada, sin público y sin publicidad."
           autor="Tu tienda"
           capitulos={CAPITULOS_DE_EJEMPLO}
+          fotos={FOTOS_DE_EJEMPLO}
           total={CAPITULOS_DE_EJEMPLO.length}
           paleta={PALETAS[0]}
           modo="claro"
@@ -115,6 +116,7 @@ export default async function EditorDeEbookPage({ params }: Props) {
 
   const opciones = leerOpciones(fila.ebookIA.indice);
   const esRecetario = opciones.formato === "recetario";
+  const indice = leerIndice(fila.ebookIA.indice);
   const capitulos = esRecetario ? [] : leerCapitulos(fila.ebookIA.capitulos);
   const puede =
     !esRecetario && sePuedeEditarElTexto(fila.ebookIA.estado) && capitulos.length > 0;
@@ -134,7 +136,11 @@ export default async function EditorDeEbookPage({ params }: Props) {
           /* Quién lo vende: el ebook es de esa persona, no nuestro. */
           autor={fila.store?.name ?? ""}
           capitulos={capitulos}
-          total={leerIndice(fila.ebookIA.indice).length}
+          /* Con qué se busca la foto de cada capítulo: la frase que escribió el
+             modelo pensando en una foto, no el título. La misma que usa el
+             armado, y la que se puede corregir en el temario. */
+          fotos={indice.map((c) => c.foto)}
+          total={indice.length}
           /* ⚠️ La misma cuenta que hace `/armar`: manda lo que eligió para el
              ebook y, si no eligió nada, la paleta de su página de venta. Si
              fueran distintas, la previa mostraría una tapa y el archivo saldría
