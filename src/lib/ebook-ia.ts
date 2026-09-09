@@ -97,6 +97,25 @@ export const BLOQUES_MAX = 60;
 export const LARGO_BLOQUE = 2_000;
 
 /**
+ * Cuántos pedazos necesita un capítulo para contar como escrito.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ NO ES UN GUSTO: ES LA REGLA CON LA QUE `leerCapitulos` DESCARTA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Un capítulo que queda por debajo de esto no se guarda mal: se guarda bien, y
+ * después **desaparece al leerlo** — y todo lo que estaba abajo se corre un
+ * lugar, así que el texto del capítulo 4 sale abajo del título del 3. Eso no
+ * falla en ningún lado: sale un PDF perfecto que dice cualquier cosa.
+ *
+ * Por eso es una constante y no un `3` suelto adentro de la función: el editor
+ * del texto (`ebook-texto`) tiene que frenar **exactamente acá**, ni un bloque
+ * más abajo. Dos copias del número se desincronizan de a una, y la que queda
+ * vieja es la que nadie mira.
+ */
+export const BLOQUES_MIN = 3;
+
+/**
  * Los tipos de pedazo que sabe dibujar el PDF. Nada más entra.
  *
  * ⚠️ `aviso` se sumó el 07/09/26 y es el único que no es texto corrido: sale
@@ -355,7 +374,7 @@ export const ESQUEMA_DEL_CAPITULO = {
   properties: {
     bloques: {
       type: "array",
-      minItems: 3,
+      minItems: BLOQUES_MIN,
       maxItems: BLOQUES_MAX,
       items: {
         type: "object",
@@ -463,7 +482,7 @@ export function normalizarCapitulo(crudo: unknown, titulo: string): CapituloEscr
 
   /* Un capítulo de dos renglones es un capítulo fallado. Mejor reintentarlo que
      dejarlo adentro del PDF que alguien va a vender. */
-  if (bloques.length < 3) return null;
+  if (bloques.length < BLOQUES_MIN) return null;
 
   const tit = limpiarTexto(titulo, LARGO_TITULO_CAPITULO);
   if (!tit) return null;
