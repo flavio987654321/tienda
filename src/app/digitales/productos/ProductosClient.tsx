@@ -1214,7 +1214,21 @@ export default function ProductosClient({
         <div
           role="group"
           aria-label="Elegí qué página de venta estás viendo"
-          className="-mt-5 flex gap-2 overflow-x-auto pb-1"
+          /* ⚠️ ENVUELVE, NO SCROLLEA. Acá había `overflow-x-auto`, y con dos
+             páginas se veía perfecto — el problema aparece recién con cinco,
+             que es lo que da Pro.
+
+             Cinco solapas ocupan 1032 px (200 cada una: 28 de aire, 20 del
+             número, 8 de separación y hasta 144 del nombre) y el ancho útil de
+             esta pantalla son 848 px en 1280, 720 en 768 y 328 en 360. O sea
+             que **en los tres anchos se pasa**, y con scroll horizontal las dos
+             últimas quedaban escondidas: en un celular se descubren arrastrando,
+             pero en escritorio hay que saber que existe shift+rueda. Una página
+             que no se puede encontrar es una página que no existe.
+
+             Envolviendo no se esconde nada en ningún ancho. El costo es que en
+             360 son tres renglones, y para eso el nombre se acorta abajo. */
+          className="-mt-5 flex flex-wrap gap-2"
         >
           {principales.map((p, i) => {
             const activa = elegido?.id === p.id;
@@ -1238,8 +1252,19 @@ export default function ProductosClient({
                 </span>
                 {/* Sin título todavía es un caso real: se crea a mano y se guarda
                     con el nombre a medio escribir. Una solapa en blanco no se
-                    puede apretar con confianza. */}
-                <span className="max-w-[9rem] truncate">{p.name.trim() || "Sin título"}</span>
+                    puede apretar con confianza.
+
+                    ⚠️ Y el nombre se acorta en pantalla chica, que es lo que
+                    hace que envolver sirva. Con 144 px fijos, en 360 entraba UNA
+                    sola por renglón y cinco páginas eran cinco renglones —una
+                    lista, no un selector—. Con 80 px entran dos y son tres.
+
+                    Ochenta píxeles son unos diez caracteres: alcanzan para
+                    distinguir "Bachiller…" de "Panadería…", y al lado está el
+                    número, que es el que no se corta nunca. */}
+                <span className="max-w-[5rem] truncate sm:max-w-[7rem] lg:max-w-[9rem]">
+                  {p.name.trim() || "Sin título"}
+                </span>
               </button>
             );
           })}

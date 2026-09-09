@@ -1409,6 +1409,29 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
   chequear("las solapas aparecen sólo cuando hay más de una página",
     /\{principales\.length > 1 && \(/.test(pantallaProductos));
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ LAS SOLAPAS ENVUELVEN, NO SE ESCONDEN DETRÁS DE UN SCROLL.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Con dos páginas se veía perfecto y por eso pasó desapercibido. El problema
+     aparece con CINCO, que es lo que da Pro: cinco solapas ocupan 1032 px —200
+     cada una: 28 de aire, 20 del número, 8 de separación y hasta 144 del
+     nombre— y el ancho útil de esta pantalla son 848 px en 1280, 720 en 768 y
+     328 en 360. **Se pasa en los tres.**
+
+     Con `overflow-x-auto` las dos últimas quedaban escondidas: en un celular se
+     descubren arrastrando, pero en escritorio hay que saber que existe
+     shift+rueda. Una página que no se puede encontrar es una página que no
+     existe.
+
+     Y el nombre acortado es la otra mitad: con 144 px fijos, en 360 entraba UNA
+     solapa por renglón y cinco páginas eran cinco renglones —una lista, no un
+     selector—. Las dos cosas van juntas o no van. */
+  chequear("las solapas envuelven y el nombre se acorta, así con 5 no se esconde ninguna",
+    /className="-mt-5 flex flex-wrap gap-2"/.test(pantallaProductos) &&
+    !/aria-label="Elegí qué página[\s\S]{0,600}overflow-x-auto/.test(pantallaProductos) &&
+    /max-w-\[5rem\] truncate sm:max-w-\[7rem\] lg:max-w-\[9rem\]/.test(pantallaProductos));
+
   /* ⚠️ LA ELECCIÓN VIVE EN LA DIRECCIÓN, Y LA LEE EL SERVIDOR.
      Guardar un producto termina en `window.location.reload()`. Con la elección
      sólo en memoria, editar el bono de la página dos te devolvía a la página uno
