@@ -1,4 +1,9 @@
 import { limpiarTexto } from "@/lib/texto-limpio";
+/* Sólo la constante del largo: `ebook-ia` no toca la base ni el modelo, así que
+   esto no arrastra nada al navegador. Se comparte a propósito — es el mismo
+   trabajo, contar de qué se trata el principal, y con dos números distintos se
+   desincronizan de a uno. */
+import { LARGO_PADRE_EN_PEDIDO } from "@/lib/ebook-ia";
 
 /**
  * Armar un embudo con IA: el principal, un bono y un upsell.
@@ -338,7 +343,21 @@ export function pedidoDeUnaFicha(
     "",
     "El producto principal:",
     `<titulo>\n${principal.titulo}\n</titulo>`,
-    principal.bajada ? `<descripcion>\n${principal.bajada}\n</descripcion>` : null,
+    /* ⚠️ CORTADA. Acá iba entera, y la descripción de un producto admite
+       10.000 caracteres: los diez mil viajaban a un pedido cuya respuesta son
+       un título y dos oraciones. El costo en plata es de centavos; el problema
+       es que **una pared de texto entierra la instrucción** y lo que vuelve
+       sale peor.
+
+       El mismo largo que usa el ebook para el contexto del padre
+       (`LARGO_PADRE_EN_PEDIDO`), porque es exactamente el mismo trabajo: contar
+       de qué se trata el principal para que lo que se proponga lo complemente.
+       Ese arreglo se hizo el 08/09/26 en el camino del ebook y este quedó
+       afuera; encontrado al día siguiente contando cuánto le llega al modelo
+       por cada camino, que daba 2.000 · 600 · sin cortar. */
+    principal.bajada
+      ? `<descripcion>\n${principal.bajada.slice(0, LARGO_PADRE_EN_PEDIDO)}\n</descripcion>`
+      : null,
     `Se vende a $${principal.precio}.`,
     ...(yaExisten.length > 0 ? [
       "",

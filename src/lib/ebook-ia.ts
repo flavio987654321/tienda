@@ -38,12 +38,33 @@ import { limpiarTexto } from "@/lib/texto-limpio";
 /* ── Lo que escribe la persona ──────────────────────────────────────────── */
 
 /**
- * Igual de largo que el nicho del embudo, y por el mismo motivo: acá también
- * hay gente que **ya tiene el ebook pensado** y quiere pegar su índice entero.
- * Con 600 caracteres tenía que resumirlo, y resumir el índice es justo perder
- * lo que lo hace suyo.
+ * Lo que se le cuenta al modelo para que escriba el ebook.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * 2.500 → 5.000 EL 09/09/26, Y ES EL ÚNICO DE LOS DOS QUE SE SUBIÓ
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Este campo **invita a pegar un índice**: el texto de ayuda dice "si ya tenés
+ * el índice pensado, pegalo tal cual". Un índice de diez capítulos con una
+ * línea cada uno entra en 2.500; uno con capítulo más tres viñetas de detalle
+ * —que es el mejor material que nos pueden dar— no entra. O sea que el tope
+ * apretaba justo a quien viene MÁS preparado, obligándolo a resumir; y resumir
+ * el índice es perder exactamente lo que lo hace suyo.
+ *
+ * ⚠️ LO QUE CUESTA, PORQUE ESTE TEXTO NO VIAJA UNA VEZ SINO ONCE. Va en la
+ * llamada del temario y **otra vez en la de cada capítulo** (ver
+ * `pedidoDelCapitulo`), así que 2.500 caracteres de más son unos 6.900 tokens
+ * de entrada por ebook: **US$0,02**, sobre los US$0,44 que cuesta un ebook.
+ * Un 5% más, y sólo para quien de verdad llena el campo.
+ *
+ * ── Por qué el nicho del embudo NO se subió ────────────────────────────────
+ *
+ * Porque no pide lo mismo. `LARGO_DEL_NICHO` pregunta "qué sabés hacer y a
+ * quién le sirve", que es un párrafo: ahí más largo no es más información, es
+ * relleno — y el relleno entierra la instrucción, que es el peor resultado
+ * posible. Sólo se agranda el campo donde lo que se pega es estructura.
  */
-export const LARGO_TEMA = 2_500;
+export const LARGO_TEMA = 5_000;
 export const MINIMO_TEMA = 20;
 export const LARGO_PUBLICO = 200;
 

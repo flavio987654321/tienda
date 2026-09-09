@@ -22,7 +22,9 @@ import {
   normalizarEmbudo, precioSano, INSTRUCCIONES, ESQUEMA_DEL_EMBUDO,
   LARGO_TITULO_IA, LARGO_BAJADA_IA, PRECIO_MINIMO_IA, PRECIO_MAXIMO_IA,
   MINIMO_DEL_NICHO, LARGO_DEL_NICHO, LARGO_TITULO_PROPIO, MINIMO_BAJADA_IA,
+  pedidoDeUnaFicha,
 } from "./embudo-ia";
+import { LARGO_PADRE_EN_PEDIDO, LARGO_TEMA } from "./ebook-ia";
 import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
   permitirGeneracion, RAFAGA_IA, GLOBAL_DIARIO, GLOBAL_PRUEBA_DIARIO,
@@ -590,6 +592,45 @@ async function losTopes() {
   check("EMB-BC",
     !/^- Cortito\./m.test(texto),
     "no se le pide 'cortito' a todo: el título va corto y la bajada no");
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ LO QUE SE LE MANDA DEL PRODUCTO PADRE VA CORTADO.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Acá iba entero, y la descripción de un producto admite 10.000 caracteres:
+     los diez mil viajaban a un pedido cuya respuesta son un título y dos
+     oraciones. El costo en plata es de centavos; el problema es que una pared
+     de texto **entierra la instrucción** y lo que vuelve sale peor.
+
+     El arreglo se había hecho el 08/09/26 en el camino del ebook
+     (`LARGO_PADRE_EN_PEDIDO`) y este quedó afuera. Se encontró al día siguiente
+     contando cuánto le llega al modelo por cada camino: eran 2.000 en la página
+     de venta, 600 en el ebook y **sin cortar** acá.
+
+     Se prueba con el comportamiento y no leyendo el archivo: se le pasa una
+     descripción gigante y se mira que no aparezca entera. */
+  const gigante = "z".repeat(LARGO_PADRE_EN_PEDIDO + 4_000);
+  const pedidoLargo = pedidoDeUnaFicha(
+    "BONO",
+    { titulo: "Un producto", bajada: gigante, precio: 10_000 },
+    [],
+  );
+  check("EMB-BD",
+    !pedidoLargo.includes("z".repeat(LARGO_PADRE_EN_PEDIDO + 1)) &&
+    pedidoLargo.includes("z".repeat(LARGO_PADRE_EN_PEDIDO)),
+    "la descripción del padre se corta antes de entrar al pedido de una ficha");
+
+  /* ⚠️ Y LOS DOS CAMPOS DONDE LA PERSONA LE HABLA A LA IA NO MIDEN LO MISMO,
+     a propósito. El del ebook invita a PEGAR UN ÍNDICE —el texto de ayuda lo
+     dice— y ahí el tope apretaba justo a quien viene más preparado. El del
+     embudo pregunta "qué sabés hacer y a quién le sirve", que es un párrafo:
+     más largo ahí no es más información, es relleno, y el relleno entierra la
+     instrucción igual que la pared de texto de arriba.
+
+     Si algún día se igualan, es que alguien los leyó como el mismo campo. */
+  check("EMB-BE",
+    LARGO_TEMA > LARGO_DEL_NICHO && LARGO_TEMA <= 8_000,
+    "el campo del ebook es más largo que el del embudo, porque en uno se pega un índice");
 }
 
 /* ── Una ficha suelta para un producto que ya existe (08/09/26) ────────────
