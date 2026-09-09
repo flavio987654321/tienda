@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { randomUUID } from "crypto";
-import path from "path";
 import { fileTypeFromBuffer } from "file-type";
 import { medirImagen, avisoDeFotoChica } from "@/lib/medidas-imagen";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
-/* Cuánto puede guardarse el navegador el archivo. Se importa y NO se escribe de
-   nuevo acá: la subida directa de videos usa exactamente la misma, y dos copias
-   del mismo valor se separan solas — que es, textualmente, el bug que nos hizo
-   prometer videos de 50 MB. El porqué largo está en lib/subida-directa.
-   Ojo: esto vale para lo que se suba DE ACÁ EN MÁS. Lo que ya está arriba quedó
-   con "no-cache" grabado y se arregla con scripts/arreglar-cache-de-imagenes.mjs,
-   que se corre una sola vez. */
-import { CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
+/* ⚠️ El guardado en sí vive en `deposito-imagenes` desde el 09/09/26, porque
+   el servidor también genera imágenes por su cuenta —la tapa del ebook— y
+   necesita escribirlas igual. Acá se queda lo que sólo tiene sentido con un
+   pedido adelante: los topes, los tipos permitidos y el freno por cuenta.
+   `CACHE_DE_UN_ANIO` se fue con el guardado, que es quien la usa. */
+import { configDeImagenes, guardarImagen, guardarImagenEnDisco } from "@/lib/deposito-imagenes";
 
 export const runtime = "nodejs";
 
@@ -59,7 +54,6 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   "text/plain",
   ...ALLOWED_IMAGE_TYPES,
 ]);
-const DEFAULT_BUCKET = "product-images";
 
 /* Los documentos de identidad de los afiliados NO van con las fotos de producto.
    Iban al mismo bucket, y ese bucket es público a propósito (las fotos tienen que
@@ -74,97 +68,10 @@ const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET || "affiliate-docs";
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
-function getSupabaseStorageConfig() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const bucket = process.env.SUPABASE_STORAGE_BUCKET || DEFAULT_BUCKET;
-
-  if (!supabaseUrl || !serviceRoleKey) return null;
-  return { supabaseUrl, serviceRoleKey, bucket };
-}
-
 function extensionFor(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (fromName) return fromName;
   return file.type.split("/")[1] || "bin";
-}
-
-const bucketsEnsured = new Set<string>();
-
-async function ensureBucket(supabaseUrl: string, serviceRoleKey: string, bucket: string, isPublic: boolean) {
-  if (bucketsEnsured.has(bucket)) return;
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    "Content-Type": "application/json",
-  };
-  const body = JSON.stringify({ id: bucket, name: bucket, public: isPublic });
-  // Try to update existing bucket
-  const updateRes = await fetch(`${supabaseUrl}/storage/v1/bucket/${bucket}`, {
-    method: "PUT",
-    headers,
-    body,
-  }).catch(() => null);
-  if (!updateRes?.ok) {
-    // Bucket might not exist yet — create it
-    await fetch(`${supabaseUrl}/storage/v1/bucket`, {
-      method: "POST",
-      headers,
-      body,
-    }).catch((err) => console.error("[upload] bucket creation failed:", err));
-  }
-  bucketsEnsured.add(bucket);
-}
-
-async function uploadToSupabaseStorage(
-  file: File,
-  bytes: ArrayBuffer,
-  folder = "products",
-  opts: { bucket?: string; isPublic?: boolean } = {}
-) {
-  const config = getSupabaseStorageConfig();
-  if (!config) {
-    throw new Error("Falta configurar Supabase Storage en Vercel para subir archivos.");
-  }
-
-  const bucket = opts.bucket ?? config.bucket;
-  const isPublic = opts.isPublic ?? true;
-
-  await ensureBucket(config.supabaseUrl, config.serviceRoleKey, bucket, isPublic);
-
-  const ext = extensionFor(file);
-  // `randomUUID` en vez de `Math.random()`: el generador de JS es predecible a
-  // partir de unas pocas salidas del mismo proceso, y para un bucket privado el
-  // nombre dejó de ser lo único que protege el archivo — pero no hay motivo para
-  // seguir usando un dado cargado.
-  const filePath = `${folder}/${Date.now()}-${randomUUID()}.${ext}`;
-  const uploadUrl = `${config.supabaseUrl}/storage/v1/object/${bucket}/${filePath}`;
-
-  const res = await fetch(uploadUrl, {
-    method: "POST",
-    headers: {
-      apikey: config.serviceRoleKey,
-      Authorization: `Bearer ${config.serviceRoleKey}`,
-      "Content-Type": file.type,
-      "x-upsert": "false",
-      // Ver CACHE_DE_UN_ANIO: sin esta línea Supabase sirve todo con "no-cache"
-      // y cada visita vuelve a bajar las fotos enteras.
-      "cache-control": CACHE_DE_UN_ANIO,
-    },
-    body: bytes,
-  });
-  const data = await res.json().catch(() => null) as { error?: string; message?: string } | null;
-
-  if (!res.ok) {
-    const message = data?.message || data?.error || "No se pudo subir la imagen a Supabase Storage";
-    throw new Error(message);
-  }
-
-  // Un bucket privado no tiene URL pública: se guarda la RUTA, y quien tenga
-  // permiso pide un link firmado. Ver /api/vendedoras/cv/[id].
-  if (!isPublic) return `supabase://${bucket}/${filePath}`;
-
-  return `${config.supabaseUrl}/storage/v1/object/public/${bucket}/${filePath}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -226,11 +133,18 @@ export async function POST(req: NextRequest) {
       ? avisoDeFotoChica(medirImagen(Buffer.from(bytes)))
       : null;
 
-    if (getSupabaseStorageConfig()) {
-      const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
-      const url = isDocument
-        ? await uploadToSupabaseStorage(file, bytes, folder, { bucket: DOCS_BUCKET, isPublic: false })
-        : await uploadToSupabaseStorage(file, bytes, folder);
+    if (configDeImagenes()) {
+      const carpeta = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
+      const url = await guardarImagen(bytes, {
+        extension: extensionFor(file),
+        tipo: file.type,
+        carpeta,
+        /* Los documentos de identidad NO van con las fotos de producto: ese
+           depósito es público a propósito —las fotos tienen que verse en la
+           tienda sin sesión— y un DNI ahí queda legible para cualquiera que
+           tenga la dirección. Ver DOCS_BUCKET. */
+        ...(isDocument ? { deposito: DOCS_BUCKET, publico: false } : {}),
+      });
       return NextResponse.json({ url, ...(aviso ? { aviso } : {}) });
     }
 
@@ -241,15 +155,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ext = extensionFor(file);
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    const buffer = Buffer.from(bytes);
-
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, fileName), buffer);
-
-    return NextResponse.json({ url: `/uploads/${fileName}`, ...(aviso ? { aviso } : {}) });
+    const url = await guardarImagenEnDisco(bytes, extensionFor(file));
+    return NextResponse.json({ url, ...(aviso ? { aviso } : {}) });
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
     return NextResponse.json(

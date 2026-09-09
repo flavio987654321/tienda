@@ -10,6 +10,8 @@ import {
   conAvisoDeFotos,
 } from "@/lib/ebook-ia";
 import { armarPDF } from "@/lib/ebook-pdf";
+import { dibujarLaTapa } from "@/lib/tapa-imagen";
+import { configDeImagenes, guardarImagen, guardarImagenEnDisco } from "@/lib/deposito-imagenes";
 import { buscarFoto, buscarFotos, bajarElegida, comoFue } from "@/lib/fotos-pexels";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
@@ -67,6 +69,9 @@ export async function POST(req: NextRequest) {
     select: {
       id: true,
       archivoPath: true,
+      /* ⚠️ Para NO pisarla. Si la persona subió su portada, esa manda: la tapa
+         del ebook se pone sólo donde hoy hay un cuadrado vacío. */
+      images: true,
       /* Para la tapa: de acá sale la paleta que la persona ya eligió para su
          página de venta, así el PDF combina con la página que lo vendió. */
       paginaVenta: true,
@@ -229,24 +234,32 @@ export async function POST(req: NextRequest) {
 
      Y se BORRA la marca cuando salió bien: sin eso, un ebook que una vez agarró
      el tope lleno diría "salió sin fotos" para siempre. Ver `conAvisoDeFotos`. */
+
   const faltaronFotos = !fotoTapa || fotosCapitulos.some((f) => !f);
   const alTope = faltaronFotos && como.sinCupo;
+
+  /* ⚠️ La promesa DE VERDAD, la que el modelo escribió para la tapa. Acá decía
+     que el resumen del capítulo 1 "cumple la misma función", y no: ese resumen
+     está escrito para quien ESCRIBE el capítulo —el prompt se lo pide así, "que
+     diga el contenido, no que lo venda"— y terminaba de tapa de un producto en
+     venta, arrancando con "Explica el punto de partida...".
+
+     El respaldo se queda para los ebooks guardados antes del 07/09/26, que no
+     tienen promesa y no se pueden reescribir. Ver `leerPromesa`.
+
+     Sale del `armarPDF` a una constante porque ahora la usan DOS: el archivo y
+     la portada. Repetida, la tapa del PDF y la imagen que se muestra en la
+     página de venta se separarían con el primer cambio. */
+  const promesaDeLaTapa = leerPromesa(ebook.indice) || indice[0]?.resumen || "";
+  const autor = producto.store?.name ?? "";
 
   let pdf: Buffer;
   try {
     pdf = await armarPDF({
       titulo: ebook.titulo,
-      /* ⚠️ La promesa DE VERDAD, la que el modelo escribió para la tapa.
-         Acá decía que el resumen del capítulo 1 "cumple la misma función", y no:
-         ese resumen está escrito para quien ESCRIBE el capítulo —el prompt se lo
-         pide así, "que diga el contenido, no que lo venda"— y terminaba de tapa
-         de un producto en venta, arrancando con "Explica el punto de partida...".
-
-         El respaldo se queda para los ebooks guardados antes del 07/09/26, que
-         no tienen promesa y no se pueden reescribir. Ver `leerPromesa`. */
-      promesa: leerPromesa(ebook.indice) || indice[0]?.resumen || "",
+      promesa: promesaDeLaTapa,
       /* Quién lo vende. El ebook es de esa persona, no nuestro. */
-      autor: producto.store?.name ?? "",
+      autor,
       capitulos,
       /* ⚠️ Si viene con algo, manda esto y `capitulos` se ignora: son dos
          moldes para el mismo archivo, no dos cosas que se apilan. */
@@ -283,6 +296,69 @@ export async function POST(req: NextRequest) {
   /* Recién ahora se le pone al producto: el archivo ya está arriba. */
   const anterior = rutaDeRef(producto.archivoPath);
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     LA TAPA, TAMBIÉN COMO IMAGEN
+     ══════════════════════════════════════════════════════════════════════════
+
+     Un producto digital sin portada se muestra con el ícono del rol adentro de
+     un recuadro punteado. En el panel eso está bien —dice "acá falta una foto",
+     y es cierto— pero es lo mismo que ve quien podría comprar en la página de
+     venta y en el enlace que se comparte por WhatsApp.
+
+     Y la tapa ya está hecha: es la primera hoja del archivo que se acaba de
+     armar. Estaba adentro de un PDF que sólo se puede ver bajándolo.
+
+     ⚠️ SÓLO si el producto no tiene portada. Si la persona subió la suya, esa
+     manda: esto llena un lugar vacío, no reemplaza una decisión.
+
+     ⚠️ Y nada de esto puede tirar. El archivo que se paga ya está arriba; una
+     portada que no se pudo dibujar no puede llevárselo puesto. Todo va en
+     `try`, y si algo sale mal el producto queda como estaba: sin foto. */
+  const yaTienePortada = (() => {
+    try {
+      const guardadas: unknown = JSON.parse(producto.images || "[]");
+      return Array.isArray(guardadas)
+        && typeof guardadas[0] === "string"
+        && guardadas[0].length > 0;
+    } catch {
+      return false;
+    }
+  })();
+
+  let portada: string | null = null;
+  if (!yaTienePortada) {
+    try {
+      const imagen = await dibujarLaTapa({
+        titulo: ebook.titulo,
+        promesa: promesaDeLaTapa,
+        autor,
+        /* La misma foto que se acaba de dibujar en el PDF, ya bajada: la
+           portada no le pide nada más al banco de imágenes. */
+        foto: fotoTapa?.datos ?? null,
+        /* Lo que dice el sello. En un recetario se cuentan recetas, que es la
+           unidad que la persona eligió y la que va en la tapa del archivo. */
+        cantidad: esRecetario ? recetas.length : capitulos.length,
+        palabra: esRecetario ? ["RECETA", "RECETAS"] : ["CAPÍTULO", "CAPÍTULOS"],
+        paleta: paletaDeLaTapa,
+        modo: opciones.tema,
+      });
+
+      if (imagen) {
+        portada = configDeImagenes()
+          ? await guardarImagen(imagen, {
+            extension: "jpg", tipo: "image/jpeg", carpeta: "products",
+          })
+          /* Sin Supabase sólo se puede en desarrollo, contra el disco. En
+             producción no hay dónde escribir y se sigue sin portada. */
+          : process.env.NODE_ENV === "production"
+            ? null
+            : await guardarImagenEnDisco(imagen, "jpg");
+      }
+    } catch (e) {
+      console.error("[ia-ebook-armar] no se pudo poner la portada", { ebookId: ebook.id, e });
+    }
+  }
+
   /* El índice tal como está AHORA. Se lee con el candado en la mano, que es lo
      que garantiza que nadie más lo esté escribiendo. Ver el `indice:` de abajo. */
   const fresco = await prisma.ebookIA.findUnique({
@@ -297,6 +373,10 @@ export async function POST(req: NextRequest) {
           archivoPath: refDeArchivo(ruta),
           archivoNombre: nombreDeArchivo(`${ebook.titulo}.pdf`),
           archivoPeso: pdf.length,
+          /* Va en la MISMA transacción que el archivo: es la tapa de ese
+             archivo. Si el guardado falla, no queda un producto mostrando la
+             portada de un ebook que no se colgó. */
+          ...(portada ? { images: JSON.stringify([portada]) } : {}),
         },
       }),
       prisma.ebookIA.update({

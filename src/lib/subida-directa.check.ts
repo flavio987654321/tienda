@@ -46,6 +46,11 @@ const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
 const formulario = leer("src/app/dashboard/productos/nuevo/page.tsx");
 const firma      = leer("src/app/api/upload/firma/route.ts");
 const porServidor = leer("src/app/api/upload/route.ts");
+/* ⚠️ El guardado que hacía esa ruta se mudó a `deposito-imagenes` el 09/09/26:
+   el servidor también genera imágenes por su cuenta —la tapa del ebook— y las
+   escribe por la misma puerta. Los topes siguen siendo de la ruta, que es quien
+   recibe el pedido; la cabecera del caché ahora se manda desde acá. */
+const elDeposito = leer("src/lib/deposito-imagenes.ts");
 
 /* El techo real del cuerpo de un pedido en producción (Vercel, serverless). No
    está escrito en ningún lado del proyecto porque no es nuestro — por eso vive
@@ -184,7 +189,7 @@ chequear(
 );
 chequear(
   "la subida que pasa por el servidor la manda",
-  /"cache-control": CACHE_DE_UN_ANIO/.test(porServidor)
+  /"cache-control": CACHE_DE_UN_ANIO/.test(elDeposito)
 );
 /* En un video pesa el triple: es lo más grande que sirve el sitio. Y como los
    bytes no pasan por nuestro servidor, el navegador es el ÚNICO que puede
@@ -195,9 +200,9 @@ chequear(
 );
 chequear(
   "los dos usan la MISMA constante, no dos copias",
-  /import \{ CACHE_DE_UN_ANIO \} from "@\/lib\/subida-directa"/.test(porServidor) &&
+  /import \{ CACHE_DE_UN_ANIO \} from "@\/lib\/subida-directa"/.test(elDeposito) &&
     /CACHE_DE_UN_ANIO/.test(formulario) &&
-    !/const CACHE_DE_UN_ANIO =/.test(porServidor),
+    !/const CACHE_DE_UN_ANIO =/.test(elDeposito),
   "dos copias del mismo valor se separan solas: es el bug que hizo prometer videos de 50 MB"
 );
 chequear(
