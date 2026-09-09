@@ -173,6 +173,29 @@ export async function borrarDelDeposito(
   }).catch(() => null);
 
   if (res?.ok) return "borrado";
-  if (res?.status === 404) return "noEstaba";
+  if (!res) return "fallo";
+  if (res.status === 404) return "noEstaba";
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ SUPABASE NO CONTESTA 404 CUANDO EL OBJETO NO ESTÁ
+     ══════════════════════════════════════════════════════════════════════════
+
+     Contesta **400** y mete el 404 ADENTRO del cuerpo:
+
+       {"statusCode":"404","error":"not_found","message":"Object not found",
+        "code":"NoSuchKey"}
+
+     Así que mirando sólo `res.status` la rama `noEstaba` de arriba **no se
+     alcanzaba nunca** y un archivo que ya no está contaba como `fallo`. Que es
+     exactamente lo que el comentario de `ResultadoBorrado` dice que no puede
+     pasar: el barrido de la noche lo reintenta para siempre, porque nunca llega
+     a soltar la referencia.
+
+     Se encontró borrando a mano un producto de prueba cuyo archivo nunca se
+     había subido: el borrado dijo "fallo" y el archivo no existía. */
+  const cuerpo = await res.text().catch(() => "");
+  if (/"statusCode"\s*:\s*"?404|NoSuchKey|not_found/.test(cuerpo)) return "noEstaba";
+
+  console.error("[deposito-digital] no se pudo borrar", { ruta, estado: res.status });
   return "fallo";
 }

@@ -230,8 +230,23 @@ check("BAR-F", barrido.includes("take: TOPE_BARRIDO") && /TOPE_BARRIDO = \d+/.te
   "hay tope por noche: un borrado masivo no se lleva puesto el resto del cron");
 
 /* Un objeto que ya no está no puede contar como error, o nunca se suelta la
-   referencia y volvemos al reintento eterno. */
-check("BAR-G", deposito.includes('"noEstaba"') && deposito.includes("res?.status === 404"),
+   referencia y volvemos al reintento eterno.
+
+   ⚠️ ESTE CHEQUEO ESTUVO EN VERDE CON EL COMPORTAMIENTO ROTO. Pedía que el
+   código dijera `res?.status === 404`, y lo decía — sólo que Supabase **no
+   contesta 404** cuando el objeto no está: contesta 400 con el 404 adentro del
+   cuerpo. O sea que la rama `noEstaba` no se alcanzaba nunca y el barrido
+   reintentaba para siempre, que es justo lo que este chequeo venía a evitar.
+
+   Se descubrió borrando a mano un producto de prueba cuyo archivo no existía:
+   el borrado contestó "fallo". Por eso ahora se pide lo que de verdad decide
+   —que se MIRE EL CUERPO— y no una comparación que puede ser cierta y no
+   servir para nada. */
+check("BAR-G",
+  deposito.includes('"noEstaba"')
+  && deposito.includes("res.status === 404")
+  && /await res\.text\(\)/.test(deposito)
+  && /NoSuchKey/.test(deposito),
   "un archivo que ya no estaba cuenta como hecho, no como falla");
 
 /* La llave de servicio no puede vivir en un archivo que importa una pantalla, y
