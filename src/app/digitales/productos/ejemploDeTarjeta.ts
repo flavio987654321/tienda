@@ -56,6 +56,16 @@ export const PRODUCTO_DE_EJEMPLO: ProductoEnPantalla = {
     trabajando: false,
     error: null,
     reintentos: 0,
+    /* En falso: el ejemplo muestra la tarjeta como sale cuando todo anduvo.
+       Para mirar el aviso de "salió sin fotos", poner esto en `true`. */
+    fotosAlTope: false,
+  },
+  /* Lo que habría contado para generarlo. Es lo que llena el formulario cuando
+     se aprieta "Rehacerlo": sin esto, el ejemplo mostraría el formulario en
+     blanco, que es justo lo que se arregló. */
+  contado: {
+    tema: "Cómo alguien que ya sabe hacer algo puede venderlo por internet sin público, sin publicidad y sin gastar en herramientas. Que se note qué hacer cada semana.",
+    publico: "gente que recién arranca y no tiene lista de correos ni seguidores",
   },
   slugDigital: "ejemplo",
   dominioPropio: null,

@@ -191,6 +191,19 @@ export default function EditorDeEbook({
           return;
         }
 
+        /* ⚠️ El archivo salió, pero salió sin fotos: el banco estaba al tope
+           justo ahora. Se dice acá y no se calla, porque es el archivo que se
+           entrega — y porque el arreglo es volver a apretar en un rato, que
+           tampoco gasta ninguna generación. Ver `ComoFue`. */
+        if (armado.datos.sinFotos === true) {
+          setListo(
+            "Guardado y el PDF se rehizo, pero salió SIN FOTOS: el banco de imágenes está al tope"
+            + " en este momento. Volvé a guardar en un rato y salen — no gasta ninguna generación.",
+          );
+          router.refresh();
+          return;
+        }
+
         setListo("Guardado, y el PDF se rehizo con los cambios. Ése es el que se entrega.");
       } else {
         setListo("Guardado. El PDF se va a armar solo cuando termine de escribirse.");

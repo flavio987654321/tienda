@@ -26,6 +26,7 @@ import {
   CAPITULOS_MIN, CAPITULOS_MAX, LARGO_TEMA, MINIMO_TEMA, LARGO_BLOQUE, BLOQUES_MAX,
   TIPOS_DE_BLOQUE, LARGO_TITULO_EBOOK,
   leerGruposDeRecetas, todasLasRecetas, normalizarRecetas, cortarEnUnaIdea,
+  leerAvisoDeFotos, conAvisoDeFotos, leerFotoDeTapa,
   INSTRUCCIONES_RECETAS, INSTRUCCIONES_INDICE_RECETARIO, LARGO_PASO,
   type CapituloEscrito, type CapituloPlaneado,
 } from "./ebook-ia";
@@ -345,7 +346,7 @@ check("PDF-B", !/[\u{1F300}-\u{1FAFF}]/u.test(soloLoQueEntra("hola 🚀 chau �
   "los emojis se sacan antes de dibujar");
 check("PDF-C", soloLoQueEntra("mirá → esto").includes("->"),
   "una flecha que no entra se cambia por una que sí, no desaparece");
-check("PDF-D", !soloLoQueEntra("un textoraro").includes(" "),
+check("PDF-D", !soloLoQueEntra("un\u0000texto\u0007raro").includes("\u0000"),
   "los caracteres de control no llegan al PDF");
 
 const capsPDF: CapituloEscrito[] = Array.from({ length: 6 }, (_, i) => ({
@@ -1086,6 +1087,153 @@ check("PRI-A",
 check("PRI-B",
   /ni un solo dato de quien te compra/.test(solapaDigital),
   "y aclara que a la IA no le llega ningún dato de los compradores");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   REHACER EL EBOOK: EL BOTÓN MÁS CARO DE LA PANTALLA
+   ══════════════════════════════════════════════════════════════════════════
+
+   Rehacer no agrega un ebook al lado del que hay: BORRA el texto entero
+   (`capitulos: "[]"`), pisa el temario y se lleva las fotos elegidas de cada
+   capítulo.
+
+   Y hasta el 09/09/26 no hacía ninguna de las dos cosas que tenía que hacer:
+   no avisaba, y **tampoco rehacía**. A `empezar(true)` no lo llamaba nadie, así
+   que el botón mandaba `rehacer: false`, el servidor tomaba el camino de
+   "retomar" y devolvía el mismo ebook de antes. Quien apretaba volvía a contar
+   el tema, elegía formato y colores, apretaba… y no pasaba nada. */
+
+/* ⚠️ LA FORMA DEL BOTÓN, no la palabra suelta. Con `/empezar\(true\)/` a secas
+   este chequeo se cumplía con el COMENTARIO de acá arriba, que la nombra: se
+   podía borrar la llamada de verdad y seguía en verde — probado rompiéndolo.
+   Es el mismo error que ya había pasado con `tomarElCandado(` matcheando la
+   línea del import. Un chequeo que mide un comentario no mide nada. */
+check("REH-A",
+  /onClick=\{\(\) => empezar\(true\)\}/.test(ventana),
+  "el botón de rehacer manda rehacer de verdad, y no `false`");
+
+/* ⚠️ Y NO desde el botón del formulario: ahí se pasa por el paso que avisa. */
+check("REH-B",
+  /rehaciendo \? setPaso\("confirmar"\) : empezar\(false\)/.test(ventana),
+  "con un ebook empezado, generar lleva al aviso y no pisa nada de una");
+
+const confirmar = ventana.indexOf("paso === \"confirmar\"");
+check("REH-C", confirmar >= 0, "existe el paso que avisa antes de pisar");
+
+/* Lo que se pierde, dicho, y el archivo de ahora a un clic. El botón de bajar
+   tiene que estar ACÁ ADENTRO: quien está por rehacer no cierra la ventana,
+   busca la tarjeta y vuelve. */
+const avisoDeRehacer = confirmar >= 0 ? ventana.slice(confirmar, confirmar + 6000) : "";
+check("REH-D",
+  /Qué se pierde/.test(avisoDeRehacer)
+  && /fotos/.test(avisoDeRehacer)
+  && /api\/digitales\/productos\/\$\{producto\.id\}\/archivo/.test(avisoDeRehacer),
+  "el aviso dice qué se pierde y deja bajar el ebook que ya está");
+
+/* ⚠️ La tapa sobrevive, y por eso el aviso lo dice. Si la subió la persona, no
+   está en ningún otro lado: tirarla sería perderle un archivo suyo por apretar
+   un botón que habla del texto. */
+check("REH-E",
+  /tapa: yaHay \? leerFotoDeTapa\(yaHay\.indice\) : undefined/.test(empezar),
+  "rehacer conserva la foto de la tapa");
+check("REH-F",
+  /La foto de la tapa/.test(avisoDeRehacer),
+  "y el aviso dice que se conserva");
+
+/* ⚠️ Y el formulario arranca con lo que ya había contado. Arrancaba VACÍO, así
+   que rehacer obligaba a reescribir de memoria el tema —más corto y con menos
+   ganas— y el ebook nuevo salía peor que el que estaba pisando. Y pagado. */
+check("REH-G",
+  /useState\(contado\?\.tema \?\? ""\)/.test(ventana)
+  && /contado=\{ebookDe\.contado\}/.test(lista)
+  && /tema: true, publico: true/.test(pantalla),
+  "el formulario de rehacer viene con lo que ya había contado");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   UN EBOOK PUEDE SALIR SIN FOTOS, Y ANTES NADIE SE ENTERABA
+   ══════════════════════════════════════════════════════════════════════════
+
+   La clave del banco de imágenes es UNA para toda la plataforma. Si el tope
+   está lleno justo cuando se arma el archivo, el molde dibuja bloques de color
+   donde iban las fotos — y eso está bien: un ebook que no se arma es plata
+   cobrada sin nada que entregar. Lo que estaba mal es que el PDF quedaba
+   colgado del producto, LISTO, y quien lo hizo creía que ése era el diseño.
+   Encima tiene arreglo gratis: rehacer el PDF no llama al modelo. */
+
+check("FOT-A",
+  /const alTope = faltaronFotos && como\.sinCupo/.test(armar),
+  "sólo se marca si faltó una foto Y el banco estaba al tope");
+
+/* ⚠️ "No hay fotos de esa frase" NO es lo mismo y no tiene el mismo arreglo:
+   ésa se arregla cambiando la frase, ésta se arregla sola en un rato. */
+check("FOT-B",
+  /indice: conAvisoDeFotos\(fresco\?\.indice \?\? ebook\.indice, alTope\)/.test(armar),
+  "queda anotado en la base, para poder decirlo cuando la persona vuelva");
+
+/* ⚠️ Sobre lo FRESCO. El índice de arriba se leyó antes del candado, y entre
+   una cosa y la otra pudo guardarse una foto elegida: escribir el viejo acá le
+   borraría a alguien lo que acaba de guardar, por un cartel. */
+check("FOT-C",
+  /const fresco = await prisma\.ebookIA\.findUnique/.test(armar)
+  && armar.indexOf("const fresco =") > armar.indexOf("await tomarElCandado("),
+  "ese índice se relee con el candado en la mano");
+
+check("FOT-D",
+  /fotosAlTope: leerAvisoDeFotos\(fila\.indice\)/.test(borrador),
+  "el estado que ve la tarjeta lo lleva");
+
+check("FOT-E",
+  /p\.ebook\?\.fotosAlTope/.test(lista) && /acc\.rehacerPDF\(p\)/.test(lista),
+  "la tarjeta lo dice y ofrece rehacer el PDF");
+
+/* Y que ese botón le pegue al ARMADO y no a la ruta que escribe: rehacer el PDF
+   no puede costar una generación, porque es el arreglo de un problema nuestro. */
+check("FOT-F",
+  /"\/api\/digitales\/ia\/ebook\/armar"/.test(lista),
+  "y ese botón le pega al armado, que no gasta ninguna generación");
+
+/* ── El anotador, a mano ─────────────────────────────────────────────────── */
+
+const indiceDeEjemplo = JSON.stringify({
+  promesa: "una promesa",
+  capitulos: [{ titulo: "uno", resumen: "dos", foto: "tres" }],
+  opciones: { formato: "texto" },
+  tapa: { frase: "un libro", elegida: null },
+});
+
+const marcado = conAvisoDeFotos(indiceDeEjemplo, true);
+check("FOT-G", leerAvisoDeFotos(marcado), "la marca se puede poner y leer");
+
+/* ⚠️ Y se BORRA cuando el armado sale bien. Sin esto, un ebook que una vez
+   agarró el tope lleno diría "salió sin fotos" para siempre, mirando un PDF que
+   ya las tiene. */
+check("FOT-H",
+  !leerAvisoDeFotos(conAvisoDeFotos(marcado, false)),
+  "y se borra cuando el armado sale bien");
+
+/* ⚠️ Un cartel no puede romperle el índice a nadie: de ahí salen los capítulos
+   del ebook. Todo lo demás tiene que quedar tal cual. */
+check("FOT-I",
+  leerPromesa(marcado) === "una promesa"
+  && leerIndice(marcado).length === 1
+  && leerFotoDeTapa(marcado).frase === "un libro",
+  "poner la marca no toca la promesa, ni el temario, ni la tapa");
+
+check("FOT-J",
+  conAvisoDeFotos("no es json", true) === "no es json"
+  && conAvisoDeFotos(null, true) === ""
+  && !leerAvisoDeFotos("no es json"),
+  "un índice que no se puede abrir se devuelve tal cual");
+
+/* ⚠️ Que el anotador no se quede en el molde: si `buscarFoto` no lo llena, todo
+   lo de acá arriba mide una marca que nunca se pone. */
+const banco = readFileSync("src/lib/fotos-pexels.ts", "utf8");
+check("FOT-K",
+  /if \(sinCupo\) como\.sinCupo = true/.test(banco),
+  "el que le pregunta al banco anota cuando volvió lleno");
+check("FOT-L",
+  /buscarFotos\(faltan, como\)/.test(armar)
+  && /buscarFoto\(tapa\.frase \|\| ebook\.titulo, \{ alta: true, como \}\)/.test(armar),
+  "y el armado le pasa el anotador a las dos búsquedas");
 
 elPDF().then(() => {
   console.log(fallos === 0

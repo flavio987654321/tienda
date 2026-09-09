@@ -8,6 +8,7 @@ import {
   INSTRUCCIONES_INDICE, ESQUEMA_DEL_INDICE, normalizarIndice,
   INSTRUCCIONES_INDICE_RECETARIO, esquemaDelIndiceRecetario, seccionesParaRecetas,
   CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO, contextoDelPadre,
+  leerFotoDeTapa,
 } from "@/lib/ebook-ia";
 import { normalizarOpciones } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTemario } from "@/lib/ebook-temario";
@@ -332,7 +333,19 @@ export async function POST(req: NextRequest) {
     /* ⚠️ Y las OPCIONES —formato, tema y color— también van acá adentro, no
        en columnas propias: agregar columnas es una migración y esta base es la
        de producción. Ver `ebook-opciones.ts`. */
-    indice: JSON.stringify({ promesa: indice.promesa, capitulos: indice.capitulos, opciones }),
+    /* ⚠️ LA TAPA SOBREVIVE AL REHACER, y es lo único que sobrevive.
+       El texto y las fotos de los capítulos no pueden: el temario nuevo no
+       tiene nada que ver con el viejo, un capítulo 3 no es el mismo capítulo 3.
+       La tapa sí es la misma tapa —el ebook sigue siendo de esta persona y de
+       este producto— y si la subió ella, no está en ningún otro lado: tirarla
+       sería perderle un archivo suyo por apretar un botón que habla del texto.
+       La pantalla de confirmar lo dice con estas palabras. Ver `leerFotoDeTapa`. */
+    indice: JSON.stringify({
+      promesa: indice.promesa,
+      capitulos: indice.capitulos,
+      opciones,
+      tapa: yaHay ? leerFotoDeTapa(yaHay.indice) : undefined,
+    }),
     /* Se arranca de cero: el temario nuevo no tiene nada que ver con los
        capítulos del anterior. */
     capitulos: "[]",

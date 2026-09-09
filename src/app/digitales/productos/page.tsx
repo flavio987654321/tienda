@@ -131,6 +131,13 @@ export default async function ProductosPage({
             select: {
               estado: true, titulo: true, indice: true, capitulos: true,
               trabajandoDesde: true, error: true, reintentos: true,
+              /* ⚠️ Lo que contó cuando lo generó. NO lo usa la tarjeta: lo usa
+                 el formulario de "rehacerlo", que arrancaba VACÍO. Quien quería
+                 rehacer su ebook tenía que volver a escribir de memoria el tema
+                 que había contado —y lo que salga depende justo de eso—, así
+                 que el ebook nuevo salía peor que el que estaba pisando.
+                 Va con el resto de la consulta: una aparte serían 45 viajes. */
+              tema: true, publico: true,
             },
           },
         },
@@ -155,6 +162,10 @@ export default async function ProductosPage({
     /* Sin el texto de los capítulos: son decenas de miles de caracteres que la
        pantalla no muestra y que viajarían con cada dibujo. */
     ebook: f.ebookIA ? estadoDelBorrador(f.ebookIA) : null,
+    /* Aparte del estado y no adentro: `estadoDelBorrador` viaja en cada vuelta
+       del bucle que mira cómo viene la escritura, cada cuatro segundos, y esto
+       no cambia nunca. Se lee una vez, al dibujar la pantalla. */
+    contado: f.ebookIA ? { tema: f.ebookIA.tema, publico: f.ebookIA.publico ?? "" } : null,
     slugDigital: f.slugDigital,
     dominioPropio: f.dominioPropio,
   }));

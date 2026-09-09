@@ -710,6 +710,57 @@ export function leerFotoDeTapa(
   };
 }
 
+/**
+ * Si el último PDF se armó con el banco de fotos al tope.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ UN EBOOK PUEDE SALIR SIN FOTOS, Y HASTA HOY NADIE SE ENTERABA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * La clave del banco es UNA para toda la plataforma. Si en el momento en que se
+ * arma el archivo el tope compartido está lleno, `buscarFoto` devuelve `null` y
+ * el molde dibuja bloques de color donde iban las fotos. El PDF queda colgado
+ * del producto, LISTO, y quien lo hizo cree que ése es el diseño.
+ *
+ * Se anota acá para poder decirlo en la tarjeta **después**, que es cuando hace
+ * falta: el armado suele pasar con la pestaña cerrada. Y lo que se dice tiene
+ * arreglo — rehacer el PDF no gasta ninguna generación.
+ *
+ * ⚠️ Vive en la RAÍZ del mismo JSON, como `promesa`, `opciones` y `tapa`, y no
+ * en una columna nueva: agregar una columna es una migración, y esta base es la
+ * de producción.
+ */
+export function leerAvisoDeFotos(guardado: string | null | undefined): boolean {
+  if (typeof guardado !== "string") return false;
+  let crudo: unknown;
+  try { crudo = JSON.parse(guardado); } catch { return false; }
+  if (!crudo || typeof crudo !== "object" || Array.isArray(crudo)) return false;
+  return (crudo as { fotosAlTope?: unknown }).fotosAlTope === true;
+}
+
+/**
+ * Dejar anotado —o borrar— ese aviso, sin tocar nada más de lo guardado.
+ *
+ * ⚠️ Devuelve lo mismo que recibió si el JSON no se puede abrir o no es un
+ * objeto. Un aviso no puede romperle el índice a nadie: el índice es de dónde
+ * salen los capítulos del ebook, y esto es un cartel.
+ *
+ * ⚠️ Y BORRA la marca cuando el armado salió bien. Sin eso, un ebook que una
+ * vez agarró el tope lleno seguiría diciendo "salió sin fotos" para siempre,
+ * incluso mirando un PDF que ya las tiene.
+ */
+export function conAvisoDeFotos(guardado: string | null | undefined, alTope: boolean): string {
+  const tal = typeof guardado === "string" ? guardado : "";
+  let crudo: unknown;
+  try { crudo = JSON.parse(tal); } catch { return tal; }
+  if (!crudo || typeof crudo !== "object" || Array.isArray(crudo)) return tal;
+
+  const raiz = { ...(crudo as Record<string, unknown>) };
+  if (alTope) raiz.fotosAlTope = true;
+  else delete raiz.fotosAlTope;
+  return JSON.stringify(raiz);
+}
+
 export function leerIndice(guardado: string | null | undefined): CapituloPlaneado[] {
   const crudo = abrirIndice(guardado);
   if (!crudo) return [];

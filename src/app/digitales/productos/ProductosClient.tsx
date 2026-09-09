@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
+  RotateCcw,
   Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
   FileText, Download,
 } from "lucide-react";
@@ -47,6 +48,14 @@ export type ProductoEnPantalla = {
   publicado: boolean;
   /** El ebook que le está escribiendo la IA, o `null` si nunca pidió uno. */
   ebook: EstadoDelBorrador | null;
+  /**
+   * Lo que contó para generarlo, tal cual lo escribió.
+   *
+   * ⚠️ La tarjeta no lo muestra: es para que el formulario de "rehacerlo"
+   * arranque con lo que ya había contado en vez de en blanco. Ver `contado` en
+   * `EbookIA`.
+   */
+  contado: { tema: string; publico: string } | null;
   /** Su dirección: `mecanica` de `mecanica.tiendaapps.com`. Sólo el principal. */
   slugDigital: string | null;
   /** El dominio que conectó, si conectó alguno. Viene con Pro. */
@@ -189,6 +198,15 @@ type Acciones = {
   borrar: (p: ProductoEnPantalla) => void;
   subirArchivo: (p: ProductoEnPantalla, file: File) => void;
   abrirEbook: (p: ProductoEnPantalla) => void;
+  /**
+   * Volver a armar el PDF con lo que ya está escrito.
+   *
+   * ⚠️ NO llama al modelo y NO gasta ninguna generación: junta el texto que ya
+   * está guardado, busca las fotos otra vez y dibuja. Existe como botón porque
+   * un ebook puede haber salido sin fotos —el banco al tope en el momento de
+   * armarlo— y ése es el arreglo, pero nadie iba a adivinarlo.
+   */
+  rehacerPDF: (p: ProductoEnPantalla) => void;
   /** Pedirle a la IA UN bono o UN upsell para un principal que ya existe. */
   pedirFicha: (padre: ProductoEnPantalla, rol: "BONO" | "UPSELL") => void;
   hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
@@ -390,6 +408,42 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   </Link>
                 )}
               </div>
+
+              {/* ══════════════════════════════════════════════════════════════
+                  ⚠️ "SALIÓ SIN FOTOS", DICHO — Y CON EL BOTÓN QUE LO ARREGLA
+                  ══════════════════════════════════════════════════════════════
+
+                  El banco de imágenes tiene UN tope para toda la plataforma. Si
+                  justo cuando se armaba este archivo estaba lleno, el PDF salió
+                  con bloques de color donde iban las fotos. Se arma igual a
+                  propósito —un ebook sin fotos se puede vender, uno que no se
+                  arma es plata cobrada sin nada que entregar— pero hasta hoy
+                  **nadie lo decía**: el armado suele terminar con la pestaña
+                  cerrada, así que la persona volvía, veía "listo", y creía que
+                  ése era el diseño de su producto.
+
+                  Y el arreglo es gratis: rehacer el PDF no llama al modelo y no
+                  gasta ninguna generación. El tope se libera por hora.
+                  Ver `leerAvisoDeFotos`. */}
+              {p.ebook?.fotosAlTope && (
+                <div className="mt-2.5 rounded-lg border border-amber-200 panel-oscuro:border-amber-500/25 bg-amber-50 panel-oscuro:bg-amber-500/10 px-3 py-2.5">
+                  <p className="text-xs leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
+                    <strong>Este PDF salió sin fotos.</strong> El banco de imágenes estaba al tope
+                    justo cuando se armó, así que quedaron bloques de color en su lugar. No es tu
+                    texto ni tu configuración.
+                  </p>
+                  <button
+                    onClick={() => acc.rehacerPDF(p)}
+                    disabled={ocupado}
+                    className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-300 panel-oscuro:border-amber-500/40 px-3 py-1.5 text-xs font-bold text-amber-900 panel-oscuro:text-amber-200 hover:bg-amber-100 panel-oscuro:hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                  >
+                    {ocupado
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <RotateCcw className="h-3.5 w-3.5" />}
+                    {ocupado ? "Rehaciendo…" : "Rehacer el PDF (es gratis)"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1090,6 +1144,7 @@ export default function ProductosClient({
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
   const acc: Acciones = {
     tier, cobroConectado, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
+    rehacerPDF,
     abrirEbook: setEbookDe,
     pedirFicha: (padre, rol) => setFichaIA({ padre, rol }),
     hijosDe,
@@ -1104,6 +1159,7 @@ export default function ProductosClient({
     publicar: () => {},
     borrar: () => {},
     subirArchivo: () => {},
+    rehacerPDF: () => {},
     abrirEbook: () => {},
     pedirFicha: () => {},
     hijosDe: () => [],
@@ -1193,6 +1249,41 @@ export default function ProductosClient({
       setError("No pudimos conectarnos. Revisá tu internet e intentá de nuevo.");
       enVuelo.current = false;
       setGuardando(false);
+    }
+  }
+
+  /* Rehacer el PDF con lo que ya está escrito. Ver `rehacerPDF` en `Acciones`. */
+  async function rehacerPDF(p: ProductoEnPantalla) {
+    if (enVuelo.current) return;
+    enVuelo.current = true;
+    setTrabajando(p.id);
+    try {
+      const r = await fetch("/api/digitales/ia/ebook/armar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productoId: p.id }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(data.error ?? "No pudimos rehacer el PDF.");
+        enVuelo.current = false;
+        setTrabajando(null);
+        return;
+      }
+      /* ⚠️ Si volvió a salir sin fotos se dice, en vez de recargar y dejar el
+         mismo cartel ahí como si no hubiera pasado nada. El tope del banco se
+         libera por hora: puede seguir lleno un rato. */
+      if (data.sinFotos === true) {
+        setError("El banco de fotos sigue al tope. El PDF se rehizo igual, pero todavía sin fotos: probá de nuevo en un rato.");
+        enVuelo.current = false;
+        setTrabajando(null);
+        return;
+      }
+      window.location.reload();
+    } catch {
+      setError("No pudimos conectarnos.");
+      enVuelo.current = false;
+      setTrabajando(null);
     }
   }
 
@@ -1516,6 +1607,7 @@ export default function ProductosClient({
           padre={padreDelEbook}
           cupoInicial={cupoEbook}
           estadoInicial={ebookDe.ebook}
+          contado={ebookDe.contado}
           onCerrar={() => setEbookDe(null)}
         />
       )}

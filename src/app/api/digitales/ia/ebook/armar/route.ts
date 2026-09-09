@@ -7,9 +7,10 @@ import { rutaDeArchivo, refDeArchivo, rutaDeRef, nombreDeArchivo } from "@/lib/s
 import { configDeposito, subirAlDeposito, borrarDelDeposito } from "@/lib/deposito-digital";
 import {
   leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa, leerFotoDeTapa,
+  conAvisoDeFotos,
 } from "@/lib/ebook-ia";
 import { armarPDF } from "@/lib/ebook-pdf";
-import { buscarFoto, buscarFotos, bajarElegida } from "@/lib/fotos-pexels";
+import { buscarFoto, buscarFotos, bajarElegida, comoFue } from "@/lib/fotos-pexels";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
@@ -178,13 +179,19 @@ export async function POST(req: NextRequest) {
      que es lo que se hacía antes. Ver `leerFotoDeTapa`. */
   const tapa = leerFotoDeTapa(ebook.indice);
 
+  /* ⚠️ Dónde queda anotado si el banco estaba al tope. No cambia NADA de lo que
+     pasa acá —si no hay foto, el molde dibuja color y el ebook se arma igual—
+     pero es la diferencia entre entregar un archivo sin fotos y entregarlo sin
+     que nadie sepa por qué. Ver `ComoFue`. */
+  const como = comoFue();
+
   const [fotoTapa, fotosCapitulos] = await Promise.all([
     (async () => {
       if (tapa.elegida) {
         const bajada = await bajarElegida(tapa.elegida).catch(() => null);
         if (bajada) return bajada;
       }
-      return buscarFoto(tapa.frase || ebook.titulo, { alta: true });
+      return buscarFoto(tapa.frase || ebook.titulo, { alta: true, como });
     })(),
     Promise.all(
       consultas.map(async (consulta, i) => {
@@ -201,10 +208,29 @@ export async function POST(req: NextRequest) {
          un ebook con las diez elegidas no le pide nada al banco. */
       const faltan = consultas.map((c, i) => (bajadas[i] ? "" : c));
       if (faltan.every((c) => !c)) return bajadas;
-      const buscadas = await buscarFotos(faltan);
+      const buscadas = await buscarFotos(faltan, como);
       return bajadas.map((b, i) => b ?? buscadas[i]);
     }),
   ]);
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ SI SALIÓ SIN FOTOS PORQUE EL BANCO ESTABA LLENO, QUEDA ANOTADO
+     ══════════════════════════════════════════════════════════════════════════
+
+     El PDF se arma igual —eso no se toca— pero el archivo que se entrega tiene
+     bloques de color donde iban las fotos, y hasta hoy nadie lo decía: el
+     armado suele pasar con la pestaña cerrada, así que la persona volvía, veía
+     "listo", y creía que ése era el diseño.
+
+     Se anota SÓLO cuando pasaron las dos cosas: faltó alguna foto Y el banco
+     contestó que estábamos al tope. Que falte una foto porque de esa frase no
+     hay ninguna no es lo mismo, y no tiene el mismo arreglo — ésa se arregla
+     cambiando la frase, ésta se arregla sola en un rato.
+
+     Y se BORRA la marca cuando salió bien: sin eso, un ebook que una vez agarró
+     el tope lleno diría "salió sin fotos" para siempre. Ver `conAvisoDeFotos`. */
+  const faltaronFotos = !fotoTapa || fotosCapitulos.some((f) => !f);
+  const alTope = faltaronFotos && como.sinCupo;
 
   let pdf: Buffer;
   try {
@@ -256,6 +282,13 @@ export async function POST(req: NextRequest) {
 
   /* Recién ahora se le pone al producto: el archivo ya está arriba. */
   const anterior = rutaDeRef(producto.archivoPath);
+
+  /* El índice tal como está AHORA. Se lee con el candado en la mano, que es lo
+     que garantiza que nadie más lo esté escribiendo. Ver el `indice:` de abajo. */
+  const fresco = await prisma.ebookIA.findUnique({
+    where: { id: ebook.id },
+    select: { indice: true },
+  });
   try {
     await prisma.$transaction([
       prisma.product.update({
@@ -268,7 +301,14 @@ export async function POST(req: NextRequest) {
       }),
       prisma.ebookIA.update({
         where: { id: ebook.id },
-        data: { estado: "LISTO", trabajandoDesde: null, error: null },
+        data: {
+          estado: "LISTO", trabajandoDesde: null, error: null,
+          /* ⚠️ Sobre `fresco` y no sobre `ebook.indice`: aquél se leyó ANTES de
+             tomar el candado, y entre las dos cosas pudo terminar de escribirse
+             un capítulo o guardarse una foto elegida. Escribir el índice viejo
+             acá le borraría a alguien lo que acaba de guardar, por un cartel. */
+          indice: conAvisoDeFotos(fresco?.indice ?? ebook.indice, alTope),
+        },
       }),
     ]);
   } catch (e) {
@@ -296,6 +336,16 @@ export async function POST(req: NextRequest) {
     ok: true,
     listo: true,
     peso: pdf.length,
-    ebook: estadoDelBorrador({ ...ebook, estado: "LISTO", trabajandoDesde: null, error: null }),
+    /* Para la pantalla que está esperando: el archivo salió, pero salió sin
+       fotos. Lo mismo que queda anotado, dicho en el momento. */
+    sinFotos: alTope,
+    ebook: estadoDelBorrador({
+      ...ebook,
+      estado: "LISTO", trabajandoDesde: null, error: null,
+      /* El mismo índice que se acaba de guardar. Con `ebook.indice` a secas,
+         el estado que vuelve diría que las fotos están bien mientras la base
+         dice que no. */
+      indice: conAvisoDeFotos(fresco?.indice ?? ebook.indice, alTope),
+    }),
   });
 }

@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { leerIndice, leerCapitulos, leerGruposDeRecetas, type CapituloPlaneado } from "@/lib/ebook-ia";
+import {
+  leerIndice, leerCapitulos, leerGruposDeRecetas, leerAvisoDeFotos,
+  type CapituloPlaneado,
+} from "@/lib/ebook-ia";
 import { leerOpciones, type OpcionesDelEbook } from "@/lib/ebook-opciones";
 
 /**
@@ -67,6 +70,14 @@ export type EstadoDelBorrador = {
   total: number;
   /** `true` mientras hay un pedido escribiendo un capítulo ahora mismo. */
   trabajando: boolean;
+  /**
+   * `true` si el último PDF se armó con el banco de fotos al tope.
+   *
+   * ⚠️ El archivo está y se puede vender, pero le faltan las fotos. Es un
+   * booleano y no un texto porque viaja en cada vuelta del bucle que mira cómo
+   * viene la escritura. Ver `leerAvisoDeFotos`.
+   */
+  fotosAlTope: boolean;
   error: string | null;
   reintentos: number;
 };
@@ -118,6 +129,7 @@ export function estadoDelBorrador(fila: FilaCruda): EstadoDelBorrador {
     trabajando:
       fila.trabajandoDesde != null &&
       Date.now() - fila.trabajandoDesde.getTime() < CANDADO_MS,
+    fotosAlTope: leerAvisoDeFotos(fila.indice),
     error: fila.error,
     reintentos: fila.reintentos,
   };

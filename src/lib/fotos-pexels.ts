@@ -82,15 +82,57 @@ function texto(v: unknown): string {
  * Ahora se agarra el PRIMERO que no se haya usado. La repetición se evita
  * igual, y el que no repite se lleva la mejor.
  */
+/**
+ * Por qué faltó una foto, para quien arma el PDF.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ SIN ESTO, UN EBOOK SALÍA SIN FOTOS Y NADIE SE ENTERABA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `buscarFoto` devuelve `null` ante cualquier problema y el molde dibuja un
+ * bloque de color en su lugar — eso está bien, un ebook que no se arma es peor
+ * que uno sin fotos. Pero el PDF quedaba colgado del producto, listo para
+ * vender, con bloques de color donde iban las fotos, y **quien lo hizo creía
+ * que ése era el diseño**.
+ *
+ * Y encima tenía arreglo gratis: rehacer el PDF no gasta ninguna generación,
+ * así que media hora después —cuando el tope compartido del banco se libera—
+ * salen todas. Nadie podía saberlo porque nadie lo decía.
+ *
+ * Es un anotador y no un valor devuelto a propósito: quien llama sigue
+ * recibiendo la foto o `null`, y esto se pasa sólo si le interesa el motivo.
+ */
+export type ComoFue = {
+  /** El banco contestó 429: nos pasamos del tope compartido de la plataforma. */
+  sinCupo: boolean;
+  /** Falta configurar la clave. No es problema de quien está vendiendo. */
+  sinClave: boolean;
+};
+
+/** Un anotador en cero, para empezar. */
+export const comoFue = (): ComoFue => ({ sinCupo: false, sinClave: false });
+
 export async function buscarFoto(
   consulta: string,
-  { alta = false, usadas }: { alta?: boolean; usadas?: Set<string> } = {},
+  { alta = false, usadas, como }: {
+    alta?: boolean;
+    usadas?: Set<string>;
+    /** Dónde anotar por qué no vino, si a quien llama le interesa. */
+    como?: ComoFue;
+  } = {},
 ): Promise<FotoDelEbook | null> {
   /* ⚠️ Por la MISMA puerta que la pantalla, que es lo que hace que el
      guardarropas sirva: la frase que alguien ya buscó al elegir sus fotos no se
      vuelve a pedir cuando el armado pasa por acá. Y rehacer el PDF diez veces
      cuesta un pedido, no diez. Ver `preguntarAlBanco`. */
-  const { fotos } = await preguntarAlBanco(consulta, alta);
+  const { fotos, sinCupo, sinClave } = await preguntarAlBanco(consulta, alta);
+  /* Se anota SIEMPRE, aunque después la foto venga bien: alcanza con que una
+     sola búsqueda del ebook se haya topado con el tope para que el archivo
+     salga incompleto, y eso es lo que hay que poder decir. */
+  if (como) {
+    if (sinCupo) como.sinCupo = true;
+    if (sinClave) como.sinClave = true;
+  }
   if (fotos.length === 0) return null;
 
   /* La primera que no se haya llevado otro capítulo. Si TODAS están usadas
@@ -340,13 +382,16 @@ export async function bajarElegida(f: {
  * no se consiguieron: quien dibuja necesita saber qué capítulo se quedó sin
  * foto, y un arreglo más corto le correría todas las demás de lugar.
  */
-export async function buscarFotos(consultas: string[]): Promise<(FotoDelEbook | null)[]> {
+export async function buscarFotos(
+  consultas: string[],
+  como?: ComoFue,
+): Promise<(FotoDelEbook | null)[]> {
   /* Compartido entre todas: es lo que evita que dos capítulos salgan con la
      misma foto. Se puede compartir aunque las búsquedas vayan en paralelo
      porque elegir y anotar pasa de corrido, sin ningún `await` en el medio. */
   const usadas = new Set<string>();
 
   return Promise.all(
-    consultas.map((c) => buscarFoto(c, { usadas }).catch(() => null)),
+    consultas.map((c) => buscarFoto(c, { usadas, como }).catch(() => null)),
   );
 }

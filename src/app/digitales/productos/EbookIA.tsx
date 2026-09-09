@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Loader2, Sparkles, X, AlertTriangle, Check, BookOpen, RotateCcw,
+  Loader2, Sparkles, X, AlertTriangle, Check, BookOpen, RotateCcw, Download,
   ListChecks, Trash2, Plus, ArrowUp, ArrowDown, Lock, Pencil,
 } from "lucide-react";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
@@ -88,7 +88,22 @@ import { useSalida } from "@/app/digitales/SalidaSinGuardar";
  * Se mudó a `productos/[id]/ebook`, que es una pantalla entera con su "volver",
  * igual que el editor de la página de venta. Desde acá se linkea, nada más.
  */
-type Paso = "contar" | "revisar" | "escribiendo" | "listo";
+/**
+ * ⚠️ "confirmar" ES UN PASO, Y SALIÓ DE UN AGUJERO DE VERDAD.
+ *
+ * Hasta el 09/09/26 el botón "Rehacerlo" devolvía a `contar`, y ahí el botón
+ * de generar mandaba SIEMPRE `rehacer: false` — a `empezar(true)` no lo llamaba
+ * nadie, nunca. Quien apretaba rehacer volvía a contar el tema, elegía formato
+ * y colores, apretaba… y el servidor le devolvía **el mismo ebook de antes**
+ * por el camino de "retomar". La pantalla no rehacía nada y no decía por qué.
+ *
+ * Y rehacer de verdad **borra el texto entero** (`capitulos: "[]"`), pisa el
+ * temario y se lleva las fotos elegidas de cada capítulo. Eso no puede pasar
+ * apretando un botón que dice "Escribir el ebook". Así que en el medio hay un
+ * paso que dice qué se pierde, qué se conserva, qué sale y desde dónde bajar el
+ * que ya está — que sigue estando hasta que el nuevo termine de armarse.
+ */
+type Paso = "contar" | "confirmar" | "revisar" | "escribiendo" | "listo";
 
 /** Cada cuánto se le pregunta al servidor cómo viene. */
 const MIRAR_CADA_MS = 4_000;
@@ -119,6 +134,7 @@ export default function EbookIA({
   padre,
   cupoInicial,
   estadoInicial,
+  contado,
   onCerrar,
 }: {
   producto: { id: string; name: string; tieneArchivo: boolean };
@@ -126,6 +142,15 @@ export default function EbookIA({
   padre: { nombre: string; rol: "BONO" | "UPSELL" } | null;
   cupoInicial: EstadoDelCupo;
   estadoInicial: EstadoDelBorrador | null;
+  /**
+   * Lo que contó la última vez, para no hacerlo escribir de nuevo.
+   *
+   * ⚠️ El formulario de "rehacerlo" arrancaba EN BLANCO. Y lo que sale depende
+   * justo de eso: quien quería rehacer su ebook tenía que reescribir de memoria
+   * el tema que había contado —normalmente más corto, con menos ganas— y el
+   * ebook nuevo salía peor que el que estaba pisando. Y encima pagado.
+   */
+  contado: { tema: string; publico: string } | null;
   onCerrar: () => void;
 }) {
   const [cupo, setCupo] = useState(cupoInicial);
@@ -136,7 +161,7 @@ export default function EbookIA({
     return "escribiendo";
   });
 
-  const [tema, setTema] = useState("");
+  const [tema, setTema] = useState(contado?.tema ?? "");
 
   /* Cómo quiere que salga. El formato hay que elegirlo ANTES de generar porque
      cambia lo que se le pide al modelo; el tema y el color no tocan el texto.
@@ -151,7 +176,7 @@ export default function EbookIA({
   const [temaVisual, setTemaVisual] = useState<TemaDeEbook>(elegidas.tema);
   const [cuantasRecetas, setCuantasRecetas] = useState<number>(elegidas.recetas);
   const [paleta, setPaleta] = useState<string>(elegidas.paleta);
-  const [publico, setPublico] = useState("");
+  const [publico, setPublico] = useState(contado?.publico ?? "");
 
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -468,6 +493,18 @@ export default function EbookIA({
 
   const temaCorto = tema.trim().length < MINIMO_TEMA;
   const sinCupo = cupo.quedan <= 0;
+
+  /* ── ¿Esto va a pisar un ebook que ya existe? ────────────────────────────
+     Generar con uno empezado NO es lo mismo que generar de cero: del otro lado
+     el texto se borra entero. Ver el comentario de `Paso`. */
+  const rehaciendo = !!ebook;
+  /* Uno incluido por ebook. Es la misma cuenta que hace el servidor
+     (`esGratis`), y por eso mira `reintentos`, no cuántas veces se apretó acá. */
+  const rehacerEsGratis = rehaciendo && (ebook?.reintentos ?? 0) < 1;
+  /* ⚠️ El cupo frena lo que se cobra, y el rehacer incluido no sale de ninguna
+     bolsa: sin esta distinción, quien se quedó sin generaciones tampoco podía
+     usar el rehacer que ya tenía pagado. */
+  const frenaElCupo = sinCupo && !rehacerEsGratis;
   const escritos = ebook?.escritos ?? 0;
   const total = ebook?.total ?? 0;
   const porcentaje = total > 0 ? Math.round((escritos / total) * 100) : 0;
@@ -743,13 +780,16 @@ export default function EbookIA({
 
               {error && <Aviso>{error}</Aviso>}
 
+              {/* ⚠️ Con un ebook empezado esto NO genera: lleva al paso que
+                  dice qué se pierde. Generar de una desde acá es lo que borraba
+                  el texto sin preguntar. */}
               <button
-                onClick={() => empezar(false)}
-                disabled={trabajando || temaCorto || sinCupo}
+                onClick={() => (rehaciendo ? setPaso("confirmar") : empezar(false))}
+                disabled={trabajando || temaCorto || frenaElCupo}
                 className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {trabajando ? "Armando el temario…" : "Escribir el ebook"}
+                {trabajando ? "Armando el temario…" : rehaciendo ? "Rehacer el ebook" : "Escribir el ebook"}
               </button>
 
               {/* ⚠️ Sólo se promete lo que existe. Acá decía "vas a poder
@@ -763,6 +803,112 @@ export default function EbookIA({
                 Primero te muestro el temario para que lo corrijas. Después tarda unos
                 minutos y se escribe solo: podés cerrar la ventana.
               </p>
+            </>
+          )}
+
+          {/* ── Confirmar que se pisa el que ya está ─────────────────────
+              ══════════════════════════════════════════════════════════════
+              ⚠️ ESTE PASO ES EL FRENO DE MANO, Y ANTES NO EXISTÍA.
+              ══════════════════════════════════════════════════════════════
+
+              Rehacer no agrega un ebook al lado del que hay: **pisa el que
+              hay**. Del otro lado el texto se borra entero, el temario se
+              reemplaza y las fotos elegidas de cada capítulo se van con él.
+
+              Todo eso, escrito, ANTES de apretar. No alcanza con un "¿estás
+              segura?": lo que hace que alguien decida bien es saber qué pierde,
+              qué se queda, cuánto sale, y que el archivo de ahora se puede bajar
+              en este mismo momento. Por eso el botón de descargar está ACÁ
+              ADENTRO y no en un consejo que se lee después: quien está por
+              rehacer no cierra la ventana, busca la tarjeta y vuelve. */}
+          {paso === "confirmar" && (
+            <>
+              <div className="flex items-start gap-3 rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/25 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3.5">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-[13px] font-bold text-amber-900 panel-oscuro:text-amber-200">
+                    Esto reemplaza el ebook que ya tenés
+                  </p>
+                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-amber-800 panel-oscuro:text-amber-300">
+                    No se guarda una copia. Se escribe otro desde cero con lo que contaste acá
+                    arriba, y el de ahora no se puede recuperar.
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
+                Qué se pierde
+              </p>
+              <ul className="mt-1.5 space-y-1 text-[12.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+                <li>
+                  El texto{escritos > 0 && (escritos === 1
+                    ? " del capítulo que ya está escrito"
+                    : ` de los ${escritos} capítulos que ya están escritos`)}, y todo lo que
+                  hayas corregido a mano.
+                </li>
+                <li>El temario, con los títulos que le hayas cambiado.</li>
+                <li>Las fotos que hayas elegido en cada capítulo.</li>
+              </ul>
+
+              <p className="mt-3.5 text-[12px] font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
+                Qué se queda
+              </p>
+              <ul className="mt-1.5 space-y-1 text-[12.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+                {/* ⚠️ La tapa se conserva a propósito, y por eso se dice. Si la
+                    subiste vos no está en ningún otro lado: tirarla sería
+                    perderte un archivo tuyo por apretar un botón que hablaba del
+                    texto. Ver el `tapa:` de la ruta que rehace. */}
+                <li>La foto de la tapa, la hayas buscado o subido vos. Después la podés cambiar.</li>
+                <li>Lo que elegiste acá arriba: el formato, el tema y el color.</li>
+                {producto.tieneArchivo && (
+                  <li>
+                    El PDF que está colgado del producto <strong>sigue estando</strong> mientras se
+                    escribe el nuevo. Recién lo reemplaza cuando el otro está armado.
+                  </li>
+                )}
+              </ul>
+
+              {producto.tieneArchivo && (
+                <a
+                  href={`/api/digitales/productos/${producto.id}/archivo`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  Bajar el que tengo ahora
+                </a>
+              )}
+
+              {/* Cuánto sale, con las palabras del cupo. El primero por ebook
+                  está incluido —lo decide el servidor mirando `reintentos`, no
+                  esta pantalla— y del segundo en adelante sale una generación. */}
+              <p className="mt-4 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/60 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+                {rehacerEsGratis
+                  ? "Este rehacer está incluido: no gasta ninguna generación. Del segundo en adelante sí."
+                  : "Este rehacer gasta una generación de tu cupo."}
+              </p>
+
+              {!rehacerEsGratis && <Cupo cupo={cupo} />}
+
+              {error && <Aviso>{error}</Aviso>}
+
+              <button
+                onClick={() => empezar(true)}
+                disabled={trabajando || temaCorto || frenaElCupo}
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                {trabajando ? "Armando el temario…" : "Sí, rehacerlo"}
+              </button>
+
+              <button
+                onClick={() => { setPaso("contar"); setError(null); }}
+                disabled={trabajando}
+                className="mt-2 w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                No, dejalo como está
+              </button>
             </>
           )}
 
