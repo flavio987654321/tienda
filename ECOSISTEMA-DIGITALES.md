@@ -2895,14 +2895,14 @@ sólo se ven en un ebook largo y ninguno lo hubiera encontrado una prueba corta:
     siempre y sin salida.
 - 🔲 **Formato infografía**: foto a sangre por hoja con el texto encima. Es el
   barato: **usa el texto que ya se genera, tal cual**.
-- 🔲 **Poder leer y corregir EL TEXTO antes de armar el PDF.** El temario ya se
-  puede corregir (abajo); lo escrito no. Hoy, si una frase no cierra, sólo se
-  puede rehacer entero. La competencia lo tiene y le falla.
-  - ⚠️ **No es el mismo editor otra vez.** Acá los topes son del molde del PDF y
-    no perdonan: un paso de receta son 160 caracteres, 8 pasos, 14 ingredientes.
-    Un campo libre deja que alguien arregle una frase y **rompa el PDF sin que
-    nada avise**, y se entere después de venderlo. Cada campo va con su tope y
-    su contador a la vista.
+- ✅ ~~**Poder leer y corregir EL TEXTO.**~~ HECHO el 09/09/26, para el ebook de
+  texto. Ver *El editor del texto* más abajo.
+  - 🔲 **Falta el del recetario.** Una receta no son párrafos: son campos, y los
+    topes son del molde del PDF y no perdonan —un paso son 160 caracteres, 8
+    pasos, 14 ingredientes—. Un campo libre deja que alguien arregle una frase y
+    **rompa el PDF sin que nada avise**, y se entere después de venderlo. Cada
+    campo va con su tope y su contador a la vista. Por eso el botón hoy no
+    aparece en un recetario, y la ruta lo dice con todas las letras.
 
 ### ✅ El editor del temario — HECHO (08/09/26)
 
@@ -2955,7 +2955,43 @@ acá— y **con el candado en la mano se vuelve a leer la fila**: entre el prime
 clic en el fondo, y hasta acá eso no tenía nada que perder. Usa la misma guarda
 del editor de la página de venta, que además tapa la barra lateral.
 
-Sigue faltando el editor **del texto**, que es otra cosa y está anotado arriba.
+### ✅ El editor del texto — HECHO (09/09/26)
+
+El segundo de los dos, del otro lado de la escritura. **La quinta ruta del ebook
+y la segunda que no gasta un peso**: acá no vuelve a escribir la IA, corrige la
+persona.
+
+Existe porque la ventana termina diciendo *"leelo antes de publicarlo, quien
+vende es quien responde por lo que dice"* — y hasta ayer, quien lo leía y
+encontraba una macana no tenía con qué arreglarla: el único botón era
+**Rehacerlo**, que tira el ebook entero y cobra otra generación por una palabra.
+
+**Lo que cuida, por orden de gravedad:**
+
+1. **No se puede guardar un capítulo con menos de `BLOQUES_MIN` pedazos.** Es la
+   regla con la que `leerCapitulos` descarta, y por eso el `3` dejó de estar
+   suelto adentro de `normalizarCapitulo`: guardar un capítulo corto no falla en
+   ningún lado, el capítulo **desaparece la próxima vez que se lee** y todo lo de
+   abajo se corre un lugar. Sale un PDF perfecto con el texto del 4 abajo del
+   título del 3. Es el mismo desastre que cuida el editor del temario, entrando
+   por la otra puerta — y por eso el botón de borrar **se apaga en el mínimo** en
+   vez de dejar borrar y avisar después.
+2. **Lo que la cadena escribió mientras alguien corregía no se borra.** El
+   editor abierto no frena nada del lado del servidor: lo que llega del navegador
+   pisa los primeros capítulos y los de abajo se mantienen tal cual.
+3. **Nada se descarta en silencio.** `normalizarCapitulo` sí lo hace, y ahí está
+   bien: del otro lado hay un modelo. Acá hay una persona que acaba de escribir
+   eso.
+4. **El PDF colgado del producto es el de antes.** Guardar baja el ebook de
+   `LISTO` a `COMPLETO` —que es lo que de verdad es, escrito y sin archivo— y el
+   editor lo rehace enseguida, con un solo botón. Si el armado falla, el texto ya
+   quedó guardado y se vuelve a la pantalla del avance, que es la que sabe
+   reintentarlo. **El archivo viejo no se borra**: hasta que esté el nuevo, quien
+   compre recibe ése. Un ebook con una falta de ortografía es mejor que un
+   producto cobrado sin nada que entregar.
+
+La prueba que resume todo es la de ida y vuelta (`TXT-J`/`TXT-K`): lo que el
+editor deja guardar, el lector lo lee **igual**, ni un pedazo ni un tipo cambian.
 
 ---
 
