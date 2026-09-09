@@ -291,6 +291,22 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
   check("TXT-AE", /rehace el PDF/.test(pantalla),
     "la pantalla avisa que el archivo se rehace con los cambios");
 
+  /* ⚠️ Que el texto NO viva adentro del editor. Si viviera, la vista previa de
+     al lado se enteraría de los cambios recién al guardar — o sea, cuando ya no
+     sirve mirarla. Es lo que hace que las dos columnas sirvan para algo. */
+  check("TXT-AM",
+    /onCapitulos\(/.test(pantalla) && !/useState<CapituloEscrito\[\]>/.test(pantalla),
+    "el texto vive arriba del editor, así la vista previa lo ve mientras se escribe");
+
+  const previa = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8");
+
+  /* ⚠️ Y que la previa NO tenga los colores escritos a mano. Salen de la misma
+     función que usa el PDF (`ebook-colores`): una copia se desincroniza de a
+     una, y ahí la previa muestra un verde y el archivo sale con otro. */
+  check("TXT-AN",
+    /coloresDelEbook\(/.test(previa) && !/#[0-9a-fA-F]{6}/.test(previa),
+    "la vista previa usa los colores del PDF, no una copia");
+
   const alrededor = readFileSync("src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");
 
   /* Que se arme el PDF después de guardar, y no se deje para nunca.
@@ -329,21 +345,28 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
 /* ── La página para mirarlo ───────────────────────────────────────────────── */
 
 {
-  /* ⚠️ Que la prueba NO se pueda abrir en producción. Es una pantalla con un
-     ebook inventado adentro: no muestra datos de nadie, pero una dirección
-     nuestra que dibuja un producto que no existe no tiene por qué existir
-     afuera. El candado es una línea y se puede borrar sin querer. */
-  const prueba = readFileSync("src/app/digitales/productos/prueba-editor/page.tsx", "utf8");
+  /* ⚠️ Que el ejemplo NO exista en producción, ni la tarjeta ni el editor. Es
+     un producto inventado: no muestra datos de nadie, pero una tarjeta falsa
+     arriba de los productos de verdad de alguien sería lo peor que puede pasar
+     en esta pantalla. Los dos candados son una línea cada uno. */
+  const paginaDelEbook = readFileSync("src/app/digitales/productos/[id]/ebook/page.tsx", "utf8");
   check("TXT-AI",
-    /process\.env\.NODE_ENV !== "development"/.test(prueba) && /notFound\(\)/.test(prueba),
-    "la pantalla de prueba del editor sólo se abre en desarrollo");
+    /process\.env\.NODE_ENV === "development" && id === ID_DEL_EJEMPLO/.test(paginaDelEbook),
+    "el editor de ejemplo sólo se abre en desarrollo");
 
-  /* Y que siga sin tocar la base: el día que lea algo de verdad, el candado de
-     arriba deja de alcanzar y hay que pedir sesión. */
-  const dibujo = readFileSync("src/app/digitales/productos/prueba-editor/PruebaEditor.tsx", "utf8");
+  const lista = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
   check("TXT-AJ",
-    !/prisma\.|fetch\(|getCurrentUser\(/.test(dibujo),
-    "la prueba no lee la base ni le pega a ninguna ruta: el ebook está escrito adentro");
+    /process\.env\.NODE_ENV === "development" && \(/.test(lista)
+    && /PRODUCTO_DE_EJEMPLO/.test(lista),
+    "la tarjeta de ejemplo sólo se dibuja en desarrollo");
+
+  /* Y que el ejemplo no le pegue a la base con un id que no existe. */
+  const alrededorDelEditor = readFileSync(
+    "src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");
+  check("TXT-AJ2",
+    alrededorDelEditor.indexOf("if (deMentira)") <
+      alrededorDelEditor.indexOf('pedir("/api/digitales/ia/ebook/texto"'),
+    "el ejemplo se corta antes de guardar: no le pega a la base");
 }
 
 /* ── Los nombres ──────────────────────────────────────────────────────────── */

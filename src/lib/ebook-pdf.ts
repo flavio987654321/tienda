@@ -2,6 +2,12 @@ import path from "path";
 import PDFDocument from "pdfkit";
 import { INGREDIENTES_MAX, PASOS_MAX, type Bloque, type CapituloEscrito, type Receta } from "@/lib/ebook-ia";
 import type { FotoDelEbook } from "@/lib/fotos-pexels";
+/* Los colores salieron de acá el 09/09/26 para que la vista previa del editor
+   los pueda usar sin arrastrar pdfkit al navegador. Ver `ebook-colores`. */
+import {
+  TAPA_DE_FABRICA, coloresDelEbook,
+  type ColoresDeTapa, type ColoresDelEbook, type ModoDelEbook,
+} from "@/lib/ebook-colores";
 
 /**
  * De los capítulos escritos al PDF que se entrega.
@@ -217,165 +223,27 @@ export function soloLoQueEntra(texto: string): string {
 /* ── Los colores ────────────────────────────────────────────────────────── */
 
 /**
- * Lo único que el PDF necesita de una `Paleta`.
+ * Los colores viven en , que no importa nada.
  *
- * Se define acá y no se importa `Paleta` de `pagina-venta` a propósito: aquel
- * archivo es enorme y trae sus secciones, estilos y tipografías. Con los cuatro
- * colores que se dibujan alcanza, y quien llama le pasa los que ya tiene.
+ * ⚠️ Salieron de acá el 09/09/26 y NO fue por orden: la vista previa del editor
+ * pinta el mismo ebook en el navegador, y este archivo importa pdfkit. La otra
+ * salida era escribir los colores otra vez allá — dos copias de una regla que
+ * se desincronizan de a una, con la previa mostrando un verde y el archivo
+ * saliendo con otro. Ver el encabezado de aquel archivo.
+ *
+ * Se vuelven a exportar desde acá porque quien dibuja el PDF los pide a este
+ * archivo desde antes, y su prueba también.
  */
-export type ColoresDeTapa = {
-  /** El texto oscuro. */
-  tinta: string;
-  /** El color fuerte de la marca. */
-  acento: string;
-  /** El texto que va ARRIBA del acento. Viene con el contraste ya verificado. */
-  sobreAcento: string;
-  /** El tinte clarito, para los recuadros. */
-  suave: string;
-  /**
-   * El acento para fondo oscuro, y su texto encima.
-   *
-   * ⚠️ Las paletas del proyecto YA TRAEN este par (`acentoOscuro` /
-   * `sobreAcentoOscuro`) y está elegido a mano para el modo oscuro del panel.
-   * Un color elegido por una persona le gana siempre al que calcula
-   * `acentoQueSeVe`, que aclara a ciegas y puede sacar un pastel lavado.
-   *
-   * Opcionales porque la paleta de fábrica no los tiene. Sin ellos se cae al
-   * cálculo, que para eso está.
-   */
-  acentoOscuro?: string;
-  sobreAcentoOscuro?: string;
-};
+export {
+  TAPA_DE_FABRICA, contraste, acentoQueSeVe, coloresDelEbook,
+} from "@/lib/ebook-colores";
+export type { ColoresDeTapa, ModoDelEbook } from "@/lib/ebook-colores";
 
-/** Cuando el producto todavía no tiene página de venta. Gris, sobrio, imprimible. */
-const TAPA_DE_FABRICA: ColoresDeTapa = {
-  tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", suave: "#e9eaeb",
-};
+type Tema = ColoresDelEbook & Letras;
 
-/** Claro es una hoja de papel; oscuro es una revista. Los dos con la marca. */
-export type ModoDelEbook = "claro" | "oscuro";
-
-type Tema = {
-  modo: ModoDelEbook;
-  fondo: string;
-  tinta: string;
-  /** El texto de segunda: bajadas, encabezados, créditos. */
-  suave: string;
-  /** El relleno de los recuadros. */
-  caja: string;
-  acento: string;
-  sobreAcento: string;
-} & Letras;
-
-function canales(hex: string): [number, number, number] {
-  const limpio = hex.replace("#", "").trim();
-  const corto = limpio.length === 3;
-  const leer = (i: number) =>
-    parseInt(corto ? limpio[i].repeat(2) : limpio.slice(i * 2, i * 2 + 2), 16) || 0;
-  return [leer(0), leer(1), leer(2)];
-}
-
-function aHex(r: number, g: number, b: number): string {
-  const dos = (n: number) =>
-    Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
-  return `#${dos(r)}${dos(g)}${dos(b)}`;
-}
-
-/** La luminancia de la norma de accesibilidad. 0 es negro, 1 es blanco. */
-function luz(hex: string): number {
-  const [r, g, b] = canales(hex).map((c) => {
-    const v = c / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-/** Cuánto se distinguen dos colores. 1 es indistinguible, 21 es negro sobre blanco. */
-export function contraste(a: string, b: string): number {
-  const la = luz(a);
-  const lb = luz(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
-
-function mezclar(a: string, b: string, cuanto: number): string {
-  const [r1, g1, b1] = canales(a);
-  const [r2, g2, b2] = canales(b);
-  return aHex(r1 + (r2 - r1) * cuanto, g1 + (g2 - g1) * cuanto, b1 + (b2 - b1) * cuanto);
-}
-
-/**
- * El acento, corrido hasta que se vea contra el fondo de la hoja.
- *
- * ══════════════════════════════════════════════════════════════════════════
- * ⚠️ SIN ESTO EL TEMA OSCURO PIERDE MEDIO EBOOK
- * ══════════════════════════════════════════════════════════════════════════
- *
- * Las seis paletas están pensadas para una página de venta **de fondo claro**,
- * así que varias tienen un acento bien oscuro —un azul noche, un bordó—. Ese
- * mismo color sobre el fondo casi negro del tema oscuro desaparece: el número
- * del capítulo, las rayas y los títulos de los recuadros quedan invisibles en
- * un archivo que ya se vendió.
- *
- * Acá se lo aclara —o se lo oscurece, en el tema claro— hasta que se despegue
- * del fondo. Y si hubo que tocarlo, **el texto que va encima se recalcula**:
- * el `sobreAcento` de la paleta estaba verificado contra el acento original, y
- * ese par deja de valer apenas se corre el color.
- */
-export function acentoQueSeVe(
-  acento: string, sobreAcento: string, fondo: string,
-): { acento: string; sobreAcento: string } {
-  const hacia = luz(fondo) > 0.5 ? "#000000" : "#ffffff";
-  let usado = acento;
-
-  /* 3 es el escalón de la norma para texto grande y para lo que no es texto.
-     Alcanza: el acento se usa en números grandes, rayas y franjas, nunca en un
-     párrafo. */
-  for (let paso = 0; paso < 12 && contraste(usado, fondo) < 3.2; paso++) {
-    usado = mezclar(usado, hacia, 0.12);
-  }
-
-  if (usado === acento) return { acento, sobreAcento };
-
-  /* Se corrió: el par de la paleta ya no aplica. Blanco o negro, el que se lea
-     mejor sobre el color nuevo. */
-  return {
-    acento: usado,
-    sobreAcento:
-      contraste(usado, "#ffffff") >= contraste(usado, "#111111") ? "#ffffff" : "#111111",
-  };
-}
-
+/** Los colores del ebook más las letras con las que se dibuja. */
 export function armarTema(paleta: ColoresDeTapa, modo: ModoDelEbook, letras: Letras): Tema {
-  if (modo === "oscuro") {
-    const fondo = "#14120F";
-    /* Primero el par que la paleta ya trae para fondo oscuro; el cálculo queda
-       de red, por si ese par tampoco alcanzara contra este fondo o por si la
-       paleta no lo tiene. */
-    return {
-      modo, fondo,
-      tinta: "#F6F1E9",
-      suave: "#B0A597",
-      caja: "#211D18",
-      ...acentoQueSeVe(
-        paleta.acentoOscuro ?? paleta.acento,
-        paleta.sobreAcentoOscuro ?? paleta.sobreAcento,
-        fondo,
-      ),
-      ...letras,
-    };
-  }
-
-  /* Blanco cálido y no blanco puro: en pantalla el blanco puro deslumbra, y el
-     papel de un libro nunca es blanco. */
-  const fondo = "#FCFAF7";
-  return {
-    modo, fondo,
-    tinta: paleta.tinta,
-    suave: mezclar(paleta.tinta, fondo, 0.42),
-    caja: paleta.suave,
-    ...acentoQueSeVe(paleta.acento, paleta.sobreAcento, fondo),
-    ...letras,
-  };
+  return { ...coloresDelEbook(paleta, modo), ...letras };
 }
 
 /* ── El armado ──────────────────────────────────────────────────────────── */

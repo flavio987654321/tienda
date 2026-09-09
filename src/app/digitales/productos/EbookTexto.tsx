@@ -43,46 +43,66 @@ import { revisarTexto, COMO_SE_LLAMA_EL_BLOQUE } from "@/lib/ebook-texto";
  * decidir si está bien escrito. Los saltos de línea se sacan solos, que es
  * justo lo que hace `limpiarTexto` del otro lado — un bloque es un párrafo.
  */
+/**
+ * ⚠️ EL TEXTO NO VIVE ACÁ ADENTRO, Y ESO ES A PROPÓSITO.
+ *
+ * Lo tuvo un rato, mientras el editor era una ventanita solo. Ahora al lado hay
+ * una **vista previa que se dibuja mientras se escribe**, y para eso el texto
+ * tiene que estar arriba: si viviera acá, la previa no se enteraría de nada
+ * hasta guardar, que es justo cuando ya no sirve mirarla.
+ *
+ * Así que esto recibe lo que hay y avisa lo que cambió. `guardados` es lo que
+ * está en la base —contra eso se compara para saber si hay algo sin guardar— y
+ * `capitulos` es lo que se está escribiendo ahora.
+ */
 export default function EbookTexto({
-  inicial,
+  guardados,
+  capitulos,
+  onCapitulos,
+  total,
   guardando,
   error,
   onCambio,
   onGuardar,
   onVolver,
 }: {
-  inicial: { titulo: string; capitulos: CapituloEscrito[]; total: number };
+  /** Lo que está guardado en la base. Es contra lo que se mide si cambió algo. */
+  guardados: CapituloEscrito[];
+  /** Lo que se está escribiendo ahora. */
+  capitulos: CapituloEscrito[];
+  onCapitulos: (capitulos: CapituloEscrito[]) => void;
+  /** Cuántos capítulos tiene el ebook entero, escritos o no. */
+  total: number;
   guardando: boolean;
   error: string | null;
-  /** Avisa hacia arriba si hay algo escrito a mano que se perdería al cerrar. */
+  /** Avisa hacia arriba si hay algo escrito a mano que se perdería al salir. */
   onCambio: (hay: boolean) => void;
   onGuardar: (capitulos: CapituloEscrito[]) => void;
   onVolver: () => void;
 }) {
-  const [capitulos, setCapitulos] = useState<CapituloEscrito[]>(inicial.capitulos);
   /* Cuál está abierto. Arranca en el primero: abrir el editor y ver una lista
      de títulos cerrados no dice que adentro hay texto para corregir. */
   const [abierto, setAbierto] = useState<number | null>(0);
 
   /* La misma revisión que hace el servidor, con el mismo mensaje. */
-  const revision = revisarTexto({ capitulos }, { capitulos: inicial.capitulos });
+  const revision = revisarTexto({ capitulos }, { capitulos: guardados });
   const falta = revision.ok ? null : revision.error;
 
   /* Se compara el resultado LIMADO contra lo guardado: así un espacio de más al
      final no cuenta como un cambio y no dispara un guardado al pedo. */
   const cambiado =
-    revision.ok && JSON.stringify(revision.capitulos) !== JSON.stringify(inicial.capitulos);
+    revision.ok && JSON.stringify(revision.capitulos) !== JSON.stringify(guardados);
 
-  /* Se avisa hacia arriba, que es donde está el botón de cerrar. Dos efectos y
+  /* Se avisa hacia arriba, que es donde está el botón de salir. Dos efectos y
      no uno: la limpieza del segundo corre SÓLO al desmontarse. */
   useEffect(() => { onCambio(cambiado); }, [cambiado, onCambio]);
   useEffect(() => () => onCambio(false), [onCambio]);
 
   const cambiarTitulo = (i: number, valor: string) =>
-    setCapitulos((cs) => cs.map((c, j) => (j === i ? { ...c, titulo: valor } : c)));
+    onCapitulos(capitulos.map((c, j) => (j === i ? { ...c, titulo: valor } : c)));
 
   const tocarBloques = (i: number, f: (bs: Bloque[]) => Bloque[]) =>
-    setCapitulos((cs) => cs.map((c, j) => (j === i ? { ...c, bloques: f(c.bloques) } : c)));
+    onCapitulos(capitulos.map((c, j) => (j === i ? { ...c, bloques: f(c.bloques) } : c)));
 
   const cambiarBloque = (i: number, k: number, campo: "tipo" | "texto", valor: string) =>
     tocarBloques(i, (bs) => bs.map((b, j) => (j === k ? { ...b, [campo]: valor } : b)));
@@ -110,18 +130,11 @@ export default function EbookTexto({
 
   /* Cuántos capítulos del ebook están escritos. Si faltan, se dice: alguien que
      entra a corregir tiene que saber que abajo todavía viene más. */
-  const faltan = Math.max(0, inicial.total - capitulos.length);
+  const faltan = Math.max(0, total - capitulos.length);
 
   return (
     <>
-      {/* Cuál ebook se está corrigiendo. La ventana tapa la pantalla entera y
-          el nombre del producto queda atrás: sin esto, quien tiene tres
-          productos abiertos en el día no sabe en cuál está escribiendo. */}
-      <p className="text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100 break-words">
-        {inicial.titulo}
-      </p>
-
-      <p className="mt-1.5 text-[13px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+      <p className="text-[13px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
         Este es el texto tal como salió. Corregí lo que quieras —{" "}
         <strong>no gasta ninguna generación</strong>: acá no vuelve a escribir la IA, lo
         cambiás vos.

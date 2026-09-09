@@ -27,6 +27,9 @@ import EmbudoIA from "./EmbudoIA";
 import FichaIA from "./FichaIA";
 import EbookIA from "./EbookIA";
 import CampoAuto from "@/components/CampoAuto";
+/* El producto de ejemplo, para mirar la tarjeta terminada sin tener una. Se
+   dibuja detrás de `NODE_ENV`, así que no viaja al build. */
+import { PRODUCTO_DE_EJEMPLO } from "./ejemploDeTarjeta";
 
 export type ProductoEnPantalla = {
   id: string;
@@ -1092,6 +1095,20 @@ export default function ProductosClient({
     hijosDe,
   };
 
+  /* Las acciones del ejemplo: ninguna hace nada. No es prolijidad — la tarjeta
+     de arriba tiene "Borrar" y "Publicar", y esos le pegarían a la base con un
+     id que no existe. Ver dónde se dibuja, más abajo. */
+  const accDeEjemplo: Acciones = {
+    ...acc,
+    setBorrador: () => {},
+    publicar: () => {},
+    borrar: () => {},
+    subirArchivo: () => {},
+    abrirEbook: () => {},
+    pedirFicha: () => {},
+    hijosDe: () => [],
+  };
+
   const topePrincipales = topeDe(tier, "PRINCIPAL");
   const llegoAlTope = principales.length >= topePrincipales;
 
@@ -1392,6 +1409,35 @@ export default function ProductosClient({
       {error && (
         <div className="rounded-2xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-5 py-4">
           <p className="text-sm font-medium text-red-700 panel-oscuro:text-red-300">{error}</p>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          UN PRODUCTO DE EJEMPLO, CON SU EBOOK YA HECHO — SÓLO EN DESARROLLO
+          ══════════════════════════════════════════════════════════════════════
+
+          Para ver cómo queda la tarjeta de un producto TERMINADO hay que tener
+          uno, y tenerlo cuesta una generación de IA contra la base de
+          producción. El otro camino era peor: meter un producto falso en esa
+          base, que queda ahí hasta que alguien se acuerde de borrarlo.
+
+          Así que se dibuja con la MISMA tarjeta que los de verdad, arriba de la
+          lista, y no toca nada: las acciones que le llegan no hacen nada. El
+          único botón que anda es "Editar el contenido", y ése abre el editor de
+          verdad con un ebook inventado — o sea que los pasos que se prueban son
+          los pasos que hay. Ver `ejemploDeTarjeta`.
+
+          `process.env.NODE_ENV` lo resuelve el compilador, así que en el build
+          de producción este bloque no existe. */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="mb-8 rounded-3xl border-2 border-dashed border-amber-300 panel-oscuro:border-amber-500/40 bg-amber-50/60 panel-oscuro:bg-amber-500/5 p-3 sm:p-4">
+          <p className="mb-3 text-[11.5px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
+            <strong>Ejemplo, sólo en desarrollo.</strong> Así se ve un producto con el
+            ebook terminado. Los botones no hacen nada, salvo{" "}
+            <strong>Editar el contenido</strong>, que abre el editor de verdad con un
+            ebook inventado.
+          </p>
+          <Tarjeta p={PRODUCTO_DE_EJEMPLO} acc={accDeEjemplo} />
         </div>
       )}
 

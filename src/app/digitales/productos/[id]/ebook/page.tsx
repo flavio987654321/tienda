@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { leerIndice, leerCapitulos } from "@/lib/ebook-ia";
+import { leerIndice, leerCapitulos, leerPromesa } from "@/lib/ebook-ia";
 import { leerOpciones, COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTexto } from "@/lib/ebook-texto";
+import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
+import { PALETAS } from "@/lib/pagina-venta";
 import BotonVolver from "../../../BotonVolver";
 import EditorDeEbook from "./EditorClient";
+import { ID_DEL_EJEMPLO, PRODUCTO_DE_EJEMPLO } from "../../ejemploDeTarjeta";
+import { CAPITULOS_DE_EJEMPLO } from "../../ejemploDeEbook";
 
 export const dynamic = "force-dynamic";
 
@@ -55,12 +59,51 @@ export default async function EditorDeEbookPage({ params }: Props) {
 
   const { id } = await params;
 
+  /* ── El ejemplo ───────────────────────────────────────────────────────────
+     Entra por ACÁ y no por una dirección aparte, y eso es todo el punto: los
+     pasos que se prueban son los de verdad —tarjeta, "Editar el contenido",
+     editor— y no una imitación que puede quedar vieja.
+
+     ⚠️ Detrás de `NODE_ENV`, así que en producción esta rama no existe y el id
+     cae en la consulta de abajo, que no lo va a encontrar. Y no lee nada: el
+     ebook está escrito en `ejemploDeEbook`. Ver `ejemploDeTarjeta`. */
+  if (process.env.NODE_ENV === "development" && id === ID_DEL_EJEMPLO) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <BotonVolver href="/digitales/productos">Volver a productos</BotonVolver>
+        <p className="mb-4 max-w-2xl rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
+          <strong>Ejemplo, sólo en desarrollo.</strong> El ebook está inventado en el
+          código: no toca la base, no gasta cupo y guardar no manda nada a ningún lado.
+        </p>
+        <EditorDeEbook
+          productoId={ID_DEL_EJEMPLO}
+          producto={PRODUCTO_DE_EJEMPLO.name}
+          titulo={PRODUCTO_DE_EJEMPLO.ebook?.titulo ?? ""}
+          promesa="Cómo pasar de tener algo para enseñar a la primera venta cobrada, sin público y sin publicidad."
+          autor="Tu tienda"
+          capitulos={CAPITULOS_DE_EJEMPLO}
+          total={CAPITULOS_DE_EJEMPLO.length}
+          paleta={PALETAS[0]}
+          modo="claro"
+          /* ⚠️ Lo único que cambia respecto de un ebook de verdad: no guarda.
+             Sin esto, el ejemplo le pegaría a la ruta con un id que no existe y
+             la respuesta sería un 404 que no explica nada. */
+          deMentira
+        />
+      </div>
+    );
+  }
+
   /* El dueño adentro del `where`, igual que en la ruta que guarda. */
   const fila = await prisma.product.findFirst({
     where: { id, deletedAt: null, store: { ownerId: user.id } },
     select: {
       id: true,
       name: true,
+      /* Para la vista previa: la tapa sale con LOS COLORES DE LA PERSONA, los
+         mismos que va a usar el armado. Se leen igual que en `/armar`. */
+      paginaVenta: true,
+      store: { select: { name: true } },
       ebookIA: { select: { estado: true, titulo: true, indice: true, capitulos: true } },
     },
   });
@@ -85,8 +128,21 @@ export default async function EditorDeEbookPage({ params }: Props) {
           productoId={fila.id}
           producto={fila.name}
           titulo={fila.ebookIA.titulo}
+          /* La promesa de la tapa, la que escribió el modelo para vender. Vacía
+             en los ebooks guardados antes del 07/09/26. Ver `leerPromesa`. */
+          promesa={leerPromesa(fila.ebookIA.indice)}
+          /* Quién lo vende: el ebook es de esa persona, no nuestro. */
+          autor={fila.store?.name ?? ""}
           capitulos={capitulos}
           total={leerIndice(fila.ebookIA.indice).length}
+          /* ⚠️ La misma cuenta que hace `/armar`: manda lo que eligió para el
+             ebook y, si no eligió nada, la paleta de su página de venta. Si
+             fueran distintas, la previa mostraría una tapa y el archivo saldría
+             con otra. */
+          paleta={buscarPaleta(
+            opciones.paleta || normalizarContenido(fila.paginaVenta).paleta,
+          )}
+          modo={opciones.tema}
         />
       ) : (
         <div className="max-w-2xl rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-5">
