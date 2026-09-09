@@ -8,6 +8,7 @@ import { Seccion, BotonGuardar, Etiqueta, Ayuda, CLASE_INPUT } from "./piezas";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import { COMISION_DIGITAL, TRANSFERENCIA_DIGITAL } from "@/lib/planLimits";
 import { LARGO_TITULAR, LARGO_ALIAS, LARGO_BANCO, LARGO_INSTRUCCIONES } from "@/lib/datos-bancarios";
+import CampoAuto from "@/components/CampoAuto";
 
 export type DatosTransferencia = {
   enabled: boolean;
@@ -205,13 +206,17 @@ export default function TabPagos({
 
             <div className="mb-4">
               <Etiqueta htmlFor="titular">Titular de la cuenta</Etiqueta>
-              <input
+              {/* ⚠️ `CampoAuto`: 120 caracteres, y el nombre del titular de una
+                  cuenta suele ser el nombre completo con dos apellidos. Un input
+                  no puede pasar a renglón nuevo y en 360 se veía la mitad — en un
+                  campo donde una letra de más es una transferencia que rebota. */}
+              <CampoAuto
                 id="titular"
                 value={tr.titular}
                 maxLength={LARGO_TITULAR}
-                onChange={(e) => campo("titular", e.target.value)}
+                onChange={(v) => campo("titular", v)}
                 placeholder="Juan Pérez"
-                className={CLASE_INPUT}
+                estilo={CLASE_INPUT}
               />
               <Ayuda>
                 Es el nombre que ve en su homebanking quien te transfiere. Si no coincide, no manda
@@ -248,13 +253,13 @@ export default function TabPagos({
 
             <div className="mb-4">
               <Etiqueta htmlFor="banco" opcional>Banco o billetera</Etiqueta>
-              <input
+              <CampoAuto
                 id="banco"
                 value={tr.banco}
                 maxLength={LARGO_BANCO}
-                onChange={(e) => campo("banco", e.target.value)}
+                onChange={(v) => campo("banco", v)}
                 placeholder="Mercado Pago"
-                className={CLASE_INPUT}
+                estilo={CLASE_INPUT}
               />
             </div>
 

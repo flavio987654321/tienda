@@ -12,6 +12,7 @@ import {
   SLUG_MAXIMO,
 } from "@/lib/configuracion-digital";
 import { TEMAS, COPY_TEMA, type Tema } from "@/lib/tema-digitales";
+import CampoAuto from "@/components/CampoAuto";
 
 /** El tope real de `/api/upload`: lo pone la plataforma, no nosotros. */
 export const MAX_LOGO_MB = 4;
@@ -134,13 +135,16 @@ export default function TabGeneral(p: Props) {
 
         <div className="mb-4">
           <Etiqueta htmlFor="nombre">Nombre</Etiqueta>
-          <input
+          {/* ⚠️ `CampoAuto` y no un `<input>`: un input no puede pasar a renglón
+              nuevo, así que un nombre largo se corría hacia la derecha y en 360
+              no se veía el principio. Ver el porqué largo en el componente. */}
+          <CampoAuto
             id="nombre"
             value={p.nom}
             maxLength={LARGO_NOMBRE}
-            onChange={(e) => p.setNom(e.target.value)}
+            onChange={p.setNom}
             placeholder="Mis guías de mecánica"
-            className={CLASE_INPUT}
+            estilo={CLASE_INPUT}
           />
           <Ayuda>Se muestra en tu página de venta y en los mails que recibe quien te compra.</Ayuda>
           {p.problemaNombre && (
@@ -156,13 +160,13 @@ export default function TabGeneral(p: Props) {
             muestra siempre cuál va a quedar: un campo vacío no dice nada. */}
         <div className="mb-4">
           <Etiqueta htmlFor="checkout" opcional>Nombre en el checkout</Etiqueta>
-          <input
+          <CampoAuto
             id="checkout"
             value={p.checkout}
             maxLength={LARGO_CHECKOUT}
-            onChange={(e) => p.setCheckout(e.target.value)}
+            onChange={p.setCheckout}
             placeholder={p.nombreOriginal || "Mis guías"}
-            className={CLASE_INPUT}
+            estilo={CLASE_INPUT}
           />
           <Ayuda>
             Es el nombre que ve quien te compra mientras paga y en la página de descarga. No cambia
@@ -185,13 +189,21 @@ export default function TabGeneral(p: Props) {
             <span className="shrink-0 hidden sm:flex items-center px-3 bg-gray-50 panel-oscuro:bg-gray-800/50 border-r border-gray-200 panel-oscuro:border-gray-700 text-xs font-mono text-gray-500 panel-oscuro:text-gray-400">
               {p.base.replace(/^https?:\/\//, "")}/tienda/
             </span>
-            <input
+            {/* Mismo caso que la dirección del producto: son 40 caracteres con
+                el prefijo comiéndole lugar al lado, así que se corría. Y con las
+                mañas del teclado del teléfono puestas — en una dirección web no
+                se quiere ni mayúscula automática ni corrector. */}
+            <CampoAuto
               id="dir"
               value={p.dir}
               maxLength={SLUG_MAXIMO}
-              onChange={(e) => p.setDir(e.target.value)}
+              onChange={p.setDir}
               placeholder="mis-guias"
-              className="flex-1 min-w-0 px-4 py-3 text-sm text-gray-900 panel-oscuro:text-gray-100 outline-none"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              estilo="px-4 py-3 text-sm text-gray-900 panel-oscuro:text-gray-100 outline-none bg-transparent"
+              className="flex-1 min-w-0"
             />
           </div>
           {/* Se muestra cómo va a quedar de verdad: la dirección se normaliza al
@@ -292,13 +304,15 @@ export default function TabGeneral(p: Props) {
 
         <div className="mb-4">
           <Etiqueta htmlFor="iaprod">Producto principal</Etiqueta>
-          <input
+          {/* Éste es el que más lo necesitaba de la pantalla: 120 caracteres, y
+              el ejemplo de abajo ya no entra en un renglón. */}
+          <CampoAuto
             id="iaprod"
             value={p.iaProd}
             maxLength={LARGO_IA_PRODUCTO}
-            onChange={(e) => p.setIaProd(e.target.value)}
+            onChange={p.setIaProd}
             placeholder="Mecánica del automotor — Guía práctica para entender y cuidar tu vehículo"
-            className={CLASE_INPUT}
+            estilo={CLASE_INPUT}
           />
           <Ayuda>Qué vendés hoy. La IA entiende cualquier palabra ambigua dentro de este tema.</Ayuda>
         </div>

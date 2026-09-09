@@ -15,6 +15,7 @@ import {
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import EscribirConIA from "./EscribirConIA";
+import CampoAuto from "@/components/CampoAuto";
 
 /**
  * El editor de la página de venta.
@@ -109,13 +110,23 @@ function CasillaTexto({
           className={`${comun} resize-y`}
         />
       ) : (
-        <input
-          type="text"
+        /* ⚠️ `CampoAuto` y no un `<input>`, y acá el cambio vale por muchos: esta
+           pieza dibuja TODOS los campos de una línea del editor —el título de
+           cada sección, los subtítulos, el texto de cada ítem de la lista de
+           beneficios, cada pregunta frecuente—. Son decenas de campos con un
+           solo elemento.
+
+           Un input no puede pasar a renglón nuevo: el texto se corría hacia la
+           derecha y en 360 no se veía ni la mitad de un título. Y acá pesa más
+           que en ningún otro lado, porque lo que se escribe en estos campos ES
+           la página que se vende: hay que poder leerla entera mientras se
+           escribe. Sigue siendo un valor de una línea. */
+        <CampoAuto
           value={valor}
           maxLength={campo.largo}
           placeholder={campo.ejemplo}
-          onChange={(e) => onChange(e.target.value)}
-          className={comun}
+          onChange={onChange}
+          estilo={comun}
         />
       )}
       {campo.ayuda && (

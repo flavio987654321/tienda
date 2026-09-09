@@ -1458,14 +1458,27 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
      dominio comiéndole lugar al lado) y el dominio propio (253, el peor de
      todos).
 
-     ⚠️ Los que NO se tocaron y es a propósito: precios, correos y códigos de
-     medición siguen con el input nativo. Ahí importa más el teclado que abre el
-     teléfono que el desborde, y esos valores no son largos. */
+     ⚠️ Los que NO se tocaron y es a propósito: **precios, correos, CBU, alias y
+     códigos de medición siguen con el input nativo.** Ahí el input aporta cosas
+     que un `<textarea>` no tiene —`type="email"` valida solo, `inputMode` abre
+     el teclado que corresponde en el teléfono— y esos valores no son largos, así
+     que no había desborde que arreglar. Cambiarlos sería perder algo a cambio de
+     nada. */
   for (const [archivo, cuantos] of [
     ["src/app/digitales/productos/ProductosClient.tsx", 1],
     ["src/app/digitales/productos/FichaIA.tsx", 1],
     ["src/app/digitales/productos/[id]/direccion/DireccionClient.tsx", 1],
     ["src/app/digitales/productos/[id]/direccion/DominioPropio.tsx", 1],
+    /* `CasillaTexto` dibuja TODOS los campos de una línea del editor —el título
+       de cada sección, los subtítulos, cada ítem de la lista de beneficios, cada
+       pregunta frecuente—: son decenas de campos con un solo elemento. */
+    ["src/app/digitales/productos/[id]/pagina/EditorClient.tsx", 1],
+    /* Nombre de la marca, nombre en el checkout, dirección de la tienda y el
+       producto principal que lee la IA. */
+    ["src/app/digitales/configuracion/TabGeneral.tsx", 4],
+    /* Titular de la cuenta y banco. Una letra de más en el titular es una
+       transferencia que rebota, así que hay que poder leerlo entero. */
+    ["src/app/digitales/configuracion/TabPagos.tsx", 2],
   ] as const) {
     const src = readFileSync(archivo, "utf8");
     chequear(`${archivo.split("/").pop()} usa CampoAuto en su campo largo`,
