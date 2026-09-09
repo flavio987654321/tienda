@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function DashboardError({
@@ -11,6 +12,11 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
+    /* ⚠️ A Sentry, no sólo a la consola. Un `console.error` vive en el navegador
+       de quien tuvo el problema: nosotros no lo vemos nunca, así que esta
+       pantalla aparecía y de este lado no pasaba nada. Encontrado en la
+       auditoría del 09/09/26. */
+    Sentry.captureException(error);
     console.error("[dashboard error]", error);
   }, [error]);
 

@@ -1,9 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AlertTriangle } from "lucide-react";
 
-export default function MetricasError() {
+/**
+ * ⚠️ ESTA PANTALLA NO RECIBÍA EL ERROR, así que no lo podía contar.
+ *
+ * Un `error.tsx` de Next recibe `{ error, reset }`. Éste no declaraba ninguno de
+ * los dos: dibujaba el cartel y listo, o sea que una métrica que se rompía se
+ * veía como "no se pudieron cargar" y **de este lado no quedaba ningún rastro**.
+ * Encontrado en la auditoría del 09/09/26.
+ */
+export default function MetricasError({ error }: { error: Error & { digest?: string } }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+    console.error("[metricas] error:", error);
+  }, [error]);
+
   return (
     <DashboardLayout>
       <div className="mx-auto w-full max-w-6xl">

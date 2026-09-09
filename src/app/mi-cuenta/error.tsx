@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { AlertCircle, RefreshCw, ShoppingBag } from "lucide-react";
 
@@ -12,6 +13,10 @@ export default function MiCuentaError({
   reset: () => void;
 }) {
   useEffect(() => {
+    /* ⚠️ A Sentry, no sólo a la consola: un `console.error` vive en el navegador
+       de quien tuvo el problema y de este lado no se ve nunca. Ver el comentario
+       largo en `app/global-error.tsx`. */
+    Sentry.captureException(error);
     console.error("[mi-cuenta] error:", error);
   }, [error]);
 
