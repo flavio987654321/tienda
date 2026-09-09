@@ -600,11 +600,40 @@ function portadilla(
   const ALTO_FOTO = 350;
   const puesta = foto ? fotoCubriendo(doc, foto, 0, 0, HOJA.ancho, ALTO_FOTO) : false;
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ EL NÚMERO VA ARRIBA DE LA FOTO, Y UNA FOTO PUEDE SER DE CUALQUIER COLOR
+     ══════════════════════════════════════════════════════════════════════════
+
+     El "07" se dibuja en el color de acento, apoyado en el borde de abajo de la
+     banda. Sobre una foto clara con un acento claro —o al revés— desaparece: se
+     lee "0" y media panza del 7, o directamente nada.
+
+     Antes había un solo degradado, de 130 puntos, que terminaba de tapar recién
+     en el borde. El número arranca 88 puntos más arriba, o sea que su mitad de
+     arriba caía sobre una foto tapada apenas un tercio. Con una foto tranquila
+     no se notaba; con una de contraste alto, el número se perdía adentro de un
+     archivo que se vende.
+
+     Ahora son dos cosas:
+
+       · El degradado ARRANCA MÁS ARRIBA (190 en vez de 130) y termina de tapar
+         ANTES de donde empieza el número.
+       · Y de ahí para abajo va papel liso.
+
+     O sea que el número nunca se apoya sobre la foto: se apoya sobre el papel,
+     y la foto se disuelve antes de llegar. La transición sigue siendo suave —de
+     eso se trataba el degradado— y encima es más larga que antes. */
+  const ALTO_NUMERO = 96;
+
   if (puesta) {
     /* La foto se funde con el papel: un corte duro parece un recorte pegado. */
-    const g = doc.linearGradient(0, ALTO_FOTO - 130, 0, ALTO_FOTO);
+    const desde = ALTO_FOTO - 190;
+    const hasta = ALTO_FOTO - ALTO_NUMERO;
+    const g = doc.linearGradient(0, desde, 0, hasta);
     g.stop(0, t.fondo, 0).stop(1, t.fondo, 1);
-    doc.rect(0, ALTO_FOTO - 130, HOJA.ancho, 130).fill(g);
+    doc.rect(0, desde, HOJA.ancho, hasta - desde).fill(g);
+    /* Y el pedazo donde se apoya el número, liso. */
+    doc.rect(0, hasta, HOJA.ancho, ALTO_NUMERO).fill(t.fondo);
   } else {
     doc.rect(0, 0, HOJA.ancho, ALTO_FOTO).fill(t.caja);
   }

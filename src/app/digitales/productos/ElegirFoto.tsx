@@ -108,10 +108,21 @@ export default function ElegirFoto({
 
       const fotos = Array.isArray(datos.fotos) ? (datos.fotos as FotoDeCandidata[]) : [];
       setResultados(fotos);
-      /* Lista vacía no es una falla: es que no hay nada de eso. Se dice con
-         palabras en vez de dejar un hueco. */
+
+      /* ⚠️ Una lista vacía tiene TRES motivos y hay que decir el que es.
+         Antes se decía siempre "no encontramos fotos de X, probá con otras
+         palabras": cuando el motivo era el tope del banco, eso mandaba a
+         alguien a reescribir la frase veinte minutos para nada. */
       if (fotos.length === 0) {
-        setError(`No encontramos fotos de "${limpia}". Probá con otras palabras, más simples.`);
+        if (datos.sinCupo === true) {
+          setError(
+            "El banco de fotos está al tope en este momento — no es tu búsqueda. Probá en un rato; mientras tanto podés subir una foto tuya.",
+          );
+        } else if (datos.sinClave === true) {
+          setError("La búsqueda de fotos no está configurada en esta instalación. Podés subir una foto tuya.");
+        } else {
+          setError(`No encontramos fotos de "${limpia}". Probá con otras palabras, más simples.`);
+        }
       }
     } catch {
       setError("Se cortó la conexión. Probá de nuevo.");

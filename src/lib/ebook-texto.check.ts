@@ -398,6 +398,55 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
     "el ejemplo se corta antes de guardar: no le pega a la base");
 }
 
+/* ── La foto y lo que se dibuja encima ────────────────────────────────────── */
+
+{
+  const pdf = readFileSync("src/lib/ebook-pdf.ts", "utf8");
+
+  /* ⚠️ El número del capítulo va ARRIBA de la foto, y una foto puede ser de
+     cualquier color: sobre una clara con un acento claro, desaparece. El
+     archivo lo resuelve disolviendo la foto en el papel ANTES de donde empieza
+     el número, y dejando liso el pedazo donde se apoya. Sin las dos cosas, el
+     número se pierde adentro de algo que se vende — y no falla en ningún lado. */
+  check("TXT-BE",
+    /const ALTO_NUMERO = 96;/.test(pdf)
+    && /doc\.rect\(0, hasta, HOJA\.ancho, ALTO_NUMERO\)\.fill\(t\.fondo\)/.test(pdf),
+    "el número del capítulo se apoya en papel liso, no arriba de la foto");
+
+  /* Y que la previa dibuje LO MISMO: si allá hay degradado y acá no, la previa
+     muestra un problema que el archivo no tiene, o al revés. */
+  const previa2 = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8");
+  check("TXT-BF",
+    /linear-gradient\(to bottom, transparent/.test(previa2) && /96 \/ 350/.test(previa2),
+    "la vista previa dibuja el mismo degradado que el PDF");
+}
+
+/* ── El tope del banco de imágenes ────────────────────────────────────────── */
+
+{
+  const banco = readFileSync("src/lib/fotos-pexels.ts", "utf8");
+
+  /* ⚠️ UNA sola puerta al banco. Es lo que hace que el guardarropas sirva: si
+     el armado buscara por su cuenta, la frase que alguien ya buscó al elegir
+     sus fotos se volvería a pedir en cada PDF que se rehace. */
+  const puertas = banco.match(/await fetch\(`\$\{RAIZ\}/g) ?? [];
+  check("TXT-BG", puertas.length === 1,
+    "hay una sola puerta al banco de imágenes, así el caché sirve para las dos");
+
+  check("TXT-BH", /leerDelCache</.test(banco) && /guardarEnCache\(/.test(banco),
+    "las búsquedas se guardan: la misma frase no se pide dos veces");
+
+  /* ⚠️ Y que se distinga "no hay fotos de eso" de "nos quedamos sin pedidos".
+     Decir el motivo que no es manda a alguien a reescribir la frase veinte
+     minutos cuando la frase estaba bien. */
+  check("TXT-BI", /sinCupo: respuesta\.status === 429/.test(banco),
+    "quedarse sin cupo del banco no se confunde con no encontrar fotos");
+
+  const elegir = readFileSync("src/app/digitales/productos/ElegirFoto.tsx", "utf8");
+  check("TXT-BJ", /datos\.sinCupo === true/.test(elegir),
+    "y la pantalla lo dice con esas palabras");
+}
+
 /* ── Los nombres ──────────────────────────────────────────────────────────── */
 
 {

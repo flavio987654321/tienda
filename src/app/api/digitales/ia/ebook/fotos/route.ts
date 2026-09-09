@@ -82,10 +82,16 @@ export async function GET(req: NextRequest) {
      mal, así que quien pregunta dice cuál necesita. */
   const alta = req.nextUrl.searchParams.get("alta") === "1";
 
-  const fotos = await buscarCandidatas(busca, { alta });
+  const { fotos, sinCupo, sinClave } = await buscarCandidatas(busca, { alta });
 
-  /* Lista vacía no es un error: puede ser que el banco no tenga nada de eso, o
-     que esta instalación no tenga la clave configurada. La pantalla lo dice con
-     sus palabras. */
-  return NextResponse.json({ ok: true, fotos });
+  /* ⚠️ TRES motivos distintos para una lista vacía, y decir el que no es manda
+     a alguien a hacer lo que no sirve:
+
+       · No hay fotos de eso → cambiar las palabras SÍ ayuda.
+       · Nos pasamos del tope compartido del banco → cambiar las palabras no
+         cambia nada, y se puede pasar veinte minutos reescribiendo la frase.
+       · Falta configurar la clave → no es problema de quien está mirando.
+
+     Antes los tres salían iguales y la pantalla decía siempre el primero. */
+  return NextResponse.json({ ok: true, fotos, sinCupo, sinClave });
 }

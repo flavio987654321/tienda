@@ -1,3 +1,5 @@
+import { leerDelCache, guardarEnCache } from "@/lib/cache-corto";
+
 /**
  * Las fotos del ebook.
  *
@@ -84,73 +86,23 @@ export async function buscarFoto(
   consulta: string,
   { alta = false, usadas }: { alta?: boolean; usadas?: Set<string> } = {},
 ): Promise<FotoDelEbook | null> {
-  const clave = process.env.PEXELS_API_KEY;
-  /* Sin clave no es un error: es una instalación que todavía no la configuró.
-     El ebook sale sin fotos y se entrega igual. */
-  if (!clave) return null;
-
-  const limpia = consulta.trim().slice(0, 120);
-  if (!limpia) return null;
-
-  const parametros = new URLSearchParams({
-    query: limpia,
-    orientation: alta ? "portrait" : "landscape",
-    /* Se piden varias y se elige una: pedir una sola deja sin salida cuando
-       ese único resultado ya se lo llevó otro capítulo. */
-    per_page: "15",
-    /* Pexels entiende castellano, y las búsquedas salen del texto que escribió
-       quien vende. Sin esto, "panadería casera" trae mucho menos. */
-    locale: "es-ES",
-  });
-
-  let respuesta: Response;
-  try {
-    respuesta = await fetch(`${RAIZ}?${parametros}`, {
-      headers: { Authorization: clave },
-      signal: AbortSignal.timeout(ESPERA_BUSQUEDA),
-    });
-  } catch {
-    /* Se cortó o tardó demasiado. No se anota como error grave: pasa, y el
-       ebook sigue. */
-    return null;
-  }
-
-  if (!respuesta.ok) {
-    /* 429 es habernos pasado del tope del mes. Interesa saberlo. */
-    console.error("[fotos-pexels] la búsqueda no salió", {
-      estado: respuesta.status, consulta: limpia,
-    });
-    return null;
-  }
-
-  let cuerpo: { photos?: unknown };
-  try {
-    cuerpo = (await respuesta.json()) as { photos?: unknown };
-  } catch {
-    return null;
-  }
-
-  const fotos = Array.isArray(cuerpo.photos) ? (cuerpo.photos as FotoDePexels[]) : [];
+  /* ⚠️ Por la MISMA puerta que la pantalla, que es lo que hace que el
+     guardarropas sirva: la frase que alguien ya buscó al elegir sus fotos no se
+     vuelve a pedir cuando el armado pasa por acá. Y rehacer el PDF diez veces
+     cuesta un pedido, no diez. Ver `preguntarAlBanco`. */
+  const { fotos } = await preguntarAlBanco(consulta, alta);
   if (fotos.length === 0) return null;
 
   /* La primera que no se haya llevado otro capítulo. Si TODAS están usadas
      —dos capítulos con la misma búsqueda y pocos resultados— se repite antes
      que dejar el capítulo sin foto: repetida se ve mejor que vacía. */
-  const libre = fotos.find((f) => !usadas?.has(String(f?.id ?? ""))) ?? fotos[0];
-  usadas?.add(String(libre?.id ?? ""));
+  const libre = fotos.find((f) => !usadas?.has(f.id)) ?? fotos[0];
+  usadas?.add(libre.id);
 
-  const direccion =
-    texto(libre?.src?.large2x) || texto(libre?.src?.large) || texto(libre?.src?.portrait);
-  if (!direccion) return null;
-
-  const datos = await bajar(direccion);
+  const datos = await bajar(libre.url);
   if (!datos) return null;
 
-  return {
-    datos,
-    fotografo: texto(libre?.photographer),
-    enlace: texto(libre?.url),
-  };
+  return { datos, fotografo: libre.fotografo, enlace: libre.enlace };
 }
 
 /**
@@ -224,20 +176,72 @@ export type FotoCandidata = {
  * miniatura de Pexels mide 280 px y adentro de un PDF, en una banda de media
  * hoja, se ve como una foto rota.
  */
-export async function buscarCandidatas(
+/**
+ * Cuánto se guarda una búsqueda antes de volver a preguntar.
+ *
+ * ⚠️ Un día. El banco no cambia sus fotos de un rato para otro, así que una
+ * lista de ayer sirve igual — y lo que se ahorra es lo que evita que diez
+ * personas eligiendo fotos al mismo tiempo dejen sin pedidos a todos los demás.
+ * Ver `cache-corto`.
+ */
+const HORAS_DE_CACHE = 24;
+
+/** Qué pasó cuando se le preguntó al banco. */
+export type RespuestaDelBanco = {
+  fotos: FotoCandidata[];
+  /** `true` si el banco contestó 429: nos pasamos del tope compartido. */
+  sinCupo: boolean;
+  /** `true` si esta instalación no tiene la clave configurada. */
+  sinClave: boolean;
+};
+
+/**
+ * Preguntarle al banco, pasando primero por el guardarropas.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ES LA ÚNICA PUERTA AL BANCO, Y ESO ES A PROPÓSITO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * La usan las dos: la pantalla que muestra la grilla para elegir, y el armado
+ * cuando le toca buscar una foto que nadie eligió. Que sea una sola es lo que
+ * hace que el guardarropas sirva de verdad — la misma frase, buscada desde la
+ * pantalla y después desde el armado, cuesta **un** pedido y no dos.
+ *
+ * ⚠️ Y distingue "no hay fotos de eso" de "nos quedamos sin pedidos". Son dos
+ * cosas completamente distintas y antes las dos salían como una lista vacía: la
+ * pantalla decía *"no encontramos fotos de X, probá con otras palabras"* cuando
+ * en realidad las palabras estaban bien y el que se había llenado era el tope.
+ * Alguien podía pasarse veinte minutos reescribiendo la frase sin saber que no
+ * era la frase.
+ */
+async function preguntarAlBanco(
   consulta: string,
-  { alta = false }: { alta?: boolean } = {},
-): Promise<FotoCandidata[]> {
+  alta: boolean,
+): Promise<RespuestaDelBanco> {
   const clave = process.env.PEXELS_API_KEY;
-  if (!clave) return [];
+  /* Sin clave no es un error: es una instalación que todavía no la configuró.
+     El ebook sale sin fotos y se entrega igual. */
+  if (!clave) return { fotos: [], sinCupo: false, sinClave: true };
 
   const limpia = consulta.trim().slice(0, 120);
-  if (!limpia) return [];
+  if (!limpia) return { fotos: [], sinCupo: false, sinClave: false };
+
+  /* La clave del guardarropas: la frase en minúsculas y la orientación. Dos
+     personas que escriben lo mismo comparten el pedido. */
+  const enElRopero = `fotos:${alta ? "alta" : "ancha"}:${limpia.toLowerCase()}`;
+  const guardadas = await leerDelCache<FotoCandidata[]>(enElRopero);
+  if (guardadas && Array.isArray(guardadas)) {
+    return { fotos: guardadas, sinCupo: false, sinClave: false };
+  }
 
   const parametros = new URLSearchParams({
     query: limpia,
-    orientation: alta ? "portrait" : "landscape",
+    /* Se piden varias y se elige una: pedir una sola deja sin salida cuando
+       ese único resultado ya se lo llevó otro capítulo. */
     per_page: "15",
+    orientation: alta ? "portrait" : "landscape",
+    /* Pexels entiende castellano, y las búsquedas salen del texto que escribió
+       quien vende. Sin esto, "panadería casera" trae mucho menos. */
     locale: "es-ES",
   });
 
@@ -248,29 +252,33 @@ export async function buscarCandidatas(
       signal: AbortSignal.timeout(ESPERA_BUSQUEDA),
     });
   } catch {
-    return [];
+    /* Se cortó o tardó demasiado. No se anota como error grave: pasa, y el
+       ebook sigue. */
+    return { fotos: [], sinCupo: false, sinClave: false };
   }
 
   if (!respuesta.ok) {
-    console.error("[fotos-pexels] la búsqueda para elegir no salió", {
+    /* 429 es habernos pasado del tope compartido. Interesa saberlo, y quien
+       llama tiene que poder decirlo con esas palabras. */
+    console.error("[fotos-pexels] la búsqueda no salió", {
       estado: respuesta.status, consulta: limpia,
     });
-    return [];
+    return { fotos: [], sinCupo: respuesta.status === 429, sinClave: false };
   }
 
   let cuerpo: { photos?: unknown };
   try {
     cuerpo = (await respuesta.json()) as { photos?: unknown };
   } catch {
-    return [];
+    return { fotos: [], sinCupo: false, sinClave: false };
   }
 
-  const fotos = Array.isArray(cuerpo.photos)
+  const crudas = Array.isArray(cuerpo.photos)
     ? (cuerpo.photos as (FotoDePexels & { src?: { medium?: unknown; tiny?: unknown } })[])
     : [];
 
-  const salida: FotoCandidata[] = [];
-  for (const f of fotos) {
+  const fotos: FotoCandidata[] = [];
+  for (const f of crudas) {
     const url = texto(f?.src?.large2x) || texto(f?.src?.large) || texto(f?.src?.portrait);
     const chica = texto(f?.src?.medium) || texto(f?.src?.tiny) || url;
     const id = String(f?.id ?? "");
@@ -279,9 +287,22 @@ export async function buscarCandidatas(
     /* Las cuatro cosas o ninguna: sin autor y enlace no se puede armar la hoja
        de créditos, y esa hoja es la licencia. Ver `leerFotoElegida`. */
     if (!id || !url || !fotografo || !enlace) continue;
-    salida.push({ id, chica, url, fotografo, enlace });
+    fotos.push({ id, chica, url, fotografo, enlace });
   }
-  return salida;
+
+  /* ⚠️ Se guarda aunque haya vuelto vacía. "De esto no hay fotos" también es una
+     respuesta, y volver a preguntarla cada vez gasta lo mismo que una que sí
+     trae. Era el caso peor: una frase que no existe se reintenta más veces. */
+  guardarEnCache(enElRopero, fotos, HORAS_DE_CACHE * 3600);
+
+  return { fotos, sinCupo: false, sinClave: false };
+}
+
+export async function buscarCandidatas(
+  consulta: string,
+  { alta = false }: { alta?: boolean } = {},
+): Promise<RespuestaDelBanco> {
+  return preguntarAlBanco(consulta, alta);
 }
 
 /**

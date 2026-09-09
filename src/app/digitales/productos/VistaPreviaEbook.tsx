@@ -169,6 +169,29 @@ export default function VistaPreviaEbook({
               style={{ position: "relative", marginTop: i === 0 ? 0 : em(26) }}
             >
               <HuecoDeFoto foto={fotos[i]} respaldo={c.titulo} t={t} proporcion="595.28 / 350" />
+
+              {/* ⚠️ EL MISMO DEGRADADO QUE EL PDF, y no es decoración: el número
+                  va arriba de la foto, y una foto puede ser de cualquier color.
+                  Sin esto, sobre una foto clara con un acento claro el número
+                  desaparece. El archivo lo resuelve disolviendo la foto en el
+                  papel antes de donde empieza el número; acá se dibuja igual,
+                  con los mismos 190 y 96 puntos. Ver `portadilla` en
+                  `ebook-pdf`: si allá cambian, acá también. */}
+              <div
+                style={{
+                  position: "absolute", left: 0, right: 0, bottom: `${((96 / 350) * 100).toFixed(2)}%`,
+                  height: `${(((190 - 96) / 350) * 100).toFixed(2)}%`,
+                  background: `linear-gradient(to bottom, transparent, ${t.fondo})`,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute", left: 0, right: 0, bottom: 0,
+                  height: `${((96 / 350) * 100).toFixed(2)}%`,
+                  background: t.fondo,
+                }}
+              />
+
               <p
                 style={{
                   position: "absolute", left: margen, bottom: em(6),
