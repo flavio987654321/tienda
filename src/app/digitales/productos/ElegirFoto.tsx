@@ -243,9 +243,23 @@ export default function ElegirFoto({
       )}
 
       {!resultados && !elegida && (
-        <p className="mt-3 flex items-center gap-2 rounded-lg bg-gray-50 panel-oscuro:bg-gray-800/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-          <ImageIcon aria-hidden className="h-4 w-4 shrink-0" />
-          Si no elegís ninguna, se busca sola con esa frase cuando se arma el PDF.
+        /* ⚠️ Este renglón decía "se busca sola con esa frase cuando se arma el
+           PDF", y se leyó como **una advertencia de costo**: "cuando se arma"
+           sonaba a que algo se iba a gastar más tarde. Lo preguntaron el
+           09/09/26, con estas palabras: *"¿quiere decir que vamos a gastar
+           tokens?"*.
+
+           No: las fotos salen de un banco de imágenes, no del modelo. Así que
+           ahora el renglón dice las dos cosas que hacían falta —quién elige si
+           vos no elegís, y que eso no cuesta una generación— y no habla de
+           "cuando se arma", que era el pedazo que asustaba. */
+        <p className="mt-3 flex items-start gap-2 rounded-lg bg-gray-50 panel-oscuro:bg-gray-800/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+          <ImageIcon aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Si no elegís ninguna, se usa la primera que aparezca con esa frase.{" "}
+            <strong>Buscar fotos no gasta generaciones</strong>: salen de un banco de
+            imágenes, no de la IA.
+          </span>
         </p>
       )}
     </div>
