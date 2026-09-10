@@ -1148,6 +1148,7 @@ export default function ProductosClient({
   cupoIA,
   cupoEbook,
   cobroConectado,
+  conEjemplo,
 }: {
   tier: TierDigital;
   /**
@@ -1162,6 +1163,8 @@ export default function ProductosClient({
   cupoEbook: EstadoDelCupo;
   /** Si ya conectó Mercado Pago: sin eso no se puede publicar. */
   cobroConectado: boolean;
+  /** Si la dirección trae `?ejemplo=1`. Ver la tarjeta de ejemplo, más abajo. */
+  conEjemplo: boolean;
 }) {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   /** Si está abierta la ventana de armar el embudo con IA. */
@@ -1722,8 +1725,26 @@ export default function ProductosClient({
           los pasos que hay. Ver `ejemploDeTarjeta`.
 
           `process.env.NODE_ENV` lo resuelve el compilador, así que en el build
-          de producción este bloque no existe. */}
-      {process.env.NODE_ENV === "development" && (
+          de producción este bloque no existe.
+
+          ── ⚠️ Y ADEMÁS HAY QUE PEDIRLA: `?ejemplo=1` — 10/09/26 ─────────────
+
+          Antes se dibujaba sola en desarrollo, arriba de todo. O sea que
+          trabajar sobre los productos de verdad era pasarle por encima a una
+          tarjeta falsa en cada carga, y en el teléfono empujaba los propios
+          abajo del pliegue.
+
+          Ahora el panel se ve como en producción, y el ejemplo se abre a
+          propósito:
+
+              /digitales/productos?ejemplo=1
+
+          Los dos candados suman, no se reemplazan. El de `NODE_ENV` es el que
+          protege de verdad —borra el bloque del build— y el `?ejemplo=1` sólo
+          saca del camino algo que estorbaba mientras se trabaja. Sacar el
+          primero dejaría la tarjeta falsa a un parámetro de distancia de los
+          productos reales de cualquiera. */}
+      {process.env.NODE_ENV === "development" && conEjemplo && (
         <div className="mb-8 rounded-3xl border-2 border-dashed border-amber-300 panel-oscuro:border-amber-500/40 bg-amber-50/60 panel-oscuro:bg-amber-500/5 p-3 sm:p-4">
           <p className="mb-3 text-[11.5px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
             <strong>Ejemplo, sólo en desarrollo.</strong> Así se ve un producto con el

@@ -405,9 +405,21 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
 
   const lista = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
   check("TXT-AJ",
-    /process\.env\.NODE_ENV === "development" && \(/.test(lista)
+    /process\.env\.NODE_ENV === "development" && conEjemplo && \(/.test(lista)
     && /PRODUCTO_DE_EJEMPLO/.test(lista),
     "la tarjeta de ejemplo sólo se dibuja en desarrollo");
+
+  /* ⚠️ Y el `?ejemplo=1` NO puede ser el único candado. Es comodidad —saca del
+     camino una tarjeta falsa mientras se trabaja— y el que protege de verdad
+     sigue siendo `NODE_ENV`, que borra el bloque del build. Si alguien cambia
+     la condición por sólo `conEjemplo`, la tarjeta inventada queda a un
+     parámetro de distancia de los productos reales de cualquiera, en
+     producción. El chequeo de arriba exige los dos juntos y en ese orden; éste
+     mira la otra punta, que es de dónde sale el dato. */
+  const paginaLista = readFileSync("src/app/digitales/productos/page.tsx", "utf8");
+  check("TXT-AJ3",
+    /consulta\.ejemplo === "1"/.test(paginaLista) && /conEjemplo=\{conEjemplo\}/.test(paginaLista),
+    "el `?ejemplo=1` llega desde el servidor y es un candado más, no el candado");
 
   /* Y que el ejemplo no le pegue a la base con un id que no existe. */
   const alrededorDelEditor = readFileSync(

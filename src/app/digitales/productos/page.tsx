@@ -58,8 +58,17 @@ export default async function ProductosPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const cual = (await searchParams).pagina;
+  const consulta = await searchParams;
+  const cual = consulta.pagina;
   const paginaInicial = typeof cual === "string" ? cual : null;
+
+  /* ⚠️ La tarjeta de ejemplo ahora se PIDE: `/digitales/productos?ejemplo=1`.
+     Antes se dibujaba sola en desarrollo y ocupaba la primera pantalla, así que
+     trabajar sobre los productos de verdad era pasarle por encima todo el
+     tiempo. Sigue siendo sólo de desarrollo —eso lo decide `ProductosClient`,
+     donde el compilador borra el bloque— y esto es un candado más, no el
+     candado. Ver el comentario largo allá. */
+  const conEjemplo = consulta.ejemplo === "1";
 
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
@@ -202,6 +211,7 @@ export default async function ProductosPage({
         cupoIA={cupoIA}
         cupoEbook={cupoEbook}
         cobroConectado={!!store?.mpAccessToken}
+        conEjemplo={conEjemplo}
       />
     </div>
   );
