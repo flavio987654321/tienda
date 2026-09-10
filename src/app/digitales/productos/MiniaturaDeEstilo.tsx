@@ -226,10 +226,14 @@ function LaReceta({
      más arriba porque la foto se le fue al costado del título. */
   const ALTO_TITULO = 30;
   const yFoto = m.arriba + ALTO_TITULO + 18;
+  /* ⚠️ Con la franja de título, la foto cuadrada arranca donde arranca la
+     franja y no seis puntos arriba del título: es lo mismo que hace el archivo
+     para que no quede el escaloncito. Ver `yCuadrada` en `hojaDeReceta`. */
+  const yCuadrada = m.arriba - 12;
   const yArriba = aSangre
     ? R.sangreMax + 24
     : cuadrada
-      ? m.arriba - 6 + R.ladoMax + 18
+      ? yCuadrada + R.ladoMax + 18
       : yFoto + R.bandaMax + 16;
 
   /* Las tres fichas: en fila a todo el ancho, o apiladas al costado. */
@@ -279,15 +283,29 @@ function LaReceta({
         </>
       ) : (
         <>
+          {/* ⚠️ `compacto` mete el título adentro de una franja de acento que
+              arranca en el BORDE de la hoja y se corta antes de la foto. Es lo
+              que lo hace ver de diario, y sin dibujarlo acá la miniatura
+              mostraba la misma cabeza que `libro` — que es exactamente el
+              problema que la franja vino a resolver. */}
+          {cuadrada && (
+            <rect
+              x={0} y={yCuadrada}
+              width={ANCHO - m.margen - R.ladoMax - 16}
+              height={ALTO_TITULO + 28}
+              fill={acento}
+            />
+          )}
           <rect
             x={m.margen} y={m.arriba}
             width={(cuadrada ? util - R.ladoMax - 20 : util - 60) * 0.9}
             height={ALTO_TITULO}
-            fill={tinta} opacity={0.75}
+            fill={cuadrada ? papel : tinta}
+            opacity={cuadrada ? 1 : 0.75}
           />
           {cuadrada ? (
             <rect
-              x={ANCHO - m.margen - R.ladoMax} y={m.arriba - 6}
+              x={ANCHO - m.margen - R.ladoMax} y={yCuadrada}
               width={R.ladoMax} height={R.ladoMax} {...foto}
             />
           ) : (

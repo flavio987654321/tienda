@@ -4716,10 +4716,26 @@ y **no** en la fila de arriba; **EST-AI**, que en `libro` sigan en la fila.
 estilos: la receta más grande que el limado deja pasar entra en una hoja en los
 cuatro.
 
+### ✅ Los tres anchos — 10/09/26
+
+Mirado en 360 / 768 / 1280: el selector del modal (2×2 en el celular, 4 en
+línea desde 640), las miniaturas de la tarjeta y la previa del recetario con los
+cuatro acomodos. Nada se desborda ni se pisa.
+
+Como el panel había quedado sin ningún recetario, se montó una pantalla
+temporal —sólo desarrollo, sin login— que dibuja las miniaturas y la previa con
+las clases de la grilla **copiadas tal cual** de `EbookIA` y `ProductosClient`.
+Se sacaron las capturas y se borró.
+
+**Y encontró algo que en el código no se veía.** La franja de acento del título
+de `compacto` se le agregó al archivo DESPUÉS de escribir la miniatura y la
+previa, y ninguna de las dos la dibujaba: las dos mostraban la misma cabeza que
+`libro`, que es exactamente el problema que la franja vino a resolver. Con las
+cuatro miniaturas juntas a 768 se ve en un segundo. Arreglado en las dos, y de
+paso el redondeo del recuadro del tip y de las fichas —que la previa tenía
+escrito a mano— ahora sale del molde, así que `compacto` y `cartel` se ven
+rectos como en el archivo.
+
 ### Lo que falta
 
-- 🔲 **Mirarlo en los tres anchos.** Sigue pendiente de la tanda anterior, y
-  ahora hay más para mirar: el selector del modal, las miniaturas de la tarjeta
-  —que ahora dibujan una receta— y la previa del recetario con sus cuatro
-  acomodos. Nada de esto se vio en 360 / 768 / 1280.
 - 🔲 **La previa no corta las hojas.** Sigue igual, y sigue siendo a propósito.

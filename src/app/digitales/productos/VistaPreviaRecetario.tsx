@@ -108,13 +108,21 @@ export default function VistaPreviaRecetario({
           </Tocable>
         );
 
-        const elNumero = (
-          <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
+        const elNumero = (claro: boolean) => (
+          <p style={{
+            fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700,
+            color: claro ? t.sobreAcento : t.acento,
+          }}>
             RECETA {String(i + 1).padStart(2, "0")}
           </p>
         );
 
-        const elTitulo = (claro: boolean) => (
+        /* ⚠️ Los colores viajan como parámetro y no como un "claro sí o no":
+           encima de una FOTO el título va blanco puro (el velo puede tener
+           cualquier color abajo), y encima de la franja de acento va el color
+           que la paleta declaró para ir sobre su acento. Son dos cosas
+           distintas y con un booleano terminaban siendo la misma. */
+        const elTitulo = (tinta: string, suave: string) => (
           <Tocable
             que={{ que: "titulo", capitulo: i }}
             seleccion={seleccion}
@@ -123,14 +131,14 @@ export default function VistaPreviaRecetario({
           >
             <p style={{
               marginTop: em(6), fontSize: em(22), lineHeight: 1.15, fontWeight: 700,
-              color: claro ? "#ffffff" : t.tinta,
+              color: tinta,
             }}>
               {r.titulo || "Sin título"}
             </p>
             {r.descripcion && (
               <p style={{
                 marginTop: em(6), fontSize: em(11), lineHeight: 1.5, fontStyle: "italic",
-                color: claro ? "rgba(255,255,255,0.86)" : t.suave,
+                color: suave,
               }}>
                 {r.descripcion}
               </p>
@@ -163,19 +171,32 @@ export default function VistaPreviaRecetario({
                   <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: "#ffffff" }}>
                     RECETA {String(i + 1).padStart(2, "0")}
                   </p>
-                  {elTitulo(true)}
+                  {elTitulo("#ffffff", "rgba(255,255,255,0.86)")}
                 </div>
               </div>
             ) : acomodo === "ficha" ? (
-              /* La foto cuadrada al lado del título: lo que gana `compacto` es
-                 el alto que se llevaba la banda. */
+              /* La foto cuadrada al lado del título, y el título adentro de una
+                 franja de acento que arranca en el BORDE de la hoja y se corta
+                 antes de la foto. Sin la franja esta cabeza es la misma que la
+                 de `libro` —el archivo también cambia la banda por el cuadrado
+                 cuando la receta es larga— y elegir uno u otro no cambiaría
+                 nada de lo que se ve. Ver `hojaDeReceta`.
+
+                 ⚠️ El relleno de la izquierda va adentro de la franja y no en
+                 el contenedor: si fuera del contenedor, la franja arrancaría en
+                 el margen y no en el borde, que es justo lo que la hace ver de
+                 diario. */
               <div style={{
-                display: "flex", gap: em(20), alignItems: "flex-start",
-                paddingLeft: margen, paddingRight: margen, paddingTop: em(18),
+                display: "flex", gap: em(16), alignItems: "flex-start",
+                paddingRight: margen, paddingTop: em(18),
               }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {elNumero}
-                  {elTitulo(false)}
+                <div style={{
+                  flex: 1, minWidth: 0, background: t.acento,
+                  paddingLeft: margen, paddingRight: em(16),
+                  paddingTop: em(12), paddingBottom: em(14),
+                }}>
+                  {elNumero(true)}
+                  {elTitulo(t.sobreAcento, t.sobreAcento)}
                 </div>
                 <div style={{ width: anchoCuadrada, flexShrink: 0 }}>
                   <Tocable
@@ -200,8 +221,8 @@ export default function VistaPreviaRecetario({
               {/* En los dos acomodos de arriba el título ya se dibujó. */}
               {acomodo !== "sangre" && acomodo !== "ficha" && (
                 <>
-                  {elNumero}
-                  {elTitulo(false)}
+                  {elNumero(false)}
+                  {elTitulo(t.tinta, t.suave)}
                 </>
               )}
 
@@ -281,7 +302,11 @@ export default function VistaPreviaRecetario({
               {r.tip && (
                 <div
                   style={{
-                    background: t.caja, borderRadius: em(9),
+                    background: t.caja,
+                    /* El recuadro del tip lo redondea el molde, como en el
+                       archivo — ver `dibujarAviso`. */
+                    borderRadius: em(molde.esquina),
+                    borderLeft: `${em(3)} solid ${t.acento}`,
                     padding: `${em(14)} ${em(18)}`, marginTop: em(16),
                   }}
                 >
@@ -340,7 +365,12 @@ function Fichas({
           style={apiladas
             ? { marginTop: i === 0 ? 0 : em(12) }
             : {
-              background: t.caja, borderRadius: em(6),
+              background: t.caja,
+              /* ⚠️ El redondeo lo decide el molde, igual que en el archivo: el 8
+                 es el que `libro` tenía escrito adentro desde antes de los
+                 moldes y no se toca; los otros leen su estilo, y por eso
+                 `compacto` y `cartel` salen con las esquinas rectas. */
+              borderRadius: em(molde.receta === "banda" ? 6 : molde.esquina),
               padding: `${em(7)} ${em(12)}`, minWidth: em(84),
             }}
         >
