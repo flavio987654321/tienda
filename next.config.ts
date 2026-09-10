@@ -10,7 +10,18 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const csp = [
   "default-src 'self'",
   `img-src 'self' data: blob: https: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://client.crisp.chat`,
-  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com https://*.ingest.sentry.io https://*.crisp.chat wss://*.crisp.chat https://challenges.cloudflare.com https://www.facebook.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com`,
+  // ⚠️ `videos.pexels.com` está acá para que el navegador pueda BAJAR el video
+  // de un reel. La pantalla de Contenido para reels no proxea el archivo por
+  // nuestro servidor a propósito —son 8 MB por video y el ancho de banda sería
+  // nuestro—: lo lee el navegador con `fetch`, arma un blob y lo guarda. Eso
+  // pasa por `connect-src`, no por `media-src`.
+  //
+  // Sin esta línea el `fetch` lo bloquea la CSP y **cae en el plan B en
+  // silencio**: el video se abre en una pestaña en vez de bajarse, y en un
+  // celular eso es no poder bajarlo. Se descubrió apretando el botón, no
+  // leyendo el código: el archivo salía con el nombre del CDN en vez del
+  // nuestro, que era la única señal.
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com https://*.ingest.sentry.io https://*.crisp.chat wss://*.crisp.chat https://challenges.cloudflare.com https://www.facebook.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://videos.pexels.com`,
   "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
   // `www.facebook.com` está acá por el Pixel de Meta, y va SOLO en frame-src.
   // El script se baja de `connect.facebook.net` (script-src), los eventos

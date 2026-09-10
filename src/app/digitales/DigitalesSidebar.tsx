@@ -9,12 +9,12 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart,
+  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
  *
- * Cinco, y son las cinco que existen de verdad. Sin entradas apagadas ni
+ * Son las que existen de verdad. Sin entradas apagadas ni
  * "próximamente": un menú que nombra pantallas que no están se lee como que el
  * panel se rompió, no como que eso viene después. Un chequeo abre cada `href` y
  * verifica que exista su `page.tsx`.
@@ -34,6 +34,18 @@ const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
      es la plata que entró y la otra la que quedó en la puerta. Y va DESPUÉS,
      no antes: lo primero que alguien quiere ver es lo que sí vendió. */
   { href: "/digitales/carritos", label: "Carritos", Icon: ShoppingCart },
+  /* ── Marketing ────────────────────────────────────────────────────────────
+   *
+   * Va DESPUÉS de las dos pantallas de plata y antes de la configuración: es lo
+   * que se hace cuando ya viste que vendiste poco. Antes de Ventas sería
+   * ofrecerle herramientas de difusión a alguien que todavía no miró si vendió.
+   *
+   * ⚠️ Es UN link a una sección, y no un árbol desplegable con las herramientas
+   * colgando. La barra de escritorio es un riel de íconos que se abre al pasar
+   * el mouse: un árbol ahí serían dos íconos sin nombre uno abajo del otro
+   * mientras está cerrado, que es peor que no tenerlo. Adentro de la sección sí
+   * están todas, con su nombre y qué hace cada una. */
+  { href: "/digitales/marketing", label: "Marketing", Icon: Megaphone },
   /* Configuración es lo del NEGOCIO —con qué cobrás, cómo te ve el comprador— y
      Mi cuenta es lo de la persona. Van separadas y en este orden: sin cobros
      conectados no se vende nada, así que lo primero que hay que encontrar es
