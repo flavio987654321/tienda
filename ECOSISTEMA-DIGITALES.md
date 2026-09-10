@@ -4520,10 +4520,11 @@ No es una lista de cortesía: son los lugares donde un error se cobra caro.
   problema. La de métricas ni siquiera recibía el error. De paso, el panel de
   digitales no tenía red propia: cualquier error subía hasta el armazón y la
   persona perdía la barra lateral. Catorce chequeos en `avisos-de-error`.
-- 🔲 **El techo de gasto de verdad vive fuera del repo.** El corta-corriente de
-  acá (600 llamadas y 40 ebooks por día) frena lo nuestro; el único que garantiza
-  que no llegue una factura grande es el límite de gasto de la cuenta de
-  Anthropic. **Verificar que esté puesto.**
+- ✅ **El techo de gasto de verdad vive fuera del repo.** Verificado el 10/09/26:
+  hay un límite de **50 dólares** puesto en la cuenta de Anthropic. El
+  corta-corriente de acá (600 llamadas y 40 ebooks por día) frena lo nuestro,
+  pero el que garantiza que no llegue una factura grande es ése, y no se puede
+  poner desde el repo.
 - ❌ **Dos campos de archivo sin teclado**: era una falsa alarma, revisada el
   09/09/26. Se miraron los 25 `input type="file"` del proyecto entero: los que
   usan `className="hidden"` tienen al lado un `<button>` de verdad que los
