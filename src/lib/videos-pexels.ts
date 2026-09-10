@@ -147,9 +147,20 @@ function archivoQueConviene(archivos: ArchivoDePexels[]): ArchivoDePexels | null
  * escena. Se ofrece el apaisado igual porque el mismo material sirve para una
  * publicación o un anuncio, que no son verticales.
  */
+/**
+ * Hasta qué página se puede pedir.
+ *
+ * ⚠️ Cada página es un pedido contra el tope compartido con las fotos, así que
+ * esto NO puede ser abierto: `?pagina=99999` desde afuera sería una forma de
+ * gastarnos la cuota de a un pedido por clic, aun con sesión. Diez páginas son
+ * 800 videos de una misma búsqueda — quien no encontró nada en 800 tiene un
+ * problema de palabras, no de cantidad, y la salida es buscar otra cosa.
+ */
+export const MAX_PAGINA = 10;
+
 export async function buscarVideos(
   consulta: string,
-  { vertical = true }: { vertical?: boolean } = {},
+  { vertical = true, pagina = 1 }: { vertical?: boolean; pagina?: number } = {},
 ): Promise<RespuestaDeVideos> {
   const clave = process.env.PEXELS_API_KEY;
   /* Sin clave no es un error: es una instalación que no la configuró. La
@@ -159,7 +170,15 @@ export async function buscarVideos(
   const limpia = consulta.trim().slice(0, 120);
   if (!limpia) return { videos: [], total: 0, sinCupo: false, sinClave: false };
 
-  const enElRopero = `videos:${vertical ? "alto" : "ancho"}:${limpia.toLowerCase()}`;
+  /* La página se acota ACÁ y no en quien llama: es la única puerta al banco, y
+     un `Math.floor` de más en la ruta no sirve de nada si mañana alguien llama a
+     esta función desde otro lado. `|| 1` ataja el `NaN`. */
+  const cual = Math.min(Math.max(Math.floor(pagina) || 1, 1), MAX_PAGINA);
+
+  /* ⚠️ La página va en la clave del guardarropas. Sin esto, la página 2 se
+     serviría con lo guardado de la 1 —misma frase, mismo formato— y "ver más"
+     devolvería los mismos ochenta videos para siempre. */
+  const enElRopero = `videos:${vertical ? "alto" : "ancho"}:${cual}:${limpia.toLowerCase()}`;
   const guardado = await leerDelCache<{ videos: VideoDeStock[]; total: number }>(enElRopero);
   if (guardado && Array.isArray(guardado.videos)) {
     return { videos: guardado.videos, total: guardado.total, sinCupo: false, sinClave: false };
@@ -167,6 +186,7 @@ export async function buscarVideos(
 
   const parametros = new URLSearchParams({
     query: limpia,
+    page: String(cual),
     per_page: String(POR_PAGINA),
     orientation: vertical ? "portrait" : "landscape",
     /* El mismo `locale` que las fotos. Ver el encabezado: sin esto la misma

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Search, Download, Smartphone, Monitor, Loader2, ExternalLink } from "lucide-react";
-import type { VideoDeStock } from "@/lib/videos-pexels";
+import { MAX_PAGINA, type VideoDeStock } from "@/lib/videos-pexels";
 
 /**
  * Videos de stock para los reels.
@@ -78,6 +78,15 @@ export default function ReelsClient({
    * más" no sale a pedir nada, sólo destapa lo que ya vino.
    */
   const [aLaVista, setALaVista] = useState(PASO_DE_LA_GRILLA);
+  /**
+   * En qué página del banco vamos.
+   *
+   * ⚠️ Esto SÍ cuesta cuota: cada página es un pedido contra el tope que
+   * compartimos con las fotos de los ebooks. Por eso es un botón aparte del de
+   * "Ver más" —que no pide nada— y por eso dice que va a traer videos nuevos.
+   * Dos botones que parecen lo mismo y cuestan distinto son una trampa.
+   */
+  const [pagina, setPagina] = useState(1);
   /* El aviso de la primera pantalla se decide en el servidor y con las mismas
      palabras que el de después: los tres casos —sin clave, sin cupo, sin
      resultados— se arreglan de tres formas distintas y hay que poder decir cuál
@@ -91,22 +100,38 @@ export default function ReelsClient({
   );
   const [bajando, setBajando] = useState<string | null>(null);
 
-  async function buscar(consulta: string, alto: boolean) {
+  /**
+   * Busca, o trae la página siguiente del banco.
+   *
+   * ⚠️ `siguiente` es la única diferencia y cambia dos cosas: los videos se
+   * SUMAN a los que ya están en vez de reemplazarlos, y el contador de lo que se
+   * dibuja no vuelve a empezar. Sin eso, pedir más videos tiraría los 80 que la
+   * persona ya venía mirando —y que costaron un pedido— para mostrar otros 80.
+   */
+  async function buscar(consulta: string, alto: boolean, siguiente = false) {
     if (!consulta.trim()) return;
+    const cual = siguiente ? pagina + 1 : 1;
+    if (cual > MAX_PAGINA) return;
+
     /* Una búsqueda nueva arranca de arriba: dejar el contador donde estaba
        mostraría 72 resultados de una lista recién traída. */
-    setALaVista(PASO_DE_LA_GRILLA);
+    if (!siguiente) setALaVista(PASO_DE_LA_GRILLA);
     setBuscando(true);
     setAviso(null);
     try {
       const r = await fetch(
-        `/api/digitales/marketing/videos?q=${encodeURIComponent(consulta)}&formato=${alto ? "alto" : "ancho"}`,
+        `/api/digitales/marketing/videos?q=${encodeURIComponent(consulta)}&formato=${alto ? "alto" : "ancho"}&pagina=${cual}`,
       );
       const j = await r.json();
       if (!r.ok) {
         setAviso(j?.error ?? "No se pudo buscar. Probá de nuevo en un rato.");
-        setVideos([]);
-        setTotal(null);
+        /* ⚠️ Pidiendo la página siguiente NO se borra lo que ya está en
+           pantalla. Que falle traer más videos no puede llevarse puestos los que
+           la persona estaba mirando, y que ya costaron un pedido. */
+        if (!siguiente) {
+          setVideos([]);
+          setTotal(null);
+        }
         return;
       }
       /* ⚠️ Los tres casos se dicen distinto. "No hay videos de eso" se arregla
@@ -115,9 +140,30 @@ export default function ReelsClient({
          reescribiendo la búsqueda veinte minutos al pedo. */
       if (j.sinClave) setAviso("Esta instalación todavía no tiene conectado el banco de videos.");
       else if (j.sinCupo) setAviso("El banco de videos está al tope por ahora. Probá en un rato: no es tu búsqueda.");
-      else if ((j.videos?.length ?? 0) === 0) setAviso(`No encontramos videos de "${consulta}". Probá con menos palabras.`);
-      setVideos(j.videos ?? []);
-      setTotal(typeof j.total === "number" ? j.total : null);
+      else if ((j.videos?.length ?? 0) === 0) {
+        setAviso(siguiente
+          ? "No hay más videos de eso en el banco."
+          : `No encontramos videos de "${consulta}". Probá con menos palabras.`);
+      }
+
+      const llegaron: VideoDeStock[] = j.videos ?? [];
+      if (siguiente) {
+        /* ⚠️ Sin filtrar por id, una página que devuelve algo repetido rompe la
+           grilla entera: React tira "dos hijos con la misma clave" y deja de
+           dibujar. Pasa con listas que se mueven entre pedidos. */
+        setVideos((antes) => {
+          const vistos = new Set(antes.map((v) => v.id));
+          return [...antes, ...llegaron.filter((v) => !vistos.has(v.id))];
+        });
+        setPagina(cual);
+        /* Se destapa la primera tanda de los nuevos: quien pidió más videos
+           quiere VER más videos, no apretar otro botón. */
+        setALaVista((n) => n + PASO_DE_LA_GRILLA);
+      } else {
+        setVideos(llegaron);
+        setPagina(1);
+        setTotal(typeof j.total === "number" ? j.total : null);
+      }
     } catch {
       setAviso("Se cortó la búsqueda. Probá de nuevo.");
     } finally {
@@ -282,6 +328,27 @@ export default function ReelsClient({
           className="mt-4 w-full rounded-xl border border-gray-200 py-3 text-[13px] font-bold text-gray-700 transition-colors hover:border-orange-300 hover:text-orange-700 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:border-orange-500/40"
         >
           Ver {Math.min(PASO_DE_LA_GRILLA, videos.length - aLaVista)} más
+        </button>
+      )}
+
+      {/* ── Traer más del banco ───────────────────────────────────────────────
+          ⚠️ Este SÍ sale a pedir, y por eso aparece recién cuando ya no queda
+          nada por destapar: ofrecerlo antes haría gastar un pedido a alguien
+          que todavía tiene cincuenta videos sin mirar en la misma pantalla.
+
+          Se corta en `MAX_PAGINA` —800 videos de una misma búsqueda— y también
+          cuando el banco tiene menos que eso. Un botón que promete más videos y
+          devuelve una lista vacía es peor que no tenerlo. */}
+      {videos.length > 0 && videos.length <= aLaVista && pagina < MAX_PAGINA
+        && (total === null || videos.length < total) && (
+        <button
+          type="button"
+          onClick={() => buscar(texto, vertical, true)}
+          disabled={buscando}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-[13px] font-bold text-gray-700 transition-colors hover:border-orange-300 hover:text-orange-700 disabled:opacity-60 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:border-orange-500/40"
+        >
+          {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {buscando ? "Buscando…" : "Traer más videos del banco"}
         </button>
       )}
 

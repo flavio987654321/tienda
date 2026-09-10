@@ -62,8 +62,11 @@ export async function GET(req: NextRequest) {
   const consulta = req.nextUrl.searchParams.get("q") ?? "";
   /* Vertical de fábrica: un reel es vertical. Lo apaisado se pide a propósito. */
   const vertical = req.nextUrl.searchParams.get("formato") !== "ancho";
+  /* Y la página, que acota `buscarVideos`: acá se lee y allá se recorta, porque
+     esa función es la única puerta al banco. Ver `MAX_PAGINA`. */
+  const pagina = Number(req.nextUrl.searchParams.get("pagina") ?? "1");
 
-  const r = await buscarVideos(consulta, { vertical });
+  const r = await buscarVideos(consulta, { vertical, pagina });
 
   /* ⚠️ Los tres casos van separados y no como una lista vacía. "No hay videos
      de eso", "nos pasamos del tope" y "esta instalación no tiene clave" se
