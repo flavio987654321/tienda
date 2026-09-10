@@ -41,14 +41,31 @@ const RAIZ = "https://api.pexels.com/videos/search";
 const ESPERA_BUSQUEDA = 6_000;
 
 /**
- * Cuántos se piden y cuántos se muestran.
+ * Cuántos se piden.
  *
- * El tope de la API es 80. Se piden 24: es lo que entra en dos pantallazos, y
- * cada video de más es una miniatura más que el navegador va a bajar. Con 80 en
- * pantalla, alguien con datos móviles se come 80 previsualizaciones para mirar
- * cuatro.
+ * ══════════════════════════════════════════════════════════════════════════
+ * SE PIDE EL MÁXIMO, Y SE MUESTRAN DE A POCO — 10/09/26
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Esto pedía 24 con este motivo: *"cada video de más es una miniatura más que
+ * el navegador va a bajar; con 80 en pantalla, alguien con datos móviles se
+ * come 80 previsualizaciones para mirar cuatro"*.
+ *
+ * El motivo era bueno y la conclusión estaba mal. **Lo que cuesta cuota es el
+ * PEDIDO, no cuántos vengan adentro**: traer 24 y traer 80 cuestan exactamente
+ * lo mismo contra el tope de 200 por hora que compartimos con las fotos de los
+ * ebooks. Pidiendo 24 estábamos tirando a la basura 56 videos gratis y
+ * obligando a otro pedido para ver más.
+ *
+ * Así que se pide el máximo que la API permite —80— y **la pantalla es la que
+ * muestra de a poco**: veinticuatro, y el resto aparece al apretar "Ver más",
+ * sin salir a pedir nada. El miedo a las miniaturas se resuelve donde estaba el
+ * problema, que era el navegador y no el banco.
+ *
+ * Es también la respuesta a "cómo hacen las otras plataformas para ofrecer cien
+ * videos": no hacen cien pedidos, hacen uno.
  */
-const POR_PAGINA = 24;
+const POR_PAGINA = 80;
 
 /** El guardarropas. La misma frase, buscada dos veces, cuesta un pedido. */
 const HORAS_DE_CACHE = 24;

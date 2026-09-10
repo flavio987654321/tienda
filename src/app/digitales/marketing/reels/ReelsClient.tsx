@@ -30,6 +30,16 @@ import type { VideoDeStock } from "@/lib/videos-pexels";
  * el `fetch` falla y no baja nada. Por eso hay un plan B explícito —abrir el
  * video en una pestaña— y no un `catch` vacío.
  */
+/**
+ * De a cuántos se DIBUJAN los resultados.
+ *
+ * La búsqueda trae hasta 80 —es lo que permite la API, y cuesta un pedido igual
+ * que traer 24: ver el porqué largo en `videos-pexels`— pero ochenta miniaturas
+ * de golpe son ochenta descargas en el teléfono de alguien para mirar cuatro.
+ * Se dibujan de a 24 y el resto se destapa con un botón, sin pedir nada.
+ */
+const PASO_DE_LA_GRILLA = 24;
+
 export default function ReelsClient({
   busquedaInicial,
   deQueProducto,
@@ -59,6 +69,15 @@ export default function ReelsClient({
   const [videos, setVideos] = useState<VideoDeStock[]>(videosIniciales);
   const [total, setTotal] = useState<number | null>(videosIniciales.length > 0 ? totalInicial : null);
   const [buscando, setBuscando] = useState(false);
+  /**
+   * Cuántos se DIBUJAN de los que ya están acá.
+   *
+   * ⚠️ Esto no tiene nada que ver con la cuota: la búsqueda ya trajo hasta 80 y
+   * están todos en memoria. Lo que se cuida acá es el TELÉFONO — ochenta
+   * miniaturas de golpe son ochenta descargas para mirar cuatro. Apretar "Ver
+   * más" no sale a pedir nada, sólo destapa lo que ya vino.
+   */
+  const [aLaVista, setALaVista] = useState(PASO_DE_LA_GRILLA);
   /* El aviso de la primera pantalla se decide en el servidor y con las mismas
      palabras que el de después: los tres casos —sin clave, sin cupo, sin
      resultados— se arreglan de tres formas distintas y hay que poder decir cuál
@@ -74,6 +93,9 @@ export default function ReelsClient({
 
   async function buscar(consulta: string, alto: boolean) {
     if (!consulta.trim()) return;
+    /* Una búsqueda nueva arranca de arriba: dejar el contador donde estaba
+       mostraría 72 resultados de una lista recién traída. */
+    setALaVista(PASO_DE_LA_GRILLA);
     setBuscando(true);
     setAviso(null);
     try {
@@ -199,13 +221,13 @@ export default function ReelsClient({
 
       {total !== null && videos.length > 0 && (
         <p className="mt-4 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
-          {total.toLocaleString("es-AR")} videos en el banco · te mostramos los primeros {videos.length}
+          {total.toLocaleString("es-AR")} videos en el banco · te mostramos {Math.min(aLaVista, videos.length)} de {videos.length}
         </p>
       )}
 
       {/* ── La grilla ────────────────────────────────────────────────────── */}
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {videos.map((v) => (
+        {videos.slice(0, aLaVista).map((v) => (
           <div
             key={v.id}
             className="overflow-hidden rounded-xl border border-gray-200 bg-white panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900"
@@ -248,6 +270,20 @@ export default function ReelsClient({
           </div>
         ))}
       </div>
+
+      {/* ⚠️ Esto NO sale a buscar nada: los videos ya están todos acá, traídos
+          por la misma búsqueda. Sólo destapa los que faltan dibujar. Por eso el
+          botón dice cuántos quedan y no "cargar más", que prometería una espera
+          que no existe. */}
+      {videos.length > aLaVista && (
+        <button
+          type="button"
+          onClick={() => setALaVista((n) => n + PASO_DE_LA_GRILLA)}
+          className="mt-4 w-full rounded-xl border border-gray-200 py-3 text-[13px] font-bold text-gray-700 transition-colors hover:border-orange-300 hover:text-orange-700 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:border-orange-500/40"
+        >
+          Ver {Math.min(PASO_DE_LA_GRILLA, videos.length - aLaVista)} más
+        </button>
+      )}
 
       {videos.length > 0 && (
         <p className="mt-6 text-[11.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">

@@ -21,12 +21,25 @@ export const dynamic = "force-dynamic";
  *
  * Por eso: sesión, rol DIGITAL como el resto del panel, y freno por cuenta.
  *
- * ── El freno ───────────────────────────────────────────────────────────────
+ * ── El freno, y por qué son 20 y no 60 ─────────────────────────────────────
  *
- * 60 búsquedas por hora y por cuenta. Buscar es barato para quien busca —se
- * escribe una palabra y se aprieta— y caro para nosotros, y encima hay un
- * guardarropas de 24 horas por delante que hace que las repetidas no lleguen
- * al banco. Sesenta alcanza de sobra para una tarde de buscar material.
+ * 20 búsquedas por hora y por cuenta.
+ *
+ * ⚠️ Estuvo en 60 y estaba mal calculado. El tope de Pexels es **200 pedidos
+ * por hora para toda la plataforma** (y 20.000 por mes), así que con 60 por
+ * cuenta alcanzaban TRES personas buscando fuerte en la misma hora para dejar
+ * seca la cuota de todos. Y el que se queda sin nada no es el que estaba
+ * mirando videos: es alguien que está armando su ebook y necesita las fotos,
+ * que ya pagó por eso.
+ *
+ * Veinte búsquedas DISTINTAS en una hora ya es muchísimo para elegir material
+ * —las repetidas no cuentan, las ataja el guardarropas de 24 horas— y deja el
+ * grueso de la cuota para lo que no puede fallar.
+ *
+ * Esto se puede subir el día que Pexels nos amplíe el límite: lo dan gratis a
+ * quien cumple sus condiciones de atribución, que es justo lo que ya hacemos
+ * —cada tarjeta muestra quién filmó y enlaza a Pexels—. Hasta que eso esté
+ * confirmado, el número tiene que ser conservador.
  */
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -36,7 +49,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    if (!(await checkRateLimit(`digital-videos:${user.id}`, 60, 60 * 60 * 1000))) {
+    if (!(await checkRateLimit(`digital-videos:${user.id}`, 20, 60 * 60 * 1000))) {
       return NextResponse.json(
         { error: "Demasiadas búsquedas seguidas. Probá de nuevo en un rato." },
         { status: 429 },
