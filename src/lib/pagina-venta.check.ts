@@ -377,6 +377,28 @@ check("RUTA-D", /rolDigital:\s*"PRINCIPAL"/.test(guardar),
 check("RUTA-E", guardar.indexOf("crudo.length > MAX_CUERPO") < guardar.indexOf("JSON.parse(crudo)"),
   "el cuerpo se mide ANTES de parsearlo");
 
+/* ══════════════════════════════════════════════════════════════════════════
+   ⚠️ EL PATCH TIENE QUE LEER LA PÁGINA ANTES DE GUARDARLA
+   ══════════════════════════════════════════════════════════════════════════
+
+   El `PATCH` cambia sólo el aspecto —estilo, paleta y letra— y por eso recibe
+   un cuerpo de tres claves. Si alguna vez alguien lo "simplifica" a
+   `normalizarContenido(cuerpo)`, como hace el PUT, esa función no vería ninguna
+   sección y armaría una página NUEVA con los textos de fábrica: elegir un color
+   borraría lo que escribió la IA y lo que la persona editó a mano.
+
+   No se nota probándolo —la página sigue existiendo y sigue teniendo precio—
+   hasta que alguien mira los textos. Por eso hay un chequeo y no sólo un
+   comentario: lo que protege es el contenido, no la forma.
+
+   La lectura previa está en `const actual = normalizarContenido(producto.paginaVenta)`
+   y el objeto que se guarda tiene que salir de ahí. */
+const traeLaPagina = /select:\s*\{[^}]*paginaVenta:\s*true/.test(guardar);
+check("RUTA-F", traeLaPagina && /const actual = normalizarContenido\(producto\.paginaVenta\)/.test(guardar),
+  "el PATCH lee la página que ya está guardada antes de tocarla");
+check("RUTA-G", /\.\.\.actual,/.test(guardar),
+  "y guarda lo que había con las tres claves cambiadas, no un cuerpo suelto");
+
 /* ── La página pública ────────────────────────────────────────────────────── */
 
 const publica = readFileSync("src/app/p/[id]/page.tsx", "utf8");
