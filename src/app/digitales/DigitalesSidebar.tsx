@@ -22,8 +22,45 @@ import {
  * La lista es una sola para la barra de escritorio y para el cajón del celular.
  * Es la corrección que ya se le hizo a `AfiliadosNav`, donde eran dos listas y
  * cuatro pantallas enteras y andando no tenían botón en la computadora. */
-const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
-  { href: "/digitales", label: "Inicio", Icon: Home },
+type LinkDelPanel = { href: string; label: string; Icon: React.ElementType };
+
+/**
+ * Los grupos del menú.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * POR QUÉ AGRUPADO, Y POR QUÉ SIN TÍTULOS EN EL RIEL — 10/09/26
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Eran siete entradas en una lista corrida, todas con el mismo peso: "Mi
+ * cuenta" se leía igual de importante que "Productos". Agrupadas se lee de un
+ * vistazo qué es de tu negocio y qué es de tu cuenta.
+ *
+ * ⚠️ Pero el título del grupo NO PUEDE SER LO QUE AGRUPA. En escritorio esta
+ * barra es un riel de 56 píxeles que se abre al pasar el mouse: mientras está
+ * cerrada —o sea casi siempre— no hay lugar para la palabra "Tu negocio", y un
+ * título recortado a tres letras es peor que ninguno.
+ *
+ * Así que lo que agrupa es la RAYA, que se ve en los dos estados, y el título
+ * aparece solo cuando la barra se abre. Cerrada se ven tres bloques de íconos
+ * separados; abierta, tres bloques con su nombre.
+ *
+ * En el cajón del celular no hay riel —está siempre abierto— así que ahí los
+ * títulos se ven siempre.
+ *
+ * ── Qué NO se hizo ────────────────────────────────────────────────────────
+ *
+ * Grupos desplegables, con su flechita, como los tiene la competencia. Un
+ * desplegable esconde pantallas atrás de un clic de más, y con siete entradas
+ * no hay nada que esconder: entran todas a la vista. Vale cuando el menú tiene
+ * el doble de cosas.
+ */
+const GRUPOS: { titulo: string | null; links: LinkDelPanel[] }[] = [
+  /* Inicio va suelto y arriba de la primera raya: no es "de" ningún grupo, es
+     de dónde salen todos. */
+  { titulo: null, links: [{ href: "/digitales", label: "Inicio", Icon: Home }] },
+  {
+    titulo: "Tu negocio",
+    links: [
   { href: "/digitales/productos", label: "Productos", Icon: Package },
   /* Ventas va JUSTO DESPUÉS de Productos y antes de lo demás: es la pantalla que
      se abre todos los días, y la única que contesta la pregunta por la que
@@ -46,12 +83,22 @@ const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
    * mientras está cerrado, que es peor que no tenerlo. Adentro de la sección sí
    * están todas, con su nombre y qué hace cada una. */
   { href: "/digitales/marketing", label: "Marketing", Icon: Megaphone },
-  /* Configuración es lo del NEGOCIO —con qué cobrás, cómo te ve el comprador— y
-     Mi cuenta es lo de la persona. Van separadas y en este orden: sin cobros
-     conectados no se vende nada, así que lo primero que hay que encontrar es
-     esto y no los datos personales. */
-  { href: "/digitales/configuracion", label: "Configuración", Icon: Settings },
-  { href: "/digitales/mi-cuenta", label: "Mi cuenta", Icon: UserRound },
+    ],
+  },
+  {
+    /* Configuración es lo del NEGOCIO —con qué cobrás, cómo te ve el comprador—
+       y Mi cuenta es lo de la persona. Van separadas y en este orden: sin cobros
+       conectados no se vende nada, así que lo primero que hay que encontrar es
+       esto y no los datos personales.
+
+       Las dos abajo del todo y en su propio grupo porque se tocan una vez y no
+       se vuelven a mirar, a diferencia de las cuatro de arriba. */
+    titulo: "Tu cuenta",
+    links: [
+      { href: "/digitales/configuracion", label: "Configuración", Icon: Settings },
+      { href: "/digitales/mi-cuenta", label: "Mi cuenta", Icon: UserRound },
+    ],
+  },
 ];
 
 type Props = {
@@ -125,23 +172,46 @@ export default function DigitalesSidebar({ tier }: Props) {
           </span>
         </Link>
 
-        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden space-y-0.5 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
-          {LINKS.map(({ href, label, Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              title={label}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                activa(href)
-                  ? "bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-600 font-semibold"
-                  : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
-              }`}
+        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+          {GRUPOS.map((grupo, n) => (
+            <div
+              key={grupo.titulo ?? "raiz"}
+              /* La raya es lo que agrupa cuando la barra está cerrada. Va arriba
+                 de cada grupo menos del primero: una raya bajo el logo sería una
+                 segunda línea pegada a la que ya tiene el encabezado. */
+              className={n > 0 ? "mt-1.5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-1.5" : ""}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="whitespace-nowrap overflow-hidden max-w-0 group-hover:max-w-xs transition-[max-width] duration-200">
-                {label}
-              </span>
-            </Link>
+              {grupo.titulo && (
+                /* ⚠️ `max-h-0` y no `hidden`: con `hidden` el título aparece de
+                   golpe mientras la barra todavía se está abriendo y da un
+                   salto. Así crece con ella. Y clavado en `max-h-0` no ocupa
+                   NADA cerrado —el `box-sizing` de Tailwind mete el relleno
+                   adentro del máximo—, así que los íconos no se corren. */
+                <p className="overflow-hidden max-h-0 opacity-0 group-hover:max-h-8 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+                  {grupo.titulo}
+                </p>
+              )}
+
+              <div className="space-y-0.5">
+                {grupo.links.map(({ href, label, Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={label}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activa(href)
+                        ? "bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-600 font-semibold"
+                        : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="whitespace-nowrap overflow-hidden max-w-0 group-hover:max-w-xs transition-[max-width] duration-200">
+                      {label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
@@ -221,21 +291,35 @@ export default function DigitalesSidebar({ tier }: Props) {
               </button>
             </div>
 
-            <nav className="flex-1 p-3 overflow-y-auto space-y-0.5">
-              {LINKS.map(({ href, label, Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-colors ${
-                    activa(href)
-                      ? "bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-600 font-semibold"
-                      : "text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 active:bg-gray-100"
-                  }`}
-                >
-                  <Icon className={`h-5 w-5 shrink-0 ${activa(href) ? "" : "text-orange-500"}`} />
-                  {label}
-                </Link>
+            {/* Acá no hay riel que se abra: el cajón está siempre abierto, así
+                que los títulos de grupo se ven siempre y no hace falta la raya
+                —el título ya separa—. */}
+            <nav className="flex-1 p-3 overflow-y-auto">
+              {GRUPOS.map((grupo, n) => (
+                <div key={grupo.titulo ?? "raiz"} className={n > 0 ? "mt-3" : ""}>
+                  {grupo.titulo && (
+                    <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+                      {grupo.titulo}
+                    </p>
+                  )}
+                  <div className="space-y-0.5">
+                    {grupo.links.map(({ href, label, Icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-colors ${
+                          activa(href)
+                            ? "bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-600 font-semibold"
+                            : "text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 active:bg-gray-100"
+                        }`}
+                      >
+                        <Icon className={`h-5 w-5 shrink-0 ${activa(href) ? "" : "text-orange-500"}`} />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))}
             </nav>
 
