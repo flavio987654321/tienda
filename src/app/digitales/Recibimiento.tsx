@@ -2,12 +2,15 @@
 
 import { useRef, useState } from "react";
 import {
-  Sparkles, FileUp, Pencil, CreditCard, Rocket, ArrowRight, Check, LogOut, Loader2,
+  Sparkles, FileUp, Pencil, CreditCard, Rocket, ArrowRight, LogOut, Loader2, Send,
 } from "lucide-react";
 import type { Paso, ClavePaso } from "@/lib/primeros-pasos";
 import { elQueSigue, NOMBRE_CORTO } from "@/lib/primeros-pasos";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import { useAuth } from "@/components/AuthProvider";
+import { AppLogo } from "@/components/AppLogo";
+import BarraDePasos, { NOMBRE_ESTILO, NOMBRE_LISTO, type CirculoDePaso } from "./BarraDePasos";
+import Consejo from "./Consejo";
 import EmbudoIA from "./productos/EmbudoIA";
 
 /**
@@ -49,7 +52,83 @@ import EmbudoIA from "./productos/EmbudoIA";
  * subida es `subirPdfDigital`; la página la escribe la misma ruta de IA; y el
  * texto de cada paso sale de `lib/primeros-pasos`, así que el recibimiento y el
  * panel nunca pueden decir cosas distintas.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * LA BIENVENIDA: POR QUÉ ESTA PANTALLA NO ES SÓLO LA TARJETA — 10/09/26
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Hasta hoy era una tarjeta chica en el medio de una pantalla vacía. En un
+ * teléfono se veía bien; en una computadora de 1920 son dos metros de gris
+ * alrededor de un botón, sin el logo por ningún lado. Reportado mirándolo al
+ * lado del recibimiento de un competidor: *"me da tristeza ver esa imagen, ni
+ * el logo de TiendaApps aparece"*.
+ *
+ * Y el problema no era estético. **Es la primera pantalla de alguien que acaba
+ * de pagar o de anotarse**, y no decía en ningún lado qué hace la plataforma
+ * por esa persona: sólo le daba una orden ("Armá tu producto"). Quien nunca vio
+ * el panel no tiene forma de saber que la IA le escribe la página, que cobra
+ * con su propio Mercado Pago o que la entrega la hacemos nosotros.
+ *
+ * Así que el espacio vacío se llena con eso, y con nada más: el saludo por su
+ * nombre y las tres cosas que la plataforma hace sola.
+ *
+ * ⚠️ Las tres salen de `LO_QUE_PONEMOS` y **no prometen nada que no esté
+ * andando hoy**. Es la misma regla que la pantalla de Marketing: acá no va una
+ * fila apagada que diga "próximamente". Antes de agregar una cuarta, mirá que
+ * exista de verdad — esta pantalla la lee alguien que todavía puede pedir la
+ * devolución.
+ *
+ * ── El orden se da vuelta en el teléfono ───────────────────────────────────
+ *
+ * En pantalla grande la bienvenida va a la izquierda y la tarjeta a la derecha.
+ * En el teléfono se apila, y ahí la bienvenida va DEBAJO (`order-2`): puesta
+ * arriba, empuja el único botón de la pantalla abajo del pliegue, que es
+ * exactamente el error que esto venía a arreglar. Primero la acción, después el
+ * relato.
  */
+
+/**
+ * Las tres cosas que la plataforma hace sola.
+ *
+ * ⚠️ Cada una tiene que ser verificable en el código de hoy. "La IA escribe" es
+ * `EmbudoIA` + `/api/digitales/ia/pagina`; "vos cobrás" es el Mercado Pago de la
+ * persona, conectado en Configuración → Pagos; "nosotros entregamos" es el mail
+ * de entrega que sale solo al confirmarse el cobro. Ninguna es una intención.
+ *
+ * ── ⚠️ FRASES CORTAS, Y NO ES UNA PREFERENCIA ──────────────────────────────
+ *
+ * La primera versión decía cosas como *"Apenas te pagan, el archivo le llega
+ * solo a quien compró. No tenés que estar mirando"*: correcto, y con dos
+ * subordinadas antes del punto. Probado en pantalla, la devolución fue *"se
+ * traba mucho leyendo"*.
+ *
+ * Esto lo lee alguien que recién entró y todavía no sabe si se quedó con algo
+ * bueno. Una frase que hay que releer se saltea, y salteadas estas tres no
+ * dicen nada. La regla acá es: **una idea por oración, sujeto adelante, y nada
+ * de aclaraciones colgadas atrás del punto**.
+ */
+const LO_QUE_PONEMOS = [
+  {
+    Icon: Sparkles,
+    titulo: "La IA lo escribe",
+    /* Se nombra qué escribe, no "te ayuda a crear contenido": lo que hace de
+       verdad es más de lo que la gente supone y es lo que la convence. */
+    detalle: "Tu producto, tus ofertas y tu página de venta. Después cambiás lo que quieras.",
+  },
+  {
+    Icon: CreditCard,
+    titulo: "Vos cobrás",
+    /* La segunda frase es la misma que el paso de `primeros-pasos`, y no una
+       parecida: es la promesa de plata de todo el ecosistema y no puede sonar
+       distinta según la pantalla en la que se lea. */
+    detalle: "Con tu Mercado Pago. La plata va derecho a tu cuenta.",
+  },
+  {
+    Icon: Send,
+    titulo: "Nosotros entregamos",
+    detalle: "Te pagan y el archivo sale solo. Vos no hacés nada.",
+  },
+] as const;
 
 /** El ícono de cada paso. El orden es el de `primerosPasos`. */
 const ICONO: Record<ClavePaso, typeof Sparkles> = {
@@ -69,12 +148,15 @@ export default function Recibimiento({
   pasos,
   productoId,
   cupoIA,
+  nombre,
 }: {
   /** Sólo los de la puerta. Ver `pasosDeLaPuerta` en `lib/primeros-pasos`. */
   pasos: Paso[];
   /** El producto principal, cuando ya existe. Todos menos el primero lo necesitan. */
   productoId: string | null;
   cupoIA: EstadoDelCupo;
+  /** El nombre de la cuenta, para saludar. Puede no estar: se entra con Google o con mail. */
+  nombre: string | null;
 }) {
   const { signOut } = useAuth();
   const [embudo, setEmbudo] = useState(false);
@@ -100,6 +182,47 @@ export default function Recibimiento({
   const numero = pasos.indexOf(sigue) + 1;
 
   const Icono = ICONO[sigue.clave];
+
+  /* ⚠️ Sólo el primer nombre, y puede quedar vacío. Se entra con Google —que
+     manda "Flavio Soltero"— o con mail y contraseña, que puede no mandar nada:
+     `name` es `string | null` en `AppSessionUser`. Un saludo con el nombre
+     completo suena a carta del banco, y uno con el hueco vacío ("Hola, .") es
+     peor que no saludar. Por eso el texto se elige, no se interpola. */
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOS CUATRO CÍRCULOS ESTÁN DESDE EL PRINCIPIO — 10/09/26
+     ══════════════════════════════════════════════════════════════════════════
+
+     Acá se dibujaban SÓLO los pasos de la puerta, que hoy son dos: Producto y
+     Página. Y el asistente hace los dos de una —crea el producto y escribe la
+     página, ver `EmbudoIA`—, así que la barra prometía dos pasos, la persona
+     apretaba un botón y caía en el panel.
+
+     Reportado probándolo: *"cuando puse generar se saltó el último paso y me
+     llevó directo al panel"*. No se salteaba nada: se tildaban los dos juntos y
+     no había nada después.
+
+     Ahora se ven los cuatro del recorrido completo —los de la puerta más los dos
+     del cierre— así que se VE que el asistente tacha dos de una, y la barra de
+     esta pantalla es la misma que la de las dos que siguen. Los del cierre
+     todavía no están hechos, y por eso van en `falta`. */
+  const circulos: CirculoDePaso[] = [
+    ...pasos.map((p) => ({
+      nombre: NOMBRE_CORTO[p.clave],
+      estado: p.hecho ? "hecho" as const : p.clave === sigue.clave ? "actual" as const : "falta" as const,
+    })),
+    { nombre: NOMBRE_ESTILO, estado: "falta" },
+    { nombre: NOMBRE_LISTO, estado: "falta" },
+  ];
+
+  const primerNombre = (nombre ?? "").trim().split(/\s+/)[0] ?? "";
+  const arrancando = sigue.clave === "producto";
+  const saludo = arrancando
+    ? primerNombre
+      ? `Hola, ${primerNombre}.`
+      : "Te damos la bienvenida."
+    : primerNombre
+      ? `Vas bien, ${primerNombre}.`
+      : "Vas bien.";
 
   async function salir() {
     setSaliendo(true);
@@ -150,62 +273,54 @@ export default function Recibimiento({
   const ocupado = trabajando;
 
   return (
-    <div className="min-h-screen bg-gray-50 panel-oscuro:bg-gray-950 text-gray-900 panel-oscuro:text-gray-100 flex flex-col">
+    <div className="relative min-h-screen overflow-hidden bg-gray-50 panel-oscuro:bg-gray-950 text-gray-900 panel-oscuro:text-gray-100 flex flex-col">
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          EL RESPLANDOR
+          ══════════════════════════════════════════════════════════════════════
+
+          Toda la pantalla era `gray-50` de punta a punta y la marca es naranja:
+          quedaba una hoja en blanco con un botón. Estas dos manchas desenfocadas
+          le ponen el color de la casa sin tocar un solo texto.
+
+          ⚠️ Van como elementos y no como `background-image` del contenedor por
+          el tema oscuro: el degradado tiene que cambiar de intensidad con
+          `panel-oscuro:`, y esa variante se aplica a clases, no a un `style`.
+
+          ⚠️ Y el `header` y el `main` llevan `relative` por esto mismo. Un
+          elemento posicionado se pinta arriba de los hermanos que no lo están,
+          así que sin eso las manchas taparían la barra y el texto. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-[10%] h-[420px] w-[900px] max-w-[150%] -translate-x-1/2 rounded-full bg-orange-200/40 blur-[100px] panel-oscuro:bg-orange-500/10"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-40 bottom-[-6rem] h-[360px] w-[560px] rounded-full bg-amber-100/60 blur-[100px] panel-oscuro:bg-amber-500/[0.06]"
+      />
 
       {/* ── La barra de progreso ─────────────────────────────────────────────
-          ⚠️ En el teléfono se ven SÓLO los números y las rayas. Los cuatro
-          nombres a 360 entran en tres letras cada uno o se parten; el número con
-          su tilde ya dice lo único que importa acá arriba, que es cuánto falta.
-          El nombre del paso donde estás se lee completo en la tarjeta. */}
-      <header className="shrink-0 border-b border-gray-200 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900">
+          La dibuja `BarraDePasos`, compartida con las dos pantallas del cierre:
+          van una atrás de la otra y tienen que ser la misma barra. */}
+      <header className="relative shrink-0 border-b border-gray-200 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <span className="hidden shrink-0 text-[13px] font-black tracking-tight sm:block">
-            TiendaApps
+          {/* ⚠️ EL LOGO, y en el teléfono también. Acá había sólo la palabra
+              "TiendaApps" escrita, y encima escondida hasta `sm` — o sea que la
+              primera pantalla de una cuenta nueva no tenía ninguna marca en un
+              celular. Es la pantalla donde alguien que acaba de pagar tiene que
+              reconocer dónde entró. La palabra sigue escondiéndose en pantalla
+              chica —ahí manda el ancho de la barra de pasos— pero la imagen no.
+
+              `AppLogo` es el mismo de la barra lateral del panel, así que al
+              entrar la marca no cambia de dibujo a mitad de camino. */}
+          <span className="flex shrink-0 items-center gap-2">
+            <AppLogo size={34} />
+            <span className="hidden text-[13px] font-black tracking-tight sm:block">
+              TiendaApps
+            </span>
           </span>
 
-          <ol className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-2">
-            {pasos.map((p, n) => {
-              const actual = p.clave === sigue.clave;
-              return (
-                <li key={p.clave} className="flex min-w-0 items-center gap-1 sm:gap-2">
-                  {n > 0 && (
-                    <span
-                      aria-hidden="true"
-                      className={`h-px w-3 shrink-0 sm:w-6 ${p.hecho || actual ? "bg-orange-400" : "bg-gray-200 panel-oscuro:bg-gray-700"}`}
-                    />
-                  )}
-                  <span
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
-                      p.hecho
-                        ? "bg-orange-600 text-white"
-                        : actual
-                          ? "bg-orange-100 panel-oscuro:bg-orange-500/20 text-orange-700 panel-oscuro:text-orange-300 ring-2 ring-orange-500"
-                          : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400 panel-oscuro:text-gray-500"
-                    }`}
-                    /* El estado se dice, no se deja al color: quien no distingue
-                       el naranja del gris tiene que poder saber en cuál está. */
-                    aria-current={actual ? "step" : undefined}
-                  >
-                    {p.hecho ? <Check className="h-3.5 w-3.5" /> : n + 1}
-                    <span className="sr-only">
-                      {p.hecho ? "hecho: " : actual ? "estás acá: " : "falta: "}
-                      {NOMBRE_CORTO[p.clave]}
-                    </span>
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className={`hidden truncate text-[12px] font-bold sm:block ${
-                      actual
-                        ? "text-orange-700 panel-oscuro:text-orange-300"
-                        : "text-gray-400 panel-oscuro:text-gray-500"
-                    }`}
-                  >
-                    {NOMBRE_CORTO[p.clave]}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+          <BarraDePasos circulos={circulos} />
 
           {/* ⚠️ Cerrar sesión SIEMPRE a la vista. Es lo único que hay que poder
               hacer siempre: sin panel, sin menú y sin barra lateral, sin esto
@@ -227,17 +342,88 @@ export default function Recibimiento({
         </div>
       </header>
 
-      {/* ── La tarjeta del paso ──────────────────────────────────────────────── */}
-      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
-        <div className="w-full max-w-lg">
+      {/* ── La bienvenida y la tarjeta del paso ──────────────────────────────
+          Dos columnas en pantalla grande, apiladas en el teléfono — y ahí la
+          bienvenida queda ABAJO, ver el comentario del encabezado. */}
+      <main className="relative flex flex-1 items-start justify-center px-4 py-8 sm:py-12 lg:items-center">
+        <div className="grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-center lg:gap-14">
 
-          <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 text-center shadow-sm sm:p-8">
+        {/* ⚠️ Los retrasos van a mano y en el ORDEN EN QUE SE LEE, que no es el
+            orden del HTML: la tarjeta está escrita después y entra primero (0ms),
+            porque es la que tiene el botón. Ver `.entra-suave` en `globals.css`. */}
+        <section className="order-2 mx-auto w-full max-w-lg lg:order-1 lg:mx-0 lg:max-w-none">
+          <p className="entra-suave text-[11px] font-bold uppercase tracking-widest text-orange-600" style={{ animationDelay: "60ms" }}>
+            Productos digitales
+          </p>
+          <h2
+            className="entra-suave mt-2 text-balance text-2xl font-black leading-tight text-gray-950 panel-oscuro:text-gray-50 sm:text-3xl"
+            style={{ animationDelay: "110ms" }}
+          >
+            {saludo}
+          </h2>
+          <p
+            className="entra-suave mt-3 max-w-md text-pretty text-[14px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400"
+            style={{ animationDelay: "170ms" }}
+          >
+            {/* ⚠️ No repite el "porque" de la tarjeta: ahí se explica qué pasa si
+                el paso falta, acá quién hace qué. Dos párrafos que dicen lo mismo
+                en la misma pantalla se leen como relleno.
+
+                Y va en dos oraciones cortas, por lo mismo que las tres filas de
+                abajo. Ver el aviso de `LO_QUE_PONEMOS`. */}
+            {arrancando
+              ? "Vos ponés lo que sabés. El resto lo hacemos nosotros."
+              : "Tu producto ya está. Falta la página que lo vende."}
+          </p>
+
+          <ul className="mt-7 space-y-4">
+            {LO_QUE_PONEMOS.map(({ Icon, titulo, detalle }, n) => (
+              <li
+                key={titulo}
+                className="entra-suave flex items-start gap-3.5"
+                style={{ animationDelay: `${230 + n * 70}ms` }}
+              >
+                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white panel-oscuro:bg-gray-900 ring-1 ring-gray-200 panel-oscuro:ring-gray-800">
+                  <Icon className="h-4 w-4 text-orange-600" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13.5px] font-bold text-gray-900 panel-oscuro:text-gray-100">
+                    {titulo}
+                  </span>
+                  <span className="mt-0.5 block max-w-sm text-pretty text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                    {detalle}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {/* El consejo del paso donde estás. Va al final de la columna y no
+              arriba: primero qué hace la plataforma —que es lo que decide si
+              sigue— y recién después el consejo, que se lee si sobra atención.
+              Ver `Consejo`. */}
+          <div className="entra-suave mt-7 max-w-md" style={{ animationDelay: "440ms" }}>
+            <Consejo momento={arrancando ? "producto" : "pagina"} />
+          </div>
+        </section>
+
+        <div className="entra-suave order-1 mx-auto w-full max-w-lg lg:order-2 lg:mx-0">
+
+          {/* La sombra subió de `shadow-sm` a ésta cuando apareció el resplandor:
+              con el fondo tibio detrás, una tarjeta blanca casi sin sombra se
+              confunde con la mancha. Tirada al naranja y no al negro, para que
+              levante sin ensuciar el color de atrás. */}
+          <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 text-center shadow-xl shadow-orange-950/[0.06] panel-oscuro:shadow-black/20 sm:p-8">
             <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-orange-100 panel-oscuro:bg-orange-500/15">
               <Icono className="h-7 w-7 text-orange-600" />
             </div>
 
+            {/* ⚠️ El total son los círculos de la barra, no los pasos de la
+                puerta: si acá dijera "de 2" y arriba hubiera cuatro bolitas, la
+                misma pantalla estaría contando dos cosas distintas. Los dos del
+                cierre —el estilo y la felicitación— también hay que hacerlos. */}
             <p className="text-[11px] font-bold uppercase tracking-widest text-orange-600">
-              Paso {numero} de {pasos.length}
+              Paso {numero} de {circulos.length}
             </p>
             <h1 className="mt-1.5 text-balance text-2xl font-black text-gray-950 panel-oscuro:text-gray-50">
               {sigue.titulo}
@@ -302,6 +488,8 @@ export default function Recibimiento({
                 terminar de una sentada, y quien no puede lo abandona. */}
             Podés cerrar esto y volver cuando quieras: lo que ya hiciste queda guardado.
           </p>
+        </div>
+
         </div>
       </main>
 

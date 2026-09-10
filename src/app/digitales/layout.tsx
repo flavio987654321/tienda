@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
-import TodoListo from "./TodoListo";
+import Cierre from "./Cierre";
 /* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
 import SondaDePantalla from "./SondaDePantalla";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
@@ -153,6 +153,11 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           pasos={recibimiento.pasos}
           productoId={recibimiento.productoId}
           cupoIA={await estadoDelCupo(user.id, tier)}
+          /* Sólo para saludar. Ya está en la sesión, así que no cuesta una
+             consulta más — y de `user` no puede salir nada más que esto: lo que
+             se le pasa a un componente de cliente termina escrito adentro del
+             HTML. Ver el aviso de `estadoDelRecibimiento`. */
+          nombre={user.name}
         />
       </>
     );
@@ -191,15 +196,23 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           la que dice "tengo cambios sin guardar" y los links que se los llevan
           puestos están en la barra. Separados, cada uno tendría su propio estado
           y la barra nunca se enteraría. */}
-      {/* ⚠️ "TODO LISTO": el cierre del recibimiento, encima del panel ya armado.
-          Se dibuja sólo mientras la publicación siga pendiente — o sea, en el
-          ratito entre terminar la puerta y publicar—. Sin esa condición, el día
-          que esto salga toda cuenta que ya venía usando el panel se comería una
-          felicitación por algo que hizo hace meses.
+      {/* ⚠️ EL CIERRE: elegir el aspecto y la felicitación, encima del panel ya
+          armado. Se dibuja sólo mientras la publicación siga pendiente — o sea,
+          en el ratito entre terminar la puerta y publicar—. Sin esa condición,
+          el día que esto salga toda cuenta que ya venía usando el panel se
+          comería una felicitación por algo que hizo hace meses.
 
           Que se muestre UNA VEZ lo decide el navegador y no la base: no gobierna
-          nada, la puerta sigue saliendo del estado real. Ver `TodoListo`. */}
-      {!recibimiento.publicado && <TodoListo productoId={recibimiento.productoId} pasos={recibimiento.pasos} pendientes={recibimiento.pendientesAdentro} />}
+          nada, la puerta sigue saliendo del estado real. Ver `Cierre`. */}
+      {!recibimiento.publicado && (
+        <Cierre
+          productoId={recibimiento.productoId}
+          productoNombre={recibimiento.productoNombre}
+          pasos={recibimiento.pasos}
+          pendientes={recibimiento.pendientesAdentro}
+          aspecto={recibimiento.aspecto}
+        />
+      )}
       <ProveedorDeSalida>
         <DigitalesSidebar tier={tier} />
         {/* `lg:ml-14` deja libre la franja de la barra, que es `fixed`; `pt-14` hace

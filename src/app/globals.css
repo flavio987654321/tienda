@@ -233,6 +233,33 @@ html[data-panel-tema] body {
 .animate-pop-in     { animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 .animate-fade-slide { animation: fadeSlideUp 0.2s ease forwards; }
 
+/* ── La entrada del recibimiento ─────────────────────────────────────────────
+   La primera pantalla de una cuenta nueva aparecía dibujada de golpe, entera y
+   quieta. Esto la arma en orden —la tarjeta del paso primero, después el saludo
+   y las tres filas— con el retraso puesto a mano en cada pieza.
+
+   ⚠️ `both` y NO `forwards`, que es la diferencia entera. Con `forwards` el
+   navegador dibuja el elemento en su estado normal mientras corre el retraso y
+   recién ahí arranca la animación: o sea que primero se ve todo, después
+   desaparece y vuelve a entrar. Con `both` también se respeta el fotograma
+   inicial durante la espera, que es lo único que hace que el escalonado exista.
+
+   Es una regla aparte y no `.animate-fade-slide` justamente por eso: aquélla es
+   `forwards` y la usan menús y avisos que aparecen sin retraso, donde la
+   diferencia no se nota. Cambiarla ahí para reusarla acá tocaría media docena de
+   pantallas por un efecto de una sola. */
+@keyframes entradaSuave {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.entra-suave { animation: entradaSuave 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Quien pidió menos movimiento la ve quieta y completa: sin animación, `both`
+   deja de aplicar y cada pieza queda en su estado normal. Nada se esconde. */
+@media (prefers-reduced-motion: reduce) {
+  .entra-suave { animation: none; }
+}
+
 /* Producto señalado desde una notificación de stock.
    Tres destellos y para. La marca ámbar se apaga sola a los 6 segundos desde el
    componente; la animación sólo sirve para que el ojo lo encuentre al llegar —si

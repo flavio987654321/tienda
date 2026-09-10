@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { buscarEstilo, buscarPaleta, buscarTipografia } from "@/lib/pagina-venta";
 import {
   primerosPasos, pasosDeLaPuerta, terminado, PASOS_DE_ADENTRO,
   type FotoDeLaCuenta, type Paso,
@@ -70,7 +71,7 @@ export type EstadoDelRecibimiento = {
    * sola razón: es lo que separa "recién terminó de armar la cuenta" de "hace
    * meses que vende". Sin esto, el día que salió la pantalla de "Todo listo"
    * se la habría comido en la cara toda cuenta que ya venía usando el panel.
-   * Ver `TodoListo`.
+   * Ver `Cierre`.
    */
   publicado: boolean;
   /**
@@ -86,6 +87,19 @@ export type EstadoDelRecibimiento = {
   productoId: string | null;
   /** Su nombre, para poder nombrarlo en los pasos que vienen después. */
   productoNombre: string | null;
+  /**
+   * Cómo se ve hoy su página: el estilo, la paleta y la letra.
+   *
+   * ⚠️ Son TRES CLAVES CORTAS y no la página entera, y es a propósito. Esto
+   * corre en el layout, así que lo que salga de acá viaja adentro del HTML de
+   * cada pantalla del panel que alguien abra. Una página normalizada pesa
+   * varios kilobytes y se usaría en una sola pantalla, vista una sola vez.
+   *
+   * Alcanza con esto porque la pantalla del cierre no reescribe la página: le
+   * manda al servidor sólo lo que cambió, y el servidor lo pega sobre lo que
+   * hay. Ver el `PATCH` de `productos/[id]/pagina`.
+   */
+  aspecto: { estilo: string; paleta: string; tipografia: string };
 };
 
 /**
@@ -144,6 +158,35 @@ export async function estadoDelRecibimiento(userId: string): Promise<EstadoDelRe
   const todos = primerosPasos(foto);
   const pasos = pasosDeLaPuerta(todos);
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ ACÁ NO SE LLAMA A `normalizarContenido`, Y NO ES UN DESCUIDO
+     ══════════════════════════════════════════════════════════════════════════
+
+     Era lo primero que escribí, porque devuelve las tres claves ya validadas en
+     una línea. Pero esa función **rearma la página entera**: recorre el catálogo
+     de secciones, normaliza cada campo de cada una y las reordena. Y esto corre
+     en el layout, o sea UNA VEZ POR CADA PANTALLA DEL PANEL QUE ALGUIEN ABRA,
+     para siempre — el aviso está tres párrafos más arriba.
+
+     Pagar el rearmado completo de la página en cada visita, para tres palabras
+     que mira una sola pantalla vista una sola vez, es exactamente lo que ese
+     aviso pide no hacer.
+
+     Así que se lee el JSON y se validan las tres claves con las mismas funciones
+     que usa `normalizarContenido` para ellas. El resultado es idéntico —una
+     clave inventada cae en la de fábrica— y no se toca ninguna sección.
+
+     El `catch` vacío es a propósito: una página guardada a medias no puede
+     tumbar el panel entero. Sin nada legible, las tres caen en las de fábrica,
+     que es lo correcto para preseleccionar. */
+  let guardado: Record<string, unknown> | null = null;
+  try {
+    const leido = principal?.paginaVenta ? JSON.parse(principal.paginaVenta) : null;
+    if (leido && typeof leido === "object" && !Array.isArray(leido)) guardado = leido;
+  } catch {
+    /* Ver arriba. */
+  }
+
   return {
     pasos,
     listo: terminado(pasos),
@@ -151,5 +194,10 @@ export async function estadoDelRecibimiento(userId: string): Promise<EstadoDelRe
     pendientesAdentro: todos.filter((p) => !p.hecho && PASOS_DE_ADENTRO.includes(p.clave)),
     productoId: principal?.id ?? null,
     productoNombre: principal?.name ?? null,
+    aspecto: {
+      estilo: buscarEstilo(guardado?.estilo).clave,
+      paleta: buscarPaleta(guardado?.paleta).clave,
+      tipografia: buscarTipografia(guardado?.tipografia).clave,
+    },
   };
 }
