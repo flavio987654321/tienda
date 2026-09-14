@@ -5087,9 +5087,11 @@ a hacer lo vamos a hacer bien, no importa si tarda más"*.
   hay que anotar tokens de salida por lámina, segundos por llamada y dólares,
   y con eso confirmar o corregir `LAMINAS_POR_LLAMADA` y el `max_tokens` de
   3.000.
-- 🔲 **Mirar la pantalla.** No hay cuenta digital para entrar en local desde
-  acá: el modal con las tres tarjetas, la miniatura de la lámina y el editor
-  los tiene que ver el dueño en su navegador, en los tres anchos.
+- ✅ ~~**Mirar la pantalla.**~~ No hay cuenta digital para entrar en local desde
+  acá, así que el modal con las tres tarjetas, el selector de láminas y las
+  miniaturas los miró el dueño en su navegador (14/09/26): se ven bien en los
+  tres anchos. El editor de láminas con contenido queda para después de la
+  primera generación real, porque hasta ahí no hay nada que mostrar.
 
 ### Lo que apareció haciéndolo
 
