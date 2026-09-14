@@ -16,7 +16,7 @@ import {
   PRECIO_MAXIMO, LARGO_TITULO, ROLES,
 } from "./productos-digitales";
 import { readFileSync } from "node:fs";
-import { TOPES_DIGITALES, EBOOKS_IA_ARRANQUE } from "./planLimits";
+import { TOPES_DIGITALES, EBOOKS_IA_ARRANQUE, MAX_PRODUCTOS_DIGITALES_CREADOS } from "./planLimits";
 import { TIERS_DIGITALES } from "./planes-digitales";
 
 let fallos = 0;
@@ -342,6 +342,35 @@ check("PUB-J",
 check("PUB-K",
   /disabled=\{apagado \|\| \(!p\.publicado && \(falta !== null \|\| sinLugar !== null\)\)\}/.test(panel),
   "y el botón de publicar se apaga por el tope igual que por lo que falta");
+
+/* ── El techo duro, que no mira el plan ──────────────────────────────────── */
+
+/* Lo máximo VIVO que puede tener una cuenta con el plan más grande. El techo
+   tiene que estar bien por encima —una cuenta real que rehace y borra no se lo
+   puede cruzar— y bien por debajo de "infinito", que es lo que un script
+   necesita para llenar el depósito. */
+const maximoVivo = TIERS_DIGITALES.reduce((m, t) => {
+  const x = TOPES_DIGITALES[t];
+  return Math.max(m, x.paginas + x.paginas * x.bonos + x.paginas * x.upsells);
+}, 0);
+check("TECHO-A", MAX_PRODUCTOS_DIGITALES_CREADOS >= maximoVivo * 3,
+  `el techo (${MAX_PRODUCTOS_DIGITALES_CREADOS}) es al menos el triple de lo máximo vivo (${maximoVivo})`);
+check("TECHO-B", MAX_PRODUCTOS_DIGITALES_CREADOS <= 1000,
+  "y no es un número que un script alcance en un rato sin que se note");
+
+/* Cuenta los creados ALGUNA VEZ —sin `deletedAt: null`— adentro de la misma
+   transacción con candado que el tope del plan, y contesta sin tirar. */
+const rutaCrear = readFileSync("src/app/api/digitales/productos/route.ts", "utf8");
+check("TECHO-C",
+  /const creadosAlgunaVez = await tx\.product\.count\(\{ where: \{ storeId: espacio\.storeId \} \}\);\s*if \(creadosAlgunaVez >= MAX_PRODUCTOS_DIGITALES_CREADOS\) return "techo";/.test(rutaCrear),
+  "la ruta de crear cuenta los creados alguna vez, borrados incluidos, adentro de la transacción");
+check("TECHO-D",
+  rutaCrear.indexOf("pg_advisory_xact_lock") < rutaCrear.indexOf("creadosAlgunaVez")
+  && rutaCrear.indexOf("creadosAlgunaVez") < rutaCrear.indexOf("tx.product.create("),
+  "después del candado y antes de crear");
+check("TECHO-E",
+  /if \(creado === "techo"\) \{[\s\S]{0,600}status: 409/.test(rutaCrear) && /escribinos/.test(rutaCrear),
+  "al llegar contesta 409 y dice a dónde escribir, sin el número");
 
 console.log(fallos === 0
   ? "\nok — el embudo de Productos Digitales se sostiene"

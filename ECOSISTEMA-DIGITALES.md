@@ -984,12 +984,10 @@ Todo esto ya está resuelto, medido y en varios casos aplicado a producción:
   postura de 2.4 bis con el número medido en la mano: la página salió US$0,041
   —tres veces el embudo— y es el botón que todo el mundo aprieta de nuevo. Lo que
   no se cuenta es empezar.
-- 🔲 **El tope anti-abuso de páginas de venta**, por arriba de las 5 de Pro.
-  Mismo criterio que `MAX_PRODUCTS_POR_TIENDA` (5.000) en `planLimits.ts`, que
-  existe porque el plan se elige en el formulario de registro y **un tope que
-  sólo mira el plan no frena justo al que lo quiere evadir**. Va en la Fase 2,
-  junto con el código que lo aplique: se escribió en la Fase 1 y se sacó, porque
-  una constante que no lee nadie es código muerto.
+- ✅ ~~**El tope anti-abuso de páginas de venta**, por arriba de las 5 de Pro.~~
+  Hecho el 14/09/26, pero contando OTRA cosa: ver *El techo duro cuenta los
+  borrados*. "Por arriba de las 5" no frenaba a nadie, porque en digitales el
+  tope del plan ya es el techo de lo vivo; el agujero estaba en los borrados.
 - ✅ **RESUELTO (01/09/26): cómo se unen Free, trial y gracia** (sección 3). Está
   en `subscription.ts`: un plan que no vence contesta `ACTIVE` y listo, y una
   cuenta digital que deja de pagar **vuelve a Free** en vez de cerrarse. Por eso
@@ -1296,10 +1294,9 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
   choque con el afiliado revisado ruta por ruta: **una orden digital nunca tiene
   afiliado**, así que las dos cosas no se pisan. Está anotado en el código, no
   sólo acá.
-- 🔲 El tope anti-abuso de páginas de venta, junto al código que lo aplica. **Es
-  lo único que queda abierto de la Fase 2.** El tope del plan sí existe
-  (`topeDe()`, aplicado al crear); falta el techo duro por encima, el
-  equivalente de `MAX_PRODUCTS_POR_TIENDA`.
+- ✅ ~~El tope anti-abuso de páginas de venta, junto al código que lo aplica.~~
+  Hecho el 14/09/26 (`MAX_PRODUCTOS_DIGITALES_CREADOS`). **La Fase 2 queda
+  cerrada.**
 
 
 ## REVISIÓN COMPLETA — 31/08/26, antes de seguir con la Fase 3
@@ -5321,3 +5318,33 @@ cuenta digital queda ahí, muerto: nada lo lee.
 por la transferencia: adentro de Mercado Pago se puede pagar en efectivo
 (Rapipago, Pago Fácil) y ahí el pago queda pendiente hasta que la persona va a
 pagar. La entrega sale sola apenas se aprueba; el "instante" no es siempre.
+
+---
+
+## El techo duro cuenta los borrados — 14/09/26
+
+Era lo único abierto de la Fase 2: "un tope anti-abuso por arriba de las 5
+páginas de Pro, como `MAX_PRODUCTS_POR_TIENDA`". Al ir a escribirlo, no tenía
+sentido tal cual: en tiendas hace falta porque el plan se elige en el registro
+y Premium no tiene tope; **en digitales el tope del plan ya es el techo de lo
+vivo** —Pro son 5 aunque te marques Pro sin tarjeta—. Un número por arriba de
+5 era la constante muerta que el plan mismo decía que no había que escribir.
+
+**El agujero estaba en otro lado: los borrados.** Un producto borrado no se
+borra (queda con `deletedAt`, porque los pedidos apuntan a él) y deja de
+contar para el plan. "Crear 5, borrar 5" en bucle no choca con nada, y con el
+límite de 60 creaciones por hora un script deja 1.440 productos por día, cada
+uno con su PDF en el depósito de Supabase — que es el que se pasa por egress.
+
+**Lo que se hizo:** `MAX_PRODUCTOS_DIGITALES_CREADOS = 200`, contando los
+creados *alguna vez* por la cuenta, borrados incluidos. Va adentro de la misma
+transacción con candado que el tope del plan, después de contar los vivos y
+antes de crear, y contesta 409 con "escribinos" sin decir el número. Lo máximo
+vivo en Pro son 45 (5 páginas + 25 bonos + 15 upsells); una cuenta real que
+rehace y borra en un año no llega a 100. No es comercial, no va en los
+términos ni en ninguna pantalla. Cinco chequeos (TECHO-A..E).
+
+Aclarado con Flavio, porque se prestaba a confusión: **nada de esto es por
+mes**. El tope del plan es "cuántos podés tener a la vez" (Pro: 5, siempre, no
+5 nuevos cada mes; pagar de nuevo no da ni saca); lo único mensual en
+digitales es el cupo de IA. Y el techo de 200 es de toda la vida de la cuenta.

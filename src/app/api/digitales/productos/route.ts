@@ -8,6 +8,7 @@ import {
   rolDe, topeDe, validarCampos, imagenValida, LARGO_TITULO, LARGO_DESCRIPCION,
 } from "@/lib/productos-digitales";
 import { limpiarTexto } from "@/lib/texto-limpio";
+import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 import { espacioDigital } from "@/lib/espacio-digital";
 
 export const runtime = "nodejs";
@@ -128,6 +129,18 @@ export async function POST(req: NextRequest) {
     });
     if (cuantos >= tope) return null;
 
+    /* ⚠️ EL TECHO DURO, que no mira el plan.
+     *
+     * El tope de arriba cuenta los productos VIVOS, y un producto borrado no
+     * se borra: queda con `deletedAt` porque los pedidos apuntan a él. O sea
+     * que "crear 5, borrar 5" en bucle no choca nunca con el plan, y con el
+     * límite de 60 por hora un script deja 1.440 productos por día, cada uno
+     * con su archivo en el depósito —el que se pasa por egress—. Esto cuenta
+     * los creados ALGUNA VEZ, borrados incluidos. Ver el número en
+     * `planLimits`: nadie usando el panel de verdad se acerca. */
+    const creadosAlgunaVez = await tx.product.count({ where: { storeId: espacio.storeId } });
+    if (creadosAlgunaVez >= MAX_PRODUCTOS_DIGITALES_CREADOS) return "techo";
+
     return tx.product.create({
       data: {
         storeId: espacio.storeId,
@@ -153,6 +166,16 @@ export async function POST(req: NextRequest) {
   /* `null` es "no entrabas por el tope". Se contesta afuera de la transacción a
      propósito: adentro habría que tirar para cortarla, y una excepción para algo
      que no es un error deja rastros feos en los registros. */
+  if (creado === "techo") {
+    /* No dice cuál es el número ni por qué: quien llega acá es un script, y
+       a una persona real con un uso raro le alcanza con que le digan a dónde
+       escribir. Queda en los registros para mirarlo. */
+    console.warn("[productos-digitales] cuenta al techo de creados:", espacio.storeId);
+    return NextResponse.json(
+      { error: "Esta cuenta ya creó demasiados productos. Si es un uso real, escribinos y lo vemos." },
+      { status: 409 }
+    );
+  }
   if (!creado) {
     return NextResponse.json(
       {

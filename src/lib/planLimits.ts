@@ -400,6 +400,28 @@ export const TOPES_DIGITALES = {
   PRO:     { paginas: 5, bonos: 5, upsells: 3, ebooksIA: 9 },
 } as const;
 
+/**
+ * El techo duro de Productos Digitales: cuántos productos puede haber CREADO
+ * una cuenta en toda su vida, borrados incluidos. Es el par de
+ * `MAX_PRODUCTS_POR_TIENDA`, y como aquél no es comercial: es un freno
+ * anti-abuso que ninguna persona usando el panel va a tocar.
+ *
+ * ⚠️ Por qué cuenta los borrados, que es lo que lo distingue del tope del plan.
+ * `TOPES_DIGITALES` cuenta los productos VIVOS, y ése ya es el techo de lo que
+ * se puede tener a la vez —Pro son 5 páginas aunque te marques Pro en el
+ * registro—. Pero un producto borrado no se borra (queda con `deletedAt`,
+ * porque los pedidos apuntan a él) y deja de contar. "Crear 5, borrar 5" en
+ * bucle no choca nunca con el plan; con el límite de 60 por hora, un script
+ * deja 1.440 productos por día, cada uno con su archivo en el depósito de
+ * Supabase — que es el que se pasa por egress, y ya nos pasó.
+ *
+ * El número: lo máximo VIVO en Pro son 5 páginas + 5×5 bonos + 5×3 upsells =
+ * 45. Una cuenta real que rehace y borra en un año no llega a 100. Doscientos
+ * es imposible a mano y molesto con un script. No va en los términos ni en
+ * ninguna pantalla: el que lo alcanza lee "escribinos" y listo.
+ */
+export const MAX_PRODUCTOS_DIGITALES_CREADOS = 200;
+
 /* ══════════════════════════════════════════════════════════════════════════
    EL REGISTRO DE PLANES — la única tabla que dice qué planes existen
    ══════════════════════════════════════════════════════════════════════════ */
