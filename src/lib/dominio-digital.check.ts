@@ -20,7 +20,11 @@ import { readFileSync } from "fs";
 import {
   validarDominio, normalizarDominio, esDominioPelado, dominioDeLaPlataforma,
 } from "./configuracion-digital";
-import { instruccionesDNS, A_DE_RESPALDO, CNAME_DE_RESPALDO } from "./dominio-digital";
+import {
+  instruccionesDNS, A_DE_RESPALDO, CNAME_DE_RESPALDO,
+  aDondeRedirige, momentoDelDominio, fechaDeSoltar, DIAS_DE_DOMINIO_EN_FREE, DIAS_DE_AVISO_DEL_DOMINIO,
+} from "./dominio-digital";
+import { caidaAFree, altaDigitalConPrueba } from "./subscription";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -358,6 +362,101 @@ const lista = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "u
 check("DOM-AR",
   /p\.dominioPropio \|\| p\.slugDigital/.test(lista) && /\{p\.dominioPropio\}/.test(lista),
   "la tarjeta muestra el dominio y la dirección de siempre, no una sola");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EL DOMINIO CUANDO YA NO HAY PRO (14/09/26)
+   ══════════════════════════════════════════════════════════════════════════
+
+   La regla: se conecta con Pro y vive mientras haya Pro. Sin Pro no se rompe
+   —redirige a la dirección de tiendaapps— y se suelta de Vercel recién a los
+   DIAS_DE_DOMINIO_EN_FREE, con aviso antes. */
+
+const p = { id: "prod1", slugDigital: "mecanica" };
+check("FREE-A", aDondeRedirige(p, "PRO") === null,
+  "con Pro el dominio contesta él mismo");
+check("FREE-B", /^https:\/\/mecanica\./.test(aDondeRedirige(p, "FREE") ?? ""),
+  "sin Pro redirige a la dirección de tiendaapps del producto");
+check("FREE-C", aDondeRedirige(p, "STARTER") !== null && aDondeRedirige(p, null) !== null && aDondeRedirige(p, undefined) !== null,
+  "Starter, sin plan o sin suscripción también redirigen: sólo Pro lo sostiene");
+check("FREE-D", /\/p\/prod1$/.test(aDondeRedirige({ id: "prod1", slugDigital: null }, "FREE") ?? ""),
+  "un producto muy viejo sin dirección corta va a su página por id");
+
+const dias = (n: number) => new Date(Date.UTC(2026, 0, 1) + n * 86400000);
+const cayo = dias(0);
+check("FREE-E", momentoDelDominio(null, dias(400)) === "nada",
+  "sin fecha de caída no se hace nada (nació Free, o cayó antes de la columna)");
+check("FREE-F", momentoDelDominio(cayo, dias(0)) === "nada" && momentoDelDominio(cayo, dias(DIAS_DE_DOMINIO_EN_FREE - DIAS_DE_AVISO_DEL_DOMINIO - 1)) === "nada",
+  "hasta el aviso, nada");
+check("FREE-G", momentoDelDominio(cayo, dias(DIAS_DE_DOMINIO_EN_FREE - DIAS_DE_AVISO_DEL_DOMINIO)) === "avisar"
+  && momentoDelDominio(cayo, dias(DIAS_DE_DOMINIO_EN_FREE - 1)) === "avisar",
+  `desde ${DIAS_DE_AVISO_DEL_DOMINIO} días antes, avisar`);
+check("FREE-H", momentoDelDominio(cayo, dias(DIAS_DE_DOMINIO_EN_FREE)) === "soltar" && momentoDelDominio(cayo, dias(500)) === "soltar",
+  `a los ${DIAS_DE_DOMINIO_EN_FREE} días, soltar — y después también, por si el cron no corrió ese día`);
+check("FREE-I", fechaDeSoltar(cayo).getTime() === dias(DIAS_DE_DOMINIO_EN_FREE).getTime(),
+  "la fecha del aviso es la de soltar de verdad");
+check("FREE-J", DIAS_DE_DOMINIO_EN_FREE > DIAS_DE_AVISO_DEL_DOMINIO && DIAS_DE_AVISO_DEL_DOMINIO > 0,
+  "el aviso cae antes de soltar, y existe");
+
+/* La caída escribe la fecha; probar o pagar la borra. Si cae de nuevo, se pisa. */
+check("FREE-K", caidaAFree(cayo).freeDesde === cayo && caidaAFree(dias(3)).freeDesde.getTime() === dias(3).getTime(),
+  "caer a Free anota desde cuándo");
+check("FREE-L", altaDigitalConPrueba("PRO").freeDesde === null,
+  "volver a probar un plan borra la fecha");
+
+/* ── Las piezas están puestas ────────────────────────────────────────────── */
+
+const publica = readFileSync("src/app/api/public/dominio/route.ts", "utf8");
+check("FREE-M",
+  /subscription: \{ select: \{ tier: true \} \}/.test(publica) && /aDondeRedirige\(producto, producto\.store\.owner\.subscription\?\.tier\)/.test(publica),
+  "la ruta pública mira el plan de la dueña y le dice al middleware a dónde redirigir");
+check("FREE-N",
+  /if \(destino\.redirigir\) \{\s*return NextResponse\.redirect\(`\$\{destino\.redirigir\}\$\{pathname === "\/" \? "" : pathname\}\$\{request\.nextUrl\.search\}`, 307\)/.test(mid),
+  "el middleware redirige con 307 y conserva la ruta y la búsqueda (los ?utm= de un anuncio)");
+check("FREE-Ñ", !/NextResponse\.redirect\([^)]*308/.test(mid),
+  "y nunca con 308: cuando vuelva a Pro tiene que dejar de redirigir, y un 308 el navegador lo recuerda");
+
+const cron = readFileSync("src/app/api/cron/daily/route.ts", "utf8");
+check("FREE-O",
+  /7 ter\. LOS DOMINIOS PROPIOS DE QUIEN LLEVA MUCHO EN FREE/.test(cron) && /momentoDelDominio\(sub\.freeDesde, now\)/.test(cron),
+  "el cron tiene su vuelta para los dominios de quien lleva mucho en Free");
+check("FREE-P",
+  /if \(!sub\.freeDesde\) \{\s*await prisma\.subscription\.update\(\{ where: \{ id: sub\.id \}, data: \{ freeDesde: now \} \}\);\s*continue;/.test(cron),
+  "a quien cayó antes de la columna se le cuenta desde el primer cron que lo ve, no se lo suelta de golpe");
+check("FREE-Q",
+  /type: "DIGITAL_DOMINIO_AVISO", createdAt: \{ gte: sub\.freeDesde \}/.test(cron) && /if \(yaAvisado\) continue;/.test(cron),
+  "el aviso sale una sola vez por caída: la marca es el aviso de adentro del panel");
+check("FREE-R",
+  /momento === "avisar"[\s\S]{0,2500}cuando: "aviso"[\s\S]{0,2500}soltarLosDominiosDe\(storeId\)[\s\S]{0,1500}cuando: "soltado"/.test(cron),
+  "primero avisa, después suelta, y cada paso manda su mail");
+check("FREE-S",
+  /dominios: dominiosDe\.get\(sub\.userId\) \?\? \[\]/.test(cron),
+  "el mail de la caída a Free cuenta que el dominio pasó a redirigir");
+
+const cuenta = readFileSync("src/app/api/cuenta/route.ts", "utf8");
+check("FREE-T",
+  /if \(user\.role === "DIGITAL" && userData\?\.store\) \{\s*await tx\.product\.updateMany\(\{\s*where: \{ storeId: userData\.store\.id, isActive: true \},\s*data: \{ isActive: false \}/.test(cuenta)
+  && /await soltarLosDominiosDe\(userData\.store\.id\)/.test(cuenta),
+  "dar de baja la cuenta despublica todo y suelta sus dominios");
+
+/* Y la pantalla lo dice antes de conectar, y cuando ya cayó no lo esconde. */
+check("FREE-U",
+  /Anda mientras tengas Pro\. Si dejás de tenerlo no se rompe: redirige/.test(pantalla) && /DIAS_DE_DOMINIO_EN_FREE\} días sin Pro se desconecta solo/.test(pantalla),
+  "antes de conectarlo se dice qué pasa sin Pro, con el número de días de verdad");
+check("FREE-V",
+  /if \(!esPro && dominio\) \{/.test(pantalla) && pantalla.indexOf("if (!esPro && dominio) {") < pantalla.indexOf("if (!esPro) {")
+  && /Redirigiendo/.test(pantalla) && /Volver a Pro/.test(pantalla) && /Desconectarlo ahora/.test(pantalla),
+  "sin Pro y con dominio, la pantalla muestra el dominio redirigiendo con sus dos salidas, en vez de esconderlo");
+check("FREE-W",
+  /seSueltaEl\s*\?\s*<> Si el <strong>\{seSueltaEl\}<\/strong> seguís sin Pro, se desconecta solo/.test(pantalla),
+  "y dice la fecha en que se desconecta");
+check("FREE-X",
+  /Sí, desconectarlo ahora/.test(pantalla) && /Deja de redirigir: quien entre por/.test(pantalla),
+  "soltarlo ya pide confirmación y dice qué pierde");
+
+/* El desconectar sin Pro sigue sin pedir plan: el dominio es de la persona. */
+check("FREE-Y",
+  /export async function DELETE[\s\S]{0,1200}Sin pedir plan/.test(ruta),
+  "desconectar no pide Pro: el dominio es de la persona y se lo lleva cuando quiere");
 
 console.log(fallos === 0
   ? "\nok — nadie se lleva el dominio de otro, y soltarlo deshace las tres puntas"

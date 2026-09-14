@@ -97,7 +97,7 @@ async function donde(
   pregunta: "sub" | "host",
   valor: string,
   request: NextRequest,
-): Promise<string | null> {
+): Promise<{ destino: string; redirigir: string | null } | null> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
   if (!appUrl) return null;
   try {
@@ -108,12 +108,17 @@ async function donde(
       { next: { revalidate: 300 } },
     );
     if (!res.ok) return null;
-    const { slug, producto } = await res.json() as { slug: string | null; producto: string | null };
+    const { slug, producto, redirigir } = await res.json() as {
+      slug: string | null; producto: string | null; redirigir?: string | null;
+    };
     /* La tienda primero: es lo que ya funcionaba. Los dos no pueden coexistir
        —lo impide el candado de `direccion-digital`— pero si algún día
        coexistieran, que gane lo viejo y no que se rompa. */
-    if (slug) return `/tienda/${slug}`;
-    if (producto) return `/p/${producto}`;
+    if (slug) return { destino: `/tienda/${slug}`, redirigir: null };
+    /* ⚠️ `redirigir` viene cuando la dueña del producto ya no tiene Pro: el
+       dominio propio no se apaga, manda a la dirección de tiendaapps. Ver
+       `aDondeRedirige` en `dominio-digital`. */
+    if (producto) return { destino: `/p/${producto}`, redirigir: redirigir ?? null };
     return null;
   } catch {
     return null;
@@ -148,7 +153,7 @@ export async function middleware(request: NextRequest) {
          funcionar porque se cayó una consulta que ella no necesita.** */
       const destino = await donde("sub", slug, request);
       if (destino) {
-        url.pathname = `${destino}${pathname === "/" ? "" : pathname}`;
+        url.pathname = `${destino.destino}${pathname === "/" ? "" : pathname}`;
         return NextResponse.rewrite(url);
       }
 
@@ -177,8 +182,15 @@ export async function middleware(request: NextRequest) {
        lo maneja y ninguna tienda se rompe por una consulta caída. */
     const destino = await donde("host", host, request);
     if (destino) {
+      /* Sin Pro, el dominio propio manda a la dirección de tiendaapps con la
+         misma ruta y la misma búsqueda: un link de anuncio con `?utm=` llega
+         entero. 307 y no 308: cuando vuelva a Pro tiene que dejar de
+         redirigir, y un 308 el navegador lo recuerda para siempre. */
+      if (destino.redirigir) {
+        return NextResponse.redirect(`${destino.redirigir}${pathname === "/" ? "" : pathname}${request.nextUrl.search}`, 307);
+      }
       const url = request.nextUrl.clone();
-      url.pathname = `${destino}${pathname === "/" ? "" : pathname}`;
+      url.pathname = `${destino.destino}${pathname === "/" ? "" : pathname}`;
       return NextResponse.rewrite(url);
     }
 

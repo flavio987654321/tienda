@@ -8,6 +8,7 @@ import {
   sendStoreClosedAffiliateEmail,
   sendTermsUpdatedEmail,
   sendCaidaAFreeEmail,
+  sendDominioEnFreeEmail,
 } from "@/lib/resend";
 import { CURRENT_TERMS_VERSION, CURRENT_TERMS_SUMMARY } from "@/lib/legal";
 import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
@@ -17,6 +18,10 @@ import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
 import { closureDeadline, CLOSURE_WARNING_DAYS, getSubscriptionStatus, caidaAFree } from "@/lib/subscription";
 import { PLANES, planDeSuscripcion, TOPES_DIGITALES } from "@/lib/planLimits";
 import { despublicarLasDeMas, type ResultadoDeLaCaida } from "@/lib/caida-a-free";
+import {
+  aDondeRedirige, momentoDelDominio, fechaDeSoltar, soltarLosDominiosDe, DIAS_DE_DOMINIO_EN_FREE,
+} from "@/lib/dominio-digital";
+import { direccionDelProducto } from "@/lib/direccion-digital";
 import { applyStoreClosure } from "@/lib/store-closure";
 import { getStoreSnapshot } from "@/lib/asistente-insights";
 import { armarAvisos, filtrarRepetidos } from "@/lib/asistente-avisos";
@@ -578,7 +583,7 @@ export async function GET(req: NextRequest) {
   if (vencidas.length > 0) {
     await prisma.subscription.updateMany({
       where: { id: { in: vencidas.map((s) => s.id) } },
-      data: caidaAFree(),
+      data: caidaAFree(now),
     });
 
     /* ── Las páginas de más se apagan ────────────────────────────────────────
@@ -609,6 +614,21 @@ export async function GET(req: NextRequest) {
            cuenta con páginas de más —el lado seguro—, y el error escrito. */
         console.error("[cron] no se pudieron despublicar las páginas de más:", sub.userId, e);
       }
+    }
+
+    /* Los dominios propios que tenía: desde hoy redirigen (no se tocan, lo
+       decide la ruta pública mirando el tier). Se buscan sólo para contárselo
+       en el mail; ver `aDondeRedirige`. */
+    const conDominio = await prisma.product.findMany({
+      where: { storeId: { in: tiendas.map((t) => t.id) }, deletedAt: null, dominioPropio: { not: null } },
+      select: { id: true, slugDigital: true, dominioPropio: true, store: { select: { ownerId: true } } },
+    });
+    const dominiosDe = new Map<string, { dominio: string; redirigeA: string }[]>();
+    for (const p of conDominio) {
+      if (!p.dominioPropio) continue;
+      const lista = dominiosDe.get(p.store.ownerId) ?? [];
+      lista.push({ dominio: p.dominioPropio, redirigeA: aDondeRedirige(p, "FREE") ?? "" });
+      dominiosDe.set(p.store.ownerId, lista);
     }
 
     /* Si el par rol+tier no resuelve a ningún plan conocido, el aviso dice
@@ -656,13 +676,112 @@ export async function GET(req: NextRequest) {
         topePaginas: TOPES_DIGITALES.FREE.paginas,
         quedaron: apagado?.quedaron.map((q) => q.name) ?? [],
         despublicadas: apagado?.despublicadas.map((d) => ({ name: d.name, rol: d.rol })) ?? [],
+        dominios: dominiosDe.get(sub.userId) ?? [],
       }).catch((e) => console.error("[cron] mail caída a Free:", sub.user?.email, e));
     }
 
     caidasAFree = vencidas.length;
   }
 
-  result.digitales = { revisadas: digitales.length, caidasAFree, despublicadas };
+  // ── 7 ter. LOS DOMINIOS PROPIOS DE QUIEN LLEVA MUCHO EN FREE ───────────────
+  //
+  // El dominio se conecta con Pro y al caer a Free no se rompe: redirige. Pero
+  // cada uno ocupa un lugar del techo de Vercel (50 por proyecto, y cada Pro
+  // trae hasta cinco), así que el que lleva DIAS_DE_DOMINIO_EN_FREE sin Pro se
+  // suelta, con un aviso unos días antes. Ver `momentoDelDominio`.
+  //
+  // Sólo las cuentas en Free CON dominio, que son poquísimas: el filtro va por
+  // la tienda, así que las Free que nunca conectaron nada ni se leen.
+  const enFreeConDominio = await prisma.subscription.findMany({
+    where: {
+      role: "DIGITAL",
+      tier: "FREE",
+      user: { store: { products: { some: { deletedAt: null, dominioPropio: { not: null } } } } },
+    },
+    select: {
+      id: true, userId: true, freeDesde: true,
+      user: { select: { email: true, name: true, store: { select: { id: true } } } },
+    },
+  });
+
+  let dominiosSoltados = 0;
+  let dominiosAvisados = 0;
+
+  for (const sub of enFreeConDominio) {
+    const storeId = sub.user.store?.id;
+    if (!storeId) continue;
+
+    /* Una cuenta que cayó ANTES de que existiera `freeDesde` no tiene fecha. Se
+       le pone hoy: cuenta desde el primer cron que la ve, no desde una fecha
+       que no se guardó. Es el lado generoso, y pasa una sola vez. */
+    if (!sub.freeDesde) {
+      await prisma.subscription.update({ where: { id: sub.id }, data: { freeDesde: now } });
+      continue;
+    }
+
+    const momento = momentoDelDominio(sub.freeDesde, now);
+    if (momento === "nada") continue;
+
+    const productos = await prisma.product.findMany({
+      where: { storeId, deletedAt: null, dominioPropio: { not: null } },
+      select: { id: true, name: true, slugDigital: true, dominioPropio: true },
+    });
+    const dominios = productos.flatMap((p) => p.dominioPropio
+      ? [{ dominio: p.dominioPropio, producto: p.name, direccion: p.slugDigital ? direccionDelProducto(p.slugDigital) : `${APP_URL}/p/${p.id}` }]
+      : []);
+    if (dominios.length === 0) continue;
+
+    if (momento === "avisar") {
+      /* El aviso sale UNA vez por caída. La marca es el aviso de adentro del
+         panel: si ya hay uno posterior a la caída, hoy no se manda otro. Así no
+         hace falta una columna más para recordar que se avisó. */
+      const yaAvisado = await prisma.notification.findFirst({
+        where: { userId: sub.userId, type: "DIGITAL_DOMINIO_AVISO", createdAt: { gte: sub.freeDesde } },
+        select: { id: true },
+      });
+      if (yaAvisado) continue;
+
+      const fecha = fechaDeSoltar(sub.freeDesde);
+      const dia = fecha.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
+      await createNotification({
+        userId: sub.userId,
+        type: "DIGITAL_DOMINIO_AVISO",
+        title: dominios.length === 1 ? `Tu dominio se desconecta el ${dia}` : `Tus dominios se desconectan el ${dia}`,
+        body: `Llevás casi ${DIAS_DE_DOMINIO_EN_FREE} días en Free y el dominio propio viene con Pro. ${dominios.map((d) => d.dominio).join(", ")} ${dominios.length === 1 ? "sigue redirigiendo" : "siguen redirigiendo"} a tu dirección de tiendaapps hasta esa fecha; si volvés a Pro antes, no cambia nada.`,
+        link: "/digitales/mi-cuenta",
+      });
+      if (sub.user.email) {
+        await sendDominioEnFreeEmail({ to: sub.user.email, userName: sub.user.name, cuando: "aviso", fecha, dominios })
+          .catch((e) => console.error("[cron] mail aviso de dominio:", sub.user.email, e));
+      }
+      dominiosAvisados += dominios.length;
+      continue;
+    }
+
+    /* Soltar: base, Vercel y captcha. Lo que se soltó de verdad es lo que se
+       cuenta en el mail; si uno falló, queda para la vuelta de mañana. */
+    const soltados = await soltarLosDominiosDe(storeId);
+    if (soltados.length === 0) continue;
+    const soltadosConDireccion = soltados.map((s) => ({
+      dominio: s.dominio,
+      producto: s.name,
+      direccion: dominios.find((d) => d.dominio === s.dominio)?.direccion ?? "",
+    }));
+    await createNotification({
+      userId: sub.userId,
+      type: "DIGITAL_DOMINIO_SOLTADO",
+      title: soltados.length === 1 ? "Tu dominio ya no apunta acá" : "Tus dominios ya no apuntan acá",
+      body: `Llevás ${DIAS_DE_DOMINIO_EN_FREE} días en Free, así que ${soltados.map((s) => s.dominio).join(", ")} se desconectó de nuestro lado. Tu página sigue andando en su dirección de tiendaapps. Si volvés a Pro, lo podés conectar de nuevo.`,
+      link: "/digitales/productos",
+    });
+    if (sub.user.email) {
+      await sendDominioEnFreeEmail({ to: sub.user.email, userName: sub.user.name, cuando: "soltado", fecha: now, dominios: soltadosConDireccion })
+        .catch((e) => console.error("[cron] mail dominio soltado:", sub.user.email, e));
+    }
+    dominiosSoltados += soltados.length;
+  }
+
+  result.digitales = { revisadas: digitales.length, caidasAFree, despublicadas, dominiosAvisados, dominiosSoltados };
 
   // ── AVISO DE CAMBIO EN LOS TÉRMINOS ────────────────────────────────────────
   // Le escribe SOLO a quien todavía no aceptó la versión vigente y a quien no

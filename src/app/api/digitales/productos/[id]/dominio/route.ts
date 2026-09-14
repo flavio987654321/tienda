@@ -27,9 +27,10 @@ export const dynamic = "force-dynamic";
  * la que está pautando, y una tarjeta que rebotó un día no puede costar eso. Lo
  * que el plan vencido bloquea es conectar uno NUEVO o cambiar el que hay.
  *
- * ⚠️ Queda pendiente y anotado en el plan: liberar los dominios de las cuentas
- * que se dieron de baja hace mucho. Hoy quedan tomados, y cada uno ocupa un
- * lugar del techo de Vercel.
+ * Y desde el 14/09/26 lo que pasa sin Pro tiene una sola regla, en
+ * `dominio-digital`: el dominio redirige a la dirección de tiendaapps, se
+ * suelta a los DIAS_DE_DOMINIO_EN_FREE, y dar de baja la cuenta lo suelta en
+ * el acto.
  */
 
 /** El producto es tuyo, es principal y no está borrado. */

@@ -130,7 +130,7 @@ check("DIR-P",
   "si la consulta no contesta, el subdominio sigue yendo a la tienda como antes");
 
 check("DIR-Q",
-  /return `\/p\/\$\{producto\}`/.test(mid) && /return `\/tienda\/\$\{slug\}`/.test(mid),
+  /destino: `\/p\/\$\{producto\}`/.test(mid) && /destino: `\/tienda\/\$\{slug\}`/.test(mid),
   "el subdominio sabe llevar a una tienda o a un producto");
 
 /* La tienda primero: es lo que ya funcionaba. Los dos no pueden coexistir —lo

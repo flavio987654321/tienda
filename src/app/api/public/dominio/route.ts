@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { aDondeRedirige } from "@/lib/dominio-digital";
 
 export const runtime = "nodejs";
 
@@ -82,12 +83,23 @@ export async function GET(req: NextRequest) {
     prisma.store.findFirst({ where: { customDomain: host }, select: { slug: true } }),
     prisma.product.findFirst({
       where: { dominioPropio: host, deletedAt: null, isActive: true, rolDigital: "PRINCIPAL" },
-      select: { id: true },
+      select: {
+        id: true, slugDigital: true,
+        /* El plan de la dueña, para saber si el dominio contesta él mismo o
+           redirige. Ver `aDondeRedirige`. */
+        store: { select: { owner: { select: { subscription: { select: { tier: true } } } } } },
+      },
     }),
   ]);
 
+  /* ⚠️ Sin Pro el dominio NO se apaga: redirige a la dirección de tiendaapps,
+     que anda con los tres planes. Los anuncios y los links siguen llegando a
+     la página; lo que se pierde es la marca en la barra, que es lo que pagaba
+     Pro. El middleware hace el salto; acá sólo se le dice a dónde. */
+  const redirigir = producto ? aDondeRedirige(producto, producto.store.owner.subscription?.tier) : null;
+
   return NextResponse.json(
-    { slug: store?.slug ?? null, producto: producto?.id ?? null },
+    { slug: store?.slug ?? null, producto: producto?.id ?? null, redirigir },
     {
       // Un dominio propio cambia como mucho una vez en la vida de una tienda.
       // Cachear evita una consulta por visita; 5 minutos es sobra para que un

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createNotificationMany } from "@/lib/notifications";
 import { getClosureBlockers, getAffiliateOwnBalance, isBlocked } from "@/lib/store-closure";
+import { soltarLosDominiosDe } from "@/lib/dominio-digital";
 
 // ── helpers de storage ────────────────────────────────────────────────────────
 
@@ -346,6 +347,19 @@ export async function DELETE(req: NextRequest) {
       });
     }
 
+    /* ── Una cuenta de Productos Digitales ──────────────────────────────────
+       Su "tienda" es el motor que sostiene sus productos y las descargas de
+       quien ya pagó, así que no se anonimiza como la de arriba (ese cierre
+       completo es la "zona de peligro" que sigue anotada en el plan). Lo que
+       SÍ se hace ya: nada suyo queda publicado. Los dominios se sueltan abajo,
+       afuera de la transacción, porque hablan con Vercel. */
+    if (user.role === "DIGITAL" && userData?.store) {
+      await tx.product.updateMany({
+        where: { storeId: userData.store.id, isActive: true },
+        data: { isActive: false },
+      });
+    }
+
     // Null out cvUrl y T&C en afiliaciones a otras tiendas, y desactivarlas (ya no puede operar como afiliado)
     await tx.affiliate.updateMany({
       where: { userId: user.id },
@@ -374,6 +388,19 @@ export async function DELETE(req: NextRequest) {
         link: "/dashboard/vendedoras",
       }))
     );
+  }
+
+  /* Los dominios propios de una cuenta digital: de la base, de Vercel y del
+     captcha. Cada uno ocupa un lugar del techo de Vercel, y una cuenta que se
+     va no vuelve a usarlos. Fail-soft: si Vercel no contesta queda escrito y
+     la baja sigue; el dominio ya no resuelve a nada porque el producto quedó
+     despublicado. */
+  if (user.role === "DIGITAL" && userData?.store) {
+    try {
+      await soltarLosDominiosDe(userData.store.id);
+    } catch (e) {
+      console.error("DELETE CUENTA: no se pudieron soltar los dominios", user.id, e);
+    }
   }
 
   // ── Eliminar de Supabase Auth — libera email para re-registro ─────────────

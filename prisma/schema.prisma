@@ -1692,6 +1692,13 @@ model Subscription {
   // reinician solos al empezar un período nuevo — los devuelve periodFor().
   expiredNotifiedAt  DateTime?
   closingNotifiedAt  DateTime?
+  // Sólo DIGITAL: desde cuándo está en Free POR HABER CAÍDO (la prueba que
+  // terminó sin pagar, o el plan pago vencido). `null` en una cuenta que nació
+  // Free y nunca tuvo otra cosa. Lo escribe `caidaAFree()` y lo lee el cron para
+  // soltar los dominios propios de quien lleva mucho sin Pro: un dominio
+  // conectado con Pro sigue anotado al caer —redirige, no se rompe— y se
+  // suelta recién a los DIAS_DE_DOMINIO_EN_FREE. Ver `dominio-digital`.
+  freeDesde          DateTime?
   mpPaymentId        String?
   // SIN USO: no hay suscripción recurrente de MercadoPago (preapproval). Los pagos
   // son de una vez por período y la renovación la hace la dueña a mano. Los

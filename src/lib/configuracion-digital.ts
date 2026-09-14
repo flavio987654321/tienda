@@ -236,6 +236,16 @@ export const logoValido = imagenValida;
 export const LARGO_DOMINIO = 253;
 
 /**
+ * Cuántos días en Free aguanta un dominio propio anotado antes de soltarse, y
+ * cuántos días antes se avisa. La regla entera está en `dominio-digital`:
+ * sin Pro el dominio redirige, no se rompe; se suelta recién a los 90 días
+ * para liberar el techo de Vercel (50 dominios por proyecto). Decidido el
+ * 14/09/26. Están acá porque la pantalla del dominio los dice.
+ */
+export const DIAS_DE_DOMINIO_EN_FREE = 90;
+export const DIAS_DE_AVISO_DEL_DOMINIO = 7;
+
+/**
  * Sufijos donde el "apex" tiene tres etiquetas y no dos: `mitienda.com.ar`.
  *
  * ⚠️ Esta lista NO decide nada de seguridad — sólo elige QUÉ INSTRUCCIÓN de DNS

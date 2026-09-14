@@ -4412,8 +4412,10 @@ daba de alta y nunca de baja—. Con 1 dominio por cuenta casi no se notaba; con
 por cuenta se llenaba solo de dominios que ya nadie usa. Ahora se da de baja al
 desconectarlo y al borrar el producto.
 
-🔲 **Queda pendiente:** soltar los dominios de las cuentas dadas de baja hace
-mucho. Hoy siguen anotados, y cada uno ocupa un lugar de esos 50.
+✅ ~~**Queda pendiente:** soltar los dominios de las cuentas dadas de baja hace
+mucho.~~ Resuelto el 14/09/26 con una regla para todos los casos: ver *El
+dominio cuando ya no hay Pro*. Dar de baja la cuenta los suelta en el acto, y
+llevar 90 días en Free también.
 
 ## FASE 6 — Legales
 
@@ -5175,11 +5177,87 @@ porque ahí la IA crea tres de una sentada.
 - 24 chequeos nuevos en `productos-digitales.check` (PUB-*, SOBRA-*, CAIDA-*):
   las dos funciones puras se ejecutan; la ruta, el cron y la pantalla se leen.
 
-### 🔲 Lo que apareció y es una decisión
+### ✅ Lo que apareció y era una decisión — tomada el mismo día
 
-- **El dominio propio sigue andando después de caer a Free.** Conectarlo pide
-  Pro (`/dominio` lo corta), pero el que ya está conectado no se toca al caer:
-  `/api/public/dominio` y el middleware no miran el tier. Es SU dominio y lo
-  paga; soltarlo de golpe rompe los anuncios que apuntan ahí. Hay que decidir
-  si se desconecta al caer, si se avisa con días, o si queda como está (que
-  es regalar la función de Pro más visible). No se tocó.
+- ~~**El dominio propio sigue andando después de caer a Free.**~~ Se decidió y
+  se hizo en la sección siguiente: sin Pro redirige, y a los 90 días se suelta.
+
+---
+
+## El dominio cuando ya no hay Pro — 14/09/26
+
+Salió de la pregunta de Flavio al terminar lo anterior: *"en Pro son 5
+productos, o sea 5 dominios; ¿qué pasa cuando elimina el producto? ¿y cuando
+baja de plan? ¿y si vuelve a pagar? ¿avisamos?"*. Cada caso estaba resuelto
+distinto, o no estaba resuelto:
+
+| Caso | Antes | Ahora |
+|---|---|---|
+| Borra el producto | ✅ se soltaba (base, Vercel, captcha) | igual |
+| Lo despublica | el dominio no contesta; queda anotado | igual |
+| Cae a Free con la página publicada | **el dominio seguía andando como en Pro** | redirige a la dirección de tiendaapps |
+| Lleva mucho en Free | nada, para siempre | a los 90 días se suelta, con aviso 7 días antes |
+| Da de baja la cuenta | 🔲 quedaban tomados en Vercel | se sueltan en el acto, y todo queda despublicado |
+| Vuelve a Pro | — | el dominio vuelve solo (nunca se desconectó); si ya pasaron los 90, lo conecta de nuevo en un clic |
+
+### La regla, una sola
+
+> El dominio se conecta con Pro y **vive mientras haya Pro**. Sin Pro no se
+> rompe: **redirige** a la dirección de tiendaapps, que nunca se apaga. Se
+> suelta de Vercel sólo cuando ya no va a volver.
+
+Por qué redirigir y no apagar: los anuncios y los links que apuntan al dominio
+siguen llegando a la página. Lo que la persona pierde es la marca en la barra
+del navegador, que es exactamente lo que pagaba Pro. Y por qué no dejarlo
+andando: es la función más visible de Pro, gratis para siempre para quien deje
+de pagar.
+
+Por qué 90 días y no nunca: Vercel gratis da **50 dominios por proyecto** y
+cada Pro puede traer 5. Diez cuentas Pro y se acabó, salvo que se suelten los
+que dejaron de servir.
+
+### Las piezas
+
+- **`Subscription.freeDesde`** (columna nueva, migración `20260914150000`):
+  desde cuándo está en Free por haber caído. La escribe `caidaAFree()`; probar
+  o pagar la borra. Las cuentas que cayeron antes de la columna quedan en
+  `null` y el cron les pone hoy la primera vez que las ve: cuentan desde ahí,
+  no desde una fecha que no se guardó.
+- **`aDondeRedirige`** en `dominio-digital`: pura, mira el tier y nada más. Una
+  Pro en gracia sigue siendo Pro; una vencida la baja el cron ese mismo día.
+- **`/api/public/dominio`** devuelve `redirigir` cuando la dueña no tiene Pro,
+  y **el middleware** hace el salto con **307 y no 308**: cuando vuelva a Pro
+  tiene que dejar de redirigir, y un 308 el navegador lo recuerda para
+  siempre. Conserva la ruta y la búsqueda: un link de anuncio con `?utm=`
+  llega entero. Con el cache de 5 minutos del middleware, volver a Pro tarda
+  eso en verse.
+- **El cron, sección 7 ter**: sólo las Free CON dominio (filtra por la tienda,
+  así que las Free que nunca conectaron nada ni se leen). `momentoDelDominio`
+  dice "nada", "avisar" o "soltar". El aviso sale una vez por caída, y la
+  marca es el aviso de adentro del panel (`DIGITAL_DOMINIO_AVISO` posterior a
+  `freeDesde`): no hizo falta otra columna. Soltar es `soltarLosDominiosDe`,
+  fail-soft de a uno; lo que falló queda para mañana.
+- **Dar de baja la cuenta** (`/api/cuenta` DELETE): una cuenta digital ahora
+  despublica todo y suelta sus dominios. El cierre completo de la cuenta
+  digital —anonimizar la tienda, qué pasa con las descargas de quien pagó—
+  sigue siendo la "zona de peligro" anotada más arriba.
+- **Tres avisos**: en la pantalla del dominio, ANTES de conectarlo ("anda
+  mientras tengas Pro; sin Pro redirige, y a los 90 días se desconecta solo");
+  en el mail de la caída a Free, con cada dominio y a dónde manda; y el mail
+  del dominio (`sendDominioEnFreeEmail`, uno solo con dos tiempos: "se
+  desconecta el 13 de diciembre" y "ya no apunta acá").
+- **La pantalla del dominio sin Pro y con dominio** —la cuenta que cayó— antes
+  ESCONDÍA el dominio que seguía conectado (caía en la rama "viene con Pro").
+  Ahora lo muestra "Redirigiendo", con la fecha en que se suelta y las dos
+  salidas: volver a Pro, o desconectarlo ya (sin pedir plan: el dominio es de
+  la persona).
+- 25 chequeos nuevos en `dominio-digital.check` (FREE-A..Y). Los tres mails y
+  la pantalla se miraron dibujados, a 768 y 360.
+
+### ⚠️ Para el deploy
+
+La migración es aditiva (una columna que admite nulos) y la aplica el build de
+producción solo (`migrar-solo-en-produccion`). Hasta ese deploy, en local el
+cron y la pantalla del dominio fallarían al leer `freeDesde` contra la base
+real; el resto anda igual. Si hace falta probarlo en local antes:
+`npx dotenv -e .env.local -- npx prisma migrate deploy`.

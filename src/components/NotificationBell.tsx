@@ -59,6 +59,10 @@ const ICONS: Record<string, string> = {
   DIGITAL_DEVOLUCION: "↩️",
   DIGITAL_ENTREGA_FALLIDA: "⚠️",
   DIGITAL_DOWNGRADE: "📋",
+  /* El dominio propio de quien lleva mucho en Free: el aviso de que se va a
+     soltar, y la confirmación de que se soltó. Ver `dominio-digital`. */
+  DIGITAL_DOMINIO_AVISO: "🌐",
+  DIGITAL_DOMINIO_SOLTADO: "🌐",
 };
 
 function timeAgo(dateStr: string) {

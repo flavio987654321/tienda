@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { PRO_MAX_PRODUCTS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+import { dominioDeLaPlataforma, DIAS_DE_DOMINIO_EN_FREE } from "@/lib/configuracion-digital";
 
 const clienteResend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
 
@@ -1523,6 +1524,7 @@ export async function sendCaidaAFreeEmail({
   topePaginas,
   quedaron,
   despublicadas,
+  dominios,
 }: {
   to: string;
   userName: string | null;
@@ -1534,6 +1536,11 @@ export async function sendCaidaAFreeEmail({
   quedaron: string[];
   /** Lo que pasó a borrador, con el rol para que se entienda qué es cada cosa. */
   despublicadas: { name: string; rol: "PRINCIPAL" | "BONO" | "UPSELL" }[];
+  /**
+   * Los dominios propios que tenía conectados y desde hoy redirigen, con la
+   * dirección a la que mandan. Vacío si no tenía ninguno.
+   */
+  dominios?: { dominio: string; redirigeA: string }[];
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
@@ -1557,6 +1564,22 @@ export async function sendCaidaAFreeEmail({
           <p style="font-size:13px;color:#7c2d12;line-height:1.6;margin:0;">
             No se borró nada: el archivo, el texto y las ventas de cada una siguen ahí. Podés cambiar
             cuál queda publicada desde Productos, despublicando una y publicando otra.
+          </p>
+        </div>`;
+
+  const bloqueDominios = !dominios || dominios.length === 0 ? "" : `
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 8px;">Tu dominio ahora redirige</p>
+          <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 12px;">
+            El dominio propio viene con Pro. No se rompió nada: quien entre por ahí llega igual a tu
+            página, por tu dirección de ${escapeHtml(dominioDeLaPlataforma())}.
+          </p>
+          <ul style="margin:0 0 12px;padding-left:18px;">
+            ${dominios.map((d) => `<li style="margin:0 0 6px;font-size:14px;color:#374151;"><strong>${escapeHtml(d.dominio)}</strong> → ${escapeHtml(d.redirigeA.replace(/^https?:\/\//, ""))}</li>`).join("")}
+          </ul>
+          <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0;">
+            Si volvés a Pro, vuelve a andar solo, sin tocar nada. Si no, a los ${DIAS_DE_DOMINIO_EN_FREE} días se
+            desconecta de nuestro lado y te avisamos antes.
           </p>
         </div>`;
 
@@ -1586,9 +1609,94 @@ export async function sendCaidaAFreeEmail({
           funciones pagas quedan apagadas.
         </p>
         ${bloqueApagadas}
+        ${bloqueDominios}
         ${boton}
         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
           ¿Problemas con el pago, o el plan te quedó grande? Respondé este email y lo vemos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * El dominio propio de quien lleva mucho en Free: primero el aviso de que se
+ * va a soltar, después la confirmación de que se soltó.
+ *
+ * Los dos son el mismo mail con dos tiempos verbales, y viven en una sola
+ * función a propósito: si se separan, uno cambia de texto y el otro no, y la
+ * persona lee "se va a desconectar el 12" y después "se desconectó el 15".
+ *
+ * `cuando: "aviso"` es la única vuelta en la que todavía puede hacer algo, así
+ * que ahí el botón es volver a Pro. En `"soltado"` el botón lleva a la
+ * dirección del producto, para que vea que la página sigue andando.
+ */
+export async function sendDominioEnFreeEmail({
+  to,
+  userName,
+  cuando,
+  fecha,
+  dominios,
+}: {
+  to: string;
+  userName: string | null;
+  cuando: "aviso" | "soltado";
+  /** Cuándo se suelta (aviso) o cuándo se soltó (soltado). */
+  fecha: Date;
+  /** Cada dominio con el producto al que apuntaba y la dirección que sigue andando. */
+  dominios: { dominio: string; producto: string; direccion: string }[];
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const hola = escapeHtml(userName?.trim()) || "ahí";
+  const dia = fecha.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: AR_TZ });
+  const esAviso = cuando === "aviso";
+  const uno = dominios.length === 1;
+
+  const lista = dominios.map((d) =>
+    `<li style="margin:0 0 8px;font-size:14px;color:#374151;line-height:1.5;"><strong>${escapeHtml(d.dominio)}</strong> · ${escapeHtml(d.producto)}<br><span style="font-size:13px;color:#6b7280;">sigue en ${escapeHtml(d.direccion)}</span></li>`,
+  ).join("");
+
+  const boton = !APP_URL ? "" : esAviso
+    ? `<div style="text-align:center;margin-bottom:24px;">
+         <a href="${APP_URL}/digitales/mi-cuenta" style="display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Volver a Pro</a>
+       </div>`
+    : `<div style="text-align:center;margin-bottom:24px;">
+         <a href="${APP_URL}/digitales/productos" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Ver mis productos</a>
+       </div>`;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: esAviso
+      ? `${uno ? "Tu dominio se desconecta" : "Tus dominios se desconectan"} el ${dia}`
+      : `${uno ? "Tu dominio se desconectó" : "Tus dominios se desconectaron"} de TiendaApps`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:${esAviso ? "#9a3412" : "#374151"};border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:${esAviso ? "#fed7aa" : "#d1d5db"};font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${esAviso
+            ? `${uno ? "Tu dominio" : "Tus dominios"} se ${uno ? "desconecta" : "desconectan"} el ${dia}`
+            : `${uno ? "Tu dominio" : "Tus dominios"} ya no ${uno ? "apunta" : "apuntan"} acá`}</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${hola}</strong>,</p>
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px;">
+          ${esAviso
+            ? `Hace casi ${DIAS_DE_DOMINIO_EN_FREE} días que tu cuenta está en Free, y el dominio propio viene con Pro. Hasta ahora ${uno ? "estuvo redirigiendo" : "estuvieron redirigiendo"} a tu dirección de ${escapeHtml(dominioDeLaPlataforma())}; el <strong>${dia}</strong> ${uno ? "lo desconectamos" : "los desconectamos"} de nuestro lado.`
+            : `Tu cuenta lleva ${DIAS_DE_DOMINIO_EN_FREE} días en Free y el dominio propio viene con Pro, así que hoy ${uno ? "lo desconectamos" : "los desconectamos"} de nuestro lado. ${uno ? "Sigue siendo tuyo" : "Siguen siendo tuyos"}: ${uno ? "lo" : "los"} podés apuntar a donde quieras.`}
+        </p>
+        <ul style="margin:0 0 20px;padding-left:18px;">${lista}</ul>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px;margin-bottom:24px;">
+          <p style="font-size:14px;color:#374151;line-height:1.6;margin:0;">
+            ${esAviso
+              ? `Si volvés a Pro antes de esa fecha, ${uno ? "el dominio sigue andando" : "los dominios siguen andando"} sin que tengas que tocar nada. Después, para usarlo${uno ? "" : "s"} de nuevo hay que conectarlo${uno ? "" : "s"} otra vez desde el panel.`
+              : `Tu página no se apagó: la dirección de ${escapeHtml(dominioDeLaPlataforma())} sigue andando igual. Si volvés a Pro, podés conectar el dominio de nuevo desde el panel; como el DNS ya apunta bien, es cuestión de minutos.`}
+          </p>
+        </div>
+        ${boton}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          ¿Alguna duda? Respondé este email y te contestamos.
         </p>
         <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
       </div>

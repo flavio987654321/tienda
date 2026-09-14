@@ -5,7 +5,9 @@ import Link from "next/link";
 import {
   Loader2, Check, AlertTriangle, Globe, Lock, Copy, RefreshCw, Clock, ArrowRight,
 } from "lucide-react";
-import { validarDominio, normalizarDominio, LARGO_DOMINIO } from "@/lib/configuracion-digital";
+import {
+  validarDominio, normalizarDominio, LARGO_DOMINIO, DIAS_DE_DOMINIO_EN_FREE,
+} from "@/lib/configuracion-digital";
 import CampoAuto from "@/components/CampoAuto";
 
 /**
@@ -59,10 +61,16 @@ export default function DominioPropio({
   productoId,
   esPro,
   dominioActual,
+  direccion,
+  seSueltaEl,
 }: {
   productoId: string;
   esPro: boolean;
   dominioActual: string | null;
+  /** La dirección de tiendaapps del producto, a la que redirige el dominio sin Pro. */
+  direccion: string | null;
+  /** Sin Pro y con dominio: el día en que se desconecta solo, ya escrito. */
+  seSueltaEl: string | null;
 }) {
   const [dominio, setDominio] = useState<string | null>(dominioActual);
   /* `null` es "todavía no preguntamos", que NO es lo mismo que "no pudimos".
@@ -165,6 +173,84 @@ export default function DominioPropio({
       /* Sin permiso de portapapeles no se hace nada: el valor está a la vista y
          se puede seleccionar a mano. */
     }
+  }
+
+  /* ── Sin Pro pero con dominio: la cuenta cayó ────────────────────────────
+     Antes esta pantalla caía en la rama de abajo y escondía el dominio que
+     seguía conectado. Acá se dice lo que pasa de verdad: redirige, hasta
+     cuándo, y las dos salidas —volver a Pro o soltarlo ya—. */
+  if (!esPro && dominio) {
+    return (
+      <div className="mt-8 rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/25 bg-amber-50/60 panel-oscuro:bg-amber-500/5 px-4 py-4">
+        <p className="flex items-center gap-2 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+          <Globe className="h-3.5 w-3.5 text-gray-400" />
+          Tu propio dominio
+        </p>
+        <p className="mt-2 text-[15px] font-bold text-gray-900 panel-oscuro:text-gray-100 break-all">
+          {dominio}
+        </p>
+        <p className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-amber-800 panel-oscuro:text-amber-200">
+          <Clock className="h-3.5 w-3.5" /> Redirigiendo
+        </p>
+        <p className="mt-2 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+          El dominio propio viene con Pro. Mientras no lo tengas, quien entre por{" "}
+          <strong className="break-all">{dominio}</strong> llega igual a tu página
+          {direccion ? <>, por <strong className="break-all">{direccion.replace(/^https?:\/\//, "")}</strong></> : null}.
+          {seSueltaEl
+            ? <> Si el <strong>{seSueltaEl}</strong> seguís sin Pro, se desconecta solo: te avisamos unos días antes por mail.</>
+            : <> A los {DIAS_DE_DOMINIO_EN_FREE} días sin Pro se desconecta solo: te avisamos unos días antes por mail.</>}
+          {" "}Si volvés a Pro, vuelve a andar sin que toques nada.
+        </p>
+
+        {error && (
+          <p role="alert" className="mt-3 flex items-start gap-2 text-[12.5px] text-red-600">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {error}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Link
+            href="/digitales/mi-cuenta"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-orange-500 transition-colors"
+          >
+            Volver a Pro <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+          {confirmando ? (
+            <>
+              <button
+                onClick={() => pedir("DELETE")}
+                disabled={trabajando !== null}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-red-500 transition-colors disabled:opacity-50"
+              >
+                {trabajando === "soltando" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Sí, desconectarlo ahora
+              </button>
+              <button
+                onClick={() => setConfirmando(false)}
+                disabled={trabajando !== null}
+                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-[13px] font-bold text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-200 disabled:opacity-50"
+              >
+                No
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirmando(true)}
+              disabled={trabajando !== null}
+              className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-[13px] font-bold text-gray-500 panel-oscuro:text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+            >
+              Desconectarlo ahora
+            </button>
+          )}
+        </div>
+        {confirmando && (
+          <p className="mt-2.5 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            Deja de redirigir: quien entre por <strong className="break-all">{dominio}</strong> ya no
+            llega a tu página. Te queda libre para apuntarlo donde quieras.
+          </p>
+        )}
+      </div>
+    );
   }
 
   /* ── Sin Pro ─────────────────────────────────────────────────────────────
@@ -340,6 +426,12 @@ export default function DominioPropio({
       </p>
       <p className="mt-1.5 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
         El dominio lo comprás vos donde quieras. Nosotros no lo vendemos ni lo cobramos.
+      </p>
+      {/* Lo que pasa si deja de tener Pro, dicho ANTES de conectarlo. Nadie
+          lee los términos; esto se lee porque está al lado del campo. */}
+      <p className="mt-1.5 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+        Anda mientras tengas Pro. Si dejás de tenerlo no se rompe: redirige a la dirección de
+        arriba, y a los {DIAS_DE_DOMINIO_EN_FREE} días sin Pro se desconecta solo, con aviso.
       </p>
 
       {/* ⚠️ SIN ETIQUETA NO TENÍA NOMBRE. Arriba hay párrafos que explican el

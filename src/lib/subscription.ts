@@ -307,6 +307,9 @@ export function altaDigitalConPrueba(
     currentPeriodStart: null,
     currentPeriodEnd: null,
     gracePeriodEndsAt: null,
+    // Deja de estar en Free: la cuenta que vuelve a probar (o a pagar) ya no
+    // está cayendo, y sus dominios no tienen que soltarse.
+    freeDesde: null,
   } as const;
 }
 
@@ -319,14 +322,19 @@ export function altaDigitalConPrueba(
  *
  * `trialEndsAt` no se toca a propósito: es lo que recuerda que la prueba ya se
  * usó, y reiniciarlo la regalaría de nuevo en cada caída.
+ *
+ * `freeDesde` es la fecha de la caída: la lee el cron para soltar los dominios
+ * propios de quien lleva mucho sin Pro (`DIAS_DE_DOMINIO_EN_FREE`). Si vuelve a
+ * caer más adelante, se pisa con la fecha nueva, que es la que vale.
  */
-export function caidaAFree() {
+export function caidaAFree(now: Date = new Date()) {
   return {
     tier: "FREE",
     status: "ACTIVE",
     currentPeriodStart: null,
     currentPeriodEnd: null,
     gracePeriodEndsAt: null,
+    freeDesde: now,
     // Los avisos eran de la suscripción que se venció. La próxima vez que pague
     // y se le venza, tiene que volver a recibirlos.
     expiredNotifiedAt: null,

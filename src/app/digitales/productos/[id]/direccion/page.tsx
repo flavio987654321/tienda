@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { dominioDeLaPlataforma } from "@/lib/direccion-digital";
+import { dominioDeLaPlataforma, direccionDelProducto } from "@/lib/direccion-digital";
+import { fechaDeSoltar } from "@/lib/dominio-digital";
 import BotonVolver from "../../../BotonVolver";
 import DireccionClient from "./DireccionClient";
 import DominioPropio from "./DominioPropio";
@@ -46,6 +47,13 @@ export default async function DireccionPage({ params }: Props) {
   const sub = await getUserSubscription(user.id);
   const esPro = sub?.role === "DIGITAL" && sub.tier === "PRO";
 
+  /* Sin Pro y con dominio puesto —la cuenta cayó— el dominio redirige y tiene
+     fecha de vencimiento. Se le dice acá, con la fecha, que es lo que la
+     persona quiere saber: "¿hasta cuándo?". Ver `momentoDelDominio`. */
+  const seSueltaEl = !esPro && producto.dominioPropio && sub?.freeDesde
+    ? fechaDeSoltar(sub.freeDesde).toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" })
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
       <BotonVolver />
@@ -73,6 +81,8 @@ export default async function DireccionPage({ params }: Props) {
           productoId={producto.id}
           esPro={esPro}
           dominioActual={producto.dominioPropio}
+          direccion={producto.slugDigital ? direccionDelProducto(producto.slugDigital) : null}
+          seSueltaEl={seSueltaEl}
         />
       </div>
     </div>

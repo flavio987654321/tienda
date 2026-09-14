@@ -320,7 +320,7 @@ check("PUB-I",
    mail. Y si apagar falla, el estado ya cayó y el aviso sale igual. */
 const cron = readFileSync("src/app/api/cron/daily/route.ts", "utf8");
 check("CAIDA-A",
-  /data: caidaAFree\(\),[\s\S]{0,1500}despublicarLasDeMas\(storeId, "FREE"\)/.test(cron),
+  /data: caidaAFree\(now\),[\s\S]{0,1500}despublicarLasDeMas\(storeId, "FREE"\)/.test(cron),
   "el cron apaga las páginas de más justo después de escribir la caída");
 check("CAIDA-B",
   /try \{\s*const r = await despublicarLasDeMas\([\s\S]{0,300}\} catch \(e\) \{[\s\S]{0,400}console\.error\("\[cron\] no se pudieron despublicar/.test(cron),

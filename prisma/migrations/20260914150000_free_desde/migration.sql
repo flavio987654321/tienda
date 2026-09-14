@@ -1,0 +1,13 @@
+-- Desde cuándo una cuenta digital está en Free por haber caído.
+--
+-- Un dominio propio se conecta con Pro y, al caer a Free, no se rompe: queda
+-- anotado y redirige a la dirección de tiendaapps. Pero cada dominio ocupa un
+-- lugar del techo de Vercel (50 por proyecto), así que el que lleva mucho sin
+-- Pro se suelta. Para saber cuánto lleva hace falta esta fecha: la escribe
+-- `caidaAFree()` y la lee el cron diario.
+--
+-- Aditiva e idempotente: una columna que admite nulos, ninguna fila cambia y
+-- volver a correrla no hace nada. Las cuentas que ya estaban en Free antes de
+-- esta columna quedan con null: el cron las cuenta desde que la columna exista
+-- —desde el primer cron que las vea—, no desde una fecha que no se guardó.
+ALTER TABLE "Subscription" ADD COLUMN IF NOT EXISTS "freeDesde" TIMESTAMP(3);

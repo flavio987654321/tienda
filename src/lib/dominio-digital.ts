@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { syncTurnstileHostname } from "@/lib/turnstile";
 import {
-  normalizarDominio, validarDominio, esDominioPelado,
+  normalizarDominio, validarDominio, esDominioPelado, dominioDeLaPlataforma,
+  DIAS_DE_DOMINIO_EN_FREE, DIAS_DE_AVISO_DEL_DOMINIO,
 } from "@/lib/configuracion-digital";
 
 /**
@@ -464,4 +465,99 @@ export async function desconectarDominio(productoId: string): Promise<boolean> {
     await syncTurnstileHostname(antes.dominioPropio, "remove");
   }
   return true;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EL DOMINIO CUANDO YA NO HAY PRO
+   ══════════════════════════════════════════════════════════════════════════
+
+   Una sola regla para todos los casos, decidida el 14/09/26:
+
+     El dominio se conecta con Pro y VIVE mientras haya Pro. Sin Pro no se
+     rompe: REDIRIGE a la dirección de tiendaapps, que nunca se apaga. Se
+     suelta de Vercel sólo cuando ya no va a volver.
+
+   Qué pasa en cada caso:
+
+   - **Borra el producto** → se suelta en el acto (`desconectarDominio`, arriba).
+   - **Cae a Free** → el dominio queda anotado y redirige (`aDondeRedirige`).
+     Los anuncios y los links siguen llegando a la página; lo que pierde es la
+     marca propia en la barra, que es exactamente lo que pagaba Pro. Si vuelve
+     a Pro, anda solo: no hay que tocar DNS ni esperar certificado.
+   - **Lleva DIAS_DE_DOMINIO_EN_FREE en Free** → el cron lo suelta y avisa por
+     mail, con un aviso DIAS_DE_AVISO_DEL_DOMINIO antes. Es lo que libera el
+     techo de 50 de Vercel sin sacárselo a nadie que lo esté usando.
+   - **Da de baja la cuenta** → se sueltan todos los suyos (`soltarLosDominiosDe`).
+
+   Y en la pantalla del dominio se dice todo esto ANTES de conectarlo. */
+
+/* Las dos constantes viven en `configuracion-digital` —sin Prisma— porque la
+   pantalla del dominio las dice, y se reexportan desde acá. */
+export { DIAS_DE_DOMINIO_EN_FREE, DIAS_DE_AVISO_DEL_DOMINIO };
+
+/**
+ * A dónde manda un dominio propio cuando la cuenta no tiene Pro, o `null` si
+ * tiene Pro y el dominio contesta él mismo.
+ *
+ * Pura: la usan la ruta pública (que le contesta al middleware) y la pantalla.
+ * Se mira el `tier` y nada más: una Pro en gracia sigue siendo Pro —los días de
+ * colchón son con el plan andando—, y una vencida la baja el cron ese mismo
+ * día. `slugDigital` puede faltar en un producto muy viejo; ahí se manda a la
+ * página por su id, que también anda siempre.
+ */
+export function aDondeRedirige(
+  p: { id: string; slugDigital: string | null },
+  tier: string | null | undefined,
+): string | null {
+  if (tier === "PRO") return null;
+  return p.slugDigital
+    ? `https://${p.slugDigital}.${dominioDeLaPlataforma()}`
+    : `${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com"}/p/${p.id}`;
+}
+
+/**
+ * Los dominios de una cuenta que hay que soltar por llevar mucho en Free, o
+ * avisar que se van a soltar. Pura, para probarla: recibe la fecha de la caída
+ * y el reloj, y dice en qué momento está.
+ *
+ *   - `"nada"`: todavía falta, o nunca cayó (`freeDesde` en null: nació Free y
+ *     no puede tener dominios, o cayó antes de que existiera la columna).
+ *   - `"avisar"`: faltan DIAS_DE_AVISO_DEL_DOMINIO o menos.
+ *   - `"soltar"`: ya pasaron los DIAS_DE_DOMINIO_EN_FREE.
+ */
+export function momentoDelDominio(freeDesde: Date | null, now: Date): "nada" | "avisar" | "soltar" {
+  if (!freeDesde) return "nada";
+  const dias = (now.getTime() - freeDesde.getTime()) / 86400000;
+  if (dias >= DIAS_DE_DOMINIO_EN_FREE) return "soltar";
+  if (dias >= DIAS_DE_DOMINIO_EN_FREE - DIAS_DE_AVISO_DEL_DOMINIO) return "avisar";
+  return "nada";
+}
+
+/** La fecha en que se suelta, para decirla en el aviso. */
+export function fechaDeSoltar(freeDesde: Date): Date {
+  return new Date(freeDesde.getTime() + DIAS_DE_DOMINIO_EN_FREE * 86400000);
+}
+
+/**
+ * Suelta todos los dominios propios de una tienda: base, Vercel y captcha, de a
+ * uno. Devuelve los que soltó, para el mail. Si uno falla sigue con el resto:
+ * un dominio que quedó colgado en Vercel se arregla después y no tiene por qué
+ * dejar colgados a los otros cuatro.
+ */
+export async function soltarLosDominiosDe(storeId: string): Promise<{ productoId: string; dominio: string; name: string }[]> {
+  const conDominio = await prisma.product.findMany({
+    where: { storeId, dominioPropio: { not: null } },
+    select: { id: true, name: true, dominioPropio: true },
+  });
+  const soltados: { productoId: string; dominio: string; name: string }[] = [];
+  for (const p of conDominio) {
+    if (!p.dominioPropio) continue;
+    try {
+      await desconectarDominio(p.id);
+      soltados.push({ productoId: p.id, dominio: p.dominioPropio, name: p.name });
+    } catch (e) {
+      console.error("[dominio-digital] no se pudo soltar el dominio", { productoId: p.id, dominio: p.dominioPropio, e });
+    }
+  }
+  return soltados;
 }
