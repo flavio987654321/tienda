@@ -538,42 +538,27 @@ chequear("los IDs de medición se mezclan, no pisan el storeConfig",
 chequear("y se validan con la misma regla que los inyecta",
   /from "@\/lib\/tracking-ids"/.test(config));
 
-/* ⚠️ EL CANDADO DE LA TRANSFERENCIA.
+/* ⚠️ NO HAY TRANSFERENCIA, Y ES A PROPÓSITO (14/09/26).
  *
- * Free no puede prenderla, y el chequeo tiene que estar en el SERVIDOR: la
- * pantalla dibuja un candado, y un candado dibujado no frena a nadie que arme el
- * pedido a mano. Y no es una función recortada para empujar a pagar — Free no
- * cobra abono, así que lo único que deja es la comisión, y esa comisión se
- * retiene adentro del cobro de Mercado Pago. En una transferencia no pasa un
- * peso por la plataforma: un Free con transferencia prendida no paga nada por
- * nada. */
+ * Hubo una sección entera en Pagos —CBU, alias, indicaciones, con candado para
+ * Free— y el checkout nunca la ofreció. Se sacó en vez de terminarla: con
+ * transferencia la entrega deja de ser automática, la comisión no se puede
+ * retener y todo lo que sigue es el quilombo que este ecosistema evita. El
+ * único medio es Mercado Pago, y la pantalla lo dice con todas las letras.
+ * Estos chequeos cuidan que no vuelva a medias: ni un campo de CBU en la
+ * pantalla, ni una rama en la ruta que lo guarde. */
 const pantallaPagos = soloCodigo(readFileSync("src/app/digitales/configuracion/TabPagos.tsx", "utf8"));
 
-chequear("el candado de la transferencia está en el SERVIDOR",
-  /TRANSFERENCIA_DIGITAL\[tier\]/.test(config) && /status: 409/.test(config));
-
-/* Y el plan se lee de la BASE, no de lo que diga el navegador: si viniera en el
-   pedido, cualquiera se declararía Pro. */
-chequear("y el plan se lee de la base, no del pedido",
-  /prisma\.subscription\.findUnique\([\s\S]{0,120}?userId: user\.id/.test(config));
-
-chequear("los datos de transferencia se validan con la misma función que la pantalla",
-  /validarTransferencia\(/.test(config) && /validarTransferencia\(/.test(pantallaConfig));
-
-/* El CBU se guarda con números y nada más, aunque se haya pegado del homebanking
-   con espacios o guiones. */
-chequear("el CBU se guarda limpio", /soloDigitos\(t\.cbu\)/.test(config));
-
-/* Se mezcla adentro de `paymentInfo` para no borrarle el efectivo a una tienda
-   que sí lo usa: una cuenta digital no tiene por qué saber que existe. */
-chequear("la transferencia se mezcla, no pisa el paymentInfo",
-  /mergeTransferencia\(configNueva/.test(config));
-
-/* ⚠️ Con Mercado Pago la entrega es automática; con transferencia NO — alguien
-   tiene que mirar el banco y confirmar a mano. Quien la prende sin saberlo se
-   entera cuando un comprador reclama que pagó y no recibió nada. */
-chequear("se avisa que con transferencia la entrega deja de ser automática",
-  /la entrega no es automática/.test(pantallaPagos));
+chequear("la pantalla de Pagos dice que Mercado Pago es el único medio",
+  /Es el único medio de cobro/.test(pantallaPagos));
+chequear("y no le queda ningún campo de transferencia",
+  !/cbu|alias|titular|DatosTransferencia|TRANSFERENCIA_DIGITAL/i.test(pantallaPagos));
+chequear("la ruta de configuración no guarda transferencia",
+  !/mergeTransferencia|validarTransferencia|transferenciaLimpia/.test(config));
+chequear("la tabla de planes no la promete",
+  !/transferencia/i.test(soloCodigo(readFileSync("src/lib/planes-digitales.ts", "utf8"))));
+chequear("y la pregunta frecuente de precios contesta que no",
+  /q: "¿Puedo cobrar por transferencia\?", a: "No: el único medio es Mercado Pago/.test(readFileSync("src/app/precios/page.tsx", "utf8")));
 
 /* ── 12 bis. El tema del panel ─────────────────────────────────────────────── */
 console.log("\n12 bis) Claro y oscuro");
@@ -1476,9 +1461,6 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     /* Nombre de la marca, nombre en el checkout, dirección de la tienda y el
        producto principal que lee la IA. */
     ["src/app/digitales/configuracion/TabGeneral.tsx", 4],
-    /* Titular de la cuenta y banco. Una letra de más en el titular es una
-       transferencia que rebota, así que hay que poder leerlo entero. */
-    ["src/app/digitales/configuracion/TabPagos.tsx", 2],
   ] as const) {
     const src = readFileSync(archivo, "utf8");
     chequear(`${archivo.split("/").pop()} usa CampoAuto en su campo largo`,

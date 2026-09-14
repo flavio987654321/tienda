@@ -21,28 +21,6 @@ import ConfiguracionClient from "./ConfiguracionClient";
  * es un componente de servidor que le pasa sus datos al del navegador, así que
  * todo lo que se lea acá termina viajando adentro del HTML.
  */
-/** Los datos de transferencia que guarda `storeConfig`, o vacíos. */
-function leerTransferencia(raw: string | null | undefined) {
-  const vacio = { enabled: false, titular: "", cbu: "", alias: "", banco: "", instrucciones: "" };
-  try {
-    const c = JSON.parse(raw || "{}") as {
-      paymentInfo?: { transferencia?: Record<string, unknown> };
-    };
-    const t = c.paymentInfo?.transferencia ?? {};
-    const texto = (v: unknown) => (typeof v === "string" ? v : "");
-    return {
-      enabled: Boolean(t.enabled),
-      titular: texto(t.titular),
-      cbu: texto(t.cbu),
-      alias: texto(t.alias),
-      banco: texto(t.banco),
-      instrucciones: texto(t.instrucciones),
-    };
-  } catch {
-    return vacio;
-  }
-}
-
 /** Los tres IDs de medición que guarda `storeConfig`, o vacíos. */
 function leerAnalytics(raw: string | null | undefined): { pixelId: string; gaId: string; clarityId: string } {
   try {
@@ -104,7 +82,6 @@ export default async function ConfiguracionPage({
      config roto no puede tumbar la pantalla entera: se lee lo que se puede y lo
      demás queda vacío. */
   const medicion = leerAnalytics(store?.storeConfig);
-  const transferencia = leerTransferencia(store?.storeConfig);
 
   /* Cuántas páginas hay publicadas, para el aviso de cambiar la dirección: si
      hay links compartidos por ahí, cambiarla los rompe. Se cuenta acá y no se
@@ -155,7 +132,6 @@ export default async function ConfiguracionPage({
         pixelId={medicion.pixelId}
         gaId={medicion.gaId}
         clarityId={medicion.clarityId}
-        transferencia={transferencia}
         iaProducto={store?.iaProducto ?? ""}
         iaDescripcion={store?.iaDescripcion ?? ""}
         publicados={publicados}

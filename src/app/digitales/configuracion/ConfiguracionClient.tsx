@@ -10,10 +10,9 @@ import {
 import { validarGaId, validarPixelId, validarClarityId } from "@/lib/tracking-ids";
 import { EtiquetaPendiente, NotaPendiente, Seccion } from "./piezas";
 import TabGeneral, { MAX_LOGO_MB } from "./TabGeneral";
-import TabPagos, { type DatosTransferencia } from "./TabPagos";
+import TabPagos from "./TabPagos";
 import TabMeta from "./TabMeta";
 import TabLegales, { type ClaveDoc, type Politica } from "./TabLegales";
-import { validarTransferencia } from "@/lib/datos-bancarios";
 import { aplicarTema, temaGuardado, type Tema } from "@/lib/tema-digitales";
 
 type Props = {
@@ -30,7 +29,6 @@ type Props = {
   iaDescripcion: string;
   cobroConectado: boolean;
   conectadoEl: string | null;
-  transferencia: DatosTransferencia;
   publicados: number;
   base: string;
   politicas: Record<ClaveDoc, Politica>;
@@ -102,7 +100,6 @@ export default function ConfiguracionClient(p: Props) {
   const [pixel, setPixel] = useState(p.pixelId);
   const [ga, setGa] = useState(p.gaId);
   const [clarity, setClarity] = useState(p.clarityId);
-  const [tr, setTr] = useState<DatosTransferencia>(p.transferencia);
 
   /* El tema vive en el navegador y no en la base: es una preferencia de ESTE
      aparato, igual que en la competencia. El script del layout ya lo pintó antes
@@ -152,7 +149,6 @@ export default function ConfiguracionClient(p: Props) {
   const problemaPixel = validarPixelId(pixel);
   const problemaGa = validarGaId(ga);
   const problemaClarity = validarClarityId(clarity);
-  const problemaTr = validarTransferencia(tr);
 
   const dirLimpia = normalizarSlug(dir);
 
@@ -314,12 +310,7 @@ export default function ConfiguracionClient(p: Props) {
           conectadoEl={p.conectadoEl}
           avisoMp={p.avisoMp}
           guardando={guardando}
-          listo={listo}
           desconectar={desconectarCobro}
-          tr={tr}
-          setTr={setTr}
-          guardar={guardar}
-          problemaTr={problemaTr}
         />
       )}
 

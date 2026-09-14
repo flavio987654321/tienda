@@ -191,28 +191,9 @@ export const COMISION_DIGITAL = {
   PRO: 2,
 } as const;
 
-/**
- * Qué planes pueden cobrar por transferencia.
- *
- * ⚠️ **Free no puede, y no es una función recortada para que pague: es lo que
- * sostiene que Free exista.**
- *
- * Free no cobra abono. Lo único que deja es la comisión del 8%, y esa comisión
- * se retiene sola dentro del cobro de Mercado Pago (`marketplace_fee`). Con una
- * transferencia **no pasa un peso por la plataforma**: el comprador le deposita
- * derecho a la vendedora y no hay nada de dónde retener.
- *
- * O sea que un Free con transferencia prendida es un Free que no paga nada por
- * nada. No se saltea "una comisión": se saltea la única que hay.
- *
- * Starter y Pro sí la tienen, porque ahí el abono ya está pago y la comisión es
- * lo de menos.
- */
-export const TRANSFERENCIA_DIGITAL = {
-  FREE: false,
-  STARTER: true,
-  PRO: true,
-} as const;
+/* Acá vivió `TRANSFERENCIA_DIGITAL` (qué planes podían cobrar por transferencia)
+   del 01/09 al 14/09/26. Se sacó con la transferencia entera: el único medio de
+   cobro de Productos Digitales es Mercado Pago. Ver `TabPagos`. */
 
 /**
  * Los topes de cada plan.

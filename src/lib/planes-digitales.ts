@@ -85,7 +85,6 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Página de venta armada con IA", on: true },
     { text: "Textos y mails con IA", on: pago },
     { text: "Sasha, la asistente", on: pago },
-    { text: "Pagos con transferencia", on: pago },
     { text: "Entrega automática con token", on: true },
     { text: "Descargas y estadísticas", on: true },
     { text: "Ver carritos abandonados", on: true },

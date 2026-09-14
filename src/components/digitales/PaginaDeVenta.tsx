@@ -416,8 +416,11 @@ function valorDeLosBonos(bonos: ProductoParaPagina[]): number {
 
 /* Los sellos de al lado del botón. Dicen sólo lo que podemos sostener: el cobro
    va por Mercado Pago y la entrega es por mail.
-   🔲 "Al instante" NO está acá a propósito: con transferencia la entrega no es
-   automática, y ese aviso va en el checkout, que todavía no existe. */
+   "Al instante" NO está acá a propósito. Ya no por la transferencia —se sacó
+   del ecosistema el 14/09/26; el único medio es Mercado Pago— sino porque
+   adentro de Mercado Pago se puede pagar en efectivo (Rapipago, Pago Fácil) y
+   ahí el pago queda pendiente hasta que la persona va a pagar. La entrega sale
+   sola apenas se aprueba, pero "al instante" no siempre es cierto. */
 function Sellos({ dias }: { dias?: number | null }) {
   return (
     <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium text-[color:var(--pv-tenue)]">

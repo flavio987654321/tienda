@@ -842,7 +842,7 @@ afuera. Ver 2.4 bis.
 | Página de venta armada con IA | ✅ | ✅ | ✅ |
 | Textos y mails con IA | ❌ | ✅ | ✅ |
 | Sasha | ❌ | ✅ | ✅ |
-| Pagos con transferencia | ❌ | ✅ | ✅ |
+| ~~Pagos con transferencia~~ (sacada el 14/09/26: sólo Mercado Pago) | ❌ | ❌ | ❌ |
 | **Ver carritos abandonados** | ✅ | ✅ | ✅ |
 | **Mail automático de recuperación** | ❌ | ❌ | ✅ |
 | Dominio propio **por producto** | ❌ | ❌ | ✅ |
@@ -3320,8 +3320,9 @@ su propio cobro: dos clics y la tarjeta otra vez.
   existen y no se van a hacer. Medido con sus propias capturas, el reloj de la
   competencia se reinicia: 13:44 marcaba 04:32, 16:07 marcaba 02:59 y después
   marcaba 09:02 — subió.
-- 🔲 El aviso de que **con transferencia la entrega no es automática**, antes de
-  comprar y no después.
+- ✅ ~~El aviso de que **con transferencia la entrega no es automática**, antes de
+  comprar y no después.~~ Ya no hace falta: la transferencia se sacó del
+  ecosistema el 14/09/26. Ver *Sólo Mercado Pago*.
 
 ### ✅ LA PANTALLA DE VENTAS — HECHA (03/09/26)
 
@@ -5261,3 +5262,62 @@ producción solo (`migrar-solo-en-produccion`). Hasta ese deploy, en local el
 cron y la pantalla del dominio fallarían al leer `freeDesde` contra la base
 real; el resto anda igual. Si hace falta probarlo en local antes:
 `npx dotenv -e .env.local -- npx prisma migrate deploy`.
+
+---
+
+## Sólo Mercado Pago — 14/09/26
+
+El ítem pendiente era "avisar antes de comprar que con transferencia la entrega
+no es automática". Al ir a ponerlo apareció que **la transferencia no existía
+del lado del comprador**: Configuración → Pagos dejaba prenderla y cargar CBU,
+alias e indicaciones (Starter y Pro), la tabla de planes y la pregunta
+frecuente de precios la prometían, y el checkout sólo ofrecía Mercado Pago. La
+casilla decía "quien te compra ve tus datos y te deposita" y eso no pasaba
+nunca.
+
+### La decisión
+
+Se pensó construirla entera —código de compra en el concepto, "Ya transferí"
+con comprobante, confirmar en Ventas, mails, cancelación a los 7 días— y se
+descartó. Decisión de Flavio: **el único medio de cobro es Mercado Pago.** Los
+motivos, en orden:
+
+1. **La comisión no se puede retener.** Vive adentro del cobro de MP
+   (`marketplace_fee`); en una transferencia no pasa un peso por nosotros.
+   Cobrarla igual obligaba a anotar deudas y descontarlas en la venta
+   siguiente: invisible para el vendedor y esquivable vendiendo sólo por
+   transferencia. No.
+2. **Rompe lo mejor del producto digital**: la entrega automática. Con
+   transferencia alguien paga un sábado y recibe el archivo cuando el vendedor
+   mira el banco, y los reclamos "pagué y no me llegó" son nuestros.
+3. **Es más problema que plata.** Confirmar a mano, comprobantes falsos,
+   soporte. El ecosistema se armó para que no haya nada de eso.
+
+La palanca que se pierde —"desde Starter podés cobrar por transferencia"— se
+acepta perderla. Starter y Pro se venden por las páginas, la IA, la comisión
+más baja y el dominio.
+
+### Lo que se sacó
+
+- La sección "Transferencia bancaria" de `TabPagos`, con su candado de Free,
+  el tipo `DatosTransferencia`, y todo lo que la sostenía en
+  `ConfiguracionClient`, `configuracion/page` y la ruta (que ahora ignora
+  `transferencia` si llega de un navegador con JS viejo).
+- `TRANSFERENCIA_DIGITAL` de `planLimits`, la fila de la tabla de planes, y
+  `datos-bancarios.ts` con su chequeo (validación de CBU: no la usaba nadie
+  más; está en el historial si vuelve a hacer falta).
+- La pregunta frecuente de precios ahora contesta **no**, con el motivo de la
+  entrega.
+- Los chequeos del candado se dieron vuelta: ahora cuidan que no vuelva a
+  medias (ni un campo de CBU en la pantalla, ni una rama en la ruta, ni la
+  fila en la tabla).
+
+Lo que ya estaba guardado en `storeConfig.paymentInfo.transferencia` de alguna
+cuenta digital queda ahí, muerto: nada lo lee.
+
+### ⚠️ Lo que sigue siendo cierto
+
+"Al instante" sigue sin estar en los sellos de la página de venta, pero ya no
+por la transferencia: adentro de Mercado Pago se puede pagar en efectivo
+(Rapipago, Pago Fácil) y ahí el pago queda pendiente hasta que la persona va a
+pagar. La entrega sale sola apenas se aprueba; el "instante" no es siempre.

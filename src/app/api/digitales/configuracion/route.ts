@@ -10,13 +10,7 @@ import {
 } from "@/lib/configuracion-digital";
 import { estaLibre } from "@/lib/direccion-digital";
 import { validarGaId, validarPixelId, validarClarityId, extraerClarityId } from "@/lib/tracking-ids";
-import { mergeAnalytics, mergeTransferencia } from "@/lib/store-config";
-import {
-  validarTransferencia, soloDigitos,
-  LARGO_TITULAR, LARGO_BANCO, LARGO_INSTRUCCIONES,
-} from "@/lib/datos-bancarios";
-import { TRANSFERENCIA_DIGITAL } from "@/lib/planLimits";
-import type { TierDigital } from "@/lib/planes-digitales";
+import { mergeAnalytics } from "@/lib/store-config";
 import { limpiarTexto } from "@/lib/texto-limpio";
 import { espacioDigital } from "@/lib/espacio-digital";
 
@@ -67,14 +61,14 @@ export async function PATCH(req: NextRequest) {
   }
   const {
     nombre, slug, logo, checkoutName, supportEmail, iaProducto, iaDescripcion,
-    gaId, pixelId, clarityId, transferencia, politicas,
+    gaId, pixelId, clarityId, politicas,
   } = body as Record<string, unknown>;
 
   /* Nada que escribir. Sin esto, un pedido vacío devolvería ok y crearía el
      espacio de la cuenta de gorra. */
   const vino = [
     nombre, slug, logo, checkoutName, supportEmail, iaProducto, iaDescripcion,
-    gaId, pixelId, clarityId, transferencia, politicas,
+    gaId, pixelId, clarityId, politicas,
   ];
   if (vino.every((v) => v === undefined)) {
     return NextResponse.json({ error: "No mandaste nada para guardar" }, { status: 400 });
@@ -121,52 +115,10 @@ export async function PATCH(req: NextRequest) {
     if (problema) return NextResponse.json({ error: problema }, { status: 400 });
   }
 
-  /* ⚠️ TRANSFERENCIA — EL CANDADO DEL PLAN
-   *
-   * Free no puede prenderla, y el chequeo va acá adentro y no sólo en la
-   * pantalla: la pantalla dibuja un botón apagado, y un botón apagado es una
-   * cortesía, no un permiso. Este pedido se puede armar a mano.
-   *
-   * Y no es una función recortada para empujar a pagar. Free no cobra abono: lo
-   * único que deja es el 8% que se retiene solo adentro del cobro de Mercado
-   * Pago. En una transferencia no pasa un peso por la plataforma, así que no hay
-   * de dónde retener. Un Free con transferencia prendida no paga nada por nada.
-   *
-   * El plan se lee de la BASE y no de lo que diga el navegador. */
-  let transferenciaLimpia: Record<string, unknown> | undefined;
-  if (transferencia !== undefined) {
-    if (!transferencia || typeof transferencia !== "object") {
-      return NextResponse.json({ error: "Datos de transferencia inválidos" }, { status: 400 });
-    }
-    const t = transferencia as Record<string, unknown>;
-
-    const problema = validarTransferencia(t);
-    if (problema) return NextResponse.json({ error: problema }, { status: 400 });
-
-    if (t.enabled) {
-      const sub = await prisma.subscription.findUnique({
-        where: { userId: user.id },
-        select: { tier: true },
-      });
-      const tier = (sub?.tier ?? "FREE") as TierDigital;
-      if (!TRANSFERENCIA_DIGITAL[tier]) {
-        return NextResponse.json(
-          { error: "El plan Free cobra sólo con Mercado Pago. Pasá a Starter o Pro para cobrar por transferencia." },
-          { status: 409 }
-        );
-      }
-    }
-
-    transferenciaLimpia = {
-      enabled: Boolean(t.enabled),
-      titular: limpiarTexto(t.titular, LARGO_TITULAR) ?? "",
-      // Se guarda sólo con números aunque se haya escrito con espacios o guiones.
-      cbu: typeof t.cbu === "string" ? soloDigitos(t.cbu).slice(0, 22) : "",
-      alias: limpiarTexto(t.alias, 20) ?? "",
-      banco: limpiarTexto(t.banco, LARGO_BANCO) ?? "",
-      instrucciones: limpiarTexto(t.instrucciones, LARGO_INSTRUCCIONES) ?? "",
-    };
-  }
+  /* La transferencia no existe en este ecosistema (decidido el 14/09/26: el
+     único medio es Mercado Pago). Si llega `transferencia` en el pedido —un
+     navegador con el JS viejo— se ignora; no hay dónde guardarla ni quién la
+     lea. */
 
   let slugNuevo: string | null = null;
   if (slug !== undefined) {
@@ -197,7 +149,7 @@ export async function PATCH(req: NextRequest) {
      mezclar en vez de escribir el objeto entero — desde acá no conocemos el
      resto y lo borraríamos sin enterarnos. Sólo se lee si hace falta. */
   let configNueva: string | undefined;
-  if (gaId !== undefined || pixelId !== undefined || clarityId !== undefined || transferenciaLimpia) {
+  if (gaId !== undefined || pixelId !== undefined || clarityId !== undefined) {
     const actual = await prisma.store.findUnique({
       where: { id: espacio.storeId },
       select: { storeConfig: true },
@@ -212,12 +164,6 @@ export async function PATCH(req: NextRequest) {
            nosotros en vez de pedirle a alguien que lo busque a mano. */
         ...(clarityId !== undefined ? { clarityProjectId: extraerClarityId(String(clarityId)) } : {}),
       });
-    }
-    /* Se encadena sobre el resultado anterior y no sobre `actual`: si vinieran
-       las dos cosas en el mismo pedido, mezclar cada una por su lado y quedarse
-       con la última tiraría la otra. */
-    if (transferenciaLimpia) {
-      configNueva = mergeTransferencia(configNueva, transferenciaLimpia);
     }
   }
 
