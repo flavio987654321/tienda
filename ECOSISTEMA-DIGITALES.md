@@ -1077,12 +1077,15 @@ Dos cosas, las dos forzadas por pasar de tres tarjetas a cuatro:
 
 ### Lo que quedó pendiente a propósito
 
-- 🔲 **Los botones dicen "Próximamente" y están apagados.** El alta y el cobro son
-  la Fase 2; un botón que no lleva a ningún lado es peor que uno que avisa.
-- 🔲 **Las preguntas frecuentes del pie** siguen siendo sólo de tiendas.
-- 🔲 **El encabezado dice "7 días de prueba gratis, sin tarjeta"**, que ahora es
-  incompleto: Productos Digitales tiene un Free para siempre. Hay que rever ese
-  texto cuando la Fase 2 defina el ciclo (ver sección 3).
+- ✅ ~~**Los botones dicen "Próximamente" y están apagados.**~~ Resuelto con la
+  Fase 2: los planes digitales se eligen y el alta anda (`DIGITALES_ABIERTO`
+  decide si se muestran). Quedó sin tachar.
+- ✅ ~~**Las preguntas frecuentes del pie** siguen siendo sólo de tiendas.~~
+  Resuelto hace tiempo (`FAQ_DIGITAL` cambia con la vista); quedó sin tachar.
+- ✅ ~~**El encabezado dice "7 días de prueba gratis, sin tarjeta"**~~ Hecho el
+  14/09/26: en la vista de digitales el cartel y la bajada dicen lo que es —Free
+  para siempre, y Starter y Pro con 7 días de prueba sin tarjeta; si no pagás,
+  volvés a Free—. En la de tiendas siguen igual.
 
 ## FASE 2 — La suscripción por detrás
 
@@ -4165,8 +4168,10 @@ devolvió dicen las dos `CANCELLED` en `status`, así que se distinguen por
 `Payment.status === "REFUNDED"` y por la marca que dejó el webhook
 (`digital_devolucion` / `digital_contracargo`).
 
-🔲 **Falta escribirlo en la pantalla de suscripción.** En los **términos** ya
-está (03/09/26): punto **6 ter** del apartado Cliente, más la excepción nombrada
+✅ ~~**Falta escribirlo en la pantalla de suscripción.**~~ Hecho el 14/09/26: en
+Mi cuenta, debajo de la comisión, dice que si una venta se devuelve la comisión
+vuelve entera. En los **términos** ya
+estaba (03/09/26): punto **6 ter** del apartado Cliente, más la excepción nombrada
 en el punto 7 de derechos del consumidor. Los plazos de ahí salen de
 `DIAS_DEL_PERMISO` y `MAX_DESCARGAS`, no escritos a mano: lo que vale para un
 reclamo es lo que dicen los términos, así que no pueden prometer un número
@@ -4585,9 +4590,10 @@ No es una lista de cortesía: son los lugares donde un error se cobra caro.
   dispara con `.click()`, y a ese botón se llega con el tabulador. Los del
   panel digital van con `sr-only`, que es otro caso: ahí la etiqueta ES el
   botón y el campo tiene que seguir siendo enfocable. Ninguno está roto.
-- 🔲 **La etiqueta "Muy pronto" de los formatos es código inalcanzable**: los
-  tres formatos que existen están listos (el tercero, la infografía, desde el
-  14/09/26). Se deja como guarda para el que venga.
+- ✅ **La etiqueta "Muy pronto" de los formatos es código inalcanzable**, y se
+  deja así a propósito (decidido el 14/09/26): `FORMATOS_LISTOS` y
+  `ESTILOS_LISTOS` son la guarda para el próximo formato o molde que se
+  empiece a medias. Sacarla es ganar diez líneas y perder la red.
 
 ## Los cuatro moldes de la hoja — 09/09/26
 

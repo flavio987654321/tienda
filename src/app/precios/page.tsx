@@ -328,14 +328,18 @@ function PreciosContent() {
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-full px-4 py-1.5 text-orange-700 text-sm font-medium mb-6">
               <Star className="h-3.5 w-3.5" />
-              7 días de prueba gratis, sin tarjeta
+              {/* En digitales el Free no vence: la prueba de 7 días es de Starter y
+                  Pro. El mismo cartel para los dos decía la mitad. */}
+              {verDigitales ? "Free para siempre · Starter y Pro con 7 días de prueba, sin tarjeta" : "7 días de prueba gratis, sin tarjeta"}
             </div>
             <h1 className="text-5xl lg:text-6xl font-black mb-4 text-gray-950">
               Planes simples,<br />
               <span className="bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent">resultados reales</span>
             </h1>
             <p className="text-gray-500 text-lg max-w-xl mx-auto">
-              Empezá gratis 7 días. Sin tarjeta de crédito. Cancelá cuando quieras.
+              {verDigitales
+                ? "Arrancá en Free sin vencimiento y sin tarjeta. Probá Starter o Pro 7 días cuando quieras; si no pagás, volvés a Free."
+                : "Empezá gratis 7 días. Sin tarjeta de crédito. Cancelá cuando quieras."}
             </p>
           </div>
 

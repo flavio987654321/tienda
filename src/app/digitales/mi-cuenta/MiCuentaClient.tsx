@@ -307,6 +307,14 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
               </>
             )}
           </p>
+          {/* Decidido el 02/09/26 y escrito en el detalle de cada venta devuelta;
+              faltaba acá, que es donde la persona lee cuánto le cobramos. Se
+              dice ANTES de la primera venta: de una venta que se deshizo no
+              nos quedamos con nada. */}
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-2 leading-relaxed">
+            Si una venta se devuelve —arrepentimiento o contracargo—, la comisión te vuelve
+            entera: de una venta que se deshizo no nos quedamos con nada.
+          </p>
         </div>
 
         {/* ── Qué incluye ──────────────────────────────────────────────────── */}
