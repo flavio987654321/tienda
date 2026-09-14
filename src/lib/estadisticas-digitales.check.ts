@@ -6,13 +6,14 @@
  * `armarEstadisticas` es pura y se ejecuta de verdad: es una cuenta de plata
  * y de porcentajes, y una conversión mal dividida sale por pantalla como un
  * número perfectamente creíble. La pantalla se mira leyendo el archivo: que
- * bloquee por plan lo que corresponde y que no pida nada que no exista.
+ * bloquee por plan lo que corresponde, que busque las devoluciones donde
+ * están, y que no pida nada que no exista.
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import {
   resolverRango, armarEstadisticas, puedeVer, DESDE_QUE_PLAN, RANGOS, DIAS_DE_TODO,
-  type OrdenCruda, type VisitaCruda, type OrigenCrudo,
+  type OrdenCruda, type VisitaCruda, type OrigenCrudo, type Bloque,
 } from "./estadisticas-digitales";
 import { DIAS_RETENCION_VISITAS } from "./retencion";
 import { featuresDigital } from "./planes-digitales";
@@ -22,6 +23,7 @@ const check = (id: string, ok: boolean, desc: string) => {
   if (ok) console.log(`✅ ${id}  ${desc}`);
   else { fallos++; console.log(`❌ ${id}  ${desc}`); }
 };
+const leer = (p: string) => readFileSync(p, "utf8").replace(/\r\n/g, "\n");
 
 /* ── El rango ────────────────────────────────────────────────────────────── */
 
@@ -36,16 +38,20 @@ check("RANGO-D", DIAS_DE_TODO === DIAS_RETENCION_VISITAS && resolverRango("todo"
   "\"Todo\" llega hasta donde se guardan las visitas: más atrás la conversión sería inventada");
 check("RANGO-E", RANGOS.includes("hoy") && RANGOS.includes("90"), "hoy y 90 días existen, como en la competencia");
 
-/* ── Qué ve cada plan ────────────────────────────────────────────────────── */
+/* ── Qué ve cada plan: por pregunta, bloques enteros ─────────────────────── */
 
-check("PLAN-A", puedeVer("FREE", "ventas") && !puedeVer("FREE", "visitas") && !puedeVer("FREE", "embudo"),
-  "Free ve las ventas y nada más");
-check("PLAN-B", puedeVer("STARTER", "visitas") && !puedeVer("STARTER", "embudo") && !puedeVer("STARTER", "origenes"),
-  "Starter suma visitas y conversión, sin embudo ni origen");
-check("PLAN-C", puedeVer("PRO", "embudo") && puedeVer("PRO", "origenes"),
-  "Pro ve todo");
-check("PLAN-D", DESDE_QUE_PLAN.ventas === "FREE",
-  "las ventas nunca se bloquean: ya las paga con la comisión");
+const bloques = Object.keys(DESDE_QUE_PLAN) as Bloque[];
+check("PLAN-A", (["ventas", "posventa"] as Bloque[]).every((b) => puedeVer("FREE", b))
+  && bloques.filter((b) => puedeVer("FREE", b)).length === 2,
+  "Free responde \"¿vendí y entregué bien?\": ventas y posventa, nada más");
+check("PLAN-B", (["visitas", "cuando"] as Bloque[]).every((b) => puedeVer("STARTER", b) && !puedeVer("FREE", b))
+  && !puedeVer("STARTER", "embudo") && !puedeVer("STARTER", "origenes") && !puedeVer("STARTER", "carritos"),
+  "Starter responde \"¿la página funciona?\": suma visitas, conversión y cuándo se vende");
+check("PLAN-C", bloques.every((b) => puedeVer("PRO", b))
+  && (["embudo", "origenes", "carritos"] as Bloque[]).every((b) => DESDE_QUE_PLAN[b] === "PRO"),
+  "Pro responde \"¿dónde invierto?\": embudo, origen y carritos recuperados son suyos");
+check("PLAN-D", DESDE_QUE_PLAN.ventas === "FREE" && DESDE_QUE_PLAN.posventa === "FREE",
+  "las ventas y lo de después nunca se bloquean: ya las paga con la comisión");
 check("PLAN-E",
   featuresDigital("FREE").some((f) => /conversión/i.test(f.text) && !f.on)
   && featuresDigital("STARTER").some((f) => /conversión/i.test(f.text) && f.on)
@@ -56,20 +62,27 @@ check("PLAN-E",
 /* ── La cuenta ───────────────────────────────────────────────────────────── */
 
 const rango = resolverRango("7", HOY); // 08 al 14
+const base: Omit<OrdenCruda, "estado" | "total" | "tasa" | "dia" | "principal"> = {
+  motivo: null, diaSemana: 3, hora: 21, comprador: "u1", upsell: 0,
+  bajo: true, vencidoSinBajar: false, mail: "ENVIADO", recordada: false, origen: null,
+};
+const orden = (o: Partial<OrdenCruda> & Pick<OrdenCruda, "estado" | "total" | "tasa" | "dia" | "principal">): OrdenCruda => ({ ...base, ...o });
+
 const ordenes: OrdenCruda[] = [
-  { estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a" },
-  { estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a" },
-  { estado: "CONFIRMED", total: 20000, tasa: 2, dia: "2026-09-14", principal: "b" },
-  { estado: "REFUNDED",  total: 10000, tasa: 8, dia: "2026-09-12", principal: "a" },
+  orden({ estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a", comprador: "u1", upsell: 3000, origen: "instagram" }),
+  orden({ estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a", comprador: "u2", bajo: false, vencidoSinBajar: true, mail: "FALLO", origen: "instagram" }),
+  orden({ estado: "CONFIRMED", total: 20000, tasa: 2, dia: "2026-09-14", principal: "b", comprador: "u1", bajo: null, mail: null, recordada: true, diaSemana: 0, hora: 9 }),
+  orden({ estado: "DEVUELTA", total: 10000, tasa: 8, dia: "2026-09-12", principal: "a", motivo: "contracargo", comprador: "u3" }),
   /* Fuera del rango: no cuenta. */
-  { estado: "CONFIRMED", total: 99999, tasa: 8, dia: "2026-09-01", principal: "a" },
+  orden({ estado: "CONFIRMED", total: 99999, tasa: 8, dia: "2026-09-01", principal: "a", comprador: "u9" }),
 ];
 const visitas: VisitaCruda[] = [
-  { productId: "a", date: "2026-09-10", paso: "pagina", count: 50 },
-  { productId: "a", date: "2026-09-10", paso: "pagar", count: 10 },
-  { productId: "b", date: "2026-09-14", paso: "pagina", count: 50 },
-  { productId: "b", date: "2026-09-14", paso: "pagar", count: 5 },
-  { productId: "a", date: "2026-09-01", paso: "pagina", count: 1000 },
+  { productId: "a", date: "2026-09-10", paso: "pagina", dispositivo: "movil", count: 40 },
+  { productId: "a", date: "2026-09-10", paso: "pagina", dispositivo: "escritorio", count: 10 },
+  { productId: "a", date: "2026-09-10", paso: "pagar", dispositivo: "movil", count: 10 },
+  { productId: "b", date: "2026-09-14", paso: "pagina", dispositivo: "movil", count: 50 },
+  { productId: "b", date: "2026-09-14", paso: "pagar", dispositivo: "escritorio", count: 5 },
+  { productId: "a", date: "2026-09-01", paso: "pagina", dispositivo: "movil", count: 1000 },
 ];
 const origenes: OrigenCrudo[] = [
   { productId: "a", date: "2026-09-10", source: "instagram", count: 30 },
@@ -83,7 +96,7 @@ const principales = [
   { id: "c", name: "Vacío", publicada: false },
 ];
 
-const todo = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null });
+const todo = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null, carritos: { abandonados: 12, recordados: 10 } });
 
 check("CUENTA-A", todo.kpis.ventas === 3 && todo.kpis.devueltas === 1 && todo.kpis.bruto === 40000,
   "3 ventas, 1 devuelta, bruto 40.000; la de fuera del rango no cuenta");
@@ -106,9 +119,42 @@ check("CUENTA-H", todo.porProducto.map((p) => p.id).join(",") === "b,a,c",
 check("CUENTA-I", todo.porProducto[1].ventas === 2 && todo.porProducto[1].neto === 18400
   && todo.porProducto[1].visitas === 50 && todo.porProducto[1].conversion === 4,
   "cada producto con sus ventas, su neto, sus visitas y su conversión");
-check("CUENTA-J", todo.origenes.conocidas === 90 && todo.origenes.filas[0].origen === "whatsapp"
+check("CUENTA-J", todo.dispositivos.movil === 90 && todo.dispositivos.escritorio === 10 && todo.dispositivos.pctMovil === 90,
+  "el dispositivo se cuenta sólo sobre las entradas a la página, no sobre los checkouts");
+
+/* Después de la venta */
+const pv = todo.posventa;
+check("POSV-A", pv.descargas.conPermiso === 2 && pv.descargas.bajaron === 1 && pv.descargas.sinBajar === 1
+  && pv.descargas.vencidosSinBajar === 1 && pv.descargas.pctBajaron === 50,
+  "descargas por compra: la que no tiene permiso todavía no cuenta, la vencida sin bajar se señala");
+check("POSV-B", pv.devoluciones.total === 1 && pv.devoluciones.contracargo === 1 && pv.devoluciones.arrepentimiento === 0
+  && pv.devoluciones.tasa === 25,
+  "devoluciones con motivo; la tasa es sobre cobradas + devueltas (1 de 4)");
+check("POSV-C", pv.upsell.ventas === 1 && pv.upsell.plata === 3000 && pv.upsell.pct !== null && Math.round(pv.upsell.pct * 10) === 333,
+  "upsell: cuántas lo llevaron y cuánta plata extra");
+check("POSV-D", pv.mails.enviados === 1 && pv.mails.fallados === 1,
+  "mails de entrega: salidos y fallados; el que no salió todavía no es ninguno");
+check("POSV-E", pv.compradores.unicos === 2 && pv.compradores.repiten === 1,
+  "compradores distintos y cuántos repiten");
+
+/* Cuándo se vende */
+check("CUANDO-A", todo.cuando.porDiaSemana[3] === 2 && todo.cuando.porDiaSemana[0] === 1
+  && todo.cuando.porHora[21] === 2 && todo.cuando.porHora[9] === 1,
+  "por día de la semana y por hora, sólo las cobradas");
+
+/* Orígenes: visitas y ventas */
+check("ORIG-A", todo.origenes.conocidas === 90 && todo.origenes.filas[0].origen === "whatsapp"
   && todo.origenes.filas.at(-1)?.origen === "directo",
   "orígenes: una etiqueta fuera de la lista se descarta, y directo va al final");
+const ig = todo.origenes.filas.find((f) => f.origen === "instagram")!;
+check("ORIG-B", ig.visitas === 30 && ig.ventas === 2 && ig.conversion !== null && Math.round(ig.conversion * 10) === 67
+  && todo.origenes.ventasSinOrigen === 1,
+  "cada origen con sus ventas y su conversión; la venta sin origen se cuenta aparte");
+
+/* Carritos */
+check("CARR-A", todo.carritos.abandonados === 12 && todo.carritos.recordados === 10
+  && todo.carritos.recuperados === 1 && todo.carritos.pctRecuperados === 10,
+  "carritos: los que quedaron, a cuántos les escribió y cuántos volvieron a pagar");
 
 const soloA = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: "a" });
 check("CUENTA-K", soloA.kpis.ventas === 2 && soloA.kpis.visitas === 50 && soloA.kpis.conversion === 4
@@ -119,8 +165,10 @@ check("CUENTA-M", soloA.origenes.filas.map((f) => f.origen).join(",") === "insta
   "y los orígenes son los de ese producto");
 
 const vacio = armarEstadisticas({ rango, ordenes: [], visitas: [], origenes: [], principales: [], elegido: null });
-check("CUENTA-N", vacio.kpis.ticket === null && vacio.kpis.conversion === null && vacio.embudo.pctCheckout === null,
-  "sin datos no se divide por cero: ticket y conversión quedan en null, no en NaN");
+check("CUENTA-N", vacio.kpis.ticket === null && vacio.kpis.conversion === null && vacio.embudo.pctCheckout === null
+  && vacio.posventa.descargas.pctBajaron === null && vacio.posventa.devoluciones.tasa === null
+  && vacio.dispositivos.pctMovil === null && vacio.carritos.pctRecuperados === null,
+  "sin datos no se divide por cero: todo porcentaje queda en null, no en NaN");
 
 const largo = armarEstadisticas({ rango: resolverRango("todo", HOY), ordenes, visitas, origenes, principales, elegido: null });
 check("CUENTA-O", largo.serie.grano === "mes" && largo.serie.visitas.length < 40,
@@ -132,19 +180,40 @@ const pagina = "src/app/digitales/estadisticas/page.tsx";
 const cliente = "src/app/digitales/estadisticas/EstadisticasClient.tsx";
 check("PANT-A", existsSync(pagina) && existsSync(cliente), "la pantalla existe");
 if (existsSync(pagina) && existsSync(cliente)) {
-  const p = readFileSync(pagina, "utf8").replace(/\r\n/g, "\n");
-  const c = readFileSync(cliente, "utf8").replace(/\r\n/g, "\n");
+  const p = leer(pagina);
+  const c = leer(cliente);
   const barra = readFileSync("src/app/digitales/DigitalesSidebar.tsx", "utf8");
   check("PANT-B", /armarEstadisticas\(/.test(p) && /resolverRango\(/.test(p),
     "la página cuenta en el servidor con la librería");
-  check("PANT-C", /status: \{ in: \["CONFIRMED", "REFUNDED"\] \}/.test(p),
-    "trae cobradas y devueltas, nada más");
-  check("PANT-D", /puedeVer\(tier, "visitas"\)/.test(c) && /puedeVer\(tier, "embudo"\)/.test(c) && /puedeVer\(tier, "origenes"\)/.test(c),
-    "la pantalla bloquea por plan cada bloque");
+  /* ⚠️ Las devoluciones NO tienen estado propio: quedan CANCELLED con el pago
+     en REFUNDED. Buscarlas por `status: "REFUNDED"` las contaba como cero. */
+  check("PANT-C", /\{ status: "CANCELLED", payment: \{ status: "REFUNDED" \} \}/.test(p) && !/"REFUNDED"\]/.test(p),
+    "las devueltas se buscan como canceladas con el pago devuelto, que es como quedan");
+  check("PANT-C2", /changedBy: \{ in: Object\.keys\(MOTIVOS\) \}/.test(p) && /digital_devolucion/.test(p) && /digital_contracargo/.test(p),
+    "el motivo de la devolución sale de la historia de la orden");
+  check("PANT-D", (["visitas", "cuando", "embudo", "origenes", "carritos"] as Bloque[]).every((b) => new RegExp(`puedeVer\\(tier, "${b}"\\)`).test(c)),
+    "la pantalla bloquea por plan cada bloque que no es de Free");
+  check("PANT-D2", !/puedeVer\(tier, "posventa"\)/.test(c) && /<Posventa p=\{posventa\} \/>/.test(c),
+    "lo de después de la venta se dibuja sin candado: es de todos");
   check("PANT-E", /<BotonVolver/.test(p), "tiene botón de volver");
   check("PANT-F", /href: "\/digitales\/estadisticas"/.test(barra), "está en la barra lateral");
   check("PANT-G", /Disponible desde/.test(c), "un bloque bloqueado dice desde qué plan se ve");
+  check("PANT-H", /timeZone: AR_TZ, weekday: "short", hour: "numeric", hourCycle: "h23"/.test(p),
+    "el día de la semana y la hora se leen en hora argentina, no en la del servidor");
+  check("PANT-I", /MADURACION_MS/.test(p) && /status: "PENDING"/.test(p),
+    "los carritos se cuentan con la misma maduración que la pantalla de Carritos");
 }
+
+/* ── El origen viaja con la orden ────────────────────────────────────────── */
+
+const checkout = leer("src/app/p/[id]/pagar/CheckoutClient.tsx");
+const comprar = leer("src/app/api/digitales/comprar/route.ts");
+const visitaComp = leer("src/app/p/[id]/VisitaDigital.tsx");
+check("ORDEN-A", /origen: origenAnotado\(p\.productoId\)/.test(checkout), "el checkout manda el origen que anotó la página");
+check("ORDEN-B", /origenVisita,/.test(comprar) && /clasificarOrigen\(/.test(comprar),
+  "la ruta lo clasifica con la lista cerrada y lo guarda en la orden");
+check("ORDEN-C", /if \(paso === "pagina"\) anotarOrigen\(productoId\);/.test(visitaComp),
+  "la página de venta anota el origen al entrar, antes del dedup del ping");
 
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);

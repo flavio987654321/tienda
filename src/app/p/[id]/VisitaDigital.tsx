@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { registrarVisitaDigital, type PasoDigital } from "@/lib/visitas-digitales";
+import { registrarVisitaDigital, anotarOrigen, type PasoDigital } from "@/lib/visitas-digitales";
 
 /**
  * Cuenta la visita. No dibuja nada.
@@ -22,6 +22,9 @@ export default function VisitaDigital({ paso, productoId, apagado = false }: {
 }) {
   useEffect(() => {
     if (apagado) return;
+    /* Al entrar a la página se anota de dónde vino, para que la orden lo lleve
+       si termina comprando. Antes del ping y sin su dedup: ver `anotarOrigen`. */
+    if (paso === "pagina") anotarOrigen(productoId);
     registrarVisitaDigital(paso, productoId);
   }, [paso, productoId, apagado]);
   return null;

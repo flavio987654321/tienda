@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
+import { origenAnotado } from "@/lib/visitas-digitales";
 import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle } from "lucide-react";
 
 /**
@@ -117,6 +118,10 @@ export default function CheckoutClient(p: Props) {
           /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
              servidor. Una prueba que la escribe el navegador no prueba nada. */
           acepto: true,
+          /* De dónde vino, tal como lo anotó la página de venta al entrar. Crudo:
+             la etiqueta la pone el servidor. Es sólo para Estadísticas; sin esto
+             la compra sale igual. */
+          origen: origenAnotado(p.productoId),
         }),
       });
       const datos = await r.json().catch(() => ({}));

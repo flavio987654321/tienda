@@ -39,8 +39,55 @@ export function esPasoDigital(valor: unknown): valor is PasoDigital {
  */
 export const MAX_VISITAS_POR_IP = 5;
 
+/** Desde qué pantalla. Lo decide el servidor con el hecho que manda el cliente. */
+export const DISPOSITIVOS = ["movil", "escritorio"] as const;
+export type Dispositivo = (typeof DISPOSITIVOS)[number];
+
 /** El prefijo de las claves de dedup en el navegador. */
 const PREFIJO = "dv_";
+/** Dónde queda anotado de dónde vino, para que el checkout lo mande con la orden. */
+const CLAVE_ORIGEN = "dv_origen_";
+
+/** Lo que la página de venta anota al entrar y el checkout manda al comprar. */
+export type OrigenCrudo = { referente: string; utmSource: string };
+
+/**
+ * De dónde vino esta visita, tal como lo anotó la página de venta. `null` si
+ * entró derecho al checkout o el almacenamiento está bloqueado. Lo lee el
+ * checkout para mandarlo con la orden; el servidor lo clasifica.
+ *
+ * Se guarda al ENTRAR y no al comprar porque al comprar ya no hay referente:
+ * el checkout se abre desde nuestra propia página. Y se pisa en cada entrada:
+ * si vino por Instagram el lunes y volvió por WhatsApp el jueves y compró, la
+ * venta es del jueves. Es la regla simple; la de "primer contacto" pide
+ * guardar más y decidir cuánto dura, y no vale lo que cuesta acá.
+ */
+export function origenAnotado(productId: string): OrigenCrudo | null {
+  try {
+    const crudo = localStorage.getItem(`${CLAVE_ORIGEN}${productId}`);
+    if (!crudo) return null;
+    const o = JSON.parse(crudo) as Partial<OrigenCrudo>;
+    return {
+      referente: typeof o.referente === "string" ? o.referente : "",
+      utmSource: typeof o.utmSource === "string" ? o.utmSource : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ¿Es un teléfono? Se mira el puntero y no el ancho: una ventana angosta en
+ * una computadora sigue siendo una computadora, y un teléfono apaisado sigue
+ * siendo un teléfono. Es el hecho que se manda; la etiqueta la pone el servidor.
+ */
+function esMovil(): boolean {
+  try {
+    return window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    return false;
+  }
+}
 
 /** El día del calendario argentino, "2026-09-14", con el reloj del visitante. */
 function claveDelDia(): string {
@@ -98,7 +145,33 @@ export function registrarVisitaDigital(paso: PasoDigital, productId: string): vo
   fetch(`/api/digitales/visita/${productId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paso, referente, utmSource }),
+    body: JSON.stringify({ paso, referente, utmSource, movil: esMovil() }),
     keepalive: true,
   }).catch(() => {});
+}
+
+/**
+ * Anota de dónde vino, para la orden. Va APARTE del ping y ANTES del dedup:
+ * la visita se cuenta una vez por día, pero el origen tiene que quedar
+ * anotado en cada entrada, o la segunda visita del día compraría con el
+ * origen de la primera. Sólo se guarda cuando hay algo que decir —un
+ * referente o un utm—: una entrada directa no borra lo que anotó la anterior,
+ * porque "directo" casi siempre es "volvió escribiendo la dirección" después
+ * de haber llegado por algún lado.
+ */
+export function anotarOrigen(productId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    let referente = document.referrer || "";
+    const utmSource = new URLSearchParams(window.location.search).get("utm_source") || "";
+    /* Un referente nuestro —volvió del checkout, o de la página de gracias—
+       no es un origen. El utm sí, venga de donde venga. */
+    try {
+      if (referente && new URL(referente).host === window.location.host) referente = "";
+    } catch { /* un referente que no es URL se manda igual; el servidor lo descarta */ }
+    if (!referente && !utmSource) return;
+    localStorage.setItem(`${CLAVE_ORIGEN}${productId}`, JSON.stringify({ referente, utmSource } satisfies OrigenCrudo));
+  } catch {
+    /* Sin almacenamiento la venta queda sin origen. */
+  }
 }

@@ -5527,43 +5527,86 @@ captura, y decidido qué se copia y qué no:
 | Visitas por día · Ingresos por día | Visitas y ventas por día, barras en SVG servidas del servidor. Por semana o por mes cuando el rango es largo (`serie-grafico`). |
 | Embudo (bloqueado en Pro) | Entraron → abrieron el pago → pagaron. |
 | Productos más vendidos | "Por producto": ventas, neto, visitas y conversión de cada página, de más a menos plata. |
-| Estado de órdenes | No: acá son cobradas o devueltas, y las devueltas van al pie de Ventas. |
+| Estado de órdenes | No: acá son cobradas o devueltas, y las devueltas van en "Después de la venta". |
 | Métodos de pago · Ventas por país | No: un solo medio (MP) y un solo país. |
 | Visitantes en vivo | No por ahora: consulta abierta contra el egress de Supabase, que es lo que aprieta. |
-| Campañas UTM (pantalla aparte) | "De dónde vienen", en la misma pantalla, con la lista cerrada de `origen-visita` que ya usan las tiendas. |
+| Campañas UTM (pantalla aparte) | "De dónde vienen", en la misma pantalla, con la lista cerrada de `origen-visita` que ya usan las tiendas — y con las VENTAS por canal, no sólo las visitas. |
 
 **Por producto y en general**, con el mismo selector que el inicio: cada
-principal es su propio sitio y una cuenta Pro tiene cinco.
+principal es su propio sitio y una cuenta Pro tiene cinco. Con un solo
+producto no hay selector ni tabla "Por producto": aparecen con el segundo.
 
-**Qué ve cada plan** (`DESDE_QUE_PLAN` en `estadisticas-digitales`): Free
-las ventas —ya las paga con la comisión—; Starter suma visitas y conversión;
-Pro suma el embudo y el origen. Un bloque bloqueado se dibuja igual, borroso
-y con "Disponible desde Starter/Pro", **pero con números de muestra**:
-borroso con los reales, cualquiera los lee con el inspector. `featuresDigital`
-promete lo mismo en /precios, el registro y Mi cuenta, y un chequeo lo exige.
+### Lo propio de un producto digital (lo que la competencia no tiene)
 
-**Para contar visitas hubo que empezar a guardarlas**: dos tablas nuevas,
-`DigitalVisita` (producto, día, paso "pagina"/"pagar", cuenta) y
-`DigitalVisitaOrigen` (producto, día, origen, cuenta), calcadas de
-`StoreView` + `StoreFunnelStep` + `StoreViewSource` pero colgadas del
-producto. El ping lo manda `VisitaDigital` desde la página pública y el
+Pensado el mismo día: lo copiado era de tienda genérica. Lo que importa
+después de vender un archivo es otra cosa, y todo esto ya estaba guardado:
+
+- **Descargas** por compra: bajaron / no bajaron / se les venció sin bajar.
+  El que pagó y no bajó es el que va a escribir "no me llegó".
+- **Devoluciones**: tasa (sobre cobradas + devueltas) y motivo, arrepentimiento
+  o contracargo. ⚠️ Una devolución **no tiene estado propio en la base**:
+  queda `CANCELLED` con el pago en `REFUNDED` y el motivo en
+  `OrderStatusLog.changedBy`. La primera versión de la pantalla las buscaba
+  por un `REFUNDED` que no existe y las contaba como cero; hay chequeo.
+- **Upsell**: cuántas ventas lo llevaron y cuánta plata extra dejó. El
+  embudo entero existe por esto y no había un número que dijera si anda.
+- **Mail de entrega**: salidos y fallados (lo que Resend rechazó; los rebotes
+  posteriores no se saben sin webhook).
+- **Compradores que repiten**: distintos, y cuántos compraron más de una vez.
+- **Cuándo se vende**: por día de la semana y por hora, en hora argentina.
+- **Celular vs computadora**: va en la clave de `DigitalVisita`
+  (`dispositivo`), decidido por el servidor con "puntero grueso".
+- **De dónde vino cada VENTA**: la página anota referente y utm al entrar
+  (`anotarOrigen`, en localStorage, pisado en cada entrada con algo que decir),
+  el checkout lo manda al comprar y `/api/digitales/comprar` lo clasifica y lo
+  guarda en `Order.origenVisita`. Sin nada anotado queda null, no "directo".
+- **Carritos recuperados**: los que quedaron en la puerta, a cuántos les
+  escribió el mail automático y cuántos volvieron a pagar.
+
+Afuera: tiempo entre visita y compra (pide guardar demasiado por visitante).
+
+### Qué ve cada plan — por PREGUNTA, no por número
+
+Regla de Flavio, y es la correcta: un bloque a medias en un plan es peor que
+no tenerlo. Cada bloque entra entero en el plan donde entra, o entra con
+candado (`DESDE_QUE_PLAN` en `estadisticas-digitales`):
+
+- **Free — "¿vendí y entregué bien?"**: los cuatro números, ventas por día,
+  Por producto (ventas y plata) y **todo "Después de la venta"**. Free
+  también vende y también tiene que atender al que compró.
+- **Starter — "¿la página funciona?"**: visitas por día, conversión, Por
+  producto con visitas y conversión, celular vs computadora, cuándo se vende.
+- **Pro — "¿dónde invierto?"**: embudo, de dónde vienen (visitas y ventas
+  por canal), carritos recuperados (el mail es de Pro, el número también).
+
+Los bloqueados se dibujan borrosos con "Disponible desde Starter/Pro",
+**pero con números de muestra**: borroso con los reales, cualquiera los lee
+con el inspector. `featuresDigital` promete lo mismo en /precios, el registro
+y Mi cuenta, y un chequeo lo exige.
+
+### Cómo se cuentan las visitas
+
+Dos tablas nuevas, `DigitalVisita` (producto, día, paso "pagina"/"pagar",
+dispositivo, cuenta) y `DigitalVisitaOrigen` (producto, día, origen, cuenta),
+calcadas de `StoreView` + `StoreFunnelStep` + `StoreViewSource` pero colgadas
+del producto. El ping lo manda `VisitaDigital` desde la página pública y el
 checkout, nunca desde la previa del editor. Mismas reglas que tiendas: una
-por navegador por día argentino, bots y tope por IP con `visitaLegitima`,
-la dueña descartada mirando la sesión sólo si hay cookie —quien compra no
-tiene cuenta, así que casi nunca la hay—. Retención igual que tiendas en el
-cron de limpieza.
+por navegador por día argentino, bots y tope por IP con `visitaLegitima`, la
+dueña descartada mirando la sesión sólo si hay cookie —quien compra no tiene
+cuenta, así que casi nunca la hay—. Retención igual que tiendas en el cron de
+limpieza.
 
 ⚠️ La migración la aplica el build de producción. Hasta ese build la ruta
 del ping contesta "no contada" y la pantalla dice cero visitas, sin caerse:
 las dos tienen su try. **La historia arranca el día del deploy**, no antes.
 
 Dónde vive: `lib/estadisticas-digitales.ts` es la cuenta, pura y probada
-(`estadisticas-digitales.check.ts`: RANGO-*, PLAN-*, CUENTA-*, PANT-*);
-`lib/visitas-digitales.ts` el ping (`visitas-digitales.check.ts`); la
-consulta en `digitales/estadisticas/page.tsx`. Mirado en 360, 768 y 1100
-con Pro, Pro mirando un producto, Starter y Free.
+(`estadisticas-digitales.check.ts`: RANGO-*, PLAN-*, CUENTA-*, POSV-*,
+CUANDO-*, ORIG-*, CARR-*, PANT-*, ORDEN-*); `lib/visitas-digitales.ts` el
+ping y el origen anotado (`visitas-digitales.check.ts`); la consulta en
+`digitales/estadisticas/page.tsx`, con techo en cada lista. Mirado en 360,
+768 y 1100 con Pro, Pro mirando un producto, Starter y Free.
 
 - 🔲 **Lo que queda para después:** exportar a PDF/CSV como Métricas de
-  tiendas; comparar contra el período anterior; y las ventas por origen
-  (hoy el origen es de las visitas; para saber de dónde vino cada VENTA hay
-  que guardarlo en la orden al pagar).
+  tiendas; comparar contra el período anterior; los rebotes reales del mail
+  (webhook de Resend).

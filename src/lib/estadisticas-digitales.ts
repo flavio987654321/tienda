@@ -2,7 +2,7 @@ import { comisionCongelada } from "@/lib/compra-digital";
 import { sumarDiasCalendario, diasEntreDias } from "@/lib/fechas-comerciales";
 import { granoPara, serieParaGrafico, type Grano, type Punto } from "@/lib/serie-grafico";
 import { ORIGENES, ordenarOrigenes, type Origen } from "@/lib/origen-visita";
-import type { PasoDigital } from "@/lib/visitas-digitales";
+import type { PasoDigital, Dispositivo } from "@/lib/visitas-digitales";
 import type { TierDigital } from "@/lib/planes-digitales";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -20,25 +20,41 @@ import type { TierDigital } from "@/lib/planes-digitales";
 
    ── Qué se cuenta, y de dónde ──────────────────────────────────────────────
 
-   - Las VENTAS salen de `Order`: una orden CONFIRMED es una venta; una
-     REFUNDED es una venta que se deshizo (arrepentimiento o contracargo). El
-     bruto y la comisión se calculan con la tasa congelada de cada orden, la
-     misma cuenta que hace la pantalla de Ventas — dos pantallas que muestran
-     la misma plata no pueden decir números distintos.
+   - Las VENTAS salen de `Order`: una orden CONFIRMED es una venta. Una
+     DEVUELTA es una venta que se deshizo —arrepentimiento o contracargo— y
+     ⚠️ en la base NO tiene estado propio: queda CANCELLED con el pago en
+     REFUNDED, y el motivo en `OrderStatusLog.changedBy`. La página lo
+     traduce a `estado: "DEVUELTA"` antes de llegar acá; buscarlas por un
+     estado "REFUNDED" que no existe las contaba como cero.
+   - El bruto y la comisión se calculan con la tasa congelada de cada orden,
+     la misma cuenta que hace la pantalla de Ventas — dos pantallas que
+     muestran la misma plata no pueden decir números distintos.
    - Las VISITAS y los CHECKOUTS salen de `DigitalVisita`, una por navegador
-     por día. Y la CONVERSIÓN es ventas ÷ visitas, que es el número que decide
+     por día. La CONVERSIÓN es ventas ÷ visitas, que es el número que decide
      si una página sirve.
-   - El ORIGEN de las visitas sale de `DigitalVisitaOrigen`, con la misma
-     lista cerrada de etiquetas que las tiendas.
+   - El ORIGEN de las visitas sale de `DigitalVisitaOrigen`; el de cada VENTA
+     viaja en la orden (`origenVisita`). Con los dos se dice "Instagram trajo
+     500 visitas y 12 ventas", que es lo que decide dónde poner publicidad.
+   - Lo de DESPUÉS de la venta —si bajaron el archivo, si lo devolvieron, si
+     llevaron el upsell, si el mail salió— sale de la orden y sus permisos.
 
-   ── Qué ve cada plan ───────────────────────────────────────────────────────
+   ── Qué ve cada plan — por PREGUNTA, no por número ─────────────────────────
 
-   Free ve las ventas: es lo que ya paga con su comisión. Starter suma las
-   visitas y la conversión. Pro suma el embudo y el origen. Los bloques
-   bloqueados se muestran igual, borrosos y con el candado: esconderlos deja
-   la pantalla de Free igual de vacía que si no existieran, y no se ve qué se
-   gana al cambiar. Es donde la competencia pone el candado, y es lo que le
-   da al de Free un motivo para subir. */
+   Un bloque a medias en un plan es peor que no tenerlo: cada bloque entra
+   entero en el plan donde entra, o entra con candado.
+
+   - Free responde "¿vendí y entregué bien?": las ventas y todo lo de después
+     de la venta. Es operar sus propias ventas, y Free también vende y también
+     tiene que atender al que compró.
+   - Starter responde "¿la página funciona?": visitas, conversión, desde qué
+     dispositivo, cuándo se vende.
+   - Pro responde "¿dónde invierto?": el embudo, de dónde vienen las visitas y
+     las ventas, y los carritos que recuperó el mail automático (que es de Pro,
+     así que el número que lo mide también).
+
+   Los bloques bloqueados se muestran igual, borrosos y con el candado: es
+   donde la competencia pone el candado y lo que le da al de Free un motivo
+   para subir. */
 
 /* ── El rango ────────────────────────────────────────────────────────────── */
 
@@ -77,14 +93,24 @@ export function resolverRango(param: string | undefined, hoy: string): Rango {
 
 /* ── Qué ve cada plan ────────────────────────────────────────────────────── */
 
-export type Bloque = "ventas" | "visitas" | "embudo" | "origenes";
+export type Bloque =
+  | "ventas"      // los cuatro números, ventas por día, por producto
+  | "posventa"    // descargas, devoluciones, upsell, mails, compradores que repiten
+  | "visitas"     // visitas por día, conversión, dispositivo
+  | "cuando"      // por día de la semana y por hora
+  | "embudo"
+  | "origenes"    // visitas y ventas por origen
+  | "carritos";   // recuperados por el mail automático
 
 /** El plan más bajo que ve cada bloque. */
 export const DESDE_QUE_PLAN: Record<Bloque, TierDigital> = {
   ventas: "FREE",
+  posventa: "FREE",
   visitas: "STARTER",
+  cuando: "STARTER",
   embudo: "PRO",
   origenes: "PRO",
+  carritos: "PRO",
 };
 
 const ORDEN: TierDigital[] = ["FREE", "STARTER", "PRO"];
@@ -95,20 +121,42 @@ export function puedeVer(tier: TierDigital, bloque: Bloque): boolean {
 
 /* ── Las filas crudas ────────────────────────────────────────────────────── */
 
+export type MotivoDevolucion = "arrepentimiento" | "contracargo";
+
 export type OrdenCruda = {
-  estado: "CONFIRMED" | "REFUNDED";
+  estado: "CONFIRMED" | "DEVUELTA";
+  /** Sólo en una devuelta; `null` si no quedó anotado. */
+  motivo: MotivoDevolucion | null;
   total: number;
   tasa: number | null;
   /** El día argentino en que se creó, "YYYY-MM-DD". */
   dia: string;
+  /** Día de la semana (0 domingo … 6 sábado) y hora (0–23), argentinos. */
+  diaSemana: number;
+  hora: number;
   /** El principal al que pertenece, o `null` si no se pudo saber. */
   principal: string | null;
+  comprador: string;
+  /** Plata de los upsells que llevó. Cero si no llevó ninguno. */
+  upsell: number;
+  /** Si el comprador bajó algo: `null` si todavía no tiene permiso (no se acreditó). */
+  bajo: boolean | null;
+  /** Tiene al menos un permiso vencido sin ninguna descarga. */
+  vencidoSinBajar: boolean;
+  /** El último mail de entrega: salió, falló, o no hubo todavía. */
+  mail: "ENVIADO" | "FALLO" | null;
+  /** Le llegó el recordatorio de compra a medias antes de pagar. */
+  recordada: boolean;
+  /** De dónde vino la visita que terminó acá. */
+  origen: string | null;
 };
 
-export type VisitaCruda = { productId: string; date: string; paso: PasoDigital; count: number };
+export type VisitaCruda = { productId: string; date: string; paso: PasoDigital; dispositivo: Dispositivo; count: number };
 export type OrigenCrudo = { productId: string; date: string; source: string; count: number };
-
 export type PrincipalCrudo = { id: string; name: string; publicada: boolean };
+
+/** Las compras a medias del rango, ya contadas por la página. */
+export type CarritosCrudos = { abandonados: number; recordados: number };
 
 /* ── Lo que sale ─────────────────────────────────────────────────────────── */
 
@@ -132,21 +180,36 @@ export type Embudo = {
   visitas: number;
   checkouts: number;
   ventas: number;
-  /** Checkouts ÷ visitas y ventas ÷ checkouts, en porcentaje. `null` sin base. */
   pctCheckout: number | null;
   pctVenta: number | null;
 };
 
-export type FilaDeOrigen = { origen: Origen; visitas: number; pct: number };
+export type Posventa = {
+  descargas: { conPermiso: number; bajaron: number; sinBajar: number; vencidosSinBajar: number; pctBajaron: number | null };
+  devoluciones: { total: number; arrepentimiento: number; contracargo: number; tasa: number | null };
+  upsell: { ventas: number; pct: number | null; plata: number };
+  mails: { enviados: number; fallados: number };
+  compradores: { unicos: number; repiten: number };
+};
+
+export type Cuando = { porDiaSemana: number[]; porHora: number[] };
+
+export type FilaDeOrigen = { origen: Origen; visitas: number; pct: number; ventas: number; conversion: number | null };
+
+export type Carritos = { abandonados: number; recordados: number; recuperados: number; pctRecuperados: number | null };
 
 export type Estadisticas = {
   rango: Rango;
   kpis: Kpis;
   serie: Serie;
+  dispositivos: { movil: number; escritorio: number; pctMovil: number | null };
   embudo: Embudo;
+  posventa: Posventa;
+  cuando: Cuando;
   /** Cuánto dejó cada página, de más a menos. Vacío si se mira un producto solo. */
   porProducto: { id: string; name: string; publicada: boolean; ventas: number; neto: number; visitas: number; conversion: number | null }[];
-  origenes: { filas: FilaDeOrigen[]; conocidas: number };
+  origenes: { filas: FilaDeOrigen[]; conocidas: number; ventasSinOrigen: number };
+  carritos: Carritos;
 };
 
 /** Un día está adentro del rango. Las fechas son "YYYY-MM-DD", comparables como texto. */
@@ -176,6 +239,7 @@ export function armarEstadisticas(entrada: {
   origenes: OrigenCrudo[];
   principales: PrincipalCrudo[];
   elegido: string | null;
+  carritos?: CarritosCrudos;
 }): Estadisticas {
   const { rango, elegido } = entrada;
   const esDelElegido = (id: string | null) => elegido === null || id === elegido;
@@ -183,6 +247,8 @@ export function armarEstadisticas(entrada: {
   const ordenes = entrada.ordenes.filter((o) => enRango(o.dia, rango) && esDelElegido(o.principal));
   const visitas = entrada.visitas.filter((v) => enRango(v.date, rango) && esDelElegido(v.productId));
   const origenes = entrada.origenes.filter((v) => enRango(v.date, rango) && esDelElegido(v.productId));
+  const cobradas = ordenes.filter((o) => o.estado === "CONFIRMED");
+  const devueltas = ordenes.filter((o) => o.estado === "DEVUELTA");
 
   /* ── Los días, de punta a punta ── */
   const dias: string[] = [];
@@ -190,26 +256,31 @@ export function armarEstadisticas(entrada: {
   const porDia = new Map(dias.map((d) => [d, { visitas: 0, checkouts: 0, ventas: 0, bruto: 0 }]));
 
   /* ── Ventas ── */
-  let ventas = 0, bruto = 0, comision = 0, devueltas = 0;
-  for (const o of ordenes) {
-    if (o.estado === "REFUNDED") { devueltas++; continue; }
-    ventas++;
+  let bruto = 0, comision = 0;
+  for (const o of cobradas) {
     bruto += o.total;
     comision += comisionCongelada(o.total, o.tasa);
     const d = porDia.get(o.dia);
     if (d) { d.ventas++; d.bruto += o.total; }
   }
+  const ventas = cobradas.length;
 
-  /* ── Visitas y checkouts ── */
-  let totalVisitas = 0, totalCheckouts = 0;
+  /* ── Visitas, checkouts y dispositivo ── */
+  let totalVisitas = 0, totalCheckouts = 0, movil = 0, escritorio = 0;
   for (const v of visitas) {
     const d = porDia.get(v.date);
-    if (v.paso === "pagina") { totalVisitas += v.count; if (d) d.visitas += v.count; }
-    else { totalCheckouts += v.count; if (d) d.checkouts += v.count; }
+    if (v.paso === "pagina") {
+      totalVisitas += v.count;
+      if (d) d.visitas += v.count;
+      if (v.dispositivo === "movil") movil += v.count; else escritorio += v.count;
+    } else {
+      totalCheckouts += v.count;
+      if (d) d.checkouts += v.count;
+    }
   }
 
   const kpis: Kpis = {
-    ventas, bruto, comision, neto: bruto - comision, devueltas,
+    ventas, bruto, comision, neto: bruto - comision, devueltas: devueltas.length,
     ticket: ventas > 0 ? bruto / ventas : null,
     visitas: totalVisitas,
     checkouts: totalCheckouts,
@@ -236,13 +307,61 @@ export function armarEstadisticas(entrada: {
     pctVenta: pct(ventas, totalCheckouts),
   };
 
+  /* ── Después de la venta ──
+     Todo sobre las COBRADAS, salvo las devoluciones, que son las otras. Las
+     descargas se cuentan por compra y no por archivo: una compra con tres
+     archivos de los que bajó uno es alguien que ya tiene lo suyo. */
+  const conPermiso = cobradas.filter((o) => o.bajo !== null);
+  const bajaron = conPermiso.filter((o) => o.bajo === true).length;
+  const conUpsell = cobradas.filter((o) => o.upsell > 0);
+  const porComprador = new Map<string, number>();
+  for (const o of cobradas) porComprador.set(o.comprador, (porComprador.get(o.comprador) ?? 0) + 1);
+  const posventa: Posventa = {
+    descargas: {
+      conPermiso: conPermiso.length,
+      bajaron,
+      sinBajar: conPermiso.length - bajaron,
+      vencidosSinBajar: cobradas.filter((o) => o.vencidoSinBajar).length,
+      pctBajaron: pct(bajaron, conPermiso.length),
+    },
+    devoluciones: {
+      total: devueltas.length,
+      arrepentimiento: devueltas.filter((o) => o.motivo === "arrepentimiento").length,
+      contracargo: devueltas.filter((o) => o.motivo === "contracargo").length,
+      /* Sobre todo lo que se cobró alguna vez: las cobradas más las que se
+         deshicieron. Sobre las cobradas solas, 3 devueltas de 3 ventas darían
+         100 % y se leería como "todas". */
+      tasa: pct(devueltas.length, ventas + devueltas.length),
+    },
+    upsell: {
+      ventas: conUpsell.length,
+      pct: pct(conUpsell.length, ventas),
+      plata: conUpsell.reduce((s, o) => s + o.upsell, 0),
+    },
+    mails: {
+      enviados: cobradas.filter((o) => o.mail === "ENVIADO").length,
+      fallados: cobradas.filter((o) => o.mail === "FALLO").length,
+    },
+    compradores: {
+      unicos: porComprador.size,
+      repiten: [...porComprador.values()].filter((n) => n > 1).length,
+    },
+  };
+
+  /* ── Cuándo se vende ── */
+  const cuando: Cuando = { porDiaSemana: Array(7).fill(0), porHora: Array(24).fill(0) };
+  for (const o of cobradas) {
+    if (o.diaSemana >= 0 && o.diaSemana < 7) cuando.porDiaSemana[o.diaSemana]++;
+    if (o.hora >= 0 && o.hora < 24) cuando.porHora[o.hora]++;
+  }
+
   /* ── Por producto, sólo mirando todo ── */
   const porProducto: Estadisticas["porProducto"] = [];
   if (elegido === null) {
     for (const p of entrada.principales) {
       let v = 0, n = 0, vis = 0;
-      for (const o of ordenes) {
-        if (o.principal !== p.id || o.estado !== "CONFIRMED") continue;
+      for (const o of cobradas) {
+        if (o.principal !== p.id) continue;
         v++; n += o.total - comisionCongelada(o.total, o.tasa);
       }
       for (const x of visitas) if (x.productId === p.id && x.paso === "pagina") vis += x.count;
@@ -251,19 +370,50 @@ export function armarEstadisticas(entrada: {
     porProducto.sort((a, b) => b.neto - a.neto || b.ventas - a.ventas || b.visitas - a.visitas);
   }
 
-  /* ── De dónde vinieron ── */
-  const porOrigen = new Map<Origen, number>();
+  /* ── De dónde vinieron: visitas y ventas por origen ──
+     Una venta con un origen que no está en la lista se descarta como una
+     visita con uno inventado; una SIN origen (de antes de que se guardara, o
+     con el almacenamiento bloqueado) se cuenta aparte y se dice. */
+  const esOrigen = (s: string): s is Origen => (ORIGENES as readonly string[]).includes(s);
+  const porOrigen = new Map<Origen, { visitas: number; ventas: number }>();
+  const cajon = (o: Origen) => {
+    let c = porOrigen.get(o);
+    if (!c) { c = { visitas: 0, ventas: 0 }; porOrigen.set(o, c); }
+    return c;
+  };
   let conocidas = 0;
   for (const o of origenes) {
-    if (!(ORIGENES as readonly string[]).includes(o.source)) continue;
-    porOrigen.set(o.source as Origen, (porOrigen.get(o.source as Origen) ?? 0) + o.count);
+    if (!esOrigen(o.source)) continue;
+    cajon(o.source).visitas += o.count;
     conocidas += o.count;
   }
+  let ventasSinOrigen = 0;
+  for (const o of cobradas) {
+    if (o.origen === null || !esOrigen(o.origen)) { ventasSinOrigen++; continue; }
+    cajon(o.origen).ventas++;
+  }
   const filas = ordenarOrigenes(
-    [...porOrigen.entries()].map(([origen, v]) => ({ origen, visitas: v, pct: pct(v, conocidas) ?? 0 })),
+    [...porOrigen.entries()].map(([origen, c]) => ({
+      origen, visitas: c.visitas, pct: pct(c.visitas, conocidas) ?? 0, ventas: c.ventas, conversion: pct(c.ventas, c.visitas),
+    })),
   );
 
-  return { rango, kpis, serie, embudo, porProducto, origenes: { filas, conocidas } };
+  /* ── Carritos: los que quedaron en la puerta y los que volvieron por el mail ── */
+  const recuperados = cobradas.filter((o) => o.recordada).length;
+  const carritos: Carritos = {
+    abandonados: entrada.carritos?.abandonados ?? 0,
+    recordados: entrada.carritos?.recordados ?? 0,
+    recuperados,
+    pctRecuperados: pct(recuperados, entrada.carritos?.recordados ?? 0),
+  };
+
+  return {
+    rango, kpis, serie,
+    dispositivos: { movil, escritorio, pctMovil: pct(movil, movil + escritorio) },
+    embudo, posventa, cuando, porProducto,
+    origenes: { filas, conocidas, ventasSinOrigen },
+    carritos,
+  };
 }
 
 /** Cuántos días abarca un rango; expuesto para los chequeos. */

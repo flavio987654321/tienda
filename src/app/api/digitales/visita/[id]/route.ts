@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import { clasificarOrigen } from "@/lib/origen-visita";
 import { visitaLegitima } from "@/lib/visita-legitima";
-import { esPasoDigital, MAX_VISITAS_POR_IP } from "@/lib/visitas-digitales";
+import { esPasoDigital, MAX_VISITAS_POR_IP, type Dispositivo } from "@/lib/visitas-digitales";
 
 export const runtime = "nodejs";
 
@@ -70,15 +70,19 @@ export async function POST(
      21:00 y la medianoche, que son las horas de más venta. */
   const date = getArgentinaDayKey();
 
+  /* `=== true` y no un truthy: viene de un navegador que cualquiera puede
+     editar. Del cliente se acepta el hecho crudo; la etiqueta es de acá. */
+  const dispositivo: Dispositivo = cuerpo?.movil === true ? "movil" : "escritorio";
+
   /* El try no es decorativo: entre que esto se deploya y que corre la
      migración, la tabla no existe. Es una métrica —el cliente no lee la
      respuesta— y un 500 acá sólo esconde en los logs los errores que sí hay
      que mirar. */
   try {
     await prisma.digitalVisita.upsert({
-      where: { productId_date_paso: { productId: producto.id, date, paso } },
+      where: { productId_date_paso_dispositivo: { productId: producto.id, date, paso, dispositivo } },
       update: { count: { increment: 1 } },
-      create: { productId: producto.id, date, paso, count: 1 },
+      create: { productId: producto.id, date, paso, dispositivo, count: 1 },
     });
   } catch {
     return NextResponse.json({ ok: true, contada: false });

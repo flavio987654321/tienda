@@ -9,6 +9,7 @@ import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { normalizarContenido, diasDeGarantia } from "@/lib/pagina-venta";
 import { loQueFalta } from "@/lib/productos-digitales";
 import { COMISION_DIGITAL } from "@/lib/planLimits";
+import { clasificarOrigen } from "@/lib/origen-visita";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
@@ -138,6 +139,23 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+
+  /* De dónde vino la visita que termina acá, para Estadísticas. Lo anotó la
+     página de venta al entrar y llega crudo; la etiqueta sale de la lista
+     cerrada de `origen-visita`, nunca del texto que mande el navegador. Sin
+     nada anotado queda en null —no "directo": no saber no es lo mismo que
+     haber entrado derecho—. Es una métrica: si falta o viene rota, la compra
+     sigue igual. */
+  const origenCrudo = cuerpo.origen;
+  const origenVisita =
+    origenCrudo && typeof origenCrudo === "object"
+      ? clasificarOrigen(
+          typeof (origenCrudo as { referente?: unknown }).referente === "string" ? (origenCrudo as { referente: string }).referente : null,
+          typeof (origenCrudo as { utmSource?: unknown }).utmSource === "string" ? (origenCrudo as { utmSource: string }).utmSource : null,
+          req.headers.get("host"),
+          false,
+        )
+      : null;
   /* El texto exacto se arma más abajo, cuando ya se leyó la página: necesita
      saber si promete garantía. Acá sólo se corta el pedido que no aceptó. */
 
@@ -397,6 +415,7 @@ export async function POST(req: NextRequest) {
           digitalConsentAt: new Date(),
           digitalConsentIp: ip,
           digitalConsentTexto: textoAceptado,
+          origenVisita,
           items: { create: ordenPrevia ? itemsDelAgregado(upsells) : armarItems(principal, bonos, upsells) },
           /* ⚠️ La fila de pago nace con la orden, igual que en el checkout de
              tiendas. El webhook la busca por `orderId` para marcarla aprobada y

@@ -810,6 +810,14 @@ model Order {
   // TIENDA, que tiene su propio `AbandonedCart`.
   recordatorioAt DateTime?
 
+  /// De dónde vino la VISITA que terminó en esta compra digital: una de las
+  /// etiquetas de `origen-visita` ("instagram", "whatsapp", "directo"…). La
+  /// página de venta anota el referente y el utm al entrar, el checkout los
+  /// manda al crear la orden y el servidor los clasifica. Es lo que permite
+  /// decir "Instagram trajo 500 visitas y 12 ventas" y no sólo las visitas.
+  /// Null en las órdenes de tiendas y en las digitales de antes de esto.
+  origenVisita String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1124,18 +1132,24 @@ model DigitalEnvioLog {
 /// checkout). La venta no se guarda acá: sale de `Order`, como siempre. Los
 /// tres juntos son el embudo: entró → quiso pagar → pagó.
 ///
+/// `dispositivo` es "movil" o "escritorio", y va en la clave y no en otra
+/// tabla: sumar las dos filas da el total, y separarlas dice para qué pantalla
+/// hay que armar la página. Lo decide el servidor con lo que el navegador
+/// declara (puntero grueso), nunca con un texto libre.
+///
 /// Se cuenta como las visitas de tiendas: una vez por navegador por día, con
 /// el dedup del lado del cliente y los filtros de `visita-legitima` del lado
 /// del servidor. `date` es el día del calendario argentino.
 model DigitalVisita {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  date      String // "2026-09-14", día argentino
-  paso      String // "pagina" | "pagar"
-  count     Int    @default(0)
+  id          String  @id @default(cuid())
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  date        String // "2026-09-14", día argentino
+  paso        String // "pagina" | "pagar"
+  dispositivo String // "movil" | "escritorio"
+  count       Int    @default(0)
 
-  @@unique([productId, date, paso])
+  @@unique([productId, date, paso, dispositivo])
   @@index([productId, date(sort: Desc)])
 }
 

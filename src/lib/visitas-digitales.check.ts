@@ -76,16 +76,23 @@ const schema = leer("prisma/schema.prisma");
 const migracion = "prisma/migrations/20260914230000_visitas_digitales/migration.sql";
 const cleanup = leer("src/app/api/cron/cleanup/route.ts");
 
-check("TABLA-A", /model DigitalVisita \{[\s\S]*@@unique\(\[productId, date, paso\]\)/.test(schema),
-  "DigitalVisita: una fila por producto, día y paso");
+check("TABLA-A", /model DigitalVisita \{[\s\S]*@@unique\(\[productId, date, paso, dispositivo\]\)/.test(schema),
+  "DigitalVisita: una fila por producto, día, paso y dispositivo");
+check("TABLA-A2", /const dispositivo: Dispositivo = cuerpo\?\.movil === true \? "movil" : "escritorio"/.test(ruta),
+  "el dispositivo lo decide el servidor con el hecho crudo, comparado con true exacto");
+check("TABLA-A3", /matchMedia\("\(pointer: coarse\)"\)/.test(lib) && /movil: esMovil\(\)/.test(lib),
+  "el cliente manda si el puntero es grueso, no el ancho de la ventana");
 check("TABLA-B", /model DigitalVisitaOrigen \{[\s\S]*@@unique\(\[productId, date, source\]\)/.test(schema),
   "DigitalVisitaOrigen: una fila por producto, día y origen");
 check("TABLA-C", /model DigitalVisita \{[\s\S]*?onDelete: Cascade/.test(schema) && /model DigitalVisitaOrigen \{[\s\S]*?onDelete: Cascade/.test(schema),
   "borrar el producto se lleva sus visitas");
 check("TABLA-D", existsSync(migracion)
   && /CREATE TABLE IF NOT EXISTS "DigitalVisita"/.test(leer(migracion))
-  && /CREATE TABLE IF NOT EXISTS "DigitalVisitaOrigen"/.test(leer(migracion)),
-  "la migración crea las dos tablas y se puede volver a correr");
+  && /CREATE TABLE IF NOT EXISTS "DigitalVisitaOrigen"/.test(leer(migracion))
+  && /"dispositivo" TEXT NOT NULL/.test(leer(migracion))
+  && /ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "origenVisita" TEXT/.test(leer(migracion)),
+  "la migración crea las dos tablas, con el dispositivo, y la columna del origen en la orden; se puede volver a correr");
+check("TABLA-D2", /origenVisita String\?/.test(schema), "Order.origenVisita existe en el esquema y admite nulos");
 check("TABLA-E", /prisma\.digitalVisita\.deleteMany\(\{\s*where: \{ date: \{ lt: corteVisitas \} \}/.test(cleanup)
   && /prisma\.digitalVisitaOrigen\.deleteMany\(\{\s*where: \{ date: \{ lt: corteVisitas \} \}/.test(cleanup),
   "la limpieza las borra con el mismo corte que las visitas de tiendas");

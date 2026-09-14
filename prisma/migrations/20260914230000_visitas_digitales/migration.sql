@@ -1,26 +1,29 @@
 -- Visitas a la página de venta de cada producto digital, por día, con cuántas
--- llegaron al checkout y de dónde vinieron.
+-- llegaron al checkout, desde qué dispositivo y de dónde vinieron. Y en la
+-- orden, de dónde vino la visita que terminó en compra.
 --
 -- Son `StoreView` + `StoreFunnelStep` + `StoreViewSource` colgadas del PRODUCTO
 -- y no de la tienda: en Productos Digitales cada principal es su propio sitio,
 -- y una cuenta Pro tiene cinco. Es lo que hace falta para que Estadísticas
 -- diga "de 100 que entraron compraron 3" por producto, que es el número que
--- decide si una página sirve.
+-- decide si una página sirve; y "Instagram trajo 500 visitas y 12 ventas",
+-- que es el que decide dónde poner la publicidad.
 --
--- Dos tablas nuevas y nada más: no toca ninguna fila existente, y volver a
--- correrla no hace nada (IF NOT EXISTS en todo).
+-- Dos tablas nuevas y una columna que admite nulos: no toca ninguna fila
+-- existente, y volver a correrla no hace nada (IF NOT EXISTS en todo).
 
 CREATE TABLE IF NOT EXISTS "DigitalVisita" (
-  "id"        TEXT NOT NULL,
-  "productId" TEXT NOT NULL,
-  "date"      TEXT NOT NULL,
-  "paso"      TEXT NOT NULL,
-  "count"     INTEGER NOT NULL DEFAULT 0,
+  "id"          TEXT NOT NULL,
+  "productId"   TEXT NOT NULL,
+  "date"        TEXT NOT NULL,
+  "paso"        TEXT NOT NULL,
+  "dispositivo" TEXT NOT NULL,
+  "count"       INTEGER NOT NULL DEFAULT 0,
   CONSTRAINT "DigitalVisita_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "DigitalVisita_productId_date_paso_key"
-  ON "DigitalVisita"("productId", "date", "paso");
+CREATE UNIQUE INDEX IF NOT EXISTS "DigitalVisita_productId_date_paso_dispositivo_key"
+  ON "DigitalVisita"("productId", "date", "paso", "dispositivo");
 CREATE INDEX IF NOT EXISTS "DigitalVisita_productId_date_idx"
   ON "DigitalVisita"("productId", "date" DESC);
 
@@ -51,3 +54,7 @@ DO $$ BEGIN
     FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- De dónde vino la visita que terminó en esta compra. Null en todo lo que ya
+-- existe (órdenes de tiendas, y digitales de antes de esto).
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "origenVisita" TEXT;

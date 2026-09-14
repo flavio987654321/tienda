@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent } from "lucide-react";
+import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent, Download, Undo2, PackagePlus, Mail, Users, Smartphone } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
   puedeVer, DESDE_QUE_PLAN, RANGOS, NOMBRE_RANGO,
@@ -38,7 +38,7 @@ const porcentaje = (n: number | null) =>
   n === null ? "—" : `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 }).format(n)} %`;
 
 export default function EstadisticasClient({ tier, principales, elegido, datos, recortado }: Props) {
-  const { rango, kpis, serie, embudo, porProducto, origenes } = datos;
+  const { rango, kpis, serie, embudo, porProducto, origenes, posventa, cuando, dispositivos, carritos } = datos;
   const href = (cambios: { p?: string | null; rango?: string }) => {
     const q = new URLSearchParams();
     const prod = cambios.p === undefined ? elegido : cambios.p;
@@ -116,6 +116,12 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         {veVisitas ? (
           <Tarjeta titulo="Visitas" bajada={pieDeSerie(serie.grano, kpis.visitas, "visitas")}>
             <Grafico puntos={serie.visitas} color="#ea580c" />
+            {dispositivos.pctMovil !== null && (
+              <p className="mt-2 flex items-center gap-1.5 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
+                <Smartphone className="h-3.5 w-3.5 text-orange-500" />
+                {porcentaje(dispositivos.pctMovil)} desde el celular · {porcentaje(100 - dispositivos.pctMovil)} desde una computadora.
+              </p>
+            )}
           </Tarjeta>
         ) : (
           <Bloqueado bloque="visitas">
@@ -128,6 +134,26 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           <Grafico puntos={serie.ventas} color="#059669" />
         </Tarjeta>
       </div>
+
+      {/* ── Después de la venta ────────────────────────────────────────────────
+          Lo que pasa con el que ya pagó. Es de todos los planes: Free también
+          vende y también tiene que atender al que compró. */}
+      <Tarjeta titulo="Después de la venta" bajada="Qué pasó con cada compra una vez cobrada.">
+        <Posventa p={posventa} />
+      </Tarjeta>
+
+      {/* ── Cuándo se vende ────────────────────────────────────────────────── */}
+      {puedeVer(tier, "cuando") ? (
+        <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras. Sirve para elegir cuándo publicar o cuándo correr un anuncio.">
+          <CuandoSeVende c={cuando} />
+        </Tarjeta>
+      ) : (
+        <Bloqueado bloque="cuando">
+          <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras.">
+            <CuandoSeVende c={{ porDiaSemana: [6, 3, 4, 5, 4, 7, 9], porHora: muestra(24, 6).map((p) => p.value) }} />
+          </Tarjeta>
+        </Bloqueado>
+      )}
 
       {/* ── El embudo ──────────────────────────────────────────────────────── */}
       {puedeVer(tier, "embudo") ? (
@@ -178,27 +204,41 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         </Tarjeta>
       )}
 
-      {/* ── De dónde vinieron ──────────────────────────────────────────────── */}
+      {/* ── De dónde vinieron: visitas Y ventas ─────────────────────────────── */}
       {puedeVer(tier, "origenes") ? (
         <Tarjeta
           titulo="De dónde vienen"
           bajada={
             origenes.conocidas > 0
-              ? `De ${entero(kpis.visitas)} visitas, sabemos de dónde vinieron ${entero(origenes.conocidas)}. Agregá ?utm_source=instagram al link que compartís y la visita queda anotada ahí.`
-              : "Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís, y cada visita queda anotada con su origen."
+              ? `Visitas y ventas por canal. Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís y quedan anotadas ahí.${origenes.ventasSinOrigen > 0 ? ` ${entero(origenes.ventasSinOrigen)} ${origenes.ventasSinOrigen === 1 ? "venta no tiene" : "ventas no tienen"} origen anotado.` : ""}`
+              : "Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís, y cada visita y cada venta quedan anotadas con su canal."
           }
         >
           <Origenes filas={origenes.filas} />
         </Tarjeta>
       ) : (
         <Bloqueado bloque="origenes">
-          <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas.">
+          <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas y cuál trae las ventas.">
             <Origenes filas={[
-              { origen: "instagram", visitas: 120, pct: 48 },
-              { origen: "whatsapp", visitas: 70, pct: 28 },
-              { origen: "facebook", visitas: 35, pct: 14 },
-              { origen: "directo", visitas: 25, pct: 10 },
+              { origen: "instagram", visitas: 120, pct: 48, ventas: 5, conversion: 4.2 },
+              { origen: "whatsapp", visitas: 70, pct: 28, ventas: 4, conversion: 5.7 },
+              { origen: "facebook", visitas: 35, pct: 14, ventas: 0, conversion: 0 },
+              { origen: "directo", visitas: 25, pct: 10, ventas: 1, conversion: 4 },
             ]} />
+          </Tarjeta>
+        </Bloqueado>
+      )}
+
+      {/* ── Carritos recuperados por el mail automático ─────────────────────
+          El mail es de Pro, así que el número que lo mide también. */}
+      {puedeVer(tier, "carritos") ? (
+        <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar.">
+          <CarritosDibujados c={carritos} />
+        </Tarjeta>
+      ) : (
+        <Bloqueado bloque="carritos">
+          <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar.">
+            <CarritosDibujados c={{ abandonados: 31, recordados: 28, recuperados: 6, pctRecuperados: 21.4 }} />
           </Tarjeta>
         </Bloqueado>
       )}
@@ -308,13 +348,16 @@ function Bloqueado({ bloque, compacto = false, children }: { bloque: Bloque; com
  * tantos puntos para que no se pisen; el alto se escala al máximo del período,
  * y con todo en cero se dibuja el piso y nada más.
  */
-function Grafico({ puntos, color }: { puntos: Punto[]; color: string }) {
+function Grafico({ puntos, color, todasLasEtiquetas = false }: { puntos: Punto[]; color: string; todasLasEtiquetas?: boolean }) {
   const W = 600, H = 180, PIE = 24, ARRIBA = 6;
   const max = Math.max(1, ...puntos.map((p) => p.value));
   const n = Math.max(1, puntos.length);
   const paso = W / n;
   const ancho = Math.max(2, Math.min(paso * 0.7, 28));
-  const cadaCuanto = Math.max(1, Math.ceil(n / 7));
+  /* Una etiqueta cada tantos puntos para que no se pisen; con pocas barras
+     —los siete días de la semana— van todas, y los puntos sin etiqueta la
+     traen vacía. */
+  const cadaCuanto = todasLasEtiquetas ? 1 : Math.max(1, Math.ceil(n / 7));
   const todoCero = puntos.every((p) => p.value === 0);
   return (
     <div>
@@ -392,19 +435,23 @@ function EmbudoDibujado({ visitas, checkouts, ventas, pctCheckout, pctVenta }: {
   );
 }
 
-function Origenes({ filas }: { filas: { origen: keyof typeof NOMBRE_ORIGEN; visitas: number; pct: number }[] }) {
+function Origenes({ filas }: { filas: { origen: keyof typeof NOMBRE_ORIGEN; visitas: number; pct: number; ventas: number; conversion: number | null }[] }) {
   if (filas.length === 0) {
     return <p className="text-[12.5px] text-gray-400 panel-oscuro:text-gray-500">Todavía no hay visitas con origen en este período.</p>;
   }
   const max = Math.max(1, ...filas.map((f) => f.visitas));
   return (
-    <ul className="space-y-2.5">
+    <ul className="space-y-3">
       {filas.map((f) => (
         <li key={f.origen}>
           <div className="flex items-baseline justify-between gap-3 mb-1">
             <p className="text-sm text-gray-700 panel-oscuro:text-gray-300">{NOMBRE_ORIGEN[f.origen]}</p>
-            <p className="text-sm font-bold tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0">
-              {entero(f.visitas)} <span className="font-medium text-gray-400 panel-oscuro:text-gray-500">{porcentaje(f.pct)}</span>
+            <p className="text-sm tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0 text-right">
+              <span className="font-bold">{entero(f.visitas)}</span>
+              <span className="font-medium text-gray-400 panel-oscuro:text-gray-500"> visitas</span>
+              <span className="block sm:inline sm:ml-2 font-medium text-gray-500 panel-oscuro:text-gray-400">
+                {entero(f.ventas)} {f.ventas === 1 ? "venta" : "ventas"}{f.conversion !== null && f.visitas > 0 ? ` · ${porcentaje(f.conversion)}` : ""}
+              </span>
             </p>
           </div>
           <div className="h-2 w-full rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden">
@@ -413,5 +460,116 @@ function Origenes({ filas }: { filas: { origen: keyof typeof NOMBRE_ORIGEN; visi
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Un número chico con su título y su pie, para las filas de "Después de la venta". */
+function Dato({ Icon, titulo, valor, pie, alerta = false }: { Icon: React.ElementType; titulo: string; valor: string; pie: string; alerta?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50/60 panel-oscuro:bg-gray-800/40 p-3.5">
+      <div className="flex items-center gap-1.5">
+        <Icon className={`h-3.5 w-3.5 ${alerta ? "text-amber-500" : "text-orange-500"}`} />
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">{titulo}</p>
+      </div>
+      <p className="mt-1 text-lg font-black tabular-nums text-gray-900 panel-oscuro:text-gray-100 [overflow-wrap:anywhere]">{valor}</p>
+      <p className={`mt-0.5 text-[12px] leading-snug ${alerta ? "text-amber-700 panel-oscuro:text-amber-400" : "text-gray-500 panel-oscuro:text-gray-400"}`}>{pie}</p>
+    </div>
+  );
+}
+
+/**
+ * Qué pasó con cada compra una vez cobrada. Las descargas se cuentan por
+ * compra: el que pagó y no bajó es el que va a escribir "no me llegó" o pedir
+ * la devolución, y es el número que hay que mirar primero.
+ */
+function Posventa({ p }: { p: Estadisticas["posventa"] }) {
+  const d = p.descargas;
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <Dato
+        Icon={Download}
+        titulo="Bajaron el archivo"
+        valor={d.conPermiso > 0 ? porcentaje(d.pctBajaron) : "—"}
+        pie={
+          d.conPermiso === 0
+            ? "todavía sin compras"
+            : d.sinBajar === 0
+              ? `${entero(d.bajaron)} de ${entero(d.conPermiso)} compras`
+              : `${entero(d.sinBajar)} ${d.sinBajar === 1 ? "compra sin bajar" : "compras sin bajar"}${d.vencidosSinBajar > 0 ? `, ${entero(d.vencidosSinBajar)} ya ${d.vencidosSinBajar === 1 ? "vencida" : "vencidas"}` : ""}`
+        }
+        alerta={d.vencidosSinBajar > 0}
+      />
+      <Dato
+        Icon={Undo2}
+        titulo="Devoluciones"
+        valor={p.devoluciones.tasa === null ? "—" : porcentaje(p.devoluciones.tasa)}
+        pie={
+          p.devoluciones.total === 0
+            ? "ninguna en el período"
+            : `${entero(p.devoluciones.arrepentimiento)} por arrepentimiento, ${entero(p.devoluciones.contracargo)} por contracargo`
+        }
+        alerta={p.devoluciones.contracargo > 0}
+      />
+      <Dato
+        Icon={PackagePlus}
+        titulo="Llevaron el upsell"
+        valor={p.upsell.pct === null ? "—" : porcentaje(p.upsell.pct)}
+        pie={p.upsell.ventas > 0 ? `${plata(p.upsell.plata)} extra en ${entero(p.upsell.ventas)} ${p.upsell.ventas === 1 ? "compra" : "compras"}` : "ninguna compra lo llevó"}
+      />
+      <Dato
+        Icon={Mail}
+        titulo="Mail de entrega"
+        valor={p.mails.enviados + p.mails.fallados === 0 ? "—" : entero(p.mails.enviados)}
+        pie={p.mails.fallados > 0 ? `${entero(p.mails.fallados)} ${p.mails.fallados === 1 ? "falló" : "fallaron"}: revisá esas ventas` : p.mails.enviados > 0 ? "salieron todos" : "todavía sin compras"}
+        alerta={p.mails.fallados > 0}
+      />
+      <div className="col-span-2 lg:col-span-4 flex items-center gap-2 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
+        <Users className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+        {p.compradores.unicos === 0
+          ? "Todavía no hay compradores en este período."
+          : `${entero(p.compradores.unicos)} ${p.compradores.unicos === 1 ? "comprador" : "compradores"} distintos; ${entero(p.compradores.repiten)} ${p.compradores.repiten === 1 ? "compró" : "compraron"} más de una vez.`}
+      </div>
+    </div>
+  );
+}
+
+const DIAS_CORTOS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+/** En qué día y a qué hora cierran las compras: dos gráficos de barras. */
+function CuandoSeVende({ c }: { c: Estadisticas["cuando"] }) {
+  const total = c.porDiaSemana.reduce((s, n) => s + n, 0);
+  /* Los días arrancan el lunes, que es como se lee una semana acá. */
+  const orden = [1, 2, 3, 4, 5, 6, 0];
+  const porDia: Punto[] = orden.map((i) => ({ dia: String(i), label: DIAS_CORTOS[i], value: c.porDiaSemana[i] }));
+  const porHora: Punto[] = c.porHora.map((v, h) => ({ dia: String(h), label: h % 3 === 0 ? `${h} h` : "", value: v }));
+  if (total === 0) {
+    return <p className="text-[12.5px] text-gray-400 panel-oscuro:text-gray-500">Todavía no hay ventas en este período.</p>;
+  }
+  return (
+    <div className="grid md:grid-cols-2 gap-4">
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500 mb-1">Por día de la semana</p>
+        <Grafico puntos={porDia} color="#ea580c" todasLasEtiquetas />
+      </div>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500 mb-1">Por hora</p>
+        <Grafico puntos={porHora} color="#ea580c" todasLasEtiquetas />
+      </div>
+    </div>
+  );
+}
+
+function CarritosDibujados({ c }: { c: Estadisticas["carritos"] }) {
+  return (
+    <div className="grid sm:grid-cols-3 gap-3">
+      <Dato Icon={Receipt} titulo="Quedaron en la puerta" valor={entero(c.abandonados)} pie="llegaron al pago y no pagaron" />
+      <Dato Icon={Mail} titulo="Les escribió el mail" valor={entero(c.recordados)} pie="recordatorio automático" />
+      <Dato
+        Icon={Wallet}
+        titulo="Volvieron a pagar"
+        valor={entero(c.recuperados)}
+        pie={c.pctRecuperados === null ? "todavía sin recordatorios" : `${porcentaje(c.pctRecuperados)} de los que recibieron el mail`}
+      />
+    </div>
   );
 }
