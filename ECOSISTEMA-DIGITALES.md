@@ -1952,8 +1952,10 @@ para generar.
   a un costado. *(Y los carritos abandonados, hechos el 05/09/26, tienen su
   propia pantalla y su aviso en el panel.)*
 - 🔲 **Estadísticas**, cuando haya qué mostrar.
-- 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
-  ahora, se construye último: depende de las Fases 4 y 5.
+- ✅ ~~**El asistente de la primera vez** (los 5 pasos de la competencia).~~ Es
+  **el recibimiento**: la pantalla entera hasta que la cuenta está armada
+  (04/09/26), y desde el 10/09/26 termina en un cierre que elige el aspecto.
+  Ver *El recibimiento termina en algo*, en la Fase 4.
 
 
 ## FASE 4 — La IA
@@ -2478,6 +2480,56 @@ salió.
 
 16 chequeos en `primeros-pasos.check`, y corren la lógica de verdad contra fotos
 armadas a mano, no leyendo el archivo. **72 pruebas** en total.
+
+#### ✅ El recibimiento termina en algo, y elige el aspecto — 10/09/26
+
+Tres cosas, y las tres salieron de probarlo en pantalla y no de leer el código.
+
+**1. La barra mentía.** El asistente hace DOS pasos de una —crea el producto y
+escribe la página—, así que la barra prometía dos, se apretaba un botón y se
+caía en el panel sin que nada dijera que había terminado. Reportado tal cual:
+*"cuando puse generar se saltó el último paso y me llevó directo al panel, ni
+siquiera me dijo listo"*. No se salteaba nada: se tildaban los dos juntos y no
+había nada después. Ahora los cuatro círculos están desde el principio
+—**Producto, Página, Estilo, Listo**— así que se VE que el asistente tacha dos
+de una.
+
+**2. Un paso para elegir cómo se ve.** Los cinco estilos y las seis paletas, con
+una muestra que se repinta a cada toque. Los colores salen de
+`variablesDePagina`, la misma función que pinta la página pública y el
+checkout, así que la muestra no puede quedarse vieja el día que cambie un tono.
+
+⚠️ Va como pantalla de **cierre** (`Cierre.tsx`) y no como paso de la puerta.
+La puerta se calcula del estado real, y *"¿ya eligió un estilo?"* no se le puede
+preguntar a la base —toda página nace con estilo y paleta—. Hacerlo paso
+obligaba a inventar una bandera, que es justo lo que el recibimiento no tiene a
+propósito (ver arriba, *Se calcula del estado REAL*).
+
+Guardar la elección usa el `PATCH` de la página, que nació para esto: ver *Cambiar
+el aspecto sin reescribir la página*, al final del documento.
+
+**3. La bienvenida y los consejos.** La primera pantalla era una tarjeta chica en
+una hoja gris, sin el logo: *"me da tristeza ver esa imagen"*. Ahora lleva el
+saludo por su nombre y las tres cosas que la plataforma hace sola, y los cuatro
+pasos tienen un consejo en el costado (`Consejo.tsx`) que antes estaba vacío.
+Los consejos no traen ni un dato inventado: cada uno tiene la razón adentro de
+la misma frase.
+
+Lo que se cuidó en pantalla chica: **todo lo secundario va DEBAJO y no arriba**
+—la bienvenida, el consejo—, porque puesto arriba empuja abajo del pliegue el
+único botón de la pantalla. La excepción es el paso del estilo, donde la muestra
+va arriba y pegada: con once opciones apiladas antes se elegía a ciegas.
+
+Dos cosas de código: `BarraDePasos` salió a un archivo propio porque la dibujan
+tres pantallas seguidas del mismo recorrido —escrita tres veces, se renombra una
+y la barra cambia a mitad de camino—; y `estadoDelRecibimiento` devuelve las tres
+claves del aspecto SIN llamar a `normalizarContenido`, que rearma la página
+entera, porque corre en el layout: una vez por cada pantalla del panel que
+alguien abra.
+
+Con esto **el asistente de la primera vez está terminado**: la lista de la Fase 3
+lo tenía en 🔲 desde el 01/09 y quedó tachado.
+
 
 ### ✅ 4.2 LA PÁGINA DE VENTA CON IA — HECHA (04/09/26)
 
@@ -4740,3 +4792,188 @@ rectos como en el archivo.
 ### Lo que falta
 
 - 🔲 **La previa no corta las hojas.** Sigue igual, y sigue siendo a propósito.
+
+---
+
+## Lo del 10/09/26 — Marketing, la barra, y dos arreglos de paso
+
+### ✅ Marketing en el panel, con contenido para reels
+
+Quien vende un producto digital tiene que mostrarlo y no tiene con qué filmar
+un taller mecánico. Termina bajando algo de Google y subiéndolo a un reel, con
+el riesgo de que le tiren la publicación por derechos.
+
+Es **el mismo banco y la misma clave** que las fotos de los ebooks: Pexels tiene
+`/videos/search` al lado de `/v1/search`. No se contrata nada. Vive en
+`src/lib/videos-pexels.ts`, la ruta en `api/digitales/marketing/videos` y la
+pantalla en `/digitales/marketing/reels`.
+
+#### ⚠️ La descarga no pasa por nuestro servidor, y eso es el diseño entero
+
+Son 8 MB por video y dos docenas en pantalla: proxearlos sería ancho de banda
+nuestro, el mismo problema que ya nos costó plata con el egress del depósito.
+Y un `<a download>` al CDN no sirve, porque `download` **no funciona entre
+dominios**: abriría el video en una pestaña, que en un celular es no poder
+bajarlo.
+
+Lo baja el NAVEGADOR: `fetch` al CDN —que manda `access-control-allow-origin: *`,
+comprobado el 10/09 con un pedido de rango—, blob, y descarga con nombre propio.
+Los megas van de Pexels a la persona.
+
+⚠️ Eso pedía tocar la CSP, y **se descubrió apretando el botón, no leyendo el
+código**: `connect-src` bloqueaba `videos.pexels.com` y el `fetch` caía en el
+plan B en silencio. La única señal era que el archivo bajaba con el nombre del
+CDN en vez del nuestro. Si algún día Pexels saca esa cabecera pasa lo mismo, y
+por eso el plan B —abrir el video en una pestaña— es explícito y no un `catch`
+vacío.
+
+#### La búsqueda va en castellano
+
+Parecía que convenía traducir al inglés: sin `locale`, "car mechanic" trae
+7.100 y "mecanica del automotor" 1.400. Es tramposo: la biblioteca de fotos ya
+manda `locale: es-ES`, y con eso la misma búsqueda pasa a 3.100. Medido con dos
+rubros, el inglés trae MÁS y no mejor —"home bakery bread" devuelve "close up of
+breads" cuatro veces contra el amasado artesanal y el horno de barro que trae
+"panaderia casera"—. Lo que decide es que la frase sea corta y visual, la misma
+lección que ya está anotada en `ebook-ia` sobre la frase de la foto.
+
+Y la pantalla entra con **la búsqueda ya hecha en el servidor** sobre el
+producto que hay cargado: abrir vacío es pedirle a la persona que apriete
+Buscar para ver lo que ya sabemos que quiere ver.
+
+#### ⚠️ Lo que gasta cuota es el PEDIDO, no los videos
+
+Dos números salieron mal la primera vez, los dos por la misma confusión.
+
+- **El freno por cuenta bajó de 60 a 20 por hora.** El tope de Pexels son **200
+  pedidos por hora para TODA la plataforma**, y con 60 por cuenta alcanzaban
+  tres personas buscando fuerte en la misma hora para dejarla seca. El que se
+  quedaba sin nada no era el que miraba videos: era alguien armando su ebook,
+  que necesita las fotos del mismo banco con la misma llave, **y que ya pagó**.
+- **La búsqueda trae 80 —el máximo de la API— y no 24.** Cuestan exactamente lo
+  mismo: un pedido. Se tiraban 56 videos gratis y se obligaba a otro pedido
+  para ver más. El motivo de los 24 era bueno —ochenta miniaturas de golpe son
+  ochenta descargas en el teléfono de alguien para mirar cuatro— pero se
+  resolvía en el lugar equivocado: ahora la pantalla **dibuja de a 24** y el
+  resto se destapa con "Ver más", sin salir a pedir nada.
+
+Verificado contra la documentación de Pexels el 10/09/26: 200 pedidos por hora
+y 20.000 por mes por defecto, 80 resultados por página como máximo, y límite
+ampliado gratis para quien cumple las condiciones de atribución.
+
+#### ⚠️ Son DOS botones y no uno, porque cuestan distinto
+
+| Botón | Qué hace | Qué cuesta |
+|---|---|---|
+| **Ver N más** | destapa los que ya vinieron | nada |
+| **Traer más videos del banco** | pide la página siguiente | un pedido contra el tope compartido |
+
+El segundo aparece recién cuando ya no queda nada por destapar. Ofrecerlo antes
+haría gastar un pedido a alguien que todavía tiene cincuenta videos sin mirar en
+la misma pantalla. Dos botones que parecen lo mismo y cuestan distinto son una
+trampa.
+
+Se piden hasta diez páginas: 800 videos de una misma búsqueda. Quien no encontró
+nada en 800 tiene un problema de palabras y no de cantidad, así que ahí se corta.
+Tres detalles que se cuidaron:
+
+- La página va en la clave del guardarropas: sin eso, la página 2 se servía con
+  lo guardado de la 1 y "traer más" devolvía los mismos ochenta para siempre.
+- El tope de páginas se acota en `buscarVideos` y no en la ruta, que es la única
+  puerta al banco: un `?pagina=99999` desde afuera sería gastarnos la cuota de a
+  un clic.
+- Los videos nuevos se SUMAN filtrando por id —una página que repite algo rompía
+  la grilla entera con dos claves iguales—, y si el pedido falla no se borra lo
+  que ya estaba en pantalla, que costó su propio pedido.
+
+Medido en el navegador, contando qué páginas se piden:
+
+    buscar          →  24 tarjetas · pidió ["1"]
+    todo destapado  →  80 tarjetas · pidió ["1"]
+    traer del banco → 120 tarjetas · pidió ["1","2"]
+
+#### Lo demás
+
+- La ruta pide sesión y rol `DIGITAL` aunque los videos sean públicos: lo que se
+  protege es **nuestra clave**, y el tope de pedidos por hora lo compartimos con
+  las fotos de los ebooks.
+- Se ofrece 1080 y no 4K: Instagram recomprime igual, y son 90 MB contra 12
+  bajados con los datos del celular.
+- El crédito a quien filmó y el enlace a Pexels van visibles, que es lo que
+  piden las reglas de su API —la misma condición que obliga a la hoja de
+  créditos del ebook—. Sin autor y enlace, el video se descarta.
+- **Marketing es UN link a una sección, no un árbol desplegable**: la barra de
+  escritorio es un riel de íconos y un árbol serían dos íconos sin nombre.
+  Adentro está también el acceso a los **upsells post-compra**, que ya existían
+  desde el checkout y estaban enterrados en la tarjeta del producto, tres
+  pantallazos abajo. La tarjeta no lleva a una pantalla nueva: lleva a
+  Productos, que es donde se cargan. Lo que se arregló es el camino, no la
+  función.
+- ⚠️ En Marketing **no van tarjetas de herramientas que no existen**. Una
+  tarjeta apagada que dice "próximamente" se lee como panel a medio hacer. La
+  lista es corta y es honesta; cuando haya otra herramienta, se agrega.
+
+### ✅ Cambiar el aspecto sin reescribir la página
+
+El `PUT` de `api/digitales/productos/[id]/pagina` **reemplaza**: guarda
+`normalizarContenido(lo que llegó)`. Mandarle sólo `{ estilo, paleta }` hace que
+esa función no vea ninguna sección y arme una página nueva con los textos de
+fábrica — o sea que **elegir un color habría borrado lo que escribió la IA y lo
+que la persona editó a mano**.
+
+Medido antes de escribir la pantalla que lo usa:
+
+    PATCH → estilo: nocturno | paleta: violeta | texto: "LO QUE ESCRIBIO LA IA"
+    PUT   → estilo: nocturno | paleta: violeta | texto: "EBOOK"
+
+El `PATCH` lee lo que hay guardado, le cambia esas tres claves (estilo, paleta,
+tipografía) y guarda el resultado. Las tres pasan igual por
+`normalizarContenido`, así que una paleta inventada cae en la de fábrica en vez
+de quedar escrita en la base; y lo que no es una palabra no toca nada, para que
+un cuerpo mal armado no le cambie el aspecto a la página en vez de dejarlo como
+estaba.
+
+Van dos chequeos (RUTA-F y RUTA-G) en `pagina-venta.check` porque **el daño no
+se ve probándolo**: la página sigue existiendo y sigue teniendo precio. Lo que
+protegen es el contenido, no la forma. Es lo que usa el cierre del recibimiento.
+
+### ✅ La barra lateral se agrupa en vez de ser una lista corrida
+
+Eran siete entradas con el mismo peso: "Mi cuenta" se leía igual de importante
+que "Productos". Ahora son tres bloques — **Inicio** suelto, **Tu negocio** con
+las cuatro que se abren todos los días, y **Tu cuenta** con las dos que se tocan
+una vez y no se vuelven a mirar.
+
+⚠️ **El título del grupo NO puede ser lo que agrupa.** En escritorio la barra es
+un riel de 56 píxeles que se abre al pasar el mouse, o sea que casi siempre está
+cerrada, y ahí no entra "Tu negocio" —recortada a tres letras es peor que
+ninguna—. Lo que agrupa es la **raya**, que se ve en los dos estados; el título
+aparece sólo cuando la barra se abre. En el cajón del celular no hay riel, así
+que ahí los títulos se ven siempre.
+
+El título va con `max-h-0` y no con `hidden`: con `hidden` aparecía de golpe
+mientras la barra todavía se estaba abriendo y daba un salto. Medido después
+del cambio, los dos anchos siguen iguales: 56 cerrada, 240 abierta.
+
+No se copiaron los grupos desplegables de la competencia: esconden pantallas
+atrás de un clic de más, y con siete entradas no hay nada que esconder.
+
+### ✅ La tarjeta de ejemplo ahora se pide con `?ejemplo=1`
+
+Se dibujaba sola en desarrollo, arriba de todo, así que trabajar sobre los
+productos de verdad era pasarle por encima a una tarjeta falsa en cada carga —
+y en el teléfono empujaba los propios abajo del pliegue. Ahora el panel se ve
+como en producción y el ejemplo se abre a propósito:
+
+    /digitales/productos?ejemplo=1
+
+No se borró porque sigue siendo la única forma de ver una tarjeta con el ebook
+terminado —y de abrir el editor de ebook con contenido— sin gastar una
+generación de IA contra la base de producción. Es lo que se usa para probar los
+cuatro moldes de la hoja.
+
+⚠️ Los dos candados suman, no se reemplazan. El que protege de verdad sigue
+siendo `NODE_ENV`, que borra el bloque del build; el `?ejemplo=1` sólo saca del
+camino algo que estorbaba. Va un chequeo nuevo (TXT-AJ3) sobre la otra punta, de
+donde sale el dato: si alguien deja sólo `conEjemplo`, la tarjeta inventada
+queda a un parámetro de distancia de los productos reales de cualquiera.
