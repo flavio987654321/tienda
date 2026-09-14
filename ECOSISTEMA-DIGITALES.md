@@ -1399,9 +1399,9 @@ saltea el paso a propósito.
   Supabase como respaldo— porque no se pudo probar contra un Supabase de prueba y
   el peor final acá es alguien que se registra y **se queda afuera para siempre**.
   Cuando se confirme cuál anda, **se borra el otro**.
-- 🔲 **El Site URL de Supabase sigue apuntando a `tienda-six-ecru.vercel.app`.**
-  Funciona, pero los links de los mails llevan a esa dirección en vez de a
-  `tiendaapps.com`. Cambiarlo es su propio movimiento, con su prueba.
+- ✅ ~~**El Site URL de Supabase sigue apuntando a `tienda-six-ecru.vercel.app`.**~~
+  Cambiado el 14/09/26 a `https://www.tiendaapps.com` (sin `/**`: ahí no van
+  comodines), verificado recargando la pantalla.
 
 ### ✅ Lo que ya está hecho en el panel de Supabase
 
@@ -5452,8 +5452,8 @@ Lo que corre solo a partir de acá, y conviene mirar la primera vez:
 Visto en el panel de Supabase (Authentication → URL Configuration) al ir a
 verificar el Site URL:
 
-- 🔲 **El Site URL seguía en `tienda-six-ecru.vercel.app`.** Flavio creía
-  haberlo cambiado; no. Se cambia a `https://www.tiendaapps.com` y se guarda.
+- ✅ ~~**El Site URL seguía en `tienda-six-ecru.vercel.app`.**~~ Flavio creía
+  haberlo cambiado; no. Cambiado a `https://www.tiendaapps.com` el mismo día.
   Sólo importa como respaldo —todos nuestros mails pasan su propio
   `redirectTo`—, pero un mail de Supabase con la dirección vieja parece
   phishing y depende de que esa dirección siga viva.
