@@ -18,9 +18,9 @@ import type { TierDigital } from "@/lib/planes-digitales";
 
    Los bonos y los upsells van con la misma regla, por producto: son "por
    producto principal" en el tope del plan, así que cada principal mira los
-   suyos. Y se revisan los hijos de TODOS los principales publicados, también de
-   los que se acaban de apagar — si la persona después cambia cuál queda
-   prendida, la que prende tiene que estar ya dentro del tope. */
+   suyos. Y se revisan los hijos de TODOS los principales, publicados o no —
+   si la persona después cambia cuál queda prendida, la que prende tiene que
+   estar ya dentro del tope. */
 
 /** Lo que se apagó y lo que quedó, con nombre, para el aviso y el mail. */
 export type ResultadoDeLaCaida = {
@@ -56,9 +56,15 @@ export async function despublicarLasDeMas(storeId: string, tier: TierDigital): P
   const principales = conVentas.filter((p) => p.rolDigital === "PRINCIPAL");
 
   const sobran = [...lasQueSobran(principales, topeDe(tier, "PRINCIPAL"))];
-  for (const principal of principales) {
+
+  /* Los hijos se miran por CADA principal de la cuenta, esté publicado o no:
+     un principal en borrador puede tener bonos publicados (se apagó él, no
+     ellos), y si la persona después lo prende, sus bonos ya tienen que estar
+     dentro del tope. Visto en la relectura antes del deploy. */
+  const padres = new Set(conVentas.map((p) => p.padreId).filter((id): id is string => !!id));
+  for (const padreId of padres) {
     for (const rol of ["BONO", "UPSELL"] as const) {
-      const hijos = conVentas.filter((p) => p.padreId === principal.id && p.rolDigital === rol);
+      const hijos = conVentas.filter((p) => p.padreId === padreId && p.rolDigital === rol);
       sobran.push(...lasQueSobran(hijos, topeDe(tier, rol)));
     }
   }
