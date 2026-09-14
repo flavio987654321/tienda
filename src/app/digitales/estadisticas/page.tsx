@@ -128,7 +128,7 @@ export default async function EstadisticasPage({
   const sinTabla = <T,>(consulta: Promise<T[]>): Promise<T[]> => consulta.catch(() => []);
 
   const ahora = new Date();
-  const [ordenes, visitas, origenes, abandonados, recordados] = await Promise.all([
+  const [ordenes, visitas, origenes, pendientes] = await Promise.all([
     prisma.order.findMany({
       /* Las cobradas, y las que se cobraron y se deshicieron. ⚠️ Una devolución
          NO tiene estado propio en la base: la orden queda CANCELLED con el pago
@@ -182,17 +182,17 @@ export default async function EstadisticasPage({
       select: { productId: true, date: true, source: true, count: true },
     })),
     /* Las compras que quedaron en la puerta: PENDING con la misma maduración
-       que la pantalla de Carritos, para que los dos números coincidan. Se
-       cuentan por cuenta y no por producto elegido: contar PENDING por
-       principal pide traer sus líneas, y es un número de la cuenta. */
-    prisma.order.count({
+       que la pantalla de Carritos, para que los dos números coincidan. Con su
+       primera línea, para saber de qué página son: se filtran por producto
+       como todo lo demás. */
+    prisma.order.findMany({
       where: {
         storeId: store.id, status: "PENDING",
         createdAt: { gte: desde, lt: new Date(Math.min(hasta.getTime(), ahora.getTime() - MADURACION_MS)) },
       },
-    }),
-    prisma.order.count({
-      where: { storeId: store.id, recordatorioAt: { not: null }, createdAt: { gte: desde, lt: hasta } },
+      orderBy: { createdAt: "desc" },
+      take: TECHO_DE_ORDENES,
+      select: { createdAt: true, recordatorioAt: true, items: { select: { productId: true }, take: 1 } },
     }),
   ]);
 
@@ -231,7 +231,11 @@ export default async function EstadisticasPage({
     origenes,
     principales,
     elegido,
-    carritos: { abandonados, recordados },
+    carritos: pendientes.map((c) => ({
+      dia: diaArgentino(c.createdAt),
+      principal: c.items[0] ? (suPrincipal.get(c.items[0].productId) ?? null) : null,
+      recordado: c.recordatorioAt !== null,
+    })),
   });
 
   return (

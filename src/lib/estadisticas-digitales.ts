@@ -155,8 +155,8 @@ export type VisitaCruda = { productId: string; date: string; paso: PasoDigital; 
 export type OrigenCrudo = { productId: string; date: string; source: string; count: number };
 export type PrincipalCrudo = { id: string; name: string; publicada: boolean };
 
-/** Las compras a medias del rango, ya contadas por la página. */
-export type CarritosCrudos = { abandonados: number; recordados: number };
+/** Una compra que quedó a medias: llegó al pago y no pagó. */
+export type CarritoCrudo = { dia: string; principal: string | null; recordado: boolean };
 
 /* ── Lo que sale ─────────────────────────────────────────────────────────── */
 
@@ -239,10 +239,11 @@ export function armarEstadisticas(entrada: {
   origenes: OrigenCrudo[];
   principales: PrincipalCrudo[];
   elegido: string | null;
-  carritos?: CarritosCrudos;
+  carritos?: CarritoCrudo[];
 }): Estadisticas {
   const { rango, elegido } = entrada;
   const esDelElegido = (id: string | null) => elegido === null || id === elegido;
+  const carritosDelRango = (entrada.carritos ?? []).filter((c) => enRango(c.dia, rango) && esDelElegido(c.principal));
 
   const ordenes = entrada.ordenes.filter((o) => enRango(o.dia, rango) && esDelElegido(o.principal));
   const visitas = entrada.visitas.filter((v) => enRango(v.date, rango) && esDelElegido(v.productId));
@@ -398,13 +399,17 @@ export function armarEstadisticas(entrada: {
     })),
   );
 
-  /* ── Carritos: los que quedaron en la puerta y los que volvieron por el mail ── */
+  /* ── Carritos: los que quedaron en la puerta y los que volvieron por el mail ──
+     Se filtran por producto como todo lo demás: un carrito es de la página
+     donde quedó. Los recordados son los que siguen sin pagar más los que
+     volvieron a pagar después del mail (ésos ya son cobradas). */
   const recuperados = cobradas.filter((o) => o.recordada).length;
+  const recordados = carritosDelRango.filter((c) => c.recordado).length + recuperados;
   const carritos: Carritos = {
-    abandonados: entrada.carritos?.abandonados ?? 0,
-    recordados: entrada.carritos?.recordados ?? 0,
+    abandonados: carritosDelRango.length,
+    recordados,
     recuperados,
-    pctRecuperados: pct(recuperados, entrada.carritos?.recordados ?? 0),
+    pctRecuperados: pct(recuperados, recordados),
   };
 
   return {

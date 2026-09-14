@@ -96,7 +96,14 @@ const principales = [
   { id: "c", name: "Vacío", publicada: false },
 ];
 
-const todo = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null, carritos: { abandonados: 12, recordados: 10 } });
+const carritos = [
+  { dia: "2026-09-11", principal: "a", recordado: true },
+  { dia: "2026-09-11", principal: "a", recordado: false },
+  { dia: "2026-09-13", principal: "b", recordado: true },
+  /* Fuera del rango: no cuenta. */
+  { dia: "2026-09-01", principal: "a", recordado: true },
+];
+const todo = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null, carritos });
 
 check("CUENTA-A", todo.kpis.ventas === 3 && todo.kpis.devueltas === 1 && todo.kpis.bruto === 40000,
   "3 ventas, 1 devuelta, bruto 40.000; la de fuera del rango no cuenta");
@@ -152,9 +159,12 @@ check("ORIG-B", ig.visitas === 30 && ig.ventas === 2 && ig.conversion !== null &
   "cada origen con sus ventas y su conversión; la venta sin origen se cuenta aparte");
 
 /* Carritos */
-check("CARR-A", todo.carritos.abandonados === 12 && todo.carritos.recordados === 10
-  && todo.carritos.recuperados === 1 && todo.carritos.pctRecuperados === 10,
-  "carritos: los que quedaron, a cuántos les escribió y cuántos volvieron a pagar");
+check("CARR-A", todo.carritos.abandonados === 3 && todo.carritos.recordados === 3
+  && todo.carritos.recuperados === 1 && todo.carritos.pctRecuperados !== null && Math.round(todo.carritos.pctRecuperados * 10) === 333,
+  "carritos: los que quedaron, a cuántos les escribió (los que siguen sin pagar más los recuperados) y cuántos volvieron a pagar");
+const carrA = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: "a", carritos });
+check("CARR-B", carrA.carritos.abandonados === 2 && carrA.carritos.recordados === 1 && carrA.carritos.recuperados === 0,
+  "mirando un producto, los carritos son los de su página");
 
 const soloA = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: "a" });
 check("CUENTA-K", soloA.kpis.ventas === 2 && soloA.kpis.visitas === 50 && soloA.kpis.conversion === 4
@@ -200,8 +210,8 @@ if (existsSync(pagina) && existsSync(cliente)) {
   check("PANT-G", /Disponible desde/.test(c), "un bloque bloqueado dice desde qué plan se ve");
   check("PANT-H", /timeZone: AR_TZ, weekday: "short", hour: "numeric", hourCycle: "h23"/.test(p),
     "el día de la semana y la hora se leen en hora argentina, no en la del servidor");
-  check("PANT-I", /MADURACION_MS/.test(p) && /status: "PENDING"/.test(p),
-    "los carritos se cuentan con la misma maduración que la pantalla de Carritos");
+  check("PANT-I", /MADURACION_MS/.test(p) && /status: "PENDING"/.test(p) && /carritos: pendientes\.map/.test(p),
+    "los carritos se cuentan con la misma maduración que la pantalla de Carritos, y por producto");
 }
 
 /* ── El origen viaja con la orden ────────────────────────────────────────── */

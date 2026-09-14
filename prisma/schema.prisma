@@ -1121,7 +1121,7 @@ model DigitalEnvioLog {
 /// no depende de que un proceso nocturno corra: si el cron no corre, no pasa
 /// nada, porque nadie está esperando que corra.
 /// Visitas a la página de venta de un producto digital, por día, y cuántas de
-/// ellas llegaron al checkout. Una fila por (producto, día, paso).
+/// ellas llegaron al checkout. Una fila por (producto, día, paso, dispositivo).
 ///
 /// Es `StoreView` + `StoreFunnelStep` colgadas del PRODUCTO y no de la tienda,
 /// porque en este ecosistema cada producto principal es su propio sitio —su
