@@ -5458,9 +5458,11 @@ verificar el Site URL:
   `redirectTo`—, pero un mail de Supabase con la dirección vieja parece
   phishing y depende de que esa dirección siga viva.
 - 🔲 **"Organization exceeded its quota in the previous billing cycle. Projects
-  will be restricted from 28 Sep, 2026."** Dos semanas. Antes de pagar el Pro
-  (US$25/mes), mirar *Review usage* del ciclo ACTUAL: si el pico fue el de las
-  imágenes sin cache (arreglado el 31/08) y este ciclo va por debajo de los
-  5 GB de egress, el aviso se apaga solo el 28. Si vuelve a estar arriba, el
-  Pro conviene y además hay que encontrar qué lo consume —el Pro también tiene
-  cuota (250 GB) y cada venta de un PDF es egress—.
+  will be restricted from 28 Sep, 2026."** Mirado el mismo día en *Usage*: el
+  ciclo actual (14 sep – 14 oct) recién arranca, **39,5 MB de Cached Egress en
+  el día** → ~1,2 GB proyectados sobre 5 GB. Lo que se pasó fue el ciclo
+  anterior, Cached Egress, con las dos semanas previas al arreglo de las
+  imágenes del 31/08. Base 7%, depósito 28%. **Decisión: no pagar el Pro por
+  ahora.** 🔲 **El 25/09** volver a mirar la misma pantalla: si Cached Egress
+  pasa de 3 GB, pagar el Pro ese día (US$25/mes) y buscar qué lo consume —el
+  Pro también tiene cuota (250 GB) y cada venta de un PDF es egress—.
