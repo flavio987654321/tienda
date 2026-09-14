@@ -1145,6 +1145,30 @@ chequear("la versión vigente de los términos tiene su entrada en el registro",
 chequear("el resumen del mail de cambio de términos no quedó vacío",
   /CURRENT_TERMS_SUMMARY: string\[\] = \[\s*"/.test(legal));
 
+/* ── 18 bis. Reemplazar el archivo de un producto que ya se vendió (14/09/26) ──
+
+   El enlace de cada compra entrega el archivo que el producto tiene EN ESE
+   MOMENTO (como Hotmart o Gumroad): sirve para corregir, y por eso mismo
+   quien pisa un producto con otro le regala el nuevo a sus compradores. No se
+   cambia la entrega; se le DICE al vendedor, tres veces: en la tarjeta, al
+   confirmar, y en los términos. Y al borrar con ventas, que nadie se queda sin
+   su compra. */
+chequear("la tarjeta sabe si el producto ya se vendió, contado de la base",
+  /vendido: boolean;/.test(pantallaProductos) &&
+  /_count: \{ select: \{ orderItems: \{ where: \{ order: \{ status: "CONFIRMED" \} \} \} \} \}/.test(readFileSync("src/app/digitales/productos/page.tsx", "utf8")));
+chequear("si ya se vendió, la tarjeta avisa qué pasa al reemplazar el archivo",
+  /p\.vendido && \([\s\S]{0,300}Ya se vendió: si lo reemplazás, quien compró baja el archivo nuevo/.test(pantallaProductos));
+chequear("y reemplazarlo pide confirmación sólo cuando hay archivo y hubo ventas",
+  /if \(p\.tieneArchivo && p\.vendido && !window\.confirm\(/.test(pantallaProductos));
+chequear("borrar un producto vendido dice que el comprador sigue bajando",
+  /p\.vendido \? " Quien ya lo compró lo puede seguir bajando hasta que le venza el enlace\." : ""/.test(pantallaProductos));
+chequear("los términos dicen que el enlace entrega el archivo actual y qué pasa al reemplazarlo",
+  /El enlace entrega el archivo que el producto tiene en ese momento\. Si reemplazás el archivo, quien ya lo compró descarga la versión nueva/.test(terminosPag));
+chequear("y ya no prometen que el dominio siga andando sin Pro",
+  !/el dominio que ya tenías conectado sigue funcionando/.test(terminosPag) &&
+  /pasa a redirigir a tu dirección de tiendaapps\.com/.test(terminosPag) &&
+  /\$\{DIAS_DE_DOMINIO_EN_FREE\} días sin Pro/.test(terminosPag));
+
 /* ══════════════════════════════════════════════════════════════════════════
    19. EL DETALLE DE UNA VENTA — la carpeta que se abre cuando alguien reclama
    ══════════════════════════════════════════════════════════════════════════

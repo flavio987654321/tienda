@@ -5,6 +5,7 @@ import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILI
    y el sistema entrega otro — y lo que vale para un reclamo es lo que dicen los
    términos. */
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
+import { DIAS_DE_DOMINIO_EN_FREE, DIAS_DE_AVISO_DEL_DOMINIO } from "@/lib/configuracion-digital";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
 import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
@@ -415,7 +416,13 @@ const CONTENT = {
           "El dominio propio (ej: tuproducto.com) viene con el plan Pro, es uno por producto y lo comprás y lo pagás vos, en el registrador que quieras. No lo compramos, no lo gestionamos y no lo renovamos por vos.",
           "Si no renovás tu dominio y lo perdés, no somos responsables. Tu dirección de tiendaapps.com sigue funcionando igual: el dominio se suma, no la reemplaza.",
           "Podés desconectar tu dominio cuando quieras, aunque tu plan esté vencido: es tuyo. Al desconectarlo deja de abrir tu página en pocos minutos.",
-          "Si tu plan Pro se vence, el dominio que ya tenías conectado sigue funcionando, pero no vas a poder conectar uno nuevo ni cambiar el que hay hasta ponerlo al día.",
+          /* ⚠️ 1.9: decía "si tu plan Pro se vence, el dominio sigue funcionando", y
+             desde el 14/09/26 no es así. Sin Pro el dominio REDIRIGE a la
+             dirección de tiendaapps —no se rompe, no se pierde— y si pasan
+             DIAS_DE_DOMINIO_EN_FREE sin Pro se desconecta de nuestro lado, con
+             aviso antes. Los números salen de la misma constante que los aplica. */
+          `Si dejás de tener el plan Pro, tu dominio no se rompe ni se pierde: pasa a redirigir a tu dirección de tiendaapps.com, así que quien entre por ahí llega igual a tu página. Si volvés a Pro, vuelve a funcionar solo. Si pasan ${DIAS_DE_DOMINIO_EN_FREE} días sin Pro, lo desconectamos de nuestro lado —te avisamos ${DIAS_DE_AVISO_DEL_DOMINIO} días antes por correo— y el dominio te queda libre; para volver a usarlo hay que conectarlo de nuevo.`,
+          "Sin el plan Pro tampoco vas a poder conectar un dominio nuevo ni cambiar el que hay.",
         ],
       },
       {
@@ -506,6 +513,12 @@ const CONTENT = {
         list: [
           `El enlace de descarga vale ${DIAS_DEL_PERMISO} días corridos desde la compra y permite hasta ${MAX_DESCARGAS} descargas. Es para que quien compró lo pueda bajar en el celular y en la computadora sin quedarse afuera.`,
           "Podés reenviar el mail de entrega desde tu panel de Ventas, con un tope diario por venta. Si el enlace estaba vencido, el reenvío lo renueva; el contador de descargas no se reinicia.",
+          /* 1.9: el enlace entrega el archivo que el producto tiene EN ESE
+             MOMENTO, no una copia congelada de la compra. Es lo que hacen las
+             plataformas del rubro y sirve para corregir; el documento no lo
+             decía, y el vendedor que pisa un producto con otro tiene que saber
+             que sus compradores se lo llevan. */
+          "El enlace entrega el archivo que el producto tiene en ese momento. Si reemplazás el archivo, quien ya lo compró descarga la versión nueva mientras su enlace esté vigente: sirve para corregir o mejorar lo que vendiste. Para vender otra cosa, creá otro producto; reemplazar un archivo por uno distinto de lo que se vendió es tu responsabilidad frente a quien compró.",
           "De cada descarga queda registrada la fecha, la dirección IP y el navegador. Es la prueba de que la entrega se hizo, y existe para poder defender un cobro si alguien lo discute. Vos ves si se descargó y cuándo; no ves la dirección IP.",
           "Si borrás un producto, su archivo queda 30 días en cuarentena antes de eliminarse del depósito. Ese plazo protege a quien todavía tiene un permiso vigente: no podemos dejar sin su compra a alguien que ya pagó.",
           /* Los bonos y los upsells viajan como líneas de la misma orden y se

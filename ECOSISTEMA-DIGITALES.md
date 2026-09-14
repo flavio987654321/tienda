@@ -4032,11 +4032,13 @@ Los dos salieron de repasar la subida, y los dos **van con la entrega y no antes
   1 producto borrado con archivo — el bono de prueba, cuyo objeto ya se sacó a
   mano. En 30 días va a contestar `noEstaba` y soltar la referencia sola.
 
-- 🔲 **Reemplazar el PDF de un producto YA VENDIDO le cambia el archivo a quien lo
-  compró antes.** El token no guarda la ubicación: pide un link firmado del
-  archivo que el producto tiene AHORA. Para corregir una errata o publicar una
-  versión 2 está perfecto; para vender una cosa y entregar otra, no tanto. Hay
-  que decidir si se avisa, si se congela lo vendido, o si se acepta como está.
+- ✅ ~~**Reemplazar el PDF de un producto YA VENDIDO le cambia el archivo a quien lo
+  compró antes.**~~ Decidido el 14/09/26: **se acepta como está y se avisa.** Es
+  lo que hacen Hotmart y Gumroad —el enlace entrega el archivo actual— y sirve
+  para corregir. Congelar lo vendido castigaba al vendedor honesto que corrige
+  una errata; el caso malo (pisar mecánica con literatura) sólo lastima al
+  vendedor que lo hace, porque el comprador ya tiene lo suyo y encima se lleva
+  lo nuevo. Ver *Reemplazar un archivo ya vendido, y los términos 1.9*.
 
 ### 🔲 Las devoluciones y el arrepentimiento (mirado el 02/09/26)
 
@@ -5348,3 +5350,71 @@ Aclarado con Flavio, porque se prestaba a confusión: **nada de esto es por
 mes**. El tope del plan es "cuántos podés tener a la vez" (Pro: 5, siempre, no
 5 nuevos cada mes; pagar de nuevo no da ni saca); lo único mensual en
 digitales es el cupo de IA. Y el techo de 200 es de toda la vida de la cuenta.
+
+---
+
+## Reemplazar un archivo ya vendido, y los términos 1.9 — 14/09/26
+
+Las preguntas de Flavio, en orden, y lo que se contestó mirando el código:
+
+- *"¿No debería ser una descarga y listo?"* No lo hace nadie, porque la
+  descarga falla: se corta el wifi, el celular la guarda donde no se encuentra,
+  se bajó en el teléfono y se quiere en la computadora. Damos **5 descargas en
+  30 días**, que ya estaba decidido. Hotmart da un área de miembros permanente;
+  Gumroad, una biblioteca para siempre; los dos entregan el archivo *actual*
+  y, si el vendedor lo cambia, todos ven el nuevo.
+- *"¿Y si compro mecánica y el dueño lo cambia por literatura?"* El que compró
+  mecánica **ya la tiene**; mientras le dure el enlace, además se baja
+  literatura. Pierde el dueño, no el comprador. Y es un caso que casi no
+  existe: para vender otra cosa se crea otro producto (tiene su página, su
+  precio y su dirección). Reemplazar es para corregir o sacar la versión 2.
+- *"¿Y si elimina el producto que ya se vendió?"* El comprador no pierde nada:
+  borrar es una marca, el archivo queda **30 días en cuarentena** —el mismo
+  plazo que el permiso más largo posible—, y ya estaba en los términos.
+- *"¿Cómo nos cubrimos legalmente, y cómo sabemos cuánto descargó?"* Ya
+  estaba: 2 bis (la venta es del vendedor, art. 40 dicho en voz alta) y 5 (30
+  días, 5 descargas, y de cada descarga fecha, IP y navegador, "para poder
+  defender un cobro"). El vendedor ve en Ventas cuántas veces bajó cada uno y
+  cuándo; la IP la tenemos nosotros.
+
+### Lo que se hizo
+
+**No se toca la entrega.** Se le dice al vendedor, tres veces:
+
+- **En la tarjeta**, sólo si el producto ya tuvo una venta cobrada (se cuenta
+  en la misma consulta, `_count` de `orderItems` con orden `CONFIRMED`): *"Ya
+  se vendió: si lo reemplazás, quien compró baja el archivo nuevo mientras le
+  dure el enlace. Sirve para corregir; para vender otra cosa, creá otro
+  producto."*
+- **Al reemplazar**, una confirmación con lo mismo. Sólo con archivo y con
+  ventas; a un producto nuevo no se le pregunta nada.
+- **Al borrar** un producto vendido, el aviso agrega que quien lo compró lo
+  sigue bajando hasta que le venza el enlace.
+- **En los términos**, sección 5: el enlace entrega el archivo actual; pisar
+  un producto con otro distinto es responsabilidad del vendedor frente a quien
+  compró.
+
+### ⚠️ Los términos suben a 1.9, y no por esto solo
+
+Al ir a escribir la línea de arriba apareció que **2 ter contradecía lo hecho
+a la mañana**: decía *"si tu plan Pro se vence, el dominio que ya tenías
+conectado sigue funcionando"*, y desde hoy redirige y a los 90 días se
+suelta. Un vendedor que cae a Free tenía un contrato que le prometía lo
+contrario de lo que le pasaba. Se reescribió con los números saliendo de la
+misma constante que los aplica (`DIAS_DE_DOMINIO_EN_FREE`,
+`DIAS_DE_AVISO_DEL_DOMINIO`).
+
+Subir la versión dispara el banner de re-aceptación para todos y el mail del
+cron a quien no vuelva a entrar; el resumen del mail cuenta sólo lo de 1.9.
+**Es parte de lo que sale con el deploy**, junto con la migración de
+`freeDesde`: el día que se deploye, la gente va a ver el banner.
+
+Seis chequeos nuevos en `panel-digitales.check` (18 bis).
+
+### Y las estadísticas
+
+Flavio preguntó si para estadísticas hay que guardar todo esto. **Ya se
+guarda**: cada venta con su fecha y monto, cada descarga con su fecha, y los
+carritos que no terminaron. La pantalla de estadísticas sigue pendiente
+"cuando haya qué mostrar", y cuando se haga va a leer eso mismo; no hace
+falta anotar nada más por ahora.

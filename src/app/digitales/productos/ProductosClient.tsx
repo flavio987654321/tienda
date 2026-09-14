@@ -48,6 +48,12 @@ export type ProductoEnPantalla = {
   archivoNombre: string | null;
   archivoPeso: number | null;
   publicado: boolean;
+  /**
+   * Si alguien ya lo compró (una orden cobrada, aunque sea una). Cambia dos
+   * avisos: reemplazar el archivo y borrarlo. Quien compró sigue bajando lo que
+   * el producto tenga mientras le dure el enlace, y eso hay que decirlo ANTES.
+   */
+  vendido: boolean;
   /** El ebook que le está escribiendo la IA, o `null` si nunca pidió uno. */
   ebook: EstadoDelBorrador | null;
   /**
@@ -479,6 +485,19 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                       ? "Lo escribió la IA"
                       : "Lo subiste vos"}
                   </p>
+                  {/* ⚠️ Lo que pasa si lo reemplaza, dicho ANTES de que lo haga.
+                      El enlace de cada compra entrega el archivo que el
+                      producto tiene en ese momento —igual que Hotmart o
+                      Gumroad—: sirve para corregir una errata y que todos la
+                      reciban, y por eso mismo no sirve para vender otra cosa
+                      pisando ésta. Sólo aparece si hubo una venta; antes no
+                      hay a quién le cambie. */}
+                  {p.vendido && (
+                    <p className="mt-1 text-[11px] leading-relaxed text-amber-700 panel-oscuro:text-amber-300">
+                      Ya se vendió: si lo reemplazás, quien compró baja el archivo nuevo mientras le dure el
+                      enlace. Sirve para corregir; para vender otra cosa, creá otro producto.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -793,7 +812,13 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                      veces seguidas vuelva a disparar el `onChange`: si el valor
                      no cambia, el navegador no avisa nada. */
                   e.target.value = "";
-                  if (file) acc.subirArchivo(p, file);
+                  if (!file) return;
+                  /* La misma advertencia de arriba, como pregunta: un archivo
+                     que ya se vendió no se pisa por un clic de más. */
+                  if (p.tieneArchivo && p.vendido && !window.confirm(
+                    `"${p.name}" ya se vendió. Quien lo compró va a poder bajar el archivo nuevo mientras le dure el enlace.\n\nSirve para corregir o mejorar; para vender otra cosa, creá otro producto.\n\n¿Reemplazar el archivo?`,
+                  )) return;
+                  acc.subirArchivo(p, file);
                 }}
               />
             </label>
@@ -1576,9 +1601,14 @@ export default function ProductosClient({
     const cuantosHijos = p.rol === "PRINCIPAL"
       ? productos.filter((h) => h.padreId === p.id).length
       : 0;
-    const aviso = cuantosHijos > 0
+    /* Si ya se vendió, se dice qué pasa con quien compró: no pierde nada, su
+       enlace sigue andando hasta que venza (el archivo queda en cuarentena ese
+       mismo plazo; ver `DIAS_CUARENTENA_ARCHIVO`). Sin esto, borrar con ventas
+       parecía dejar gente sin su compra, y no es así. */
+    const aviso = (cuantosHijos > 0
       ? `Se borra "${p.name}" y también sus ${cuantosHijos} bono/upsell. No se puede deshacer.`
-      : `Se borra "${p.name}". No se puede deshacer.`;
+      : `Se borra "${p.name}". No se puede deshacer.`)
+      + (p.vendido ? " Quien ya lo compró lo puede seguir bajando hasta que le venza el enlace." : "");
     // El cerrojo se cierra DESPUÉS de preguntar: si dice que no, no hubo nada
     // en vuelo y la pantalla tiene que seguir respondiendo.
     if (!window.confirm(aviso)) return;

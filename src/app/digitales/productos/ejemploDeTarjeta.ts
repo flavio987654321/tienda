@@ -69,4 +69,5 @@ export const PRODUCTO_DE_EJEMPLO: ProductoEnPantalla = {
   },
   slugDigital: "ejemplo",
   dominioPropio: null,
+  vendido: false,
 };

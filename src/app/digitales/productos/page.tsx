@@ -133,6 +133,9 @@ export default async function ProductosPage({
           rolDigital: true, padreId: true, archivoPath: true, archivoNombre: true,
           archivoPeso: true, isActive: true, images: true, slugDigital: true,
           dominioPropio: true,
+          /* Si tuvo alguna venta cobrada. Sólo el número, en la misma consulta:
+             la tarjeta lo usa para avisar qué pasa al reemplazar o borrar. */
+          _count: { select: { orderItems: { where: { order: { status: "CONFIRMED" } } } } },
           /* El borrador del ebook, para que la tarjeta diga en qué anda sin que
              haya que abrir nada. Se pide con la misma consulta: una aparte
              serían 45 viajes más para traer un número. */
@@ -168,6 +171,7 @@ export default async function ProductosPage({
     archivoNombre: f.archivoNombre,
     archivoPeso: f.archivoPeso,
     publicado: f.isActive,
+    vendido: f._count.orderItems > 0,
     /* Sin el texto de los capítulos: son decenas de miles de caracteres que la
        pantalla no muestra y que viajarían con cada dibujo. */
     ebook: f.ebookIA ? estadoDelBorrador(f.ebookIA) : null,

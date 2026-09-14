@@ -106,6 +106,25 @@
 //     responsabilidad, ley aplicable y jurisdicción, y la cláusula de no garantía
 //     de resultados. Y este texto todavía no lo leyó un abogado de consumo.
 //
+// 1.9 (14/09/2026) — dos reglas de Productos Digitales que cambiaron ese día,
+//     y una de las dos CONTRADECÍA lo escrito.
+//   · "2 ter", el dominio propio sin Pro. Decía "si tu plan Pro se vence, el
+//     dominio que ya tenías conectado sigue funcionando", y desde hoy no: sin
+//     Pro el dominio REDIRIGE a la dirección de tiendaapps —no se rompe ni se
+//     pierde—, vuelve solo si vuelve Pro, y a los 90 días sin Pro lo
+//     desconectamos de nuestro lado con aviso 7 días antes. Los números salen
+//     de la misma constante que los aplica (`DIAS_DE_DOMINIO_EN_FREE`). Sin
+//     esto, un vendedor que cae a Free tenía un documento que le prometía lo
+//     contrario de lo que le pasaba.
+//   · Sección 5, el reemplazo del archivo. El enlace de descarga entrega el
+//     archivo que el producto tiene EN ESE MOMENTO, no una copia congelada de
+//     la compra (es lo que hacen Hotmart y Gumroad, y sirve para corregir).
+//     El documento no lo decía. Ahora dice que quien compró baja la versión
+//     nueva mientras le dure el enlace, y que pisar un producto con otro
+//     distinto es responsabilidad del vendedor frente a quien compró.
+//   ⚠️ Siguen a decisión del titular: limitación de responsabilidad, ley
+//     aplicable y jurisdicción, no garantía de resultados. Sin abogado todavía.
+//
 // 1.6 (11/08/2026) — tres arreglos que salieron de revisar el texto, no de un
 // cambio de producto:
 //   · La sección 5 del Dueño decía "sos responsable de las comisiones que
@@ -147,7 +166,7 @@
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.8";
+export const CURRENT_TERMS_VERSION = "1.9";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -171,11 +190,8 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Si vendés productos digitales, cada producto tuyo tiene ahora su propia dirección de internet, y escribimos las reglas. La dirección tipo tuproducto.tiendaapps.com es nuestra y te la prestamos mientras tengas la cuenta: viene con todos los planes, no se apaga por cambiar de plan, y si la cambiás vos, la anterior deja de funcionar y los enlaces que repartiste dejan de llegar.",
-  "Y si estás en Pro y conectás un dominio tuyo, ahora dice quién es dueño de qué: el dominio lo comprás y lo pagás vos donde quieras, no lo renovamos nosotros, y si lo perdés por no renovarlo no somos responsables. Lo podés desconectar cuando quieras, aunque tu plan esté vencido, porque es tuyo. Tu dirección de tiendaapps sigue funcionando igual: el dominio se suma, no la reemplaza.",
-  "Si usás la IA para que te escriba un ebook, quedó escrito qué es eso: un borrador tuyo. Puede tener errores o datos inventados, no es asesoramiento profesional, y leerlo entero antes de venderlo es tuyo. El resultado es tuyo y lo podés vender, pero no te garantizamos que sea único.",
-  "Y los bonos y los upsells ahora están nombrados: aunque el bono sea gratis, es parte de lo que la persona compró, y le corren las mismas reglas de entrega y de devolución que al archivo principal.",
-  "Si alguien empieza a comprarte y no llega a pagar, ahora está escrito qué pasa con sus datos: vos le ves el correo en tu panel, y si tenés plan Pro le mandamos un único recordatorio de tu parte —nunca a quien tiene el pago en camino, como un pago en efectivo—. Esa compra sin pagar se borra sola a los 45 días.",
+  "Si vendés productos digitales y conectaste un dominio tuyo con el plan Pro, cambió qué pasa si dejás de tener Pro: antes decíamos que el dominio seguía funcionando, y ahora pasa a redirigir a tu dirección de tiendaapps.com — quien entre por tu dominio llega igual a tu página. Si volvés a Pro, vuelve a andar solo. Y si pasan 90 días sin Pro, lo desconectamos de nuestro lado, avisándote 7 días antes por correo.",
+  "Y quedó escrito qué pasa si reemplazás el archivo de un producto que ya vendiste: quien lo compró puede bajar la versión nueva mientras le dure su enlace. Sirve para corregir o mejorar; si querés vender otra cosa, creá otro producto.",
 ];
 
 /**
