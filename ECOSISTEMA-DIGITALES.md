@@ -5444,3 +5444,23 @@ Lo que corre solo a partir de acá, y conviene mirar la primera vez:
   mail a quien no vuelva.
 - El cron de la noche: `result.digitales` ahora trae `caidasAFree`,
   `despublicadas`, `dominiosAvisados` y `dominiosSoltados`.
+
+---
+
+## ⚠️ Supabase: cuota pasada, y el Site URL — 14/09/26
+
+Visto en el panel de Supabase (Authentication → URL Configuration) al ir a
+verificar el Site URL:
+
+- 🔲 **El Site URL seguía en `tienda-six-ecru.vercel.app`.** Flavio creía
+  haberlo cambiado; no. Se cambia a `https://www.tiendaapps.com` y se guarda.
+  Sólo importa como respaldo —todos nuestros mails pasan su propio
+  `redirectTo`—, pero un mail de Supabase con la dirección vieja parece
+  phishing y depende de que esa dirección siga viva.
+- 🔲 **"Organization exceeded its quota in the previous billing cycle. Projects
+  will be restricted from 28 Sep, 2026."** Dos semanas. Antes de pagar el Pro
+  (US$25/mes), mirar *Review usage* del ciclo ACTUAL: si el pico fue el de las
+  imágenes sin cache (arreglado el 31/08) y este ciclo va por debajo de los
+  5 GB de egress, el aviso se apaga solo el 28. Si vuelve a estar arriba, el
+  Pro conviene y además hay que encontrar qué lo consume —el Pro también tiene
+  cuota (250 GB) y cada venta de un PDF es egress—.
