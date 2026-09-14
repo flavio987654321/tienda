@@ -75,14 +75,14 @@ export default function VistaPreviaInfografia({
       {laminas.map((l, i) => {
         const numero = String(i + 1).padStart(2, "0");
 
-        const laFoto = (proporcion?: string, alto?: string) => (
+        const laFoto = (proporcion: string) => (
           <Tocable
             que={{ que: "foto", capitulo: i }}
             seleccion={seleccion}
             onTocar={onTocar}
             nombre={`Cambiar la foto de la lámina ${i + 1}`}
           >
-            <HuecoDeFoto foto={fotos[i]} respaldo={l.titulo} t={t} proporcion={proporcion} alto={alto} />
+            <HuecoDeFoto foto={fotos[i]} respaldo={l.titulo} t={t} proporcion={proporcion} />
           </Tocable>
         );
 
@@ -146,9 +146,13 @@ export default function VistaPreviaInfografia({
         /* ── Foto a la izquierda, texto a la derecha ────────────────────── */
         if (acomodo === "lado") {
           return (
-            <div key={i} style={{ display: "flex", alignItems: "stretch", marginTop: i === 0 ? 0 : em(26), minHeight: em(560) }}>
-              <div style={{ width: anchoLado, flexShrink: 0, display: "flex" }}>
-                <div style={{ width: "100%" }}>{laFoto(undefined, "100%")}</div>
+            /* ⚠️ La foto lleva la proporción de la hoja entera, no `height:
+               100%`: adentro del botón tocable ese porcentaje no tiene contra
+               qué medirse y la foto quedaba como un cuadradito arriba. Se vio
+               dibujando la previa, no leyendo el código. */
+            <div key={i} style={{ display: "flex", alignItems: "stretch", marginTop: i === 0 ? 0 : em(26) }}>
+              <div style={{ width: anchoLado, flexShrink: 0 }}>
+                {laFoto(`${(ANCHO_DE_HOJA * L.ladoAncho).toFixed(0)} / ${altoUtil.toFixed(0)}`)}
               </div>
               <div style={{
                 flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center",
@@ -192,7 +196,7 @@ export default function VistaPreviaInfografia({
               {laFoto(proporcionFicha)}
               <div style={{ display: "flex", gap: em(molde.calle), paddingLeft: margen, paddingRight: margen, paddingTop: em(36), paddingBottom: em(40) }}>
                 <div style={{ width: anchoFranja, flexShrink: 0 }}>
-                  <p style={{ fontSize: em(60), lineHeight: 1, fontWeight: 700, color: t.acento, marginTop: em(28) }}>
+                  <p style={{ fontSize: em(60), lineHeight: 1, fontWeight: 700, color: t.acento, marginTop: em(14) }}>
                     {numero}
                   </p>
                 </div>
