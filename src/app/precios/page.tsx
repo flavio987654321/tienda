@@ -28,7 +28,7 @@ const FAQ_TIENDAS = [
 /* Las de Productos Digitales. Contestan lo que la tabla de planes no puede: qué
    es una página de venta, cómo llega el archivo, y las dos cosas que conviene
    saber ANTES de elegir plan y no después — que la comisión se suma a la de
-   Mercado Pago, y que con transferencia la entrega no sale sola. */
+   Mercado Pago, y que no hay transferencia: sólo Mercado Pago, en los tres. */
 const FAQ_DIGITAL = [
   { q: "¿El plan Free tiene fecha de vencimiento?", a: "No. Es gratis para siempre y no te pedimos tarjeta. No pagás abono: nos llevamos una comisión sobre cada venta que hagas. Si no vendés, no pagás nada." },
   { q: "¿Qué es una “página de venta”?", a: "Es la página donde se vende uno de tus productos: la foto, el texto, el precio, los bonos y el botón de compra. Va una por producto, así que cuando decimos “5 páginas de venta” queremos decir que podés tener 5 productos publicados." },
