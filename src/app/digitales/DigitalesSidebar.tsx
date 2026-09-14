@@ -9,7 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone,
+  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone, BarChart3,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
@@ -71,6 +71,10 @@ const GRUPOS: { titulo: string | null; links: LinkDelPanel[] }[] = [
      es la plata que entró y la otra la que quedó en la puerta. Y va DESPUÉS,
      no antes: lo primero que alguien quiere ver es lo que sí vendió. */
   { href: "/digitales/carritos", label: "Carritos", Icon: ShoppingCart },
+  /* Estadísticas va DESPUÉS de la plata y antes de Marketing: contesta "¿la
+     página sirve?", que es lo que se mira cuando ya se vio si vendió, y antes
+     de salir a difundir más. */
+  { href: "/digitales/estadisticas", label: "Estadísticas", Icon: BarChart3 },
   /* ── Marketing ────────────────────────────────────────────────────────────
    *
    * Va DESPUÉS de las dos pantallas de plata y antes de la configuración: es lo

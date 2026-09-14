@@ -1950,7 +1950,9 @@ para generar.
   plata del mes, las direcciones de cada página para copiar y los accesos rápidos
   a un costado. *(Y los carritos abandonados, hechos el 05/09/26, tienen su
   propia pantalla y su aviso en el panel.)*
-- 🔲 **Estadísticas**, cuando haya qué mostrar.
+- ✅ ~~**Estadísticas**, cuando haya qué mostrar.~~ Hechas el 14/09/26 (ver el
+  apartado "Estadísticas" al final): por producto y en general, con visitas,
+  conversión, embudo y origen, bloqueadas por plan.
 - ✅ ~~**El asistente de la primera vez** (los 5 pasos de la competencia).~~ Es
   **el recibimiento**: la pantalla entera hasta que la cuenta está armada
   (04/09/26), y desde el 10/09/26 termina en un cierre que elige el aspecto.
@@ -5510,3 +5512,58 @@ tres cuentas: Pro llena, Free caída con tres páginas, y Free vacía.
 
 También se tacharon dos pendientes viejos que ya estaban resueltos: los
 pasos de creación en `/digitales` y el llamador de `pruebaYaUsada`.
+
+---
+
+## Estadísticas — 14/09/26
+
+Mirada la pantalla "General" de la competencia (Impultienda) captura por
+captura, y decidido qué se copia y qué no:
+
+| Ellos | Nosotros |
+|---|---|
+| Hoy / 7 / 30 / 90 / Todo | Igual. "Todo" son 730 días: la retención de las visitas; más atrás la conversión sería inventada. |
+| Ingresos · Ventas · Ticket promedio · Conversión | Los cuatro números. "Te quedó" es el destacado: bruto menos la comisión congelada de cada orden, la misma cuenta que Ventas. |
+| Visitas por día · Ingresos por día | Visitas y ventas por día, barras en SVG servidas del servidor. Por semana o por mes cuando el rango es largo (`serie-grafico`). |
+| Embudo (bloqueado en Pro) | Entraron → abrieron el pago → pagaron. |
+| Productos más vendidos | "Por producto": ventas, neto, visitas y conversión de cada página, de más a menos plata. |
+| Estado de órdenes | No: acá son cobradas o devueltas, y las devueltas van al pie de Ventas. |
+| Métodos de pago · Ventas por país | No: un solo medio (MP) y un solo país. |
+| Visitantes en vivo | No por ahora: consulta abierta contra el egress de Supabase, que es lo que aprieta. |
+| Campañas UTM (pantalla aparte) | "De dónde vienen", en la misma pantalla, con la lista cerrada de `origen-visita` que ya usan las tiendas. |
+
+**Por producto y en general**, con el mismo selector que el inicio: cada
+principal es su propio sitio y una cuenta Pro tiene cinco.
+
+**Qué ve cada plan** (`DESDE_QUE_PLAN` en `estadisticas-digitales`): Free
+las ventas —ya las paga con la comisión—; Starter suma visitas y conversión;
+Pro suma el embudo y el origen. Un bloque bloqueado se dibuja igual, borroso
+y con "Disponible desde Starter/Pro", **pero con números de muestra**:
+borroso con los reales, cualquiera los lee con el inspector. `featuresDigital`
+promete lo mismo en /precios, el registro y Mi cuenta, y un chequeo lo exige.
+
+**Para contar visitas hubo que empezar a guardarlas**: dos tablas nuevas,
+`DigitalVisita` (producto, día, paso "pagina"/"pagar", cuenta) y
+`DigitalVisitaOrigen` (producto, día, origen, cuenta), calcadas de
+`StoreView` + `StoreFunnelStep` + `StoreViewSource` pero colgadas del
+producto. El ping lo manda `VisitaDigital` desde la página pública y el
+checkout, nunca desde la previa del editor. Mismas reglas que tiendas: una
+por navegador por día argentino, bots y tope por IP con `visitaLegitima`,
+la dueña descartada mirando la sesión sólo si hay cookie —quien compra no
+tiene cuenta, así que casi nunca la hay—. Retención igual que tiendas en el
+cron de limpieza.
+
+⚠️ La migración la aplica el build de producción. Hasta ese build la ruta
+del ping contesta "no contada" y la pantalla dice cero visitas, sin caerse:
+las dos tienen su try. **La historia arranca el día del deploy**, no antes.
+
+Dónde vive: `lib/estadisticas-digitales.ts` es la cuenta, pura y probada
+(`estadisticas-digitales.check.ts`: RANGO-*, PLAN-*, CUENTA-*, PANT-*);
+`lib/visitas-digitales.ts` el ping (`visitas-digitales.check.ts`); la
+consulta en `digitales/estadisticas/page.tsx`. Mirado en 360, 768 y 1100
+con Pro, Pro mirando un producto, Starter y Free.
+
+- 🔲 **Lo que queda para después:** exportar a PDF/CSV como Métricas de
+  tiendas; comparar contra el período anterior; y las ventas por origen
+  (hoy el origen es de las visitas; para saber de dónde vino cada VENTA hay
+  que guardarlo en la orden al pagar).

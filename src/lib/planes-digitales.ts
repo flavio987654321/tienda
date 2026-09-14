@@ -86,7 +86,14 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Textos y mails con IA", on: pago },
     { text: "Sasha, la asistente", on: pago },
     { text: "Entrega automática con token", on: true },
-    { text: "Descargas y estadísticas", on: true },
+    /* Estadísticas en tres escalones, que es donde la competencia pone el
+       candado y lo que le da al de Free un motivo para subir: las ventas las
+       ve todo el mundo —ya las paga con su comisión—; las visitas y la
+       conversión de cada página, desde Starter; el embudo y de dónde vienen
+       las visitas (UTM), sólo Pro. Ver `estadisticas-digitales`. */
+    { text: "Estadísticas de ventas y descargas", on: true },
+    { text: "Visitas y conversión de cada página", on: pago },
+    { text: "Embudo y origen de las visitas (UTM)", on: tier === "PRO" },
     { text: "Ver carritos abandonados", on: true },
     { text: "Mail automático de recuperación", on: tier === "PRO" },
     /* "Por producto" no es un detalle: es TODO. Un dominio por cuenta no le sirve
