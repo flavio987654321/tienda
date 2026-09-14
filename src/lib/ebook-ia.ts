@@ -1,4 +1,5 @@
 import { limpiarTexto } from "@/lib/texto-limpio";
+import type { OpcionesDelEbook } from "@/lib/ebook-opciones";
 
 /**
  * Escribir un ebook con IA: qué se le pide al modelo y cómo se lima lo que
@@ -1446,4 +1447,467 @@ export function pedidoDeRecetas(
     "",
     `Escribí ${cuantas} recetas para esa sección.`,
   ].filter((l) => l !== null).join("\n");
+}
+
+/* ── La infografía ──────────────────────────────────────────────────────── */
+
+/**
+ * La tercera clase de ebook: UNA IDEA POR HOJA.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * NO ES UN CAPÍTULO CORTO: ES OTRA COSA QUE SE LE PIDE AL MODELO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Un ebook de texto se lee; una infografía se HOJEA. Cada hoja es una foto
+ * grande, un título que es la idea entera —"Regar de noche es un error"—, dos
+ * o tres frases que la explican y hasta tres datos cortos. Es el formato de la
+ * guía rápida, del lead magnet y del bono: "10 errores al arrancar con
+ * airfryer", "Checklist para tu primer viaje en moto".
+ *
+ * Se tentaba hacerla "barata" —poner la foto detrás del texto de un capítulo—
+ * y no: 400 palabras sobre un velo no se leen en un celular. Una idea por hoja
+ * son textos cortos, y eso hay que pedírselo al modelo. Por eso es un formato
+ * y no un molde; ver el documento del 14/09/26.
+ *
+ * ⚠️ Cada lámina ocupa UNA hoja, y los topes son los que hacen que entre. Al
+ * revés que en la receta, acá no hay nada elástico —ni ingredientes ni pasos
+ * variables—, así que la lámina más grande posible entra en las cuatro hojas
+ * por construcción, y hay un candado que lo verifica. Ver `hojaDeLamina` en
+ * `ebook-pdf.ts`.
+ */
+export const PUNTOS_MAX = 3;
+export const LARGO_TITULO_LAMINA = 70;
+export const LARGO_TEXTO_LAMINA = 280;
+export const LARGO_PUNTO = 80;
+
+export type Lamina = {
+  /** La idea, entera, en una frase. Es lo más grande de la hoja. */
+  titulo: string;
+  /** Dos o tres frases que la explican. Termina en una idea completa. */
+  texto: string;
+  /** Hasta tres datos cortos, abajo del texto. Puede ir vacío. */
+  puntos: string[];
+  /** Con qué buscar la foto. Igual que en los capítulos y las recetas. */
+  foto: string;
+  /**
+   * La que se eligió a mano, si se eligió alguna. Vive adentro de la lámina
+   * por lo mismo que en la receta: acá la unidad es la lámina y el índice
+   * tiene secciones. Ver `Receta.fotoElegida`.
+   */
+  fotoElegida?: FotoElegida | null;
+};
+
+/**
+ * Cuántas láminas escribe UNA llamada.
+ *
+ * Una lámina son unos 170 tokens de salida —título, tres frases, tres datos y
+ * la frase de la foto—, contra los 950 de una receta. Cinco caben holgadas en
+ * una llamada (menos de 1.000 tokens, bastante abajo del techo) sin que la
+ * quinta salga peor que la primera, que es lo que pasa con dos capítulos de
+ * 900 palabras pedidos juntos.
+ *
+ * ⚠️ Igual que `RECETAS_POR_LLAMADA`: subirlo tiene dos techos, el reloj y
+ * `max_tokens`, y cortarse en `max_tokens` no devuelve las que ya escribió.
+ * Se mide con la primera generación real y se anota en el documento.
+ */
+export const LAMINAS_POR_LLAMADA = 5;
+
+/**
+ * En cuántas secciones se parte una infografía de `total` láminas.
+ *
+ * La misma cuenta que `seccionesParaRecetas`, y por lo mismo: una sección =
+ * una llamada = una entrada del temario, así que el bucle de las tres rutas es
+ * el mismo que en los otros dos formatos.
+ */
+export function seccionesParaLaminas(total: number): number {
+  return Math.ceil(total / LAMINAS_POR_LLAMADA);
+}
+
+/**
+ * Cuántas láminas escribe la sección número `numero`.
+ *
+ * Todas llevan `LAMINAS_POR_LLAMADA` menos la última, que se queda con el
+ * resto. Con las tres cantidades de hoy (10, 20, 30) todas dan justo, pero la
+ * cuenta va igual: si mañana entra 15, la última escribe cinco y no diez.
+ */
+export function laminasDeLaSeccion(total: number, numero: number): number {
+  const yaPedidas = (numero - 1) * LAMINAS_POR_LLAMADA;
+  return Math.max(0, Math.min(LAMINAS_POR_LLAMADA, total - yaPedidas));
+}
+
+/**
+ * Las reglas de escritura de una lámina.
+ *
+ * Van sobre `REGLAS_COMUNES` —acá sí valen todas: los números que se prohíben
+ * son los que pretenden ser datos del mundo, y una infografía es justo donde
+ * más tienta inventar un "el 80% de la gente"—, más lo que hace que entre en
+ * la hoja.
+ */
+const REGLAS_DE_LAMINA = `
+${REGLAS_COMUNES}
+
+QUE ENTRE EN LA HOJA — esto no es un capricho de diseño
+
+Cada lámina ocupa UNA hoja con una foto grande, y la hoja no se estira. Lo que
+se pase de estos largos se corta adentro de un archivo que alguien pagó.
+
+- El título es LA IDEA, entera, en una frase: "Regar de noche es un error",
+  "Primero la base, después el color". Como mucho ${LARGO_TITULO_LAMINA}
+  caracteres. No es un nombre de sección ni una pregunta.
+- El texto son dos o tres frases que expliquen la idea y qué hacer con ella.
+  Como mucho ${LARGO_TEXTO_LAMINA} caracteres. Se lee de parado, en un celular:
+  si necesita un párrafo, es otra lámina.
+- Hasta ${PUNTOS_MAX} datos cortos, de una línea cada uno (como mucho
+  ${LARGO_PUNTO} caracteres): un ejemplo, un "sí / no", un número que sale de
+  la propia idea y no de una estadística. Si no hay nada que sume, ninguno:
+  mejor vacío que una obviedad.
+- Cada lámina tiene que entenderse sola, sin leer la anterior.
+`.trim();
+
+/**
+ * Un grupo de láminas.
+ *
+ * Recibe la infografía entera en temario, por el mismo motivo que la receta:
+ * para no repetir la idea de la sección de al lado.
+ */
+export const INSTRUCCIONES_LAMINAS = `
+Escribís las láminas de una infografía que se vende en internet, en Argentina.
+
+Una infografía es una guía que se hojea: UNA idea por hoja, con una foto
+grande. No es un libro corto — es otra cosa. Te paso de qué se trata la
+infografía entera y qué sección te toca. Escribí las láminas de ESA sección y
+ninguna otra.
+
+QUÉ ES CADA LÁMINA
+
+- Un título que es la idea entera, en una frase. Quien lea sólo los títulos
+  tiene que llevarse la guía completa.
+- Dos o tres frases que la expliquen: por qué, y qué hacer.
+- Hasta tres datos cortos, si suman. Un ejemplo concreto vale más que un
+  consejo general.
+- Y una búsqueda de foto: dos a cuatro palabras que describan una ESCENA QUE
+  SE PUEDA FOTOGRAFIAR y que tenga que ver con la idea. Se busca tal cual en
+  un banco de imágenes. La foto es la mitad de la hoja, así que importa.
+  Sí: "regadera sobre plantas al sol", "manos ajustando casco de moto".
+  No: "error común", "lo que hay que saber" — eso no es ninguna foto.
+
+No repitas una idea que ya está en otra sección del temario. Dos láminas que
+dicen lo mismo con otras palabras es lo primero que se nota.
+
+${REGLAS_DE_LAMINA}
+`.trim();
+
+/**
+ * El temario de una infografía: las secciones, no las láminas.
+ *
+ * Devuelve la misma forma que los otros dos —título, promesa y una lista—
+ * para que el resto del sistema no tenga que distinguirlas.
+ */
+export const INSTRUCCIONES_INDICE_INFOGRAFIA = `
+Sos quien arma el índice de una infografía que se va a vender en internet, en
+Argentina.
+
+Una infografía es una guía que se hojea: una idea por hoja, con una foto
+grande. "10 errores al arrancar con airfryer", "Checklist para tu primer viaje
+en moto". Te van a contar de qué se trata, con las palabras de quien lo vende,
+y cuántas secciones tenés que armar. Ese número no se discute: devolvé
+exactamente ésas.
+
+QUÉ DEVOLVÉS
+
+- Un título de la infografía. Concreto, que diga qué se lleva quien la lea, y
+  si es una lista que lo diga: "10 errores al arrancar con la airfryer". Nada
+  de títulos de una palabra.
+- Una línea para la tapa que diga QUÉ HAY adentro. Es una descripción del
+  contenido, no una promesa de resultado, así que sí va y nunca la dejes vacía:
+  "Los diez errores que arruinan la primera semana con la airfryer, y cómo
+  evitarlos." Más abajo dice que no escribas promesas — eso es para el texto
+  de las láminas, esta línea es otra cosa y tiene que estar.
+- Las secciones, en orden.
+
+CÓMO SON LAS SECCIONES
+
+- Cada una agrupa ideas del mismo momento o del mismo tipo: "Antes de comprar",
+  "Los primeros usos", "Lo que nadie te dice". Es como se ordena cualquier guía.
+- Con su título y un resumen de dos renglones que diga QUÉ IDEAS van adentro.
+  Ese resumen lo va a leer después quien escriba las láminas, así que nombrá
+  ideas concretas: "precalentar siempre, no llenar el canasto, secar bien lo
+  que va con aceite".
+- Una sección no puede pisar a otra. Si dos se superponen, cambiá una.
+- Y cada una con una búsqueda de foto: dos a cuatro palabras que describan una
+  escena fotografiable de esa sección.
+  Sí: "airfryer sobre mesada de cocina", "casco de moto sobre el tanque".
+  No: "lo básico", "consejos" — eso no es ninguna foto.
+- Ordenalas como se usan: primero lo que pasa primero.
+
+${REGLAS_DE_LAMINA}
+`.trim();
+
+/**
+ * El esquema del temario de la infografía, con la cantidad de secciones clavada.
+ *
+ * Función y no constante por lo mismo que `esquemaDelIndiceRecetario`:
+ * `minItems` y `maxItems` tienen que ser el mismo número, y sale de cuántas
+ * láminas eligió la persona.
+ */
+export function esquemaDelIndiceInfografia(secciones: number) {
+  return {
+    type: "object" as const,
+    properties: {
+      titulo: { type: "string", description: "El título de la infografía." },
+      promesa: {
+        type: "string",
+        description:
+          "Una línea para la tapa que diga qué hay adentro. Descripción del " +
+          "contenido, no promesa de resultado. Obligatoria: nunca vacía.",
+      },
+      capitulos: {
+        type: "array",
+        minItems: secciones,
+        maxItems: secciones,
+        items: {
+          type: "object",
+          properties: {
+            titulo: { type: "string", description: "El nombre de la sección." },
+            resumen: {
+              type: "string",
+              description: "Dos renglones nombrando las ideas concretas que van adentro.",
+            },
+            foto: {
+              type: "string",
+              description:
+                "Dos a cuatro palabras que describan una escena fotografiable de esta sección. " +
+                "Se busca tal cual en un banco de imágenes.",
+            },
+          },
+          required: ["titulo", "resumen", "foto"],
+        },
+      },
+    },
+    required: ["titulo", "promesa", "capitulos"],
+  };
+}
+
+export const ESQUEMA_DE_LAMINAS = {
+  type: "object" as const,
+  properties: {
+    laminas: {
+      type: "array",
+      minItems: 1,
+      maxItems: LAMINAS_POR_LLAMADA,
+      items: {
+        type: "object",
+        properties: {
+          titulo: {
+            type: "string",
+            description: `La idea entera, en una frase. Como mucho ${LARGO_TITULO_LAMINA} caracteres.`,
+          },
+          texto: {
+            type: "string",
+            description: `Dos o tres frases que la explican. Como mucho ${LARGO_TEXTO_LAMINA} caracteres. Lo que se pase se corta.`,
+          },
+          puntos: {
+            type: "array",
+            minItems: 0,
+            maxItems: PUNTOS_MAX,
+            items: {
+              type: "string",
+              description: `Un dato corto de una línea, como mucho ${LARGO_PUNTO} caracteres.`,
+            },
+            description: "Hasta tres datos cortos. Vacío si no hay nada que sume.",
+          },
+          foto: {
+            type: "string",
+            description:
+              "Dos a cuatro palabras que describan una escena fotografiable de esta idea. " +
+              "Se busca tal cual en un banco de imágenes.",
+          },
+        },
+        required: ["titulo", "texto", "puntos", "foto"],
+      },
+    },
+  },
+  required: ["laminas"],
+};
+
+/**
+ * El esquema de un grupo de láminas, con la cantidad clavada.
+ *
+ * Función por lo mismo que `esquemaDeRecetas`: la última sección puede pedir
+ * menos que `LAMINAS_POR_LLAMADA`.
+ */
+export function esquemaDeLaminas(cuantas: number) {
+  return {
+    ...ESQUEMA_DE_LAMINAS,
+    properties: {
+      ...ESQUEMA_DE_LAMINAS.properties,
+      laminas: { ...ESQUEMA_DE_LAMINAS.properties.laminas, minItems: cuantas, maxItems: cuantas },
+    },
+  };
+}
+
+/**
+ * Las láminas que devolvió el modelo, limadas.
+ *
+ * Los topes son los que hacen que la lámina ENTRE EN LA HOJA; el esquema se los
+ * pide al modelo, pero pedir no es garantizar. Y una lámina sin título o sin
+ * texto NO es una lámina a la que le falta algo: es media hoja en blanco
+ * adentro de un archivo que se vendió. Se descarta entera, igual que una
+ * receta sin ingredientes — y por eso el editor (`infografia-texto`) avisa
+ * antes de guardar con esta misma regla.
+ */
+export function normalizarLaminas(crudo: unknown, cuantas = LAMINAS_POR_LLAMADA): Lamina[] {
+  if (!crudo || typeof crudo !== "object") return [];
+  const c = crudo as Record<string, unknown>;
+  if (!Array.isArray(c.laminas)) return [];
+
+  /* El tope es el de ESTA sección, no el general. Ver `normalizarRecetas`. */
+  const tope = Math.max(1, Math.min(cuantas, LAMINAS_POR_LLAMADA));
+
+  const laminas: Lamina[] = [];
+  for (const bruto of c.laminas) {
+    if (laminas.length >= tope) break;
+    if (!bruto || typeof bruto !== "object") continue;
+    const b = bruto as Record<string, unknown>;
+
+    /* ⚠️ El título se corta en una idea y no en el carácter que toca: es la
+       frase más grande de la hoja, y "Regar de noche es un err" a 40 puntos se
+       ve desde la otra punta de la habitación. */
+    const titulo = cortarEnUnaIdea(b.titulo, LARGO_TITULO_LAMINA);
+    if (!titulo || titulo.length < 2) continue;
+
+    const texto = cortarEnUnaIdea(b.texto, LARGO_TEXTO_LAMINA);
+    if (!texto) continue;
+
+    const puntos: string[] = [];
+    if (Array.isArray(b.puntos)) {
+      for (const bp of b.puntos) {
+        if (puntos.length >= PUNTOS_MAX) break;
+        const punto = cortarEnUnaIdea(bp, LARGO_PUNTO);
+        if (punto) puntos.push(punto);
+      }
+    }
+
+    laminas.push({
+      titulo,
+      texto,
+      puntos,
+      foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "",
+      /* Se lee y se conserva, por lo mismo que en la receta: esta función es la
+         que vuelve a leer lo guardado. Del modelo nunca viene. */
+      fotoElegida: leerFotoElegida(b.fotoElegida),
+    });
+  }
+
+  return laminas;
+}
+
+/**
+ * Las láminas ya escritas, tal como quedan guardadas: agrupadas por sección,
+ * en la misma columna y con la misma forma de afuera que los otros dos
+ * formatos. Ver `leerGruposDeRecetas`, que es exactamente esto.
+ */
+export function leerGruposDeLaminas(guardado: string | null | undefined): Lamina[][] {
+  if (typeof guardado !== "string") return [];
+  let crudo: unknown;
+  try { crudo = JSON.parse(guardado); } catch { return []; }
+  if (!Array.isArray(crudo)) return [];
+
+  const grupos: Lamina[][] = [];
+  for (const bruto of crudo) {
+    if (grupos.length >= CAPITULOS_MAX) break;
+    if (!Array.isArray(bruto)) continue;
+    const laminas = normalizarLaminas({ laminas: bruto });
+    /* Un grupo vacío corta la lista, por lo mismo que en las recetas. */
+    if (laminas.length === 0) break;
+    grupos.push(laminas);
+  }
+  return grupos;
+}
+
+/** Todas las láminas de la infografía, en orden, para dibujar el PDF. */
+export function todasLasLaminas(guardado: string | null | undefined): Lamina[] {
+  return leerGruposDeLaminas(guardado).flat();
+}
+
+/**
+ * El mensaje con el que se le piden las láminas de una sección.
+ *
+ * El mismo armado que `pedidoDeRecetas` y `pedidoDelCapitulo`, a propósito.
+ */
+export function pedidoDeLaminas(
+  titulo: string,
+  tema: string,
+  publico: string | null,
+  indice: CapituloPlaneado[],
+  numero: number,
+  cuantas: number = LAMINAS_POR_LLAMADA,
+): string {
+  const temario = indice
+    .map((c, i) => `${i + 1}. ${c.titulo}\n   ${c.resumen}`)
+    .join("\n");
+  const seccion = indice[numero - 1];
+
+  return [
+    `La infografía se llama "${titulo}".`,
+    publico ? `Está escrita para: ${publico}` : null,
+    "",
+    "De qué se trata, en palabras de quien la vende:",
+    `<tema>\n${tema}\n</tema>`,
+    "",
+    "Las secciones de la infografía:",
+    `<temario>\n${temario}\n</temario>`,
+    "",
+    `Te toca la sección ${numero}: "${seccion?.titulo ?? ""}".`,
+    seccion?.resumen ? `Qué va adentro: ${seccion.resumen}` : null,
+    "",
+    `Escribí ${cuantas} láminas para esa sección.`,
+  ].filter((l) => l !== null).join("\n");
+}
+
+/* ── Lo que los tres formatos tienen en común ───────────────────────────── */
+
+/**
+ * Cuánto hay escrito, en las dos unidades que importan.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ HAY DOS CUENTAS Y NO SON LA MISMA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * - `partes`: cuántas LLAMADAS ya cobradas hay guardadas. Es lo que el bucle
+ *   compara contra el largo del temario para saber cuál sigue y si está
+ *   completo. En los tres formatos es el largo de la lista guardada.
+ * - `unidades`: cuántas cosas de las que la persona eligió —capítulos,
+ *   recetas o láminas— hay escritas. Es lo que ve la barra. En un ebook de
+ *   texto coincide con `partes`; en los otros dos no: una sección de
+ *   recetario son tres recetas, y una de infografía cinco láminas.
+ *
+ * Existe porque hasta el 14/09/26 esta cuenta estaba escrita en siete lugares
+ * con un `esRecetario ? … : …` cada uno, y el tercer formato la habría
+ * convertido en siete ternarios de tres ramas. Acá se decide una vez.
+ */
+export function partesEscritas(
+  formato: string, guardado: string | null | undefined,
+): { partes: number; unidades: number } {
+  if (formato === "recetario") {
+    const grupos = leerGruposDeRecetas(guardado);
+    return { partes: grupos.length, unidades: grupos.reduce((n, g) => n + g.length, 0) };
+  }
+  if (formato === "infografia") {
+    const grupos = leerGruposDeLaminas(guardado);
+    return { partes: grupos.length, unidades: grupos.reduce((n, g) => n + g.length, 0) };
+  }
+  const partes = leerCapitulos(guardado).length;
+  return { partes, unidades: partes };
+}
+
+/**
+ * En cuántas secciones se parte lo que se eligió, en los formatos donde eso lo
+ * decide la persona y no el modelo. Cero en un ebook de texto: ahí el temario
+ * tiene los capítulos que el modelo quiso.
+ */
+export function seccionesElegidas(opciones: OpcionesDelEbook): number {
+  if (opciones.formato === "recetario") return seccionesParaRecetas(opciones.recetas);
+  if (opciones.formato === "infografia") return seccionesParaLaminas(opciones.laminas);
+  return 0;
 }

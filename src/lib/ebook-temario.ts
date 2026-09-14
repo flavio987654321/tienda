@@ -60,8 +60,11 @@ export type LoQueHay = {
    * se escribe de arriba para abajo y el que sigue es el largo de lo escrito.
    */
   escritos: number;
-  /** Un recetario tiene las secciones repartidas y no se pueden mover. */
-  esRecetario: boolean;
+  /**
+   * Un recetario —y una infografía— tiene las secciones repartidas según lo
+   * que se eligió y pagó, y no se pueden agregar ni quitar.
+   */
+  porSecciones: boolean;
 };
 
 export type Revision =
@@ -170,12 +173,12 @@ export function revisarTemario(recibido: unknown, hay: LoQueHay): Revision {
   const capitulos = [...prefijo, ...nuevos];
 
   /* ── Cuántos pueden ser ────────────────────────────────────────────────── */
-  if (hay.esRecetario) {
-    /* Ver el punto 2: las secciones son el reparto de las recetas pagadas. */
+  if (hay.porSecciones) {
+    /* Ver el punto 2: las secciones son el reparto de lo que se pagó. */
     if (capitulos.length !== hay.capitulos.length) {
       return {
         ok: false,
-        error: "Las secciones del recetario son las que hacen falta para las recetas que elegiste: no se pueden agregar ni quitar.",
+        error: "Las secciones son las que hacen falta para la cantidad que elegiste: no se pueden agregar ni quitar.",
       };
     }
   } else {

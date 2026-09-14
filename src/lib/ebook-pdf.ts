@@ -1,6 +1,8 @@
 import path from "path";
 import PDFDocument from "pdfkit";
-import { INGREDIENTES_MAX, PASOS_MAX, type Bloque, type CapituloEscrito, type Receta } from "@/lib/ebook-ia";
+import {
+  INGREDIENTES_MAX, PASOS_MAX, type Bloque, type CapituloEscrito, type Receta, type Lamina,
+} from "@/lib/ebook-ia";
 import type { FotoDelEbook } from "@/lib/fotos-pexels";
 /* Los colores salieron de acá el 09/09/26 para que la vista previa del editor
    los pueda usar sin arrastrar pdfkit al navegador. Ver `ebook-colores`. */
@@ -11,7 +13,7 @@ import {
 /* Y el molde salió de acá el mismo día, por el mismo motivo y para lo mismo:
    la previa tiene que poder dibujar la hoja del estilo que se eligió. */
 import {
-  moldeDe, anchoUtilDe, columnaDeTexto, anchoDeColumna, HOJA_DE_RECETA,
+  moldeDe, anchoUtilDe, columnaDeTexto, anchoDeColumna, HOJA_DE_RECETA, HOJA_DE_LAMINA,
   type Molde, type EstiloDeEbook,
 } from "@/lib/ebook-estilos";
 
@@ -346,6 +348,11 @@ export type DatosDelEbook = {
    * capítulos, y `fotosCapitulos` se empareja POR POSICIÓN con las recetas.
    */
   recetas?: Receta[];
+  /**
+   * Las láminas, cuando el ebook es una infografía. La misma regla que
+   * `recetas`: si viene con algo, manda esto. Nunca vienen dos de los tres.
+   */
+  laminas?: Lamina[];
 };
 
 type Doc = PDFKit.PDFDocument;
@@ -781,6 +788,9 @@ function contenido(doc: Doc, d: DatosDelEbook, t: Tema, e: Estado): void {
 function loQueTieneAdentro(d: DatosDelEbook): { titulos: string[]; palabra: [string, string] } {
   if (d.recetas && d.recetas.length > 0) {
     return { titulos: d.recetas.map((r) => r.titulo), palabra: ["RECETA", "RECETAS"] };
+  }
+  if (d.laminas && d.laminas.length > 0) {
+    return { titulos: d.laminas.map((l) => l.titulo), palabra: ["LÁMINA", "LÁMINAS"] };
   }
   return { titulos: d.capitulos.map((c) => c.titulo), palabra: ["CAPÍTULO", "CAPÍTULOS"] };
 }
@@ -2054,6 +2064,243 @@ function hojaDeReceta(
   doc.y = HOJA.alto;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   LA HOJA DE UNA LÁMINA
+   ══════════════════════════════════════════════════════════════════════════
+
+   Una infografía es una idea por hoja: una foto grande, la idea en un título,
+   dos o tres frases y hasta tres datos. Ver `Lamina` en `ebook-ia`.
+
+   ⚠️ AL REVÉS QUE LA RECETA, ACÁ NO HAY NADA ELÁSTICO. Los topes de la lámina
+   son fijos —70 caracteres de título, 280 de texto, tres datos de 80— así que
+   la lámina más grande posible se conoce de antemano y se puede probar contra
+   los cuatro moldes (LAM-PDF). Por eso no hay HOLGADA / APRETADA / AL_LIMITE:
+   hay UNA medida, y lo único que cede es la foto de `banda`, que se achica
+   hasta el mínimo si el texto la necesita. Es la misma idea que la banda de
+   la receta, sin la segunda cuenta.
+
+   Los cuatro acomodos los elige el molde (`t.molde.lamina`); ver
+   `ebook-estilos` para qué hace cada uno con la hoja. */
+
+/** Las medidas del texto de una lámina. Una sola densidad; ver arriba. */
+const LAMINA = {
+  rotulo: 7.5,
+  titulo: 27,
+  /** El título cuando la columna es angosta (`lado`, `ficha`): en 250 puntos
+      de ancho, 27 puntos parte cada frase en cinco renglones. */
+  tituloAngosto: 22,
+  texto: 12.5,
+  interlineaTexto: 4.5,
+  punto: 10.5,
+  interlineaPunto: 3,
+  /** El aire entre el título y el texto, y entre el texto y los datos. */
+  aire: 16,
+  /** El número grande de `ficha`, en la franja. */
+  numero: 60,
+} as const;
+
+/**
+ * El bloque de texto de una lámina —rótulo, título, raya, texto y datos—
+ * dibujado en una columna dada, con los colores que se le pasen.
+ *
+ * Devuelve cuánto ocupó. Con `soloMedir` no dibuja nada y sólo devuelve el
+ * alto: es lo que necesita `banda` para saber cuánta foto puede dejar.
+ *
+ * ⚠️ Es UNA función para los cuatro acomodos, con los colores y el ancho como
+ * parámetros. Escrita cuatro veces, el día que se toque el aire del título en
+ * `cartel` los otros tres se quedan viejos.
+ */
+function bloqueDeLamina(
+  doc: Doc, l: Lamina, rotulo: string, t: Tema,
+  x: number, y: number, ancho: number,
+  colores: { rotulo: string; titulo: string; texto: string; acento: string },
+  soloMedir = false,
+  cuerpoDelTitulo: number = LAMINA.titulo,
+): number {
+  const titulo = soloLoQueEntra(l.titulo);
+  const texto = soloLoQueEntra(l.texto);
+  const puntos = l.puntos.map(soloLoQueEntra).filter((p) => !!p);
+
+  let yy = y;
+
+  /* El rótulo: "LÁMINA 03 · 10". */
+  doc.font(t.etiqueta).fontSize(LAMINA.rotulo);
+  if (!soloMedir) {
+    doc.fillColor(colores.rotulo)
+      .text(rotulo, x, yy, { width: ancho, characterSpacing: 1.6, lineBreak: false });
+  }
+  yy += 18;
+
+  /* El título, que es la idea. */
+  doc.font(t.titulo).fontSize(cuerpoDelTitulo);
+  const altoTitulo = doc.heightOfString(titulo, { width: ancho, lineGap: 2 });
+  if (!soloMedir) doc.fillColor(colores.titulo).text(titulo, x, yy, { width: ancho, lineGap: 2 });
+  yy += altoTitulo + 12;
+
+  /* La rayita de acento, como la del subtítulo de un capítulo. */
+  if (!soloMedir) doc.rect(x, yy, 44, 3).fill(colores.acento);
+  yy += 3 + LAMINA.aire;
+
+  /* El texto. */
+  doc.font(t.cuerpo).fontSize(LAMINA.texto);
+  const altoTexto = doc.heightOfString(texto, { width: ancho, lineGap: LAMINA.interlineaTexto });
+  if (!soloMedir) {
+    doc.fillColor(colores.texto).text(texto, x, yy, { width: ancho, lineGap: LAMINA.interlineaTexto });
+  }
+  yy += altoTexto;
+
+  /* Los datos, cada uno con su bolita de acento. */
+  if (puntos.length > 0) {
+    yy += LAMINA.aire;
+    const SANGRIA = 18;
+    doc.font(t.etiqueta).fontSize(LAMINA.punto);
+    for (const punto of puntos) {
+      const altoPunto = doc.heightOfString(punto, { width: ancho - SANGRIA, lineGap: LAMINA.interlineaPunto });
+      if (!soloMedir) {
+        doc.circle(x + 4, yy + 6, 3).fill(colores.acento);
+        doc.fillColor(colores.texto)
+          .text(punto, x + SANGRIA, yy, { width: ancho - SANGRIA, lineGap: LAMINA.interlineaPunto });
+      }
+      yy += altoPunto + 7;
+    }
+  }
+
+  return yy - y;
+}
+
+/** La foto, o el bloque de acento en su lugar. Devuelve si la foto se pudo poner. */
+function fotoOBloque(
+  doc: Doc, foto: FotoDelEbook | null | undefined, t: Tema,
+  x: number, y: number, ancho: number, alto: number,
+): boolean {
+  const puesta = foto ? fotoCubriendo(doc, foto, x, y, ancho, alto) : false;
+  /* Sin foto, el bloque de acento: la misma red que la tapa, la portadilla y
+     la receta. Una cuenta sin fotos entrega una infografía igual de terminada. */
+  if (!puesta) doc.rect(x, y, ancho, alto).fill(t.acento);
+  return puesta;
+}
+
+function hojaDeLamina(
+  doc: Doc, l: Lamina, numero: number, total: number,
+  foto: FotoDelEbook | null | undefined, t: Tema, e: Estado,
+): void {
+  dibujarLamina(doc, l, numero, total, foto, t, e);
+
+  /* ⚠️ La hoja se da por TERMINADA, aunque el texto haya quedado a media
+     altura: en `lado` va centrado y en `ficha` es corto, así que abajo sobra
+     papel y lo que siga —los créditos— lo tomaría como lugar libre. Pasó: la
+     caja de créditos se dibujaba en la última lámina, encima de la foto de la
+     izquierda. Con el cursor al pie, `entra` dice que no y se abre hoja. */
+  doc.x = t.margen;
+  doc.y = HOJA.alto;
+}
+
+function dibujarLamina(
+  doc: Doc, l: Lamina, numero: number, total: number,
+  foto: FotoDelEbook | null | undefined, t: Tema, e: Estado,
+): void {
+  /* Sin encabezado: en los cuatro acomodos la foto llega al borde de arriba y
+     lo taparía. El número va en el rótulo, que se dibuja acá. Y la hoja se
+     abre SIEMPRE, sin preguntar por `doc.y`: cada lámina es una hoja entera. */
+  e.capitulo = `Lámina ${String(numero).padStart(2, "0")}`;
+  e.conEncabezado = false;
+  doc.addPage();
+  e.conEncabezado = true;
+
+  const rotulo = `LÁMINA ${String(numero).padStart(2, "0")}  ·  ${total}`;
+  /* Hasta dónde llega el papel: la franja del pie la dibujó `muebles`. */
+  const pisoDeLaHoja = HOJA.alto - ALTO_FRANJA;
+
+  const enElPapel = { rotulo: t.acento, titulo: t.tinta, texto: t.tinta, acento: t.acento };
+  const sobreElAcento = { rotulo: t.sobreAcento, titulo: t.sobreAcento, texto: t.sobreAcento, acento: t.sobreAcento };
+
+  /* ⚠️ `ficha` necesita la franja del costado, que sólo la tiene `manual`. Si
+     un molde sin franja pidiera este acomodo, el número enorme caería encima
+     del texto. Cae a `banda`, que es el de siempre. */
+  const acomodo = t.molde.lamina === "ficha" && t.molde.franja <= 0 ? "banda" : t.molde.lamina;
+
+  /* ── Foto a la izquierda, texto a la derecha ────────────────────────────── */
+  if (acomodo === "lado") {
+    const anchoFoto = Math.round(HOJA.ancho * HOJA_DE_LAMINA.ladoAncho);
+    fotoOBloque(doc, foto, t, 0, 0, anchoFoto, pisoDeLaHoja);
+
+    const x = anchoFoto + 34;
+    const ancho = HOJA.ancho - x - t.margen;
+    /* Centrado en el alto de la hoja: la columna es angosta y el texto es
+       corto, así que arriba de todo dejaría dos tercios de papel vacío. */
+    const alto = bloqueDeLamina(doc, l, rotulo, t, x, 0, ancho, enElPapel, true, LAMINA.tituloAngosto);
+    const y = Math.max(t.arriba, (pisoDeLaHoja - alto) / 2);
+    bloqueDeLamina(doc, l, rotulo, t, x, y, ancho, enElPapel, false, LAMINA.tituloAngosto);
+    return;
+  }
+
+  /* ── La foto tapa la hoja y el texto va encima, abajo ───────────────────── */
+  if (acomodo === "sangre") {
+    const puesta = fotoOBloque(doc, foto, t, 0, 0, HOJA.ancho, pisoDeLaHoja);
+    const desde = pisoDeLaHoja * HOJA_DE_LAMINA.sangreVeloDesde;
+    /* ⚠️ Más oscuro que el velo de la tapa, y se vio mirando: la foto la elige
+       Pexels y una de quesos sobre fondo blanco dejaba el texto blanco flotando
+       sobre gris claro. Acá el texto es LA hoja —no un título de tres
+       palabras— y tiene que leerse como sobre papel. */
+    if (puesta) velo(doc, desde, pisoDeLaHoja - desde, [[0, 0], [0.3, 0.78], [1, 0.95]]);
+
+    /* ⚠️ El acento corrido contra el velo, no el de la paleta: con foto clara
+       y velo medio, un bordó desaparece. Ver `acentoSobreLaFoto`. Sin foto no
+       hay velo y todo va sobre el bloque de acento. */
+    const colores = puesta
+      ? { rotulo: SOBRE_LA_FOTO.promesa, titulo: SOBRE_LA_FOTO.titulo, texto: SOBRE_LA_FOTO.promesa, acento: acentoSobreLaFoto(t) }
+      : sobreElAcento;
+
+    const ancho = t.ancho - 40;
+    const alto = bloqueDeLamina(doc, l, rotulo, t, t.margen, 0, ancho, colores, true);
+    /* Apoyado abajo, donde el velo es más oscuro; nunca más arriba de donde
+       arranca el velo, que es hasta donde se garantiza que se lee. */
+    const y = Math.max(desde + 24, pisoDeLaHoja - 44 - alto);
+    bloqueDeLamina(doc, l, rotulo, t, t.margen, y, ancho, colores);
+    return;
+  }
+
+  /* ── El número en la franja, la foto baja y el texto en la columna ──────── */
+  if (acomodo === "ficha") {
+    /* La foto cede como en `banda`: con una lámina corta se quedaba en un
+       tercio y abajo sobraba media hoja de papel. Crece hasta su máximo y baja
+       hasta su mínimo si el texto la necesita. */
+    const AIRE = 36;
+    const altoTexto = bloqueDeLamina(doc, l, rotulo, t, t.xTexto, 0, t.anchoTexto, enElPapel, true, LAMINA.tituloAngosto);
+    const fotoMax = Math.round(pisoDeLaHoja * HOJA_DE_LAMINA.fichaMax);
+    const fotoMin = Math.round(pisoDeLaHoja * HOJA_DE_LAMINA.fichaMin);
+    const altoFoto = Math.max(fotoMin, Math.min(fotoMax, pisoDeLaHoja - AIRE - altoTexto - AIRE));
+    fotoOBloque(doc, foto, t, 0, 0, HOJA.ancho, altoFoto);
+
+    const y = altoFoto + AIRE;
+    /* El número enorme, en la franja, a la altura del título. En acento sobre
+       el papel: es un adorno que también dice algo cierto. */
+    sinCortes(doc, () => {
+      doc.font(t.titulo).fontSize(LAMINA.numero).fillColor(t.acento)
+        .text(String(numero).padStart(2, "0"), t.margen, y + 10,
+          { width: t.molde.franja, lineBreak: false });
+    });
+    /* El rótulo sin el número, que ya está enorme al lado: "LÁMINA 01 · 3" al
+       lado de un 01 de sesenta puntos lo dice dos veces. */
+    bloqueDeLamina(doc, l, `DE ${total} LÁMINAS`, t, t.xTexto, y, t.anchoTexto, enElPapel, false, LAMINA.tituloAngosto);
+    return;
+  }
+
+  /* ── La foto arriba y todo lo demás abajo, en el papel (`banda`) ─────────── */
+  /* ⚠️ La única cuenta de esta hoja: la foto se lleva la mitad de arriba, y si
+     el texto no entra abajo, la foto cede hasta su mínimo. El mínimo es alto a
+     propósito —un tercio de la hoja—: más chica que eso ya no es "una foto
+     grande", y la lámina más grande posible entra igual (LAM-PDF). */
+  const altoTexto = bloqueDeLamina(doc, l, rotulo, t, t.margen, 0, t.ancho, enElPapel, true);
+  const AIRE = 40;
+  const fotoMax = Math.round(pisoDeLaHoja * HOJA_DE_LAMINA.bandaMax);
+  const fotoMin = Math.round(pisoDeLaHoja * HOJA_DE_LAMINA.bandaMin);
+  const disponible = pisoDeLaHoja - AIRE - altoTexto - AIRE;
+  const altoFoto = Math.max(fotoMin, Math.min(fotoMax, disponible));
+  fotoOBloque(doc, foto, t, 0, 0, HOJA.ancho, altoFoto);
+  bloqueDeLamina(doc, l, rotulo, t, t.margen, altoFoto + AIRE, t.ancho, enElPapel);
+}
+
 /**
  * La hoja de créditos.
  *
@@ -2250,6 +2497,10 @@ export function armarPDF(d: DatosDelEbook): Promise<Buffer> {
   if (d.recetas && d.recetas.length > 0) {
     for (const [i, r] of d.recetas.entries()) {
       hojaDeReceta(doc, r, i + 1, d.fotosCapitulos?.[i], t, e);
+    }
+  } else if (d.laminas && d.laminas.length > 0) {
+    for (const [i, l] of d.laminas.entries()) {
+      hojaDeLamina(doc, l, i + 1, d.laminas.length, d.fotosCapitulos?.[i], t, e);
     }
   } else {
     for (const [i, c] of d.capitulos.entries()) {

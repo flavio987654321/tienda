@@ -718,7 +718,7 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
   /* ⚠️ Y cerrar a mano la apaga. Sin esto, un capítulo abierto desde la previa
      no se puede cerrar: se vuelve a abrir solo y parece que el botón no anda. */
   check("SEL-K",
-    /onSeleccion\?\.\(null\);\n\s*setAbiertoAMano\(/.test(editor),
+    /onSeleccion\?\.\(null\);\r?\n\s*setAbiertoAMano\(/.test(editor),
     "cerrar un capítulo a mano apaga la selección");
 
   /* ── El salto al abrir un capítulo ───────────────────────────────────── */

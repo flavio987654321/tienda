@@ -532,15 +532,30 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                    la foto, dónde van rinde, tiempo y cocción—, no de columnas
                    ni de subtítulos. Ver `MiniaturaDeEstilo`. */
                 const esUnRecetario = p.ebook.opciones.formato === "recetario";
+                const esUnaInfografia = p.ebook.opciones.formato === "infografia";
+                /* Y en una infografía, una lámina: la foto grande y el texto corto. */
+                const muestra = esUnRecetario ? "receta" : esUnaInfografia ? "lamina" : "hoja";
+                const queHace = (x: EstiloDeEbook) =>
+                  esUnRecetario
+                    ? QUE_ES_CADA_ESTILO[x].receta
+                    : esUnaInfografia
+                      ? QUE_ES_CADA_ESTILO[x].lamina
+                      : QUE_ES_CADA_ESTILO[x].explica;
                 return (
                 <div className="mt-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 panel-oscuro:text-gray-400">
-                    {esUnRecetario ? "Cómo está armada cada receta" : "Cómo está armada la hoja"}
+                    {esUnRecetario
+                      ? "Cómo está armada cada receta"
+                      : esUnaInfografia
+                        ? "Cómo está armada cada lámina"
+                        : "Cómo está armada la hoja"}
                   </p>
                   <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
                     {esUnRecetario
                       ? "Cambia dónde va la foto y dónde van rinde, tiempo y cocción. Rehace el PDF con las recetas que ya están escritas. Es gratis."
-                      : "Cambiarlo rehace el PDF con lo que ya está escrito. Es gratis."}
+                      : esUnaInfografia
+                        ? "Cambia dónde va la foto y dónde va la idea. Rehace el PDF con las láminas que ya están escritas. Es gratis."
+                        : "Cambiarlo rehace el PDF con lo que ya está escrito. Es gratis."}
                   </p>
                   <div className="mt-1.5 grid grid-cols-4 gap-1.5 sm:max-w-[280px]">
                     {ESTILOS.map((x) => {
@@ -551,7 +566,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                           type="button"
                           onClick={() => !acc.deMentira && !puesto && acc.rehacerPDF(p, x)}
                           disabled={ocupado || acc.deMentira || puesto}
-                          title={acc.deMentira ? porQueApagado : (esUnRecetario ? QUE_ES_CADA_ESTILO[x].receta : QUE_ES_CADA_ESTILO[x].explica)}
+                          title={acc.deMentira ? porQueApagado : queHace(x)}
                           aria-pressed={puesto}
                           className={`rounded-lg border p-1 text-left transition-colors disabled:cursor-not-allowed ${
                             puesto
@@ -562,7 +577,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                           <span className="block overflow-hidden rounded ring-1 ring-black/10 panel-oscuro:ring-white/10">
                             <MiniaturaDeEstilo
                               estilo={x}
-                              muestra={esUnRecetario ? "receta" : "hoja"}
+                              muestra={muestra}
                               acento="#c2410c"
                               tinta="#0f172a"
                               papel="#FCFAF7"

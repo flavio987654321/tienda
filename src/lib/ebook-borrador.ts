@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import {
-  leerIndice, leerCapitulos, leerGruposDeRecetas, leerAvisoDeFotos,
+  leerIndice, partesEscritas, leerAvisoDeFotos,
   type CapituloPlaneado,
 } from "@/lib/ebook-ia";
-import { leerOpciones, type OpcionesDelEbook } from "@/lib/ebook-opciones";
+import { leerOpciones, unidadesElegidas, type OpcionesDelEbook } from "@/lib/ebook-opciones";
 
 /**
  * El borrador del ebook: lo que las tres rutas necesitan compartir.
@@ -103,19 +103,15 @@ type FilaCruda = {
 export function estadoDelBorrador(fila: FilaCruda): EstadoDelBorrador {
   const indice: CapituloPlaneado[] = leerIndice(fila.indice);
   const opciones = leerOpciones(fila.indice);
-  const esRecetario = opciones.formato === "recetario";
 
-  /* ⚠️ Un recetario guarda grupos de recetas donde un ebook de texto guarda
-     capítulos, y `leerCapitulos` no los reconoce: devolvería 0 y la barra se
-     quedaría en cero para siempre mientras la persona mira cómo se escribe su
-     recetario. Cada elemento de la lista es una llamada ya cobrada, en los dos
-     formatos, así que la cuenta de secciones hechas es la misma. */
-  const grupos = esRecetario ? leerGruposDeRecetas(fila.capitulos) : [];
-  const partes = esRecetario ? grupos.length : leerCapitulos(fila.capitulos).length;
-
-  /* Y de ahí a la unidad que la persona eligió. Ver `escritos` arriba. */
-  const escritos = esRecetario ? grupos.reduce((n, g) => n + g.length, 0) : partes;
-  const total = esRecetario ? opciones.recetas : indice.length;
+  /* ⚠️ Un recetario guarda grupos de recetas —y una infografía grupos de
+     láminas— donde un ebook de texto guarda capítulos, y `leerCapitulos` no los
+     reconoce: devolvería 0 y la barra se quedaría en cero para siempre
+     mientras la persona mira cómo se escribe. `partesEscritas` sabe leer los
+     tres, y devuelve las dos cuentas: las secciones hechas (una por llamada
+     cobrada) y la unidad que la persona eligió. Ver `escritos` arriba. */
+  const { partes, unidades: escritos } = partesEscritas(opciones.formato, fila.capitulos);
+  const total = unidadesElegidas(opciones, indice.length);
 
   return {
     estado: fila.estado,

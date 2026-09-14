@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
-  leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa, leerFotoDeTapa,
+  leerIndice, partesEscritas, leerPromesa, leerFotoDeTapa,
 } from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import { revisarTemario, sePuedeEditarElTemario } from "@/lib/ebook-temario";
@@ -44,10 +44,7 @@ function loQueSeEdita(fila: {
   capitulos: string;
 }) {
   const opciones = leerOpciones(fila.indice);
-  const esRecetario = opciones.formato === "recetario";
-  const escritos = esRecetario
-    ? leerGruposDeRecetas(fila.capitulos).length
-    : leerCapitulos(fila.capitulos).length;
+  const { partes: escritos } = partesEscritas(opciones.formato, fila.capitulos);
 
   return {
     titulo: fila.titulo,
@@ -164,13 +161,12 @@ export async function POST(req: NextRequest) {
   }
 
   const opciones = leerOpciones(fresco.indice);
-  const esRecetario = opciones.formato === "recetario";
   const hay = {
     capitulos: leerIndice(fresco.indice),
-    escritos: esRecetario
-      ? leerGruposDeRecetas(fresco.capitulos).length
-      : leerCapitulos(fresco.capitulos).length,
-    esRecetario,
+    escritos: partesEscritas(opciones.formato, fresco.capitulos).partes,
+    /* Un recetario y una infografía tienen las secciones repartidas según
+       lo que se eligió; sólo el ebook de texto deja agregar o quitar. */
+    porSecciones: opciones.formato !== "texto",
   };
 
   const revision = revisarTemario(body, hay);

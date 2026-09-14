@@ -28,8 +28,13 @@ import {
   leerGruposDeRecetas, todasLasRecetas, normalizarRecetas, cortarEnUnaIdea,
   leerAvisoDeFotos, conAvisoDeFotos, leerFotoDeTapa,
   INSTRUCCIONES_RECETAS, INSTRUCCIONES_INDICE_RECETARIO, LARGO_PASO,
-  type CapituloEscrito, type CapituloPlaneado,
+  INSTRUCCIONES_LAMINAS, INSTRUCCIONES_INDICE_INFOGRAFIA, esquemaDeLaminas, esquemaDelIndiceInfografia,
+  normalizarLaminas, leerGruposDeLaminas, todasLasLaminas, pedidoDeLaminas,
+  seccionesParaLaminas, laminasDeLaSeccion, seccionesElegidas, partesEscritas,
+  LAMINAS_POR_LLAMADA, PUNTOS_MAX, LARGO_TITULO_LAMINA, LARGO_TEXTO_LAMINA, LARGO_PUNTO,
+  type CapituloEscrito, type CapituloPlaneado, type Lamina,
 } from "./ebook-ia";
+import { OPCIONES_DE_FABRICA } from "./ebook-opciones";
 import { armarPDF, soloLoQueEntra } from "./ebook-pdf";
 import { CUPO_EBOOK } from "./cupo-ia";
 import { RAFAGA_CAPITULOS, RAFAGA_IA, MARGEN_DE_INTENTOS, GLOBAL_EBOOKS_DIARIO } from "./ia-digitales";
@@ -603,18 +608,19 @@ check("RUT-W",
   /* Y con la cantidad de secciones CLAVADA, no un rango: si el modelo devuelve
      menos, el recetario sale más chico de lo que se cobró. */
   check("REC-B",
-    /normalizarIndice\([\s\S]{0,120}esRecetario \? secciones/.test(empezar),
+    /normalizarIndice\([\s\S]{0,120}porSecciones \? secciones/.test(empezar),
     "un temario de recetario con menos secciones de las pedidas se rechaza entero");
 
   check("REC-C",
     /INSTRUCCIONES_RECETAS/.test(paso) &&
     /esquemaDeRecetas\(cuantasRecetas\)/.test(paso) &&
-    /normalizarRecetas\(bloque\.input, cuantasRecetas\)/.test(paso),
+    /normalizarRecetas\(entrada, cuantasRecetas\)/.test(paso),
     "la ruta del paso escribe recetas, con el tope de esa sección");
 
   /* ⚠️ `max_tokens` más alto para las recetas. Cortarse ahí no devuelve las
      que ya escribió: devuelve NADA, y se paga igual. */
-  check("REC-D", /max_tokens: esRecetario \? 4000 : 3000/.test(paso),
+  /* Desde el 14/09/26 cada formato arma su plan y el techo va adentro. */
+  check("REC-D", /maxTokens: 4000,\s*system: INSTRUCCIONES_RECETAS/.test(paso) && /max_tokens: plan\.maxTokens/.test(paso),
     "las recetas tienen más techo de salida que un capítulo");
 
   check("REC-E",
@@ -628,8 +634,8 @@ check("RUT-W",
      se escribe en 4 secciones, así que contando secciones la barra le decía
      "2 de 4" a alguien que había elegido 10. */
   check("REC-F",
-    /leerGruposDeRecetas\(fila\.capitulos\)/.test(borrador) &&
-    /grupos\.reduce\(\(n, g\) => n \+ g\.length, 0\)/.test(borrador) &&
+    /partesEscritas\(opciones\.formato, fila\.capitulos\)/.test(borrador) &&
+    /unidadesElegidas\(opciones, indice\.length\)/.test(borrador) &&
     /^\s+opciones,$/m.test(borrador),
     "el borrador cuenta recetas —no secciones— y devuelve la elección entera");
 
@@ -836,7 +842,7 @@ check("PAN-E5",
    va a aparecer colgado del producto. Si no, "podés cerrar" deja a alguien sin
    saber dónde mirar después. */
 check("PAN-E2",
-  /queda guardado apenas/.test(ventana) && /colgado del producto/.test(ventana),
+  /se guarda apenas/.test(ventana) && /colgado del producto/.test(ventana),
   "y se dice que cada parte se guarda sola y dónde va a aparecer el PDF");
 
 /* ⚠️ El botón para retomar a mano SIGUE EXISTIENDO, aunque ya no se nombre en
@@ -1257,6 +1263,172 @@ check("FOT-L",
   /buscarFotos\(faltan, como\)/.test(armar)
   && /buscarFoto\(tapa\.frase \|\| ebook\.titulo, \{ alta: true, como \}\)/.test(armar),
   "y el armado le pasa el anotador a las dos búsquedas");
+
+/* ── La infografía, de punta a punta ───────────────────────────────────── */
+
+{
+  /* ⚠️ EL QUE CUIDA QUE NO SE ENTREGUE OTRA COSA, para el tercer formato. Las
+     tres rutas tienen que mirar el formato guardado; si una se lo olvida, se
+     cobra una infografía y sale un ebook de texto. */
+  check("LAM-A",
+    /INSTRUCCIONES_INDICE_INFOGRAFIA/.test(empezar) &&
+    /esquemaDelIndiceInfografia\(secciones\)/.test(empezar) &&
+    /seccionesElegidas\(opciones\)/.test(empezar),
+    "la ruta del temario pide secciones cuando es una infografía, con la cantidad clavada");
+
+  check("LAM-B",
+    /INSTRUCCIONES_LAMINAS/.test(paso) &&
+    /esquemaDeLaminas\(cuantasLaminas\)/.test(paso) &&
+    /normalizarLaminas\(entrada, cuantasLaminas\)/.test(paso) &&
+    /laminasDeLaSeccion\(opciones\.laminas, sigue\.numero\)/.test(paso),
+    "la ruta del paso escribe láminas, con el tope de esa sección");
+
+  check("LAM-C",
+    /leerGruposDeLaminas\(ebook\.capitulos\)/.test(armar) &&
+    /laminas\.map\(\(l\) => l\.foto \|\| l\.titulo\)/.test(armar) &&
+    /laminas\.map\(\(l\) => l\.fotoElegida \?\? null\)/.test(armar) &&
+    /laminas: esInfografia \? laminas : undefined/.test(armar) &&
+    /\["LÁMINA", "LÁMINAS"\]/.test(armar),
+    "la ruta del PDF pasa las láminas, busca UNA FOTO POR LÁMINA y el sello dice láminas");
+
+  /* ── Cuántas por sección ────────────────────────────────────────────── */
+  check("LAM-D",
+    seccionesParaLaminas(10) === 2 && seccionesParaLaminas(20) === 4 && seccionesParaLaminas(30) === 6
+    && seccionesParaLaminas(30) <= CAPITULOS_MAX,
+    "10 / 20 / 30 láminas son 2 / 4 / 6 secciones, adentro del tope del temario");
+
+  check("LAM-E",
+    laminasDeLaSeccion(10, 1) === 5 && laminasDeLaSeccion(10, 2) === 5 && laminasDeLaSeccion(10, 3) === 0
+    && laminasDeLaSeccion(12, 3) === 2,
+    "cada sección escribe cinco y la última se queda con el resto");
+
+  /* ── Lo que vuelve del modelo ───────────────────────────────────────── */
+  const lamina = (n: number, extra: Partial<Lamina> = {}): Lamina => ({
+    titulo: `Lámina ${n}`, texto: "Una idea explicada en dos frases. Y qué hacer con ella.",
+    puntos: ["Un dato", "Otro dato"], foto: "una escena", ...extra,
+  });
+
+  const cinco = normalizarLaminas({ laminas: [1, 2, 3, 4, 5, 6].map((n) => lamina(n)) });
+  check("LAM-F", cinco.length === LAMINAS_POR_LLAMADA,
+    "una sección no guarda más láminas que las que escribe una llamada");
+
+  check("LAM-G",
+    normalizarLaminas({ laminas: [lamina(1), lamina(2), lamina(3)] }, 1).length === 1,
+    "una sección que pidió una lámina no guarda las tres que mandó el modelo");
+
+  /* ⚠️ Sin título o sin texto la lámina se DESCARTA entera: media hoja en
+     blanco adentro de algo vendido. Y los datos sí pueden faltar. */
+  const limadas = normalizarLaminas({
+    laminas: [
+      lamina(1, { titulo: "" }),
+      lamina(2, { texto: "" }),
+      lamina(3, { puntos: [] }),
+      lamina(4, { puntos: ["a", "b", "c", "d", "e"] }),
+    ],
+  });
+  check("LAM-H",
+    limadas.length === 2 && limadas[0].puntos.length === 0 && limadas[1].puntos.length === PUNTOS_MAX,
+    "sin título o sin texto la lámina se descarta; sin datos vale, y los datos de más se cortan");
+
+  /* Los topes son los del molde: lo que se pase se corta en una idea entera,
+     no en el carácter que toca. */
+  const larga = normalizarLaminas({
+    laminas: [lamina(1, {
+      titulo: "Una idea. " + "palabra ".repeat(30),
+      texto: "Frase corta. ".repeat(40),
+      puntos: ["dato ".repeat(40)],
+    })],
+  })[0];
+  check("LAM-I",
+    larga.titulo.length <= LARGO_TITULO_LAMINA && larga.texto.length <= LARGO_TEXTO_LAMINA
+    && larga.puntos[0].length <= LARGO_PUNTO && larga.texto.endsWith("."),
+    "el título, el texto y cada dato se recortan a su tope, terminando en una idea");
+
+  /* ── Lo guardado ───────────────────────────────────────────────────── */
+  const dosGruposL = JSON.stringify([[lamina(1), lamina(2), lamina(3), lamina(4), lamina(5)], [lamina(6)]]);
+  check("LAM-J",
+    leerGruposDeLaminas(dosGruposL).length === 2 &&
+    todasLasLaminas(dosGruposL).length === 6 &&
+    todasLasLaminas(dosGruposL)[5].titulo === "Lámina 6",
+    "las láminas se leen agrupadas por sección y se aplanan en orden");
+
+  check("LAM-K",
+    leerGruposDeLaminas(JSON.stringify([[lamina(1)], [], [lamina(3)]])).length === 1 &&
+    leerGruposDeLaminas("{roto").length === 0 &&
+    leerGruposDeLaminas(null).length === 0,
+    "un grupo vacío corta la cuenta, y un guardado roto devuelve una lista vacía");
+
+  /* La foto elegida a mano sobrevive a la relectura: sin esto se perdería en
+     el primer PDF que se rehaga. */
+  const conFoto = JSON.stringify([[lamina(1, {
+    fotoElegida: { id: "1", url: "https://images.pexels.com/photos/1/x.jpeg", fotografo: "Alguien", enlace: "https://www.pexels.com/photo/1/" },
+  })]]);
+  check("LAM-L",
+    todasLasLaminas(conFoto)[0].fotoElegida?.fotografo === "Alguien",
+    "la foto elegida de una lámina se conserva al releer lo guardado");
+
+  /* ── Lo que se le dice al modelo ───────────────────────────────────── */
+  check("LAM-M",
+    INSTRUCCIONES_LAMINAS.includes(`${LARGO_TEXTO_LAMINA} caracteres`)
+    && INSTRUCCIONES_LAMINAS.includes(`${LARGO_TITULO_LAMINA}`)
+    && INSTRUCCIONES_LAMINAS.includes(`${LARGO_PUNTO} caracteres`)
+    && INSTRUCCIONES_INDICE_INFOGRAFIA.includes("exactamente"),
+    "los prompts le dicen al modelo los topes de cada campo y que las secciones son exactas");
+
+  /* Las reglas comunes SÍ valen acá: una infografía es donde más tienta
+     inventar un porcentaje. */
+  check("LAM-N",
+    INSTRUCCIONES_LAMINAS.includes("Estadísticas, porcentajes") && INSTRUCCIONES_LAMINAS.includes("Sin emojis"),
+    "las láminas llevan las reglas comunes: nada de estadísticas inventadas ni emojis");
+
+  const esquemaL = esquemaDeLaminas(2);
+  check("LAM-O",
+    esquemaL.properties.laminas.minItems === 2 && esquemaL.properties.laminas.maxItems === 2
+    && esquemaL.properties.laminas.items.properties.puntos.maxItems === PUNTOS_MAX
+    && esquemaDelIndiceInfografia(4).properties.capitulos.minItems === 4
+    && esquemaDelIndiceInfografia(4).properties.capitulos.maxItems === 4,
+    "los esquemas clavan la cantidad de láminas y de secciones");
+
+  /* El pedido de una sección lleva el temario entero y dice cuál toca. */
+  const pedidoL = pedidoDeLaminas("Guía", "de qué se trata", null, [
+    { titulo: "Antes", resumen: "lo previo", foto: "x" },
+    { titulo: "Después", resumen: "lo que sigue", foto: "y" },
+  ], 2, 5);
+  check("LAM-P",
+    pedidoL.includes("Te toca la sección 2") && pedidoL.includes("Escribí 5 láminas")
+    && pedidoL.includes("1. Antes") && pedidoL.includes("<tema>"),
+    "el pedido de láminas dice qué sección toca, cuántas van, y lleva el temario entero");
+
+  /* ── La cuenta común de los tres formatos ──────────────────────────── */
+  const recetaL = (n: number) => ({
+    titulo: `Receta ${n}`, descripcion: "d", rinde: "2", tiempo: "10 minutos", coccion: "Sin horno",
+    ingredientes: [{ nombre: "harina", cantidad: "500 g" }, { nombre: "sal", cantidad: "" }],
+    pasos: [{ titulo: "Uno", texto: "Mezclá todo." }, { titulo: "Dos", texto: "Cociná." }],
+    tip: "", foto: "pan",
+  });
+  const dosGruposR = JSON.stringify([[recetaL(1), recetaL(2), recetaL(3)], [recetaL(4)]]);
+  const capituloL = () => ({
+    titulo: "Capítulo",
+    bloques: [
+      { tipo: "subtitulo", texto: "Un subtítulo" },
+      { tipo: "parrafo", texto: "Un párrafo con bastante texto adentro." },
+      { tipo: "parrafo", texto: "Otro párrafo con bastante texto adentro." },
+    ],
+  });
+  check("LAM-Q",
+    partesEscritas("infografia", dosGruposL).partes === 2 &&
+    partesEscritas("infografia", dosGruposL).unidades === 6 &&
+    partesEscritas("recetario", dosGruposR).partes === 2 &&
+    partesEscritas("recetario", dosGruposR).unidades === 4 &&
+    partesEscritas("texto", JSON.stringify([capituloL(), capituloL()])).unidades === 2,
+    "partesEscritas cuenta secciones y unidades en los tres formatos");
+
+  check("LAM-R",
+    seccionesElegidas({ ...OPCIONES_DE_FABRICA, formato: "infografia", laminas: 30 }) === 6 &&
+    seccionesElegidas({ ...OPCIONES_DE_FABRICA, formato: "recetario", recetas: 10 }) === 4 &&
+    seccionesElegidas({ ...OPCIONES_DE_FABRICA, formato: "texto" }) === 0,
+    "seccionesElegidas sabe repartir los dos formatos por hoja y devuelve cero en texto");
+}
 
 elPDF().then(() => {
   console.log(fallos === 0

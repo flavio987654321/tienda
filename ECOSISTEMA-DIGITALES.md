@@ -2945,8 +2945,11 @@ sólo se ven en un ebook largo y ninguno lo hubiera encontrado una prueba corta:
     que avance el contador, la pantalla vuelve a mostrar el botón de seguir a
     mano (PAN-P2). Sin eso, un ebook trabado se vería "escribiéndose" para
     siempre y sin salida.
-- 🔲 **Formato infografía**: foto a sangre por hoja con el texto encima. Es el
-  barato: **usa el texto que ya se genera, tal cual**.
+- ✅ ~~**Formato infografía**: foto a sangre por hoja con el texto encima. Es el
+  barato: **usa el texto que ya se genera, tal cual**.~~ HECHO el 14/09/26, y
+  **no como decía acá**: lo "barato" ya lo hacía `cartel`, y lo que faltaba era
+  un formato de verdad, una idea por hoja. Ver *La infografía: el tercer
+  formato*, al final del documento.
 - ✅ ~~**Más de un diseño de hoja.**~~ HECHO el 09/09/26. Ver *Los cuatro moldes*
   más abajo.
 - ✅ ~~**Poder leer y corregir EL TEXTO.**~~ HECHO el 09/09/26, para el ebook de
@@ -4583,8 +4586,9 @@ No es una lista de cortesía: son los lugares donde un error se cobra caro.
   dispara con `.click()`, y a ese botón se llega con el tabulador. Los del
   panel digital van con `sr-only`, que es otro caso: ahí la etiqueta ES el
   botón y el campo tiene que seguir siendo enfocable. Ninguno está roto.
-- 🔲 **La etiqueta "Muy pronto" de los formatos es código inalcanzable**: los dos
-  formatos que existen están listos. Se deja como guarda para el tercero.
+- 🔲 **La etiqueta "Muy pronto" de los formatos es código inalcanzable**: los
+  tres formatos que existen están listos (el tercero, la infografía, desde el
+  14/09/26). Se deja como guarda para el que venga.
 
 ## Los cuatro moldes de la hoja — 09/09/26
 
@@ -4977,3 +4981,140 @@ siendo `NODE_ENV`, que borra el bloque del build; el `?ejemplo=1` sólo saca del
 camino algo que estorbaba. Va un chequeo nuevo (TXT-AJ3) sobre la otra punta, de
 donde sale el dato: si alguien deja sólo `conEjemplo`, la tarjeta inventada
 queda a un parámetro de distancia de los productos reales de cualquiera.
+
+---
+
+## La infografía: el tercer formato — 14/09/26
+
+### Qué es, y para quién
+
+Hoy la IA arma dos clases de ebook: el de **texto** (capítulos de 900
+palabras, para leer) y el **recetario** (una receta por hoja, con campos). La
+infografía es la tercera: **una idea por hoja**. Cada hoja tiene una foto
+grande, un título corto que es la idea ("Regar de noche es un error"), dos o
+tres frases que la explican y hasta tres datos cortos. Se hojea en el celular
+como diapositivas, no se lee como un libro.
+
+Es el formato del **lead magnet y del bono**: "10 errores al arrancar con
+airfryer", "Checklist para tu primer viaje en moto", "15 posturas para el dolor
+de espalda". Lo que se regala o se vende barato para enganchar, porque se lee
+en cinco minutos y se ve lindo. En el mercado de productos digitales son
+muchísimos los que venden esto y no un libro.
+
+### ⚠️ Por qué es un FORMATO y no un quinto molde
+
+La nota del 07/09 la tenía como *"foto a sangre por hoja con el texto encima,
+el barato: usa el texto que ya se genera tal cual"*. Esa nota es de antes de los
+cuatro moldes: **`cartel` ya hace eso** —tapa a sangre, portadilla a sangre con
+el título encima—. Lo que quedaba de la nota era poner la foto detrás de cada
+hoja de texto corrido, y eso son 400 palabras sobre un velo (ilegible en el
+celular) y una foto por hoja (veinte fotos `large` contra el techo de 4,5 MB).
+
+Una infografía de verdad **no usa el texto tal cual**: una idea por hoja son
+textos cortos, y eso hay que pedírselo al modelo. Cambia lo que se le pide, así
+que es un formato como el recetario: se elige antes de generar y gasta una
+generación. Decidido el 14/09/26, con la explicación en la mano: *"si lo vamos
+a hacer lo vamos a hacer bien, no importa si tarda más"*.
+
+### Las decisiones
+
+- **La unidad es la lámina.** Título (hasta 70 caracteres), texto (hasta 280,
+  cortado en una idea entera como los pasos de receta), hasta 3 datos cortos
+  (hasta 80 cada uno), y la frase para buscar la foto. La foto elegida a mano
+  vive adentro de la lámina, igual que en la receta y por el mismo motivo.
+- **Los topes son del molde y no perdonan**, como en la receta: una lámina es
+  una hoja y la hoja no se estira. Pero al revés que la receta, **la lámina más
+  grande posible entra en las cuatro hojas por construcción** —no hay
+  ingredientes variables—, así que no hace falta la medición HOLGADA / APRETADA:
+  hay UNA medida de texto, y lo único que cede es la foto de `libro` y de
+  `manual`, que se achica hasta un tercio de la hoja si el texto la necesita y
+  crece hasta más de la mitad si sobra. Lo que sí hay es un candado (LAM-PDF,
+  ocho variantes: cuatro moldes, con y sin foto) que arma la lámina más grande
+  posible y verifica que salga UNA hoja.
+- **Cinco por llamada** (`LAMINAS_POR_LLAMADA`). Una lámina son unos 170 tokens
+  de salida; cinco caben holgadas en una llamada y no se degrada la quinta como
+  se degradaría un segundo capítulo. Se mide con la primera generación real.
+- **10 / 20 / 30 láminas**, elige quien vende, y va en la tapa como "10
+  LÁMINAS". De fábrica 10: una guía rápida es corta. Con cinco por llamada son
+  2 / 4 / 6 secciones, adentro de `CAPITULOS_MAX`.
+- **El temario tiene secciones**, como el recetario: "Antes de empezar",
+  "Errores comunes", "Lo que nadie te dice". La hoja de contenido lista las
+  láminas, no las secciones.
+- **Se guarda igual que el recetario**: grupos por sección en la misma columna
+  `capitulos`, cada elemento una llamada cobrada. El bucle de las tres rutas no
+  cambia.
+- **Los cuatro moldes le cambian la hoja**, con un campo `lamina` en `Molde`:
+  `libro` → foto de banda arriba y el texto en el papel; `compacto` → la foto
+  ocupa la mitad izquierda a toda altura y el texto va a la derecha; `manual`
+  → el número enorme en la franja del costado, foto baja y el texto en la
+  columna angosta; `cartel` → la foto tapa la hoja y el texto va encima del
+  velo, abajo.
+- **El lector descarta la lámina entera** sin título o sin texto —media hoja en
+  blanco adentro de algo vendido—, y por eso el editor avisa antes de guardar,
+  con la misma regla. Los datos pueden ir vacíos.
+
+### Las piezas, en orden — HECHAS (14/09/26), menos la última
+
+- ✅ `ebook-opciones`: el formato, la cantidad, cómo se llama cada cosa. Y dos
+  funciones que faltaban para no seguir escribiendo ternarios: `unidadesElegidas`
+  (cuántas cosas tiene que tener el ebook terminado, según el formato) acá, y
+  `seccionesElegidas` en `ebook-ia`.
+- ✅ `ebook-ia`: la lámina, los topes, los dos prompts, los esquemas, el lector.
+  Y **`partesEscritas`**, que cuenta secciones y unidades en los tres formatos:
+  hasta hoy esa cuenta estaba escrita siete veces con un `esRecetario ? … : …`
+  cada una, y el tercer formato la convertía en siete ternarios de tres ramas.
+- ✅ `ebook-estilos`: el campo `lamina` del molde, su explicación por estilo y
+  `HOJA_DE_LAMINA` (fracciones de la hoja, para el archivo, la miniatura y la
+  previa).
+- ✅ `ebook-pdf`: `hojaDeLamina` con los cuatro acomodos, en UNA función de
+  bloque de texto con los colores y el ancho como parámetros —escrita cuatro
+  veces, el día que se toque el aire del título en `cartel` los otros tres se
+  quedan viejos—. La hoja de contenido y el sello dicen "LÁMINAS".
+- ✅ `ebook-borrador`: cuenta con `partesEscritas` y `unidadesElegidas`.
+- ✅ Las cinco rutas. `paso` ya no tiene tres ternarios por línea: arma un
+  `plan` por formato —instrucciones, esquema, pedido, lector y mensaje de
+  error— y la llamada al modelo es una sola.
+- ✅ El editor: `infografia-texto` (revisa con las reglas del lector y avisa
+  antes de guardar) e `InfografiaTexto` (cada campo con su contador a la vista,
+  los datos se mueven y se borran sin mínimo). En `EditorClient` el guardado de
+  los formatos por hoja salió a `guardarPorHoja`, uno para los dos.
+- ✅ La previa (`VistaPreviaInfografia`), la miniatura (`LaLamina`) y la tarjeta.
+- ✅ El modal: la tercera tarjeta, en tres columnas, y el selector de 10 / 20 /
+  30 láminas.
+- ✅ Los chequeos: 8 LAM-PDF, 5 EST-L*, 18 LAM-* en `ebook-ia`, 5 OPC-L* y el
+  archivo nuevo `infografia-texto.check` con 24. Los 91 archivos pasan.
+- 🔲 **La primera generación real, medida.** Cuesta centavos y se hace a pedido:
+  hay que anotar tokens de salida por lámina, segundos por llamada y dólares,
+  y con eso confirmar o corregir `LAMINAS_POR_LLAMADA` y el `max_tokens` de
+  3.000.
+- 🔲 **Mirar la pantalla.** No hay cuenta digital para entrar en local desde
+  acá: el modal con las tres tarjetas, la miniatura de la lámina y el editor
+  los tiene que ver el dueño en su navegador, en los tres anchos.
+
+### Lo que apareció haciéndolo
+
+- ⚠️ **Los créditos se metían en la última lámina.** En `compacto` el texto va
+  centrado y en `manual` es corto, así que abajo sobra papel y la caja de
+  créditos lo tomaba como lugar libre: se dibujaba encima de la foto de la
+  izquierda. Se vio con el candado LAM-PDF, que esperaba una hoja más y no la
+  encontraba. Ahora cada lámina deja el cursor al pie de la hoja: lo que siga
+  abre hoja nueva.
+- ⚠️ **El velo de `cartel` era flojo para una lámina.** Con la tapa alcanza,
+  porque es un título de tres palabras; acá el texto ES la hoja, y con una
+  foto clara (se probó con quesos sobre fondo blanco) el blanco flotaba sobre
+  gris. El velo de la lámina arranca antes y llega más oscuro que el de la
+  tapa.
+- **La foto cede, y también crece.** Con la foto fija en la mitad, `manual`
+  dejaba media hoja de papel vacío con una lámina corta. Ahora `libro` y
+  `manual` miden el bloque de texto y le dan a la foto todo lo que sobra, entre
+  un tercio y algo más de la mitad de la hoja.
+- **Las hojas se miraron de verdad**, no sólo se contaron: se dibujaron los
+  cuatro PDF con pdf.js adentro del Chromium de Playwright (no había
+  `pdftoppm` en la máquina) y se revisaron a ojo. El guion quedó en el
+  scratchpad de la sesión, no en el repo.
+- **`SEL-K` de `ebook-texto.check` fallaba desde antes** en esta máquina:
+  `EbookTexto.tsx` está en CRLF en la copia de trabajo y el regex pedía `\n`
+  pelado. Ahora acepta `\r?\n`.
+- El ejemplo de desarrollo (`?ejemplo=1`) sigue siendo un ebook de texto: para
+  ver el editor de láminas con contenido hace falta una infografía generada de
+  verdad.

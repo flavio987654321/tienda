@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2, Image as ImageIcon } from "lucide-react";
 import EbookTexto from "../../EbookTexto";
 import VistaPreviaEbook from "../../VistaPreviaEbook";
-import type { CapituloEscrito, Receta } from "@/lib/ebook-ia";
+import type { CapituloEscrito, Receta, Lamina, FotoElegida } from "@/lib/ebook-ia";
 import RecetarioTexto from "../../RecetarioTexto";
 import VistaPreviaRecetario from "../../VistaPreviaRecetario";
+import InfografiaTexto from "../../InfografiaTexto";
+import VistaPreviaInfografia from "../../VistaPreviaInfografia";
 import type { ColoresDeTapa, ModoDelEbook } from "@/lib/ebook-colores";
 import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
 import ElegirFoto from "../../ElegirFoto";
@@ -57,6 +59,7 @@ export default function EditorDeEbook({
   autor,
   capitulos: guardadosIniciales,
   recetas: recetasIniciales,
+  laminas: laminasIniciales,
   fotos: fotosIniciales,
   tapa: tapaInicial,
   total,
@@ -79,6 +82,11 @@ export default function EditorDeEbook({
    * Ver `RecetarioTexto`.
    */
   recetas?: Receta[][];
+  /**
+   * Las láminas, agrupadas por sección, cuando esto es una infografía. La
+   * misma regla: su presencia decide el editor, y nunca viene con las otras.
+   */
+  laminas?: Lamina[][];
   /** La foto de cada capítulo: con qué buscarla y cuál se eligió. */
   fotos: FotoDelCapitulo[];
   /** La de la tapa, que vive en la raíz del índice. */
@@ -126,11 +134,15 @@ export default function EditorDeEbook({
      cada receta vive ADENTRO de la receta, así que al guardar hay que volver a
      pegarla. Ver `guardar`. */
   const esRecetario = !!recetasIniciales;
+  const esInfografia = !!laminasIniciales;
 
-  /* El molde del estilo elegido, para las dos previas. Ver `ebook-estilos`. */
+  /* El molde del estilo elegido, para las tres previas. Ver `ebook-estilos`. */
   const molde = moldeDe(estilo);
   const [recetasGuardadas, setRecetasGuardadas] = useState<Receta[][]>(recetasIniciales ?? []);
   const [recetas, setRecetas] = useState<Receta[][]>(recetasIniciales ?? []);
+  /* Y la infografía, con el mismo molde que el recetario. */
+  const [laminasGuardadas, setLaminasGuardadas] = useState<Lamina[][]>(laminasIniciales ?? []);
+  const [laminas, setLaminas] = useState<Lamina[][]>(laminasIniciales ?? []);
 
 
   const [guardando, setGuardando] = useState(false);
@@ -197,31 +209,41 @@ export default function EditorDeEbook({
   }, [productoId]);
 
   /**
-   * Las fotos vuelven a su lugar adentro de cada receta.
+   * Las fotos vuelven a su lugar adentro de cada receta o lámina.
    *
    * ⚠️ En un ebook de texto las fotos viajan aparte —viven en el índice— pero
-   * en un recetario viven ADENTRO de la receta, porque ahí la unidad es la
-   * receta y el índice tiene secciones. La pantalla las maneja en una lista
-   * aparte, todas seguidas, así que acá se vuelven a pegar por posición.
+   * en un recetario y en una infografía viven ADENTRO de la unidad, porque ahí
+   * la unidad es la hoja y el índice tiene secciones. La pantalla las maneja
+   * en una lista aparte, todas seguidas, así que acá se vuelven a pegar por
+   * posición. Genérica porque las dos unidades llevan los mismos dos campos.
    */
-  const conSusFotos = useCallback((grupos: Receta[][]): Receta[][] => {
+  const conSusFotos = useCallback(<U extends { foto: string; fotoElegida?: FotoElegida | null }>(grupos: U[][]): U[][] => {
     let n = 0;
-    return grupos.map((g) => g.map((r) => {
+    return grupos.map((g) => g.map((u) => {
       const f = fotos[n++];
-      return { ...r, foto: f?.frase ?? r.foto, fotoElegida: f?.elegida ?? null };
+      return { ...u, foto: f?.frase ?? u.foto, fotoElegida: f?.elegida ?? null };
     }));
   }, [fotos]);
 
-  const guardarRecetario = useCallback(async (corregidas: Receta[][]) => {
+  /**
+   * Guardar un formato por hoja —recetario o infografía—, que es el mismo
+   * viaje con otro cuerpo: se manda, se marca como guardado, y si el PDF ya
+   * existía se rehace. Escrito una vez para los dos; lo que cambia viaja como
+   * parámetro.
+   */
+  const guardarPorHoja = useCallback(async (
+    cuerpo: Record<string, unknown>,
+    marcarGuardado: () => void,
+    resumen: string,
+    queEs: string,
+  ) => {
     if (enVuelo.current) return;
-    const conFotos = conSusFotos(corregidas);
 
     if (deMentira) {
-      setRecetasGuardadas(conFotos);
-      setRecetas(conFotos);
+      marcarGuardado();
       setFotosGuardadas(fotos);
       setTapaGuardada(tapa);
-      setListo(`Se habría guardado: ${conFotos.flat().length} recetas. Y después se rehacía el PDF.`);
+      setListo(`Se habría guardado: ${resumen}. Y después se rehacía el PDF.`);
       return;
     }
 
@@ -231,16 +253,15 @@ export default function EditorDeEbook({
     setListo(null);
 
     try {
-      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { recetas: conFotos, tapa });
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { ...cuerpo, tapa });
       if (!vivo.current) return;
 
       if (!ok) {
-        setError(typeof datos.error === "string" ? datos.error : "No pudimos guardar las recetas.");
+        setError(typeof datos.error === "string" ? datos.error : `No pudimos guardar ${queEs}.`);
         return;
       }
 
-      setRecetasGuardadas(conFotos);
-      setRecetas(conFotos);
+      marcarGuardado();
       setFotosGuardadas(fotos);
       setTapaGuardada(tapa);
 
@@ -275,7 +296,27 @@ export default function EditorDeEbook({
       enVuelo.current = false;
       if (vivo.current) setGuardando(false);
     }
-  }, [pedir, router, deMentira, fotos, tapa, conSusFotos]);
+  }, [pedir, router, deMentira, fotos, tapa]);
+
+  const guardarRecetario = useCallback(async (corregidas: Receta[][]) => {
+    const conFotos = conSusFotos(corregidas);
+    await guardarPorHoja(
+      { recetas: conFotos },
+      () => { setRecetasGuardadas(conFotos); setRecetas(conFotos); },
+      `${conFotos.flat().length} recetas`,
+      "las recetas",
+    );
+  }, [guardarPorHoja, conSusFotos]);
+
+  const guardarInfografia = useCallback(async (corregidas: Lamina[][]) => {
+    const conFotos = conSusFotos(corregidas);
+    await guardarPorHoja(
+      { laminas: conFotos },
+      () => { setLaminasGuardadas(conFotos); setLaminas(conFotos); },
+      `${conFotos.flat().length} láminas`,
+      "las láminas",
+    );
+  }, [guardarPorHoja, conSusFotos]);
 
   const guardar = useCallback(async (corregidos: CapituloEscrito[]) => {
     if (enVuelo.current) return;
@@ -480,13 +521,33 @@ export default function EditorDeEbook({
           </div>
 
           <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
-            {/* ⚠️ Dos editores y no uno con `if` adentro: un recetario son
-                campos —ingredientes con su cantidad, pasos numerados, fichas— y
-                un ebook de texto son párrafos. Mezclados en un componente, cada
-                arreglo de uno hay que probarlo en los dos. Lo que SÍ comparten
-                —la hoja de la derecha, la selección, el guardado, el aviso de
-                salida— está afuera de los dos. */}
-            {esRecetario ? (
+            {/* ⚠️ Tres editores y no uno con `if` adentro: un recetario son
+                campos —ingredientes con su cantidad, pasos numerados, fichas—,
+                una infografía son láminas y un ebook de texto son párrafos.
+                Mezclados en un componente, cada arreglo de uno hay que
+                probarlo en los tres. Lo que SÍ comparten —la hoja de la
+                derecha, la selección, el guardado, el aviso de salida— está
+                afuera. */}
+            {esInfografia ? (
+              <InfografiaTexto
+                guardadas={laminasGuardadas}
+                laminas={laminas}
+                onLaminas={setLaminas}
+                fotos={fotos}
+                onFotos={setFotos}
+                otrosCambios={
+                  JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
+                  || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
+                }
+                seleccion={seleccion}
+                onSeleccion={setSeleccion}
+                guardando={guardando}
+                error={error}
+                onCambio={setSinGuardar}
+                onGuardar={guardarInfografia}
+                onVolver={() => router.push("/digitales/productos")}
+              />
+            ) : esRecetario ? (
               <RecetarioTexto
                 guardadas={recetasGuardadas}
                 recetas={recetas}
@@ -554,7 +615,21 @@ export default function EditorDeEbook({
                 metros, y sin esto la columna de la izquierda quedaría al lado
                 de una tira de tres pantallas de alto. */}
             <div className="max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl">
-              {esRecetario ? (
+              {esInfografia ? (
+                <VistaPreviaInfografia
+                  titulo={titulo}
+                  promesa={promesa}
+                  autor={autor}
+                  laminas={laminas.flat()}
+                  fotos={fotos}
+                  tapa={tapa}
+                  paleta={paleta}
+                  molde={molde}
+                  modo={modo}
+                  seleccion={seleccion}
+                  onTocar={tocar}
+                />
+              ) : esRecetario ? (
                 <VistaPreviaRecetario
                   titulo={titulo}
                   promesa={promesa}

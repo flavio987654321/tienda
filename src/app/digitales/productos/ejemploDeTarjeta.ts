@@ -42,7 +42,7 @@ export const PRODUCTO_DE_EJEMPLO: ProductoEnPantalla = {
   ebook: {
     estado: "LISTO",
     titulo: "Vendé tu conocimiento: de la idea al primer cobro",
-    opciones: { formato: "texto", estilo: "libro", tema: "claro", paleta: "", recetas: 20 },
+    opciones: { formato: "texto", estilo: "libro", tema: "claro", paleta: "", recetas: 20, laminas: 10 },
     capitulos: [
       { titulo: "Qué vendés en realidad, y por qué no es el archivo", listo: true },
       { titulo: "El precio no se calcula, se prueba", listo: true },

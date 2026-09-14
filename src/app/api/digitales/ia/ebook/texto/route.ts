@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
-  leerCapitulos, leerIndice, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas,
+  leerCapitulos, leerIndice, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas, leerGruposDeLaminas,
 } from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import {
   revisarTexto, sePuedeEditarElTexto, pegarLasFotos, pegarLaTapa,
 } from "@/lib/ebook-texto";
 import { revisarRecetas } from "@/lib/recetario-texto";
+import { revisarLaminas } from "@/lib/infografia-texto";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
 
 export const runtime = "nodejs";
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     DOS FORMATOS, UNA SOLA PUERTA
+     TRES FORMATOS, UNA SOLA PUERTA
      ══════════════════════════════════════════════════════════════════════════
 
      Acá había un CORTE: un recetario se rechazaba con "todavía no se corrige a
@@ -136,28 +137,38 @@ export async function POST(req: NextRequest) {
      generación entera**. Y en un recetario duele más, porque lo que se corrige
      suele ser un número, y un número mal es una receta que no sale.
 
-     Ahora los dos entran por acá. Lo que cambia es qué se revisa y qué se
+     Ahora los tres entran por acá —el recetario desde el 09/09/26, la
+     infografía desde el 14/09/26—. Lo que cambia es qué se revisa y qué se
      guarda; todo lo de alrededor —el candado, la relectura fresca, el estado, el
      freno, la respuesta— es lo mismo, y tiene que serlo: son las partes donde
      equivocarse borra algo que se pagó.
 
      ⚠️ Y cada formato lima con las reglas de SU lector. Las de un recetario
-     están en `revisarRecetas`, y no son las mismas: ahí lo que desaparece en
-     silencio no es un capítulo, es una receta entera. */
+     están en `revisarRecetas` y las de una infografía en `revisarLaminas`, y no
+     son las mismas: ahí lo que desaparece en silencio no es un capítulo, es una
+     receta o una lámina entera. */
   const opciones = leerOpciones(fresco.indice);
   const esRecetario = opciones.formato === "recetario";
+  const esInfografia = opciones.formato === "infografia";
 
   let capitulos: string;
   let indiceNuevo: string;
 
-  if (esRecetario) {
-    const hay = { grupos: leerGruposDeRecetas(fresco.capitulos) };
-    if (hay.grupos.length === 0) {
+  if (esRecetario || esInfografia) {
+    /* Los dos formatos por hoja se revisan con su propio lector y se guardan
+       igual: grupos por sección, en la misma columna. */
+    const revision = (() => {
+      if (esRecetario) {
+        const hay = { grupos: leerGruposDeRecetas(fresco.capitulos) };
+        return hay.grupos.length === 0 ? null : revisarRecetas(body, hay);
+      }
+      const hay = { grupos: leerGruposDeLaminas(fresco.capitulos) };
+      return hay.grupos.length === 0 ? null : revisarLaminas(body, hay);
+    })();
+    if (!revision) {
       await soltarElCandado(fresco.id, marca);
       return NextResponse.json({ error: "Todavía no hay nada escrito para corregir." }, { status: 409 });
     }
-
-    const revision = revisarRecetas(body, hay);
     if (!revision.ok) {
       await soltarElCandado(fresco.id, marca);
       return NextResponse.json({ error: revision.error }, { status: 400 });
@@ -165,11 +176,11 @@ export async function POST(req: NextRequest) {
 
     capitulos = JSON.stringify(revision.grupos);
 
-    /* ⚠️ El índice de un recetario tiene SECCIONES, no recetas, y esta pantalla
-       no las edita: la foto de cada receta vive adentro de la receta. Así que de
-       acá lo único que puede cambiar es la tapa, y todo lo demás se vuelve a
-       escribir tal cual — sin `promesa` y `opciones`, guardar esto convertiría
-       un recetario de 30 en un ebook de texto. */
+    /* ⚠️ El índice de un recetario —o de una infografía— tiene SECCIONES, y
+       esta pantalla no las edita: la foto de cada receta o lámina vive adentro
+       de ella. Así que de acá lo único que puede cambiar es la tapa, y todo lo
+       demás se vuelve a escribir tal cual — sin `promesa` y `opciones`, guardar
+       esto convertiría un recetario de 30 en un ebook de texto. */
     indiceNuevo = JSON.stringify({
       promesa: leerPromesa(fresco.indice),
       capitulos: leerIndice(fresco.indice),

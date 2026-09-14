@@ -34,7 +34,8 @@ import { PALETAS } from "./pagina-venta";
 import { ESTILOS } from "./ebook-estilos";
 import {
   LARGO_BLOQUE, INGREDIENTES_MAX, PASOS_MAX, LARGO_PASO, LARGO_DESCRIPCION_RECETA,
-  type Bloque, type CapituloEscrito, type Receta,
+  PUNTOS_MAX, LARGO_TITULO_LAMINA, LARGO_TEXTO_LAMINA, LARGO_PUNTO,
+  type Bloque, type CapituloEscrito, type Receta, type Lamina,
 } from "./ebook-ia";
 
 let fallos = 0;
@@ -454,6 +455,46 @@ async function pruebasDeArmado() {
     check(`PDF-Y-${estilo}`, hojas(normales) === 6,
       `en ${estilo}, una receta común de 8 pasos entra en su hoja con la foto puesta (${hojas(normales)} hojas, se esperaban 6)`);
   }
+
+  /* ── La infografía ──────────────────────────────────────────────────────
+     Una lámina es una hoja, y al revés que la receta no tiene nada elástico:
+     la más grande posible se conoce de antemano. Se arma con los topes
+     EXACTOS del limado —el título, el texto y los tres datos al máximo— en los
+     cuatro moldes, con foto y sin foto, y cada una tiene que ocupar UNA hoja.
+     Si un acomodo la parte, esto falla; y si alguien sube un tope en
+     `ebook-ia` sin mirar el molde, también. */
+  const laminaGorda = (i: number): Lamina => ({
+    titulo: `Lámina ${i}: ${"palabra ".repeat(20)}`.slice(0, LARGO_TITULO_LAMINA).trim(),
+    texto: "palabra ".repeat(Math.ceil(LARGO_TEXTO_LAMINA / 8)).slice(0, LARGO_TEXTO_LAMINA).trim(),
+    puntos: Array.from({ length: PUNTOS_MAX }, () =>
+      "dato ".repeat(Math.ceil(LARGO_PUNTO / 5)).slice(0, LARGO_PUNTO).trim()),
+    foto: "una escena",
+  });
+
+  const LAMINAS = 3;
+  for (const estilo of ESTILOS) {
+    for (const conFoto of [false, true]) {
+      const infografia = await armarPDF({
+        ...base,
+        capitulos: [],
+        laminas: Array.from({ length: LAMINAS }, (_, i) => laminaGorda(i + 1)),
+        fotosCapitulos: conFoto ? Array.from({ length: LAMINAS }, () => fotoDeVerdad) : undefined,
+        estilo,
+      });
+      /* Tapa + contenido + una hoja por lámina, y los créditos sólo con fotos. */
+      const esperadas = 2 + LAMINAS + (conFoto ? 1 : 0);
+      check(`LAM-PDF-${estilo}${conFoto ? "-foto" : ""}`, hojas(infografia) === esperadas,
+        `en ${estilo}${conFoto ? " con foto" : " sin foto"}, la lámina más grande posible entra en UNA hoja `
+        + `(${hojas(infografia)} hojas, se esperaban ${esperadas})`);
+    }
+  }
+
+  /* Y que el índice liste láminas, no capítulos: el sello y la hoja de
+     contenido tienen que decir la palabra que corresponde. */
+  const conLaminas = await armarPDF({
+    ...base, capitulos: [], laminas: [laminaGorda(1), laminaGorda(2)],
+  });
+  check("LAM-PDF-palabra", conLaminas.length > 1000, "una infografía de dos láminas se arma entera");
 
   /* El título y el autor van en los datos del archivo, que es lo que muestra
      el lector de PDF en la pestaña. Esos NO van comprimidos. */

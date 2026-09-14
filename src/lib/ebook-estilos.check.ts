@@ -30,7 +30,7 @@ import { readFileSync } from "fs";
 import zlib from "zlib";
 import {
   ESTILOS, ESTILOS_LISTOS, ESTILO_DE_FABRICA, MOLDES, QUE_ES_CADA_ESTILO,
-  moldeDe, anchoUtilDe, columnaDeTexto, anchoDeColumna, ANCHO_DE_HOJA,
+  moldeDe, anchoUtilDe, columnaDeTexto, anchoDeColumna, ANCHO_DE_HOJA, HOJA_DE_LAMINA,
   type EstiloDeEbook,
 } from "./ebook-estilos";
 import { normalizarOpciones, leerOpciones, conEstilo } from "./ebook-opciones";
@@ -299,10 +299,45 @@ const check = (id: string, ok: boolean, desc: string) => {
     "cada estilo dice qué le hace a una receta, y los cuatro dicen algo distinto");
 
   check("EST-AC",
-    /esRecetario \? "¿Cómo querés que esté armada cada receta\?"/.test(modal)
-    && /muestra=\{esRecetario \? "receta" : "hoja"\}/.test(modal)
-    && /muestra=\{esUnRecetario \? "receta" : "hoja"\}/.test(tarjeta),
+    /\? "¿Cómo querés que esté armada cada receta\?"/.test(modal)
+    && /const muestraDelEstilo = esRecetario \? "receta" : esInfografia \? "lamina" : "hoja"/.test(modal)
+    && /muestra=\{muestraDelEstilo\}/.test(modal)
+    && /const muestra = esUnRecetario \? "receta" : esUnaInfografia \? "lamina" : "hoja"/.test(tarjeta)
+    && /muestra=\{muestra\}/.test(tarjeta),
     "con un recetario, el modal y la tarjeta muestran la receta y no la prosa");
+
+  /* ── La infografía ──────────────────────────────────────────────────────
+     El tercer formato, desde el 14/09/26. Cada molde tiene que decir qué le
+     hace a una lámina, y la miniatura tiene que saber dibujarla. */
+  check("EST-LA",
+    ESTILOS.every((e) => QUE_ES_CADA_ESTILO[e].lamina.length > 20)
+    && new Set(ESTILOS.map((e) => QUE_ES_CADA_ESTILO[e].lamina)).size === ESTILOS.length
+    && /lamina: string;/.test(cadaUno),
+    "cada estilo dice qué le hace a una lámina, y los cuatro dicen algo distinto");
+
+  check("EST-LB",
+    new Set(ESTILOS.map((e) => MOLDES[e].lamina)).size === ESTILOS.length,
+    "los cuatro moldes acomodan la lámina de cuatro formas distintas");
+
+  /* ⚠️ `ficha` pone el número enorme en la franja del costado: sin franja
+     caería encima del texto. Sólo puede pedirlo un molde que la tenga. */
+  check("EST-LC",
+    ESTILOS.every((e) => MOLDES[e].lamina !== "ficha" || MOLDES[e].franja > 0),
+    "sólo un molde con franja pone el número de la lámina en la franja");
+
+  check("EST-LD",
+    /muestra\?: "hoja" \| "receta" \| "lamina"/.test(mini) && /function LaLamina\(/.test(mini)
+    && /HOJA_DE_LAMINA/.test(mini),
+    "la miniatura dibuja una lámina, del molde y de las mismas medidas que el archivo");
+
+  /* Las fracciones de la foto tienen que ser fracciones: un 56 en vez de 0.56
+     haría una foto de 56 hojas de alto sin que nada falle. Y el mínimo va abajo
+     del máximo, si no la foto "cede" para arriba. */
+  check("EST-LE",
+    Object.values(HOJA_DE_LAMINA).every((v) => v > 0 && v < 1)
+    && HOJA_DE_LAMINA.bandaMin < HOJA_DE_LAMINA.bandaMax
+    && HOJA_DE_LAMINA.fichaMin < HOJA_DE_LAMINA.fichaMax,
+    "las medidas de la hoja de lámina son fracciones de la hoja, con el mínimo abajo del máximo");
 
   /* Y que la miniatura de la receta salga de la MISMA tabla que el archivo. Es
      el mismo motivo que EST-W: cuatro dibujitos con los números copiados a mano

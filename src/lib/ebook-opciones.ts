@@ -31,7 +31,7 @@ import {
  * único que cambia es `leerOpciones` y dónde escribe la ruta.
  */
 
-export const FORMATOS = ["texto", "recetario"] as const;
+export const FORMATOS = ["texto", "recetario", "infografia"] as const;
 export type FormatoDeEbook = (typeof FORMATOS)[number];
 
 /**
@@ -51,7 +51,7 @@ export type FormatoDeEbook = (typeof FORMATOS)[number];
  * hecho a mano. Cuando el modelo aprenda a escribir recetas, se agrega
  * `"recetario"` acá y las dos puntas se encienden solas.
  */
-export const FORMATOS_LISTOS: readonly FormatoDeEbook[] = ["texto", "recetario"];
+export const FORMATOS_LISTOS: readonly FormatoDeEbook[] = ["texto", "recetario", "infografia"];
 
 /**
  * Cuántas recetas puede tener un recetario.
@@ -80,6 +80,25 @@ export const FORMATOS_LISTOS: readonly FormatoDeEbook[] = ["texto", "recetario"]
 export const RECETAS_OPCIONES = [10, 20, 30] as const;
 export const RECETAS_DE_FABRICA = 20;
 
+/**
+ * Cuántas láminas puede tener una infografía.
+ *
+ * El mismo criterio que las recetas: lo elige quien vende, va en la tapa —"10
+ * LÁMINAS"— y es lo que justifica el precio. Y los tres números caen justo con
+ * lo que aguanta el resto: cada llamada escribe `LAMINAS_POR_LLAMADA` (5) y el
+ * temario no pasa de `CAPITULOS_MAX` (10) secciones, así que el techo real
+ * sería 50. Se queda en 30 a propósito: una infografía de cincuenta hojas ya
+ * no es una guía rápida, es un libro de fotos, y no es lo que se vende como
+ * "una idea por hoja".
+ *
+ *   10 láminas → 2 llamadas   ·   20 → 4   ·   30 → 6
+ *
+ * De fábrica 10 y no 20: la infografía es el formato de la guía corta —el lead
+ * magnet, el bono— y diez ideas es lo que se lee en cinco minutos.
+ */
+export const LAMINAS_OPCIONES = [10, 20, 30] as const;
+export const LAMINAS_DE_FABRICA = 10;
+
 export const TEMAS = ["claro", "oscuro"] as const;
 export type TemaDeEbook = (typeof TEMAS)[number];
 
@@ -92,6 +111,10 @@ export const QUE_ES_CADA_FORMATO: Record<FormatoDeEbook, { nombre: string; expli
   recetario: {
     nombre: "Recetario",
     explica: "Una receta por hoja: ingredientes, pasos y tiempos. Sólo para cocina.",
+  },
+  infografia: {
+    nombre: "Infografía",
+    explica: "Una idea por hoja, con foto grande y texto corto. Para guías rápidas, listas de errores y checklists.",
   },
 };
 
@@ -121,6 +144,7 @@ export const COMO_SE_LLAMA: Record<FormatoDeEbook, {
 }> = {
   texto: { obra: "Ebook", parte: "capítulo", partes: "capítulos", tramo: "capítulo", tramos: "capítulos" },
   recetario: { obra: "Recetario", parte: "receta", partes: "recetas", tramo: "sección", tramos: "secciones" },
+  infografia: { obra: "Infografía", parte: "lámina", partes: "láminas", tramo: "sección", tramos: "secciones" },
 };
 
 export const QUE_ES_CADA_TEMA: Record<TemaDeEbook, { nombre: string; explica: string }> = {
@@ -157,6 +181,15 @@ export type OpcionesDelEbook = {
    * formato, lo que había elegido sigue ahí.
    */
   recetas: number;
+  /**
+   * Cuántas láminas, si el formato es infografía. Una de `LAMINAS_OPCIONES`.
+   *
+   * Va aparte de `recetas` y no en un solo "cuántas": son dos productos con dos
+   * escalas distintas —y si mañana el recetario sube a 40 y la infografía no,
+   * un número compartido obligaría a validar según el formato—. Se guarda
+   * igual en los otros formatos, por lo mismo que `recetas`.
+   */
+  laminas: number;
 };
 
 export const OPCIONES_DE_FABRICA: OpcionesDelEbook = {
@@ -168,6 +201,7 @@ export const OPCIONES_DE_FABRICA: OpcionesDelEbook = {
   tema: "claro",
   paleta: "",
   recetas: RECETAS_DE_FABRICA,
+  laminas: LAMINAS_DE_FABRICA,
 };
 
 /**
@@ -215,7 +249,13 @@ export function normalizarOpciones(crudo: unknown): OpcionesDelEbook {
     ? cuantas
     : RECETAS_DE_FABRICA;
 
-  return { formato, estilo, tema, paleta, recetas };
+  /* Lo mismo para las láminas, contra SU lista. */
+  const cuantasLaminas = Number(c.laminas);
+  const laminas = (LAMINAS_OPCIONES as readonly number[]).includes(cuantasLaminas)
+    ? cuantasLaminas
+    : LAMINAS_DE_FABRICA;
+
+  return { formato, estilo, tema, paleta, recetas, laminas };
 }
 
 /**
@@ -268,4 +308,18 @@ export function conEstilo(guardado: string | null | undefined, estilo: string): 
     estilo,
   });
   return JSON.stringify(raiz);
+}
+
+/**
+ * Cuántas unidades —capítulos, recetas o láminas— tiene que tener el ebook
+ * terminado, según lo que se eligió.
+ *
+ * En un ebook de texto es el largo del temario, porque ahí el número lo puso
+ * el modelo. En los otros dos lo puso la persona antes de generar, y es lo
+ * que va en la tapa. Es la cuenta contra la que la barra dice "4 de 10".
+ */
+export function unidadesElegidas(opciones: OpcionesDelEbook, largoDelTemario: number): number {
+  if (opciones.formato === "recetario") return opciones.recetas;
+  if (opciones.formato === "infografia") return opciones.laminas;
+  return largoDelTemario;
 }

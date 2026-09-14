@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  MOLDES, columnaDeTexto, anchoDeColumna, HOJA_DE_RECETA,
+  MOLDES, columnaDeTexto, anchoDeColumna, HOJA_DE_RECETA, HOJA_DE_LAMINA,
   type EstiloDeEbook, type Molde,
 } from "@/lib/ebook-estilos";
 
@@ -54,8 +54,11 @@ export function MiniaturaDeEstilo({
    * Ahora sí lo lee (ver `receta` en `ebook-estilos` y `hojaDeReceta`), así que
    * esto dibuja **la misma receta que va a salir**: dónde cae la foto y dónde
    * caen las tres fichas, que es lo que cambia entre los cuatro.
+   *
+   * Y en una infografía se dibuja una lámina, por lo mismo: la foto grande y
+   * el texto corto, acomodados como dice el molde.
    */
-  muestra?: "hoja" | "receta";
+  muestra?: "hoja" | "receta" | "lamina";
 }) {
   const m = MOLDES[estilo];
   const ANCHO = 595.28;
@@ -63,6 +66,9 @@ export function MiniaturaDeEstilo({
 
   if (muestra === "receta") {
     return <LaReceta molde={m} acento={acento} tinta={tinta} papel={papel} />;
+  }
+  if (muestra === "lamina") {
+    return <LaLamina molde={m} acento={acento} tinta={tinta} papel={papel} />;
   }
 
   const texto = columnaDeTexto(m, ANCHO);
@@ -387,6 +393,113 @@ function LaReceta({
 
       {/* La franja del pie, que todos los moldes tienen. */}
       <rect x={0} y={ALTO - 34} width={ANCHO} height={34} fill={acento} />
+    </svg>
+  );
+}
+
+/**
+ * La hoja de UNA LÁMINA, en chiquito.
+ *
+ * Lo mismo que `LaReceta`, para la infografía: se dibuja del molde y de
+ * `HOJA_DE_LAMINA`, con la foto en su máximo. Lo que cambia entre los cuatro
+ * —y lo único que se lee a este tamaño— es dónde está la foto y dónde el
+ * texto: arriba, a la izquierda, con el número en la franja, o tapando todo.
+ */
+function LaLamina({
+  molde, acento, tinta, papel,
+}: {
+  molde: Molde;
+  acento: string;
+  tinta: string;
+  papel: string;
+}) {
+  const ANCHO = 595.28;
+  const ALTO = 841.89;
+  const m = molde;
+  const util = ANCHO - m.margen * 2;
+  const foto = { fill: acento, opacity: 0.28 };
+  const L = HOJA_DE_LAMINA;
+  const PIE = 34;
+  const altoUtil = ALTO - PIE;
+
+  /* `ficha` sin franja cae a `banda`, igual que el archivo y la previa. */
+  const acomodo = m.lamina === "ficha" && m.franja <= 0 ? "banda" : m.lamina;
+
+  /* El bloque de texto: rótulo, título de dos renglones, raya, cuatro
+     renglones de texto y tres datos con su bolita. */
+  const bloque = (x: number, y: number, ancho: number, claro: boolean, angosto: boolean) => {
+    const tituloAlto = angosto ? 22 : 27;
+    const color = claro ? papel : tinta;
+    let yy = y;
+    const partes: React.ReactNode[] = [];
+    partes.push(<rect key="r" x={x} y={yy} width={70} height={6} fill={claro ? papel : acento} opacity={0.8} />);
+    yy += 20;
+    for (let k = 0; k < (angosto ? 3 : 2); k++) {
+      partes.push(
+        <rect key={`t${k}`} x={x} y={yy} width={ancho * (k === (angosto ? 2 : 1) ? 0.6 : 0.95)} height={tituloAlto * 0.8} fill={color} opacity={claro ? 1 : 0.85} />,
+      );
+      yy += tituloAlto + 6;
+    }
+    yy += 8;
+    partes.push(<rect key="raya" x={x} y={yy} width={44} height={3} fill={claro ? papel : acento} />);
+    yy += 3 + 16;
+    for (let k = 0; k < (angosto ? 6 : 4); k++) {
+      partes.push(
+        <rect key={`x${k}`} x={x} y={yy} width={ancho * (k === (angosto ? 5 : 3) ? 0.55 : 1)} height={8} fill={color} opacity={claro ? 0.85 : 0.35} />,
+      );
+      yy += 17;
+    }
+    yy += 12;
+    for (let k = 0; k < 3; k++) {
+      partes.push(
+        <g key={`p${k}`}>
+          <circle cx={x + 4} cy={yy + 5} r={3.5} fill={claro ? papel : acento} />
+          <rect x={x + 18} y={yy + 1} width={ancho * 0.6} height={8} fill={color} opacity={claro ? 0.9 : 0.5} />
+        </g>,
+      );
+      yy += 20;
+    }
+    return partes;
+  };
+
+  return (
+    <svg
+      viewBox={`0 0 ${ANCHO} ${ALTO}`}
+      className="h-auto w-full"
+      role="img"
+      aria-hidden="true"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <rect x={0} y={0} width={ANCHO} height={ALTO} fill={papel} />
+
+      {acomodo === "lado" ? (
+        <>
+          <rect x={0} y={0} width={ANCHO * L.ladoAncho} height={altoUtil} {...foto} />
+          {bloque(ANCHO * L.ladoAncho + 34, altoUtil * 0.28, ANCHO - ANCHO * L.ladoAncho - 34 - m.margen, false, true)}
+        </>
+      ) : acomodo === "sangre" ? (
+        <>
+          <rect x={0} y={0} width={ANCHO} height={altoUtil} {...foto} />
+          {/* El velo: de transparente a casi negro, donde va el texto. */}
+          <rect x={0} y={altoUtil * L.sangreVeloDesde} width={ANCHO} height={altoUtil * (1 - L.sangreVeloDesde)} fill={tinta} opacity={0.55} />
+          {bloque(m.margen, altoUtil * 0.52, util - 40, true, false)}
+        </>
+      ) : acomodo === "ficha" ? (
+        <>
+          <rect x={0} y={0} width={ANCHO} height={altoUtil * L.fichaMax} {...foto} />
+          {/* El número enorme en la franja del costado. */}
+          <rect x={m.margen} y={altoUtil * L.fichaMax + 60} width={m.franja * 0.7} height={48} fill={acento} />
+          {bloque(m.margen + m.franja + m.calle, altoUtil * L.fichaMax + 36, util - m.franja - m.calle, false, true)}
+        </>
+      ) : (
+        <>
+          <rect x={0} y={0} width={ANCHO} height={altoUtil * L.bandaMax} {...foto} />
+          {bloque(m.margen, altoUtil * L.bandaMax + 40, util, false, false)}
+        </>
+      )}
+
+      {/* La franja del pie, que todos los moldes tienen. */}
+      <rect x={0} y={ALTO - PIE} width={ANCHO} height={PIE} fill={acento} />
     </svg>
   );
 }

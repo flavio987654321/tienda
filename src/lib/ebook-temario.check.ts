@@ -47,7 +47,7 @@ const lista = (n: number) => Array.from({ length: n }, (_, i) => cap(i + 1));
 const hayTexto = (cuantos: number, escritos = 0): LoQueHay => ({
   capitulos: lista(cuantos),
   escritos,
-  esRecetario: false,
+  porSecciones: false,
 });
 
 /** El temario tal como lo manda la pantalla. */
@@ -113,7 +113,7 @@ const mandar = (capitulos: unknown[], titulo = "Un ebook de prueba", promesa = "
 /* ── El recetario no cambia de tamaño ─────────────────────────────────────── */
 
 {
-  const hay: LoQueHay = { capitulos: lista(4), escritos: 0, esRecetario: true };
+  const hay: LoQueHay = { capitulos: lista(4), escritos: 0, porSecciones: true };
 
   const menos = revisarTemario(mandar(lista(3)), hay);
   const mas = revisarTemario(mandar(lista(5)), hay);

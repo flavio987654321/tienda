@@ -21,7 +21,7 @@ import {
 import { revisarTemario, sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import {
   FORMATOS, TEMAS, QUE_ES_CADA_FORMATO, QUE_ES_CADA_TEMA,
-  OPCIONES_DE_FABRICA, FORMATOS_LISTOS, RECETAS_OPCIONES, COMO_SE_LLAMA,
+  OPCIONES_DE_FABRICA, FORMATOS_LISTOS, RECETAS_OPCIONES, LAMINAS_OPCIONES, COMO_SE_LLAMA,
   type FormatoDeEbook, type TemaDeEbook,
 } from "@/lib/ebook-opciones";
 import {
@@ -179,6 +179,7 @@ export default function EbookIA({
   const [formato, setFormato] = useState<FormatoDeEbook>(elegidas.formato);
   const [temaVisual, setTemaVisual] = useState<TemaDeEbook>(elegidas.tema);
   const [cuantasRecetas, setCuantasRecetas] = useState<number>(elegidas.recetas);
+  const [cuantasLaminas, setCuantasLaminas] = useState<number>(elegidas.laminas);
   const [paleta, setPaleta] = useState<string>(elegidas.paleta);
   const [estilo, setEstilo] = useState<EstiloDeEbook>(elegidas.estilo);
   const [publico, setPublico] = useState(contado?.publico ?? "");
@@ -187,9 +188,17 @@ export default function EbookIA({
      acaba de elegir abajo, para que las cuatro se vean con SU color y no con
      uno de muestra. Sin paleta elegida —"la de tu página"— va el naranja del
      panel, que es lo que la mayoría termina viendo. */
-  /* Un recetario no tiene prosa adentro, así que el estilo le cambia sólo la
-     tapa. La pantalla tiene que decir eso y no otra cosa. */
+  /* Un recetario no tiene prosa adentro —ni una infografía—, así que lo que
+     el estilo les cambia es otra cosa. La pantalla tiene que decir eso. */
   const esRecetario = formato === "recetario";
+  const esInfografia = formato === "infografia";
+  const muestraDelEstilo = esRecetario ? "receta" : esInfografia ? "lamina" : "hoja";
+  const queHaceElEstilo = (x: EstiloDeEbook) =>
+    esRecetario
+      ? QUE_ES_CADA_ESTILO[x].receta
+      : esInfografia
+        ? QUE_ES_CADA_ESTILO[x].lamina
+        : QUE_ES_CADA_ESTILO[x].explica;
 
   const colorDeLaMiniatura =
     PALETAS.find((p) => p.clave === paleta)?.acento ?? "#c2410c";
@@ -366,7 +375,7 @@ export default function EbookIA({
     try {
       const { ok, datos } = await pedir("/api/digitales/ia/ebook", {
         tema, publico, rehacer,
-        opciones: { formato, estilo, tema: temaVisual, paleta, recetas: cuantasRecetas },
+        opciones: { formato, estilo, tema: temaVisual, paleta, recetas: cuantasRecetas, laminas: cuantasLaminas },
       });
       if (!vivo.current) return;
 
@@ -409,7 +418,7 @@ export default function EbookIA({
     /* Sólo si no hubo temario que revisar: con temario, escribir lo dispara el
        botón del editor. */
     if (vivo.current) void seguir();
-  }, [pedir, tema, publico, formato, estilo, temaVisual, paleta, cuantasRecetas, seguir]);
+  }, [pedir, tema, publico, formato, estilo, temaVisual, paleta, cuantasRecetas, cuantasLaminas, seguir]);
 
   /* ── Abrir el temario desde la pantalla de escritura ──────────────────────
      Se busca en el momento y no viaja en cada vuelta del bucle: son varios
@@ -650,7 +659,7 @@ export default function EbookIA({
                 ¿Cómo querés que salga?
               </p>
 
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {FORMATOS.map((f) => {
                   /* ⚠️ Apagado si el modelo todavía no lo sabe escribir. Ver
                      `FORMATOS_LISTOS`: elegirlo daría un ebook de otro tipo. */
@@ -719,6 +728,37 @@ export default function EbookIA({
                 </div>
               )}
 
+              {/* Y lo mismo para la infografía: el número va en la tapa —"10
+                  LÁMINAS"— y lo elige quien vende. */}
+              {formato === "infografia" && (
+                <div className="mt-3 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3.5 py-3">
+                  <p className="text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+                    ¿Cuántas láminas?
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
+                    Una idea por hoja. El número va en la tapa. Diez es una guía rápida; treinta, una guía completa.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {LAMINAS_OPCIONES.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setCuantasLaminas(n)}
+                        disabled={trabajando}
+                        aria-pressed={cuantasLaminas === n}
+                        className={`min-w-[64px] rounded-lg border px-3 py-2 text-[13px] font-bold transition-colors disabled:opacity-60 ${
+                          cuantasLaminas === n
+                            ? "border-orange-400 bg-orange-50 text-orange-800 panel-oscuro:bg-orange-500/10 panel-oscuro:text-orange-300"
+                            : "border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* ══════════════════════════════════════════════════════════
                   EL ESTILO — Y QUE SE PUEDE CAMBIAR DESPUÉS, DICHO ACÁ
                   ══════════════════════════════════════════════════════════
@@ -735,12 +775,18 @@ export default function EbookIA({
                   receta no leía el molde y acá se mostraba la tapa, que era lo
                   único que el estilo le cambiaba. Ver `MiniaturaDeEstilo`. */}
               <p className="mt-5 text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
-                {esRecetario ? "¿Cómo querés que esté armada cada receta?" : "¿Cómo querés que esté armada la hoja?"}
+                {esRecetario
+                  ? "¿Cómo querés que esté armada cada receta?"
+                  : esInfografia
+                    ? "¿Cómo querés que esté armada cada lámina?"
+                    : "¿Cómo querés que esté armada la hoja?"}
               </p>
               <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
                 {esRecetario
                   ? "Cambia dónde va la foto y dónde van rinde, tiempo y cocción. Lo podés cambiar después, gratis."
-                  : "Esto lo podés cambiar después, gratis y sin volver a escribirlo."}
+                  : esInfografia
+                    ? "Cambia dónde va la foto y dónde va la idea. Lo podés cambiar después, gratis."
+                    : "Esto lo podés cambiar después, gratis y sin volver a escribirlo."}
               </p>
 
               <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -754,7 +800,7 @@ export default function EbookIA({
                       type="button"
                       onClick={() => listo && setEstilo(x)}
                       disabled={trabajando || !listo}
-                      title={listo ? (esRecetario ? QUE_ES_CADA_ESTILO[x].receta : QUE_ES_CADA_ESTILO[x].explica) : "Todavía no está disponible"}
+                      title={listo ? queHaceElEstilo(x) : "Todavía no está disponible"}
                       aria-pressed={estilo === x}
                       className={`rounded-xl border p-2 text-left transition-colors disabled:opacity-60 ${
                         estilo === x
@@ -765,7 +811,7 @@ export default function EbookIA({
                       <span className="block overflow-hidden rounded-md ring-1 ring-black/10 panel-oscuro:ring-white/10">
                         <MiniaturaDeEstilo
                           estilo={x}
-                          muestra={esRecetario ? "receta" : "hoja"}
+                          muestra={muestraDelEstilo}
                           acento={colorDeLaMiniatura}
                           tinta="#0f172a"
                           papel="#FCFAF7"
@@ -783,8 +829,8 @@ export default function EbookIA({
                   y no los cuatro: cuatro descripciones abajo de cuatro
                   miniaturas es una pared de texto que nadie lee. */}
               <p className="mt-2 text-[11.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
-                {esRecetario ? (
-                  QUE_ES_CADA_ESTILO[estilo].receta
+                {esRecetario || esInfografia ? (
+                  queHaceElEstilo(estilo)
                 ) : (
                   <>
                     {QUE_ES_CADA_ESTILO[estilo].explica}{" "}
@@ -1152,7 +1198,7 @@ export default function EbookIA({
                 Tarda unos minutos y <strong>podés cerrar esto tranquila</strong>: se sigue
                 escribiendo solo, aunque apagues la computadora.
                 <br />
-                Cada {COMO_SE_LLAMA[ebook?.opciones.formato ?? formato].parte} queda guardado apenas
+                Cada {COMO_SE_LLAMA[ebook?.opciones.formato ?? formato].parte} se guarda apenas
                 se escribe. Cuando el PDF esté armado lo vas a ver colgado del producto, sin
                 tener que apretar nada.
               </p>
@@ -1289,7 +1335,9 @@ function Temario({
   const [promesa, setPromesa] = useState(inicial.promesa);
   const [capitulos, setCapitulos] = useState<CapituloPlaneado[]>(inicial.capitulos);
 
-  const esRecetario = inicial.formato === "recetario";
+  /* Un recetario y una infografía tienen las secciones repartidas según lo
+     que se eligió: se renombran, no se agregan ni se quitan. */
+  const porSecciones = inicial.formato !== "texto";
   const nombres = COMO_SE_LLAMA[inicial.formato];
   /* Las primeras `escritos` entradas ya tienen su capítulo escrito y pagado. */
   const escritos = Math.min(inicial.escritos, capitulos.length);
@@ -1298,7 +1346,7 @@ function Temario({
   /* La misma revisión que hace el servidor, con el mismo mensaje. */
   const revision = revisarTemario(
     { titulo, promesa, capitulos },
-    { capitulos: inicial.capitulos, escritos: inicial.escritos, esRecetario },
+    { capitulos: inicial.capitulos, escritos: inicial.escritos, porSecciones },
   );
   const falta = revision.ok ? null : revision.error;
 
@@ -1337,10 +1385,10 @@ function Temario({
 
   /* Agregar y borrar sólo en un ebook de texto: las secciones de un recetario
      son el reparto de las recetas que se eligieron y se pagaron. */
-  const sePuedeAgregar = !esRecetario && capitulos.length < CAPITULOS_MAX;
+  const sePuedeAgregar = !porSecciones && capitulos.length < CAPITULOS_MAX;
   /* Y no por debajo del mínimo: dejar borrar hasta tres para después apagar el
      botón con un cartel es hacerle deshacer el trabajo a alguien. */
-  const sePuedeBorrar = !esRecetario && capitulos.length > CAPITULOS_MIN && faltan > 1;
+  const sePuedeBorrar = !porSecciones && capitulos.length > CAPITULOS_MIN && faltan > 1;
 
   const campo =
     "w-full rounded-lg border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3 py-2 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60";
@@ -1394,7 +1442,7 @@ function Temario({
               agrupan recetas, no recetas sueltas. Ver `COMO_SE_LLAMA.tramo`. */}
           {capitulos.length} {capitulos.length === 1 ? nombres.tramo : nombres.tramos}
         </p>
-        {esRecetario && (
+        {porSecciones && (
           <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500">
             Se pueden renombrar, no agregar ni quitar
           </p>

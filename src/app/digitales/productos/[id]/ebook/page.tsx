@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import {
-  leerIndice, leerCapitulos, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas,
+  leerIndice, leerCapitulos, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas, leerGruposDeLaminas,
 } from "@/lib/ebook-ia";
 import { leerOpciones, COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTexto } from "@/lib/ebook-texto";
 import { fotosDeLasRecetas } from "@/lib/recetario-texto";
+import { fotosDeLasLaminas } from "@/lib/infografia-texto";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { PALETAS } from "@/lib/pagina-venta";
 import BotonVolver from "../../../BotonVolver";
@@ -123,18 +124,25 @@ export default async function EditorDeEbookPage({ params }: Props) {
 
   const opciones = leerOpciones(fila.ebookIA.indice);
   const esRecetario = opciones.formato === "recetario";
+  const esInfografia = opciones.formato === "infografia";
   const indice = leerIndice(fila.ebookIA.indice);
-  const capitulos = esRecetario ? [] : leerCapitulos(fila.ebookIA.capitulos);
+  const capitulos = esRecetario || esInfografia ? [] : leerCapitulos(fila.ebookIA.capitulos);
 
-  /* ⚠️ Un recetario guarda GRUPOS de recetas donde un ebook de texto guarda
-     capítulos. Cada grupo es una llamada al modelo ya cobrada, y esa forma se
-     conserva hasta el guardado: la pantalla las muestra todas seguidas, pero lo
-     que va a la base se vuelve a agrupar igual. Ver `leerGruposDeRecetas`. */
+  /* ⚠️ Un recetario guarda GRUPOS de recetas —y una infografía grupos de
+     láminas— donde un ebook de texto guarda capítulos. Cada grupo es una
+     llamada al modelo ya cobrada, y esa forma se conserva hasta el guardado:
+     la pantalla las muestra todas seguidas, pero lo que va a la base se vuelve
+     a agrupar igual. Ver `leerGruposDeRecetas`. */
   const grupos = esRecetario ? leerGruposDeRecetas(fila.ebookIA.capitulos) : [];
+  const gruposDeLaminas = esInfografia ? leerGruposDeLaminas(fila.ebookIA.capitulos) : [];
 
   /* Hasta el 09/09/26 esto decía `!esRecetario &&`: un recetario no se podía
      corregir a mano y arreglar un número costaba una generación entera. */
-  const cuantas = esRecetario ? grupos.flat().length : capitulos.length;
+  const cuantas = esRecetario
+    ? grupos.flat().length
+    : esInfografia
+      ? gruposDeLaminas.flat().length
+      : capitulos.length;
   const puede = sePuedeEditarElTexto(fila.ebookIA.estado) && cuantas > 0;
 
   return (
@@ -154,6 +162,7 @@ export default async function EditorDeEbookPage({ params }: Props) {
           capitulos={capitulos}
           /* Su presencia es lo que decide qué editor se dibuja. */
           recetas={esRecetario ? grupos : undefined}
+          laminas={esInfografia ? gruposDeLaminas : undefined}
           /* La foto de cada parte: con qué se busca y cuál se eligió a mano.
              Las mismas que va a usar el armado.
 
@@ -161,9 +170,11 @@ export default async function EditorDeEbookPage({ params }: Props) {
              unidad es la receta y el índice tiene secciones. Ver `Receta`. */
           fotos={esRecetario
             ? fotosDeLasRecetas(grupos)
-            : indice.map((c) => ({ frase: c.foto, elegida: c.fotoElegida ?? null }))}
+            : esInfografia
+              ? fotosDeLasLaminas(gruposDeLaminas)
+              : indice.map((c) => ({ frase: c.foto, elegida: c.fotoElegida ?? null }))}
           tapa={leerFotoDeTapa(fila.ebookIA.indice)}
-          total={esRecetario ? cuantas : indice.length}
+          total={esRecetario || esInfografia ? cuantas : indice.length}
           /* ⚠️ La misma cuenta que hace `/armar`: manda lo que eligió para el
              ebook y, si no eligió nada, la paleta de su página de venta. Si
              fueran distintas, la previa mostraría una tapa y el archivo saldría
@@ -182,7 +193,7 @@ export default async function EditorDeEbookPage({ params }: Props) {
             Este {COMO_SE_LLAMA[opciones.formato].obra.toLowerCase()} no se corrige acá
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
-            {/* Ya no hay un caso de "este formato no se corrige": los dos se
+            {/* Ya no hay un caso de "este formato no se corrige": los tres se
                 corrigen. Lo único que queda es que todavía no haya nada escrito. */}
             Todavía no hay nada escrito. Lo que se puede corregir antes de escribir es el
             temario, y eso se hace desde la ventana del {COMO_SE_LLAMA[opciones.formato].obra.toLowerCase()},

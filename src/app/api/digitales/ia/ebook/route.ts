@@ -6,11 +6,12 @@ import { permitirGeneracion } from "@/lib/ia-digitales";
 import { consumirDelCupo, devolverAlCupo, estadoDelCupo, CUPO_EBOOK, type Bolsa } from "@/lib/cupo-ia";
 import {
   INSTRUCCIONES_INDICE, ESQUEMA_DEL_INDICE, normalizarIndice,
-  INSTRUCCIONES_INDICE_RECETARIO, esquemaDelIndiceRecetario, seccionesParaRecetas,
+  INSTRUCCIONES_INDICE_RECETARIO, esquemaDelIndiceRecetario,
+  INSTRUCCIONES_INDICE_INFOGRAFIA, esquemaDelIndiceInfografia, seccionesElegidas,
   CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO, contextoDelPadre,
   leerFotoDeTapa,
 } from "@/lib/ebook-ia";
-import { normalizarOpciones } from "@/lib/ebook-opciones";
+import { normalizarOpciones, unidadesElegidas } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import { estadoDelBorrador, CANDADO_MS } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
@@ -227,14 +228,42 @@ export async function POST(req: NextRequest) {
 
   const devolver = async () => { if (bolsa) await devolverAlCupo(user.id, bolsa, "EBOOK"); };
 
-  /* ── Un recetario se planea distinto ─────────────────────────────────────
+  /* ── Un recetario y una infografía se planean distinto ───────────────────
      La lista que devuelve el modelo es la misma —título, promesa y entradas—
-     pero cada entrada es una SECCIÓN de recetas y no un capítulo. Y cuántas
-     hay no lo decide el modelo: sale de cuántas recetas eligió la persona,
+     pero cada entrada es una SECCIÓN de recetas o de láminas y no un capítulo.
+     Y cuántas hay no lo decide el modelo: sale de cuántas eligió la persona,
      porque ese número va en la tapa y es lo que justifica el precio.
-     Ver `seccionesParaRecetas`. */
+     Ver `seccionesElegidas`. */
   const esRecetario = opciones.formato === "recetario";
-  const secciones = esRecetario ? seccionesParaRecetas(opciones.recetas) : 0;
+  const esInfografia = opciones.formato === "infografia";
+  const porSecciones = esRecetario || esInfografia;
+  const secciones = seccionesElegidas(opciones);
+
+  /* Lo que cambia entre los tres: las instrucciones, el esquema y cómo se
+     nombra lo que se está armando. Elegido acá una vez, y no en cada línea. */
+  const plan = esRecetario
+    ? {
+      instrucciones: INSTRUCCIONES_INDICE_RECETARIO,
+      esquema: esquemaDelIndiceRecetario(secciones),
+      describe: "Devuelve el título, la promesa y las secciones del recetario.",
+      seLlama: `El recetario se llama "${producto.name}".`,
+      adentro: `${opciones.recetas} recetas`,
+    }
+    : esInfografia
+      ? {
+        instrucciones: INSTRUCCIONES_INDICE_INFOGRAFIA,
+        esquema: esquemaDelIndiceInfografia(secciones),
+        describe: "Devuelve el título, la promesa y las secciones de la infografía.",
+        seLlama: `La infografía se llama "${producto.name}".`,
+        adentro: `${opciones.laminas} láminas`,
+      }
+      : {
+        instrucciones: INSTRUCCIONES_INDICE,
+        esquema: ESQUEMA_DEL_INDICE,
+        describe: "Devuelve el título, la promesa y los capítulos del ebook.",
+        seLlama: `El ebook se llama "${producto.name}".`,
+        adentro: "",
+      };
 
   let respuesta;
   try {
@@ -242,16 +271,14 @@ export async function POST(req: NextRequest) {
       {
         model: "claude-sonnet-5",
         max_tokens: 2000,
-        system: esRecetario ? INSTRUCCIONES_INDICE_RECETARIO : INSTRUCCIONES_INDICE,
+        system: plan.instrucciones,
         /* La forma la garantiza la herramienta, no una frase pidiendo JSON:
            "contestame en JSON" funciona casi siempre, y el "casi" acá es una
            pantalla rota a mitad de un ebook pago. */
         tools: [{
           name: "armar_temario",
-          description: esRecetario
-            ? "Devuelve el título, la promesa y las secciones del recetario."
-            : "Devuelve el título, la promesa y los capítulos del ebook.",
-          input_schema: esRecetario ? esquemaDelIndiceRecetario(secciones) : ESQUEMA_DEL_INDICE,
+          description: plan.describe,
+          input_schema: plan.esquema,
         }],
         tool_choice: { type: "tool", name: "armar_temario" },
         messages: [{
@@ -260,9 +287,7 @@ export async function POST(req: NextRequest) {
              lo anterior" no es una frase mágica: es la forma de la salida —sólo
              puede llenar un temario— y el limado de `normalizarIndice`. */
           content: [
-            esRecetario
-              ? `El recetario se llama "${producto.name}".`
-              : `El ebook se llama "${producto.name}".`,
+            plan.seLlama,
             publico ? `Está escrito para: ${publico}` : null,
             /* Antes del tema a propósito: primero de qué producto cuelga esto,
                después qué hay que escribir. Al revés, el contexto del principal
@@ -273,9 +298,9 @@ export async function POST(req: NextRequest) {
             "",
             "De qué se trata, en palabras de quien lo vende:",
             `<tema>\n${tema}\n</tema>`,
-            ...(esRecetario ? [
+            ...(porSecciones ? [
               "",
-              `Armá exactamente ${secciones} secciones. Adentro van a ir ${opciones.recetas} recetas en total.`,
+              `Armá exactamente ${secciones} secciones. Adentro van a ir ${plan.adentro} en total.`,
             ] : []),
           ].filter((l) => l !== null).join("\n"),
         }],
@@ -300,12 +325,12 @@ export async function POST(req: NextRequest) {
   const bloque = respuesta.content.find((b) => b.type === "tool_use");
   /* El título del producto gana sobre el que proponga la IA: la persona ya le
      puso nombre a lo que vende. Ver `normalizarIndice`. */
-  /* ⚠️ El mínimo de un recetario son TODAS las secciones que se pidieron, no
-     `CAPITULOS_MIN`. Si el modelo devuelve siete de diez, el recetario saldría
-     con 21 recetas y se cobró uno de 30. Mejor "probá de nuevo" con el cupo
-     devuelto que entregar menos de lo que dice la tapa. */
+  /* ⚠️ El mínimo de un recetario —y de una infografía— son TODAS las secciones
+     que se pidieron, no `CAPITULOS_MIN`. Si el modelo devuelve siete de diez, el
+     recetario saldría con 21 recetas y se cobró uno de 30. Mejor "probá de
+     nuevo" con el cupo devuelto que entregar menos de lo que dice la tapa. */
   const indice = bloque
-    ? normalizarIndice(bloque.input, producto.name, esRecetario ? secciones : CAPITULOS_MIN)
+    ? normalizarIndice(bloque.input, producto.name, porSecciones ? secciones : CAPITULOS_MIN)
     : null;
 
   if (!indice) {
@@ -390,7 +415,7 @@ export async function POST(req: NextRequest) {
          para un recetario son RECETAS y no las secciones en que se parten. Si
          acá dijera secciones, la barra arrancaría diciendo "0 de 4" a alguien
          que eligió 10 y recién en la segunda vuelta se acomodaría. */
-      total: esRecetario ? opciones.recetas : indice.capitulos.length,
+      total: unidadesElegidas(opciones, indice.capitulos.length),
       trabajando: false,
       error: null,
       reintentos: yaHay ? yaHay.reintentos + 1 : 0,

@@ -21,11 +21,13 @@
 import { readFileSync } from "fs";
 import {
   FORMATOS, FORMATOS_LISTOS, TEMAS, OPCIONES_DE_FABRICA,
-  RECETAS_OPCIONES, RECETAS_DE_FABRICA,
-  normalizarOpciones, leerOpciones,
+  RECETAS_OPCIONES, RECETAS_DE_FABRICA, LAMINAS_OPCIONES, LAMINAS_DE_FABRICA,
+  QUE_ES_CADA_FORMATO, COMO_SE_LLAMA,
+  normalizarOpciones, leerOpciones, unidadesElegidas,
 } from "./ebook-opciones";
 import {
   CAPITULOS_MAX, RECETAS_POR_LLAMADA, seccionesParaRecetas, recetasDeLaSeccion,
+  LAMINAS_POR_LLAMADA, seccionesParaLaminas, laminasDeLaSeccion,
 } from "./ebook-ia";
 import { PALETAS } from "./pagina-venta";
 
@@ -140,6 +142,49 @@ const check = (id: string, ok: boolean, desc: string) => {
       return true;
     }),
     "ninguna sección queda vacía ni pide más de las que entran en una llamada");
+
+  /* ── Cuántas láminas ─────────────────────────────────────────────────── */
+  /* Los mismos candados que las recetas, para el tercer formato (14/09/26). */
+
+  check("OPC-LA",
+    LAMINAS_OPCIONES.every((n) => normalizarOpciones({ laminas: n }).laminas === n)
+    /* Sin el "20" escrito como texto: `Number` lo convierte y 20 SÍ es una de
+       las tres. En las recetas pasa igual y no se nota porque 20 es la de
+       fábrica. */
+    && raras.filter((x) => typeof x !== "string").every((x) => normalizarOpciones({ laminas: x }).laminas === LAMINAS_DE_FABRICA),
+    "las tres cantidades de láminas entran tal cual, y una rara cae a la de fábrica");
+
+  check("OPC-LB",
+    LAMINAS_OPCIONES.every((n) => seccionesParaLaminas(n) <= CAPITULOS_MAX),
+    `ninguna cantidad de láminas pide más de ${CAPITULOS_MAX} secciones`);
+
+  check("OPC-LC",
+    LAMINAS_OPCIONES.every((n) => {
+      const secciones = seccionesParaLaminas(n);
+      let suma = 0;
+      for (let i = 1; i <= secciones; i++) {
+        const cuantas = laminasDeLaSeccion(n, i);
+        if (cuantas < 1 || cuantas > LAMINAS_POR_LLAMADA) return false;
+        suma += cuantas;
+      }
+      return suma === n;
+    }),
+    "las secciones suman exactamente las láminas elegidas, sin ninguna vacía ni pasada");
+
+  /* El formato existe en las dos puntas: se puede elegir y se puede escribir. */
+  check("OPC-LD",
+    FORMATOS.includes("infografia") && FORMATOS_LISTOS.includes("infografia")
+    && normalizarOpciones({ formato: "infografia" }).formato === "infografia"
+    && QUE_ES_CADA_FORMATO.infografia.nombre === "Infografía"
+    && COMO_SE_LLAMA.infografia.parte === "lámina",
+    "la infografía se puede elegir, se guarda, y tiene su nombre y su unidad");
+
+  /* Y la cuenta que mira la barra: en cada formato la unidad que corresponde. */
+  check("OPC-LE",
+    unidadesElegidas({ ...OPCIONES_DE_FABRICA, formato: "infografia", laminas: 20 }, 4) === 20
+    && unidadesElegidas({ ...OPCIONES_DE_FABRICA, formato: "recetario", recetas: 30 }, 10) === 30
+    && unidadesElegidas({ ...OPCIONES_DE_FABRICA, formato: "texto" }, 7) === 7,
+    "unidadesElegidas devuelve láminas, recetas o el largo del temario según el formato");
 }
 
 /* ── Lo guardado ──────────────────────────────────────────────────────────── */
@@ -190,8 +235,8 @@ const check = (id: string, ok: boolean, desc: string) => {
      la persona elige, y el ebook sale igual que siempre sin que nada avise. */
   const pantalla = readFileSync("src/app/digitales/productos/EbookIA.tsx", "utf8");
   check("OPC-J",
-    /opciones:\s*\{\s*formato,\s*estilo,\s*tema:\s*temaVisual,\s*paleta,\s*recetas:\s*cuantasRecetas\s*\}/.test(pantalla),
-    "la pantalla manda la elección al servidor, con la cantidad de recetas adentro");
+    /opciones:\s*\{\s*formato,\s*estilo,\s*tema:\s*temaVisual,\s*paleta,\s*recetas:\s*cuantasRecetas,\s*laminas:\s*cuantasLaminas\s*\}/.test(pantalla),
+    "la pantalla manda la elección al servidor, con la cantidad de recetas y de láminas adentro");
 
   /* Y la ruta del temario tiene que GUARDARLA. */
   const temario = readFileSync("src/app/api/digitales/ia/ebook/route.ts", "utf8");

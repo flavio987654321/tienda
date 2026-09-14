@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { rutaDeArchivo, refDeArchivo, rutaDeRef, nombreDeArchivo } from "@/lib/subida-digital";
 import { configDeposito, subirAlDeposito, borrarDelDeposito } from "@/lib/deposito-digital";
 import {
-  leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa, leerFotoDeTapa,
+  leerIndice, leerCapitulos, leerGruposDeRecetas, leerGruposDeLaminas, leerPromesa, leerFotoDeTapa,
   conAvisoDeFotos,
 } from "@/lib/ebook-ia";
 import { armarPDF } from "@/lib/ebook-pdf";
@@ -94,13 +94,15 @@ export async function POST(req: NextRequest) {
   /* Formato, estilo, tema y color, tal como los eligió la persona. */
   const opciones = leerOpciones(ebook.indice);
   const esRecetario = opciones.formato === "recetario";
+  const esInfografia = opciones.formato === "infografia";
 
-  /* Un recetario guarda grupos de recetas donde un ebook de texto guarda
-     capítulos, pero la cuenta de "¿está completo?" es la misma: un elemento
-     por cada llamada del temario. */
+  /* Un recetario guarda grupos de recetas —y una infografía grupos de
+     láminas— donde un ebook de texto guarda capítulos, pero la cuenta de
+     "¿está completo?" es la misma: un elemento por cada llamada del temario. */
   const grupos = esRecetario ? leerGruposDeRecetas(ebook.capitulos) : [];
-  const capitulos = esRecetario ? [] : leerCapitulos(ebook.capitulos);
-  const partes = esRecetario ? grupos.length : capitulos.length;
+  const gruposDeLaminas = esInfografia ? leerGruposDeLaminas(ebook.capitulos) : [];
+  const capitulos = esRecetario || esInfografia ? [] : leerCapitulos(ebook.capitulos);
+  const partes = esRecetario ? grupos.length : esInfografia ? gruposDeLaminas.length : capitulos.length;
 
   /* ⚠️ No se arma un ebook al que le falta un capítulo. Sería entregar un
      archivo cortado a la mitad, y encima marcar el producto como entregable. */
@@ -195,10 +197,14 @@ export async function POST(req: NextRequest) {
      una receta y una foto del plato de al lado desentona más que no tener
      ninguna. Y `fotosCapitulos` se empareja POR POSICIÓN con lo que se dibuja,
      así que acá tiene que haber una por receta, en el mismo orden. */
+  /* Y en una infografía lo mismo, por lámina: la foto ES la mitad de la hoja. */
   const recetas = esRecetario ? grupos.flat() : [];
+  const laminas = esInfografia ? gruposDeLaminas.flat() : [];
   const consultas = esRecetario
     ? recetas.map((r) => r.foto || r.titulo)
-    : capitulos.map((c, i) => indice[i]?.foto || c.titulo);
+    : esInfografia
+      ? laminas.map((l) => l.foto || l.titulo)
+      : capitulos.map((c, i) => indice[i]?.foto || c.titulo);
 
   /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ LO ELEGIDO A MANO GANA, Y POR ESO LAS FOTOS YA NO CAMBIAN SOLAS
@@ -221,7 +227,9 @@ export async function POST(req: NextRequest) {
      que cada vez que se rehacía el PDF las treinta fotos cambiaban solas. */
   const elegidas = esRecetario
     ? recetas.map((r) => r.fotoElegida ?? null)
-    : capitulos.map((_, i) => indice[i]?.fotoElegida ?? null);
+    : esInfografia
+      ? laminas.map((l) => l.fotoElegida ?? null)
+      : capitulos.map((_, i) => indice[i]?.fotoElegida ?? null);
 
   /* La tapa, igual: lo elegido gana y la búsqueda queda de respaldo. Su frase
      puede estar vacía —nadie la tocó— y ahí se busca con el título del ebook,
@@ -308,6 +316,7 @@ export async function POST(req: NextRequest) {
       /* ⚠️ Si viene con algo, manda esto y `capitulos` se ignora: son dos
          moldes para el mismo archivo, no dos cosas que se apilan. */
       recetas: esRecetario ? recetas : undefined,
+      laminas: esInfografia ? laminas : undefined,
       /* ⚠️ La tapa sale con LOS COLORES DE LA PERSONA, los que ya eligió para
          su página de venta. No se le pregunta nada nuevo: elige la paleta una
          vez y el archivo que entrega combina con la página que lo vendió.
@@ -449,10 +458,15 @@ export async function POST(req: NextRequest) {
         /* La misma foto que se acaba de dibujar en el PDF, ya bajada: la
            portada no le pide nada más al banco de imágenes. */
         foto: fotoTapa?.datos ?? null,
-        /* Lo que dice el sello. En un recetario se cuentan recetas, que es la
-           unidad que la persona eligió y la que va en la tapa del archivo. */
-        cantidad: esRecetario ? recetas.length : capitulos.length,
-        palabra: esRecetario ? ["RECETA", "RECETAS"] : ["CAPÍTULO", "CAPÍTULOS"],
+        /* Lo que dice el sello. En un recetario se cuentan recetas —y en una
+           infografía láminas—, que es la unidad que la persona eligió y la que
+           va en la tapa del archivo. */
+        cantidad: esRecetario ? recetas.length : esInfografia ? laminas.length : capitulos.length,
+        palabra: esRecetario
+          ? ["RECETA", "RECETAS"]
+          : esInfografia
+            ? ["LÁMINA", "LÁMINAS"]
+            : ["CAPÍTULO", "CAPÍTULOS"],
         paleta: paletaDeLaTapa,
         modo: opciones.tema,
         /* Y el mismo molde que el archivo: esta imagen ES la tapa del PDF, no

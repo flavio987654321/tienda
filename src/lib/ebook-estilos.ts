@@ -75,6 +75,12 @@ export const QUE_ES_CADA_ESTILO: Record<
      * los subtítulos" — algo que ese archivo nunca iba a tener.
      */
     receta: string;
+    /**
+     * Qué hace con LA HOJA DE UNA LÁMINA, que tampoco es prosa: es una foto
+     * grande, un título y un texto corto. Aparte por el mismo motivo que
+     * `receta`.
+     */
+    lamina: string;
   }
 > = {
   libro: {
@@ -82,24 +88,28 @@ export const QUE_ES_CADA_ESTILO: Record<
     explica: "Una columna, con aire, y cada capítulo abre con su foto y su número.",
     contra: "Es el más largo en hojas.",
     receta: "Foto ancha arriba, las tres fichas en una fila y abajo los ingredientes y los pasos.",
+    lamina: "La foto ocupa la mitad de arriba y la idea va abajo, en el papel.",
   },
   compacto: {
     nombre: "Compacto",
     explica: "Dos columnas, como un diario. El título va sobre la foto y entra casi el doble por hoja.",
     contra: "En el celular se lee peor: hay que subir y bajar por cada columna.",
     receta: "La foto cuadrada al lado del título: se gana alto y entra una receta más larga.",
+    lamina: "La foto ocupa la mitad izquierda a toda altura y la idea va a la derecha, como una revista.",
   },
   manual: {
     nombre: "Manual",
     explica: "Columna angosta y una franja al costado donde caen los subtítulos, afuera del texto.",
     contra: "El renglón es corto: un texto largo se estira en más hojas.",
     receta: "Rinde, tiempo y cocción en la franja del costado, a la vista mientras bajás por los pasos.",
+    lamina: "El número enorme en la franja del costado, la foto más baja y la idea en la columna angosta.",
   },
   cartel: {
     nombre: "Cartel",
     explica: "Títulos enormes, fotos a toda la hoja y los subtítulos resaltados en color.",
     contra: "Gasta mucha tinta si alguien lo imprime.",
     receta: "La foto tapa lo alto de la hoja y el título de la receta va encima.",
+    lamina: "La foto tapa la hoja entera y la idea va encima, abajo, sobre un velo.",
   },
 };
 
@@ -228,6 +238,24 @@ export type Molde = {
    */
   receta: "banda" | "ficha" | "franja" | "sangre";
 
+  /* ── La hoja de UNA LÁMINA ─────────────────────────────────────────────── */
+
+  /**
+   * Cómo se acomoda una lámina de infografía: una foto grande, la idea en un
+   * título, dos o tres frases y hasta tres datos. Nada elástico, así que el
+   * molde decide dónde va cada cosa y no hace falta medir.
+   *
+   * - `banda`: la foto ocupa la mitad de arriba, a sangre, y todo lo demás va
+   *   abajo, en el papel. **Es el de siempre.**
+   * - `lado`: la foto ocupa la mitad IZQUIERDA a toda altura y el texto va a
+   *   la derecha. Es lo que hace ver de revista.
+   * - `ficha`: el número enorme en la franja del costado, la foto de banda más
+   *   baja y el texto en la columna angosta, al lado del número.
+   * - `sangre`: la foto tapa la hoja entera y el texto va encima del velo,
+   *   abajo, como la tapa de `cartel`.
+   */
+  lamina: "banda" | "lado" | "ficha" | "sangre";
+
   /* ── La tapa ───────────────────────────────────────────────────────────── */
 
   /**
@@ -257,7 +285,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 11.5, interlinea: 3, alineado: "justify", entrada: false,
     portadilla: "banda", altoFoto: 350, numero: 72,
     subtitulo: "raya", subtituloPt: 13, esquina: 10,
-    receta: "banda",
+    receta: "banda", lamina: "banda",
     tapa: "clasica", tituloTapa: 30,
   },
 
@@ -269,7 +297,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 10, interlinea: 2.2, alineado: "justify", entrada: true,
     portadilla: "sangre", altoFoto: 300, numero: 60,
     subtitulo: "linea", subtituloPt: 11, esquina: 0,
-    receta: "ficha",
+    receta: "ficha", lamina: "lado",
     tapa: "titular", tituloTapa: 32,
   },
 
@@ -282,7 +310,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 11, interlinea: 3.2, alineado: "left", entrada: false,
     portadilla: "ficha", altoFoto: 200, numero: 56,
     subtitulo: "raya", subtituloPt: 12.5, esquina: 4,
-    receta: "franja",
+    receta: "franja", lamina: "ficha",
     tapa: "ficha", tituloTapa: 31,
   },
 
@@ -294,7 +322,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 12.5, interlinea: 4.5, alineado: "left", entrada: true,
     portadilla: "sangre", altoFoto: 430, numero: 110,
     subtitulo: "resaltado", subtituloPt: 15, esquina: 0,
-    receta: "sangre",
+    receta: "sangre", lamina: "sangre",
     tapa: "sangre", tituloTapa: 38,
   },
 };
@@ -346,6 +374,33 @@ export const HOJA_DE_RECETA = {
    */
   sangreMax: 400,
   sangreMin: 200,
+} as const;
+
+/**
+ * Las medidas de la hoja de UNA LÁMINA que miran los tres: el archivo, la
+ * miniatura y la vista previa. Escritas tres veces se desincronizan de a una;
+ * ver `HOJA_DE_RECETA`.
+ *
+ * Son fracciones de la hoja y no puntos, porque la lámina no tiene nada
+ * elástico: la foto se lleva siempre lo mismo, y lo que queda es para el
+ * texto, que entra por construcción (lo verifica el candado LAM-PDF).
+ */
+export const HOJA_DE_LAMINA = {
+  /**
+   * `banda`: cuánto de la hoja, de arriba, se lleva la foto. Hasta la mitad;
+   * y si el texto no entra abajo, cede hasta un tercio, no menos: más chica
+   * ya no es "una foto grande".
+   */
+  bandaMax: 0.56,
+  bandaMin: 0.34,
+  /** `lado`: cuánto del ancho se lleva la foto de la izquierda. */
+  ladoAncho: 0.46,
+  /** `ficha`: la foto de banda, que también cede; más baja que en `banda`
+      porque abajo el texto va en la columna angosta y necesita más alto. */
+  fichaMax: 0.52,
+  fichaMin: 0.3,
+  /** `sangre`: desde dónde empieza el velo, contando desde arriba. */
+  sangreVeloDesde: 0.4,
 } as const;
 
 /**
