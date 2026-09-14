@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { normalizarContenido } from "@/lib/pagina-venta";
 import PaginaDeVenta, { type ProductoParaPagina } from "@/components/digitales/PaginaDeVenta";
 import PaginaEnVivo from "./PaginaEnVivo";
+import VisitaDigital from "./VisitaDigital";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 
 export const runtime = "nodejs";
@@ -164,6 +165,10 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
 
   return (
     <div className={CLASES_FUENTES}>
+      {/* La visita se cuenta acá y no en la previa: la previa es la dueña
+          mirándose. Un borrador tampoco cuenta —lo ve sólo ella—, y el servidor
+          lo descarta igual; `apagado` sólo ahorra el ping. */}
+      <VisitaDigital paso="pagina" productoId={fila.id} apagado={!fila.isActive} />
       <PaginaDeVenta {...datos} />
     </div>
   );

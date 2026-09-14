@@ -41,6 +41,8 @@ export async function limpiar() {
     storeViewSources,
     funnelSteps,
     abandonedCarts,
+    visitasDigitales,
+    origenesDigitales,
   ] = await Promise.all([
     // Sesiones de NextAuth ya expiradas
     prisma.session.deleteMany({
@@ -85,6 +87,14 @@ export async function limpiar() {
     prisma.abandonedCart.deleteMany({
       where: { recoveredAt: null, lastActivityAt: { lt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000) } },
     }),
+    // Las visitas de los productos digitales, con el mismo corte que las de
+    // tiendas: la pantalla de Estadísticas promete la misma retención.
+    prisma.digitalVisita.deleteMany({
+      where: { date: { lt: corteVisitas } },
+    }),
+    prisma.digitalVisitaOrigen.deleteMany({
+      where: { date: { lt: corteVisitas } },
+    }),
   ]);
 
   // Va al final y aparte del `Promise.all`: es lo único acá que sale a internet.
@@ -103,10 +113,13 @@ export async function limpiar() {
       storeViewSources: storeViewSources.count,
       funnelSteps:   funnelSteps.count,
       abandonedCarts: abandonedCarts.count,
+      visitasDigitales: visitasDigitales.count,
+      origenesDigitales: origenesDigitales.count,
     },
     total: sessions.count + clicks.count + notifications.count +
            adminLogs.count + coupons.count + storeViews.count +
-           storeViewSources.count + funnelSteps.count + abandonedCarts.count,
+           storeViewSources.count + funnelSteps.count + abandonedCarts.count +
+           visitasDigitales.count + origenesDigitales.count,
     ranAt: now.toISOString(),
   });
 }

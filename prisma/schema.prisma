@@ -684,6 +684,8 @@ model Product {
   stockMovements  StockMovement[]
   affiliateClicks AffiliateClick[]
   expenses        VehicleExpense[]
+  visitasDigital  DigitalVisita[]
+  origenesDigital DigitalVisitaOrigen[]
 
   @@index([deletedAt])
   // Todo lo que se le pide a esta tabla arranca por la tienda: el catálogo que
@@ -1110,6 +1112,52 @@ model DigitalEnvioLog {
 /// mes actual, el contador se pone en cero **en ese momento**. Así el reinicio
 /// no depende de que un proceso nocturno corra: si el cron no corre, no pasa
 /// nada, porque nadie está esperando que corra.
+/// Visitas a la página de venta de un producto digital, por día, y cuántas de
+/// ellas llegaron al checkout. Una fila por (producto, día, paso).
+///
+/// Es `StoreView` + `StoreFunnelStep` colgadas del PRODUCTO y no de la tienda,
+/// porque en este ecosistema cada producto principal es su propio sitio —su
+/// dirección, su anuncio, su conversión— y una cuenta Pro tiene cinco. Un
+/// número por cuenta no le dice cuál de los cinco anda.
+///
+/// `paso` es "pagina" (entró a la página de venta) o "pagar" (abrió el
+/// checkout). La venta no se guarda acá: sale de `Order`, como siempre. Los
+/// tres juntos son el embudo: entró → quiso pagar → pagó.
+///
+/// Se cuenta como las visitas de tiendas: una vez por navegador por día, con
+/// el dedup del lado del cliente y los filtros de `visita-legitima` del lado
+/// del servidor. `date` es el día del calendario argentino.
+model DigitalVisita {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  date      String // "2026-09-14", día argentino
+  paso      String // "pagina" | "pagar"
+  count     Int    @default(0)
+
+  @@unique([productId, date, paso])
+  @@index([productId, date(sort: Desc)])
+}
+
+/// De dónde vinieron las visitas a la página de venta, por día. Una fila por
+/// (producto, día, origen). Sólo del paso "pagina": el checkout se abre desde
+/// la propia página, así que su referente sería siempre nosotros.
+///
+/// `source` sale de la lista cerrada de `src/lib/origen-visita.ts`, la misma
+/// que usan las tiendas: un `utm_source` reconocido cae en su etiqueta, uno
+/// desconocido en "otro", y sin utm decide el referente.
+model DigitalVisitaOrigen {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  date      String
+  source    String // una de ORIGENES
+  count     Int    @default(0)
+
+  @@unique([productId, date, source])
+  @@index([productId, date(sort: Desc)])
+}
+
 model CupoIA {
   id String @id @default(cuid())
 

@@ -8,6 +8,7 @@ import { loQueFalta } from "@/lib/productos-digitales";
 import { totalDeLaCompra, type ItemDeCompra } from "@/lib/compra-digital";
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import CheckoutClient from "./CheckoutClient";
+import VisitaDigital from "../VisitaDigital";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -131,6 +132,9 @@ export default async function PantallaDePago({ params }: Props) {
         style={variablesDePagina(pagina) as React.CSSProperties}
         className="min-h-screen overflow-x-clip [overflow-wrap:anywhere] bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased"
       >
+        {/* El segundo escalón del embudo: abrió el checkout. Con la previa de la
+            dueña apagado; el servidor la descartaría igual. */}
+        <VisitaDigital paso="pagar" productoId={fila.id} apagado={!seLePuedeVender} />
         <CheckoutClient
           productoId={fila.id}
           nombre={fila.name}
