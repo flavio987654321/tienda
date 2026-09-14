@@ -5424,3 +5424,23 @@ guarda**: cada venta con su fecha y monto, cada descarga con su fecha, y los
 carritos que no terminaron. La pantalla de estadísticas sigue pendiente
 "cuando haya qué mostrar", y cuando se haga va a leer eso mismo; no hace
 falta anotar nada más por ahora.
+
+---
+
+## Deploy del 14/09/26 — cerrado
+
+Doce commits a producción (`7c158609..034c2342`), en verde en 2m 28s. Antes
+del push: relectura del diff entero (salió un arreglo: los bonos y upsells de
+la caída a Free se revisan por cada principal, publicado o no), `tsc`, eslint,
+los 90 chequeos y la compilación de producción completa en local.
+
+Verificado desde afuera después del deploy: `/terminos` muestra las dos líneas
+de 1.9. Lo de `/precios` para digitales se dibuja al tocar la tarjeta, así que
+se mira en el navegador.
+
+Lo que corre solo a partir de acá, y conviene mirar la primera vez:
+- La migración `freeDesde` la aplicó el build.
+- El banner de términos 1.9 les aparece a todos al entrar; el cron manda el
+  mail a quien no vuelva.
+- El cron de la noche: `result.digitales` ahora trae `caidasAFree`,
+  `despublicadas`, `dominiosAvisados` y `dominiosSoltados`.
