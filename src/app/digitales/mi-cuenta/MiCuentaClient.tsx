@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useIsPwa } from "@/hooks/useIsPwa";
 import {
   CheckCircle, Clock, AlertTriangle, ArrowRight, Sparkles, Rocket, Crown,
-  Loader2, Star, Percent, ShieldCheck, X, Mail, KeyRound, Phone, UserRound, CalendarDays,
+  Loader2, Star, Percent, ShieldCheck, X, Mail, KeyRound, Phone, UserRound, CalendarDays, Gauge,
 } from "lucide-react";
 import { PRECIOS_DIGITALES, COMISION_DIGITAL, DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { COPY_DIGITAL, featuresDigital, type TierDigital } from "@/lib/planes-digitales";
 import { validarTelefono, LARGO_MAXIMO as TELEFONO_MAXIMO } from "@/lib/telefono";
+import { pesoLegible, nombreDelMes, type UsoDeLaCuenta } from "@/lib/uso-digital";
+import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 type Estado = "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
@@ -24,6 +26,8 @@ type Props = {
   renovacion: string | null;
   /** Si los 7 días de prueba siguen sin usar. */
   pruebaDisponible: boolean;
+  /** Lo que tiene contra lo que el plan permite. Contado en el servidor. */
+  uso: UsoDeLaCuenta & { ia: { embudo: EstadoDelCupo; ebook: EstadoDelCupo } };
   cuenta: { nombre: string; email: string; telefono: string; alta: string };
 };
 
@@ -32,6 +36,68 @@ function money(n: number) {
 }
 
 const PLAN_KEY = { STARTER: "DIGITAL_STARTER", PRO: "DIGITAL_PRO" } as const;
+
+/**
+ * La barra de "Tu uso". Se llena hasta el tope y no más: pasarse —caer de plan
+ * con más páginas que las que permite— se dice con palabras al lado, no con una
+ * barra que se sale del borde. Con tope cero no se dibuja nada: no hay contra
+ * qué medir.
+ */
+function Barra({ usado, tope, degrade, pasado = false }: { usado: number; tope: number; degrade: string; pasado?: boolean }) {
+  const porcentaje = tope > 0 ? Math.min(100, Math.round((usado / tope) * 100)) : 0;
+  return (
+    <div
+      className="h-2 w-full rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={tope}
+      aria-valuenow={Math.min(usado, tope)}
+    >
+      <div
+        className={`h-full rounded-full transition-all ${pasado ? "bg-amber-500" : `bg-gradient-to-r ${degrade}`}`}
+        style={{ width: `${porcentaje}%` }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Un renglón de cupo de IA: el título, cuántas quedan, la barra y de dónde
+ * salen. Las dos bolsas —del mes y de bienvenida— se suman en la barra y se
+ * separan en el texto: es la misma cuenta que hace `estadoDelCupo`, y la
+ * persona tiene que poder ver que las del mes vuelven y las otras no.
+ */
+function CupoDeIA({ titulo, cupo, degrade, sinPlan }: { titulo: string; cupo: EstadoDelCupo; degrade: string; sinPlan: string }) {
+  const total = cupo.topeDelMes + cupo.topeDeBienvenida;
+  const usadas = total - cupo.quedan;
+  const partes: string[] = [];
+  if (cupo.topeDelMes > 0) {
+    partes.push(`${cupo.quedanDelMes} de este mes${cupo.proximoMes ? ` (vuelven en ${nombreDelMes(cupo.proximoMes)})` : ""}`);
+  }
+  if (cupo.topeDeBienvenida > 0) partes.push(`${cupo.quedanDeBienvenida} de bienvenida`);
+  /* Sin cupo en este plan: el título y, abajo, que no viene. Al costado se
+     partía en dos renglones en el celular. */
+  if (total === 0) {
+    return (
+      <div>
+        <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">{titulo}</p>
+        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1">{sinPlan}.</p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3 mb-1.5">
+        <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">{titulo}</p>
+        <p className="text-sm font-bold tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0">
+          {cupo.quedan} <span className="font-medium text-gray-400 panel-oscuro:text-gray-500">{cupo.quedan === 1 ? "queda" : "quedan"}</span>
+        </p>
+      </div>
+      <Barra usado={usadas} tope={total} degrade={degrade} />
+      <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1.5">{partes.join(" · ")}.</p>
+    </div>
+  );
+}
 
 /* El color de cada plan. Naranja es el de Productos Digitales en toda la
    plataforma —la tarjeta de /precios, la de registro, el inicio del panel— y los
@@ -69,7 +135,7 @@ const ESTADO_CFG: Record<Estado, { label: string; texto: string; fondo: string; 
  * ésta tiene que sacar el miedo, porque el miedo acá sería mentira. Por eso el
  * cartel de abajo está en los cinco estados.
  */
-export default function MiCuentaClient({ tier, billing, estado, dias, renovacion, pruebaDisponible, cuenta }: Props) {
+export default function MiCuentaClient({ tier, billing, estado, dias, renovacion, pruebaDisponible, uso, cuenta }: Props) {
   const inPwa = useIsPwa();
   const [pagar, setPagar] = useState<{ plan: "DIGITAL_STARTER" | "DIGITAL_PRO"; billing: Billing } | null>(null);
   const [probando, setProbando] = useState<TierDigital | null>(null);
@@ -315,6 +381,99 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             Si una venta se devuelve —arrepentimiento o contracargo—, la comisión te vuelve
             entera: de una venta que se deshizo no nos quedamos con nada.
           </p>
+        </div>
+
+        {/* ── Tu uso ───────────────────────────────────────────────────────────
+            Lo que la competencia pone en "Mi plan" y acá se postergó hasta que
+            hubiera qué contar (ver `lib/uso-digital`). Va antes de la lista de
+            funciones: "cuánto me queda" se mira más que "qué incluye". Las
+            páginas se cuentan CREADAS contra el tope, porque el tope cierra la
+            puerta de crear; cuántas están publicadas va al lado. */}
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Gauge className="h-4 w-4 text-orange-500" />
+            <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest">Tu uso</p>
+          </div>
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mb-5">
+            Lo que tenés contra lo que permite {COPY_DIGITAL[tier].nombre}.
+          </p>
+
+          <div className="space-y-5">
+            {/* Páginas de venta */}
+            <div>
+              <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Páginas de venta</p>
+                <p className="text-sm font-bold tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0">
+                  {uso.paginas.creadas} <span className="font-medium text-gray-400 panel-oscuro:text-gray-500">de {uso.paginas.tope}</span>
+                </p>
+              </div>
+              <Barra usado={uso.paginas.creadas} tope={uso.paginas.tope} degrade={cfg.degrade} pasado={uso.paginas.creadas > uso.paginas.tope} />
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1.5">
+                {uso.paginas.creadas === 0
+                  ? "Todavía no creaste ninguna."
+                  : `${uso.paginas.publicadas} ${uso.paginas.publicadas === 1 ? "publicada" : "publicadas"}, ${uso.paginas.creadas - uso.paginas.publicadas} en borrador.`}
+              </p>
+              {/* Cayó de plan: tiene más páginas que las que el plan permite. Las de
+                  más ya están en borrador —las apagó el cron— y no puede crear otra. */}
+              {uso.paginas.creadas > uso.paginas.tope && (
+                <p className="text-xs text-amber-700 panel-oscuro:text-amber-400 mt-1.5 leading-relaxed">
+                  Tenés más páginas que las que permite {COPY_DIGITAL[tier].nombre}. No se borró ninguna:
+                  las de más quedaron en borrador, y no podés crear otra hasta borrar alguna o subir de plan.
+                </p>
+              )}
+            </div>
+
+            {/* Bonos y upsells, por página: el tope es por producto, no por cuenta. */}
+            {uso.porPagina.length > 0 && (
+              <div>
+                <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                  <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Bonos y upsells</p>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 shrink-0">
+                    hasta {uso.topes.bonos} y {uso.topes.upsells} por página
+                  </p>
+                </div>
+                <ul className="divide-y divide-gray-100 panel-oscuro:divide-gray-800">
+                  {uso.porPagina.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                      {/* El nombre se corta con puntos suspensivos; "borrador" no, o en
+                          el celular se pierde justo lo que distingue a esa fila. */}
+                      <span className="flex min-w-0 items-center gap-1 text-gray-700 panel-oscuro:text-gray-300">
+                        <span className="truncate">{p.name}</span>
+                        {!p.publicada && <span className="shrink-0 text-gray-400 panel-oscuro:text-gray-500">· borrador</span>}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-xs text-gray-500 panel-oscuro:text-gray-400">
+                        {p.bonos}/{uso.topes.bonos} bonos · {p.upsells}/{uso.topes.upsells} upsells
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Archivos: sin barra, porque no hay tope por plan contra qué medir.
+                El único tope es el de cada PDF, y ése se dice al subirlo. */}
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Archivos subidos</p>
+              <p className="text-sm font-bold tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0">
+                {uso.archivos.cantidad}{" "}
+                <span className="font-medium text-gray-400 panel-oscuro:text-gray-500">· {pesoLegible(uso.archivos.bytes)}</span>
+              </p>
+            </div>
+
+            {/* Las dos bolsas de IA, separadas: gastar una no toca la otra. */}
+            <CupoDeIA
+              titulo="IA para armar la página"
+              cupo={uso.ia.embudo}
+              degrade={cfg.degrade}
+              sinPlan={`No viene con ${COPY_DIGITAL[tier].nombre}`}
+            />
+            <CupoDeIA
+              titulo="Ebooks escritos con IA"
+              cupo={uso.ia.ebook}
+              degrade={cfg.degrade}
+              sinPlan={`No viene con ${COPY_DIGITAL[tier].nombre}`}
+            />
+          </div>
         </div>
 
         {/* ── Qué incluye ──────────────────────────────────────────────────── */}

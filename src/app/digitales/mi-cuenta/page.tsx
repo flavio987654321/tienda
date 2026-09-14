@@ -7,6 +7,9 @@ import {
   pruebaYaUsada,
 } from "@/lib/subscription";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { TOPES_DIGITALES } from "@/lib/planLimits";
+import { estadoDelCupo } from "@/lib/cupo-ia";
+import { armarUso } from "@/lib/uso-digital";
 import BotonVolver from "../BotonVolver";
 import MiCuentaClient from "./MiCuentaClient";
 
@@ -33,6 +36,42 @@ import MiCuentaClient from "./MiCuentaClient";
  * manifiesto y desde la app instalada abría el sitio comercial entero. La
  * pantalla la dibuja el layout.
  */
+
+/**
+ * Cuántas filas puede llegar a traer "Tu uso", con el doble de margen. Es el
+ * mismo techo que la pantalla de productos, calculado igual y por el mismo
+ * motivo: una consulta sin límite contra una tabla que crece.
+ */
+const TECHO_DE_FILAS =
+  TOPES_DIGITALES.PRO.paginas * (1 + TOPES_DIGITALES.PRO.bonos + TOPES_DIGITALES.PRO.upsells) * 2;
+
+/**
+ * Lo que la cuenta tiene contra lo que el plan permite. Sin `Store` todavía
+ * —nunca guardó un producto— es todo cero, que es la verdad y no un caso aparte.
+ *
+ * `enPrueba` va al cupo de ebooks por el mismo motivo que en la pantalla de
+ * productos: el número que se muestra tiene que ser el que aplica el servidor.
+ * La cuenta en sí la hace `armarUso`, que es pura y está probada.
+ */
+async function usoDeLaCuenta(userId: string, tier: TierDigital, enPrueba: boolean) {
+  const [store, embudo, ebook] = await Promise.all([
+    prisma.store.findUnique({ where: { ownerId: userId }, select: { id: true } }),
+    estadoDelCupo(userId, tier),
+    estadoDelCupo(userId, tier, "EBOOK", enPrueba),
+  ]);
+
+  const filas = store
+    ? await prisma.product.findMany({
+        where: { storeId: store.id, deletedAt: null, rolDigital: { not: null } },
+        orderBy: { createdAt: "asc" },
+        take: TECHO_DE_FILAS,
+        select: { id: true, name: true, rolDigital: true, padreId: true, isActive: true, archivoPeso: true },
+      })
+    : [];
+
+  return { ...armarUso(filas, tier), ia: { embudo, ebook } };
+}
+
 export default async function MiCuentaPage() {
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
@@ -72,6 +111,10 @@ export default async function MiCuentaPage() {
     : estado === "GRACE" ? (sub.gracePeriodEndsAt ?? sub.currentPeriodEnd)
     : sub.currentPeriodEnd;
 
+  /* Páginas, bonos, archivos y el cupo de IA, contados acá y bajados resueltos
+     como todo lo demás de esta pantalla. */
+  const uso = await usoDeLaCuenta(user.id, tier, estado === "TRIAL");
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-8">
       <BotonVolver />
@@ -92,6 +135,7 @@ export default async function MiCuentaPage() {
             : null
         }
         pruebaDisponible={!sub || !pruebaYaUsada(sub)}
+        uso={uso}
         cuenta={cuenta}
       />
     </div>

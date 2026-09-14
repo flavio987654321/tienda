@@ -1281,9 +1281,10 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
 
 ### 🔲 Lo que queda de la Fase 2
 
-- 🔲 **Los pasos de creación antes de entrar al panel.** Hay imágenes de
-  referencia para esto; van cuando lleguen. Su lugar es `/digitales`, que hoy es
-  una pantalla sola que dice que el panel se está construyendo.
+- ✅ ~~**Los pasos de creación antes de entrar al panel.**~~ Resuelto hace
+  tiempo: `/digitales` es el panel, con los primeros pasos como pantalla entera
+  hasta que la cuenta está armada (ver Fase 3, el recibimiento). Quedó sin
+  tachar; tachado el 14/09/26.
 
 **Lo que sigue abierto:**
 
@@ -1349,8 +1350,9 @@ medias?, ¿quedamos vulnerables?, ¿se entiende lo que decimos?
   cuesta nada; **pasa a importar el día que se encienda la IA** (Fase 4).
 - 🔲 **El correo no se verifica** (`email_confirm: true` sin mandar nada). Es así
   para los cuatro roles desde antes; no lo trajo esto.
-- 🔲 **`pruebaYaUsada` no tiene llamador todavía**: la va a usar el botón de
-  "probar Starter" del panel. La otra mitad de la regla ya está viva.
+- ✅ ~~**`pruebaYaUsada` no tiene llamador todavía**~~: lo usan
+  `/api/digitales/prueba` (rechaza la segunda prueba) y Mi cuenta (esconde el
+  botón). Quedó sin tachar; tachado el 14/09/26.
 - ✅ ~~Despublicar las páginas de más al caer a Free.~~ Hecho el 14/09/26.
 
 
@@ -1520,10 +1522,10 @@ persona, como lo tiene la competencia. Se miran juntos y el panel todavía no
 tiene tantas pantallas como para partirlos.
 
 - ✅ Nombre y celular editables, correo y fecha de alta a la vista.
-- 🔲 **NO se copiaron las barras de "Tu uso actual"** (Tiendas 1/1,
-  Almacenamiento 92 KB…), que es lo mejor que tienen. Hoy no hay qué contar: el
-  modelo de producto digital no existe, y una barra clavada en 0 es un número
-  inventado esperando a mentir. Van apenas exista el modelo.
+- ✅ ~~**NO se copiaron las barras de "Tu uso actual"** (Tiendas 1/1,
+  Almacenamiento 92 KB…), que es lo mejor que tienen.~~ Hechas el 14/09/26,
+  cuando ya había qué contar: la tarjeta **Tu uso** de Mi cuenta (ver el
+  apartado del 14/09 al final).
 - ✅ **La contraseña se cambia por un link al correo, no con un formulario.** Un
   formulario ahí deja que cualquiera con la sesión abierta —el teléfono
   desbloqueado arriba de la mesa— te cambie la contraseña y te deje afuera de tu
@@ -5466,3 +5468,45 @@ verificar el Site URL:
   ahora.** 🔲 **El 25/09** volver a mirar la misma pantalla: si Cached Egress
   pasa de 3 GB, pagar el Pro ese día (US$25/mes) y buscar qué lo consume —el
   Pro también tiene cuota (250 GB) y cada venta de un PDF es egress—.
+
+---
+
+## "Tu uso" en Mi cuenta — 14/09/26
+
+La tarjeta que la competencia pone en "Mi plan" (Tiendas 1/1, Almacenamiento
+92 KB…) y que acá se había postergado porque no había qué contar. Ahora sí:
+va entre la comisión y la lista de funciones, porque "cuánto me queda" se
+mira más que "qué incluye".
+
+Qué muestra, y por qué así:
+
+- **Páginas de venta: creadas de tope**, con barra. Se cuentan las CREADAS y
+  no las publicadas porque el tope cierra la puerta de crear; cuántas están
+  publicadas y cuántas en borrador va escrito debajo. Si hay más creadas que
+  el tope —cayó de plan—, la barra se pone ámbar y un texto dice que no se
+  borró nada, que las de más quedaron en borrador y que no puede crear otra
+  hasta borrar alguna o subir de plan.
+- **Bonos y upsells, por página**, un renglón cada una con `3/5 bonos · 1/3
+  upsells`. No van en una barra sola porque el tope es POR PRODUCTO, no por
+  cuenta. Las páginas en borrador figuran igual, marcadas.
+- **Archivos subidos: cantidad y peso** ("9 · 37,4 MB"), sin barra: no hay
+  tope por plan contra qué medir, y una barra sin tope es una barra contra
+  nada. Los huérfanos —bonos cuyo padre se borró— no cuentan en ninguna
+  página pero sí pesan: están en el depósito igual.
+- **Las dos bolsas de IA por separado** (armar la página / escribir ebooks):
+  cuántas quedan, la barra de lo gastado, y debajo de dónde salen —"8 de este
+  mes (vuelven en octubre) · 12 de bienvenida"—. Un plan sin cupo dice "No
+  viene con Free" debajo del título. El cupo de ebooks se lee con `enPrueba`,
+  igual que la ruta que lo gasta: el número de la pantalla tiene que ser el
+  que aplica el servidor.
+
+Dónde vive: `lib/uso-digital.ts` es puro —`armarUso`, `pesoLegible`,
+`nombreDelMes`— y **no toca la base a propósito**: lo importa la tarjeta, que
+es un componente de navegador, y un import de Prisma desde ahí arrastra el
+cliente entero al bundle. La consulta está en `mi-cuenta/page.tsx`, con el
+mismo techo de filas que la pantalla de productos. Chequeos en
+`uso-digital.check.ts` (USO-*, PESO-*, TARJ-*). Mirado en 360, 768 y 1280 con
+tres cuentas: Pro llena, Free caída con tres páginas, y Free vacía.
+
+También se tacharon dos pendientes viejos que ya estaban resueltos: los
+pasos de creación en `/digitales` y el llamador de `pruebaYaUsada`.
