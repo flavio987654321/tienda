@@ -1327,7 +1327,7 @@ chequear("el input de archivo se puede alcanzar con el teclado, y el foco se ve"
 /* Y el motivo por el que "Publicar" está apagado tiene que llegar sin depender
    del `title`, que en un celular no existe. */
 chequear("el motivo por el que no se puede publicar está atado al botón",
-  /aria-describedby=\{!p\.publicado && falta \?/.test(pantallaProductos));
+  /aria-describedby=\{!p\.publicado && \(falta \|\| sinLugar\) \?/.test(pantallaProductos));
 
 /* ── El fondo del sitio no se ve por detrás del panel (08/09/26) ───────────
  *

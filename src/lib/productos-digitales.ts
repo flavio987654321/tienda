@@ -1,5 +1,5 @@
 import { TOPES_DIGITALES } from "@/lib/planLimits";
-import type { TierDigital } from "@/lib/planes-digitales";
+import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 
 /* ══════════════════════════════════════════════════════════════════════════
    EL EMBUDO DE UN PRODUCTO DIGITAL
@@ -227,4 +227,74 @@ export function validarCampos(c: CamposProducto, rol: RolDigital): string | null
   }
 
   return null;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LO QUE PUEDE ESTAR PUBLICADO A LA VEZ
+   ══════════════════════════════════════════════════════════════════════════
+
+   El tope del plan se cobra en DOS puertas, y son dos a propósito.
+
+   La primera es crear: `topeDe` cuenta los que existen, publicados o no, y
+   con eso alcanzaba mientras el plan de una cuenta sólo podía subir. El día
+   que una cuenta CAE —de Pro a Free, al vencerse sin pagar— se queda con más
+   productos que los que su plan permite, y ahí crear ya no es el problema: no
+   puede crear ninguno. El problema es que sigue con cinco páginas publicadas
+   en un plan que vende una.
+
+   La segunda puerta es publicar, y es la que cierra ese agujero: no se puede
+   publicar uno si ya hay tantos publicados como permite el plan. Sin ella, el
+   cron despublica de más a la noche y la persona los vuelve a publicar a la
+   mañana, todos los días, para siempre. */
+
+/** Cómo se nombra cada rol cuando se cuenta contra el tope, en singular y plural. */
+const AL_CONTAR: Record<RolDigital, { una: string; varias: string }> = {
+  PRINCIPAL: { una: "página de venta publicada", varias: "páginas de venta publicadas" },
+  BONO: { una: "bono publicado por producto", varias: "bonos publicados por producto" },
+  UPSELL: { una: "upsell publicado por producto", varias: "upsells publicados por producto" },
+};
+
+/**
+ * Por qué no se puede publicar uno más, o `null` si hay lugar.
+ *
+ * `publicados` son los que YA están publicados en ese grupo —las páginas de la
+ * cuenta, o los bonos o upsells de ese producto—, sin contar el que se quiere
+ * publicar. El texto dice qué hacer y no sólo qué pasó: se muestra tal cual en
+ * el botón apagado y como error de la ruta, y "llegaste al tope" a secas deja a
+ * la persona sin saber que despublicar otro es la salida.
+ */
+export function porQueNoSePublica(rol: RolDigital, publicados: number, tier: TierDigital): string | null {
+  const tope = topeDe(tier, rol);
+  if (publicados < tope) return null;
+  const nombre = COPY_DIGITAL[tier].nombre;
+  const cosa = tope === 1 ? AL_CONTAR[rol].una : AL_CONTAR[rol].varias;
+  const otra = rol === "PRINCIPAL" ? "otra" : "otro";
+  return `Tu plan ${nombre} permite ${tope} ${cosa}. Despublicá ${otra} para publicar ${rol === "PRINCIPAL" ? "ésta" : "éste"}.`;
+}
+
+/**
+ * Cuáles se despublican cuando hay más publicados que los que permite el plan.
+ *
+ * Se quedan los que **más vendieron**, y a igual venta el más viejo. Es la
+ * regla que la persona hubiera elegido si le preguntaran: la página que vende
+ * es la que no puede apagarse, y entre las que no vendieron nada, la primera
+ * que armó es la principal casi siempre. Los bonos no se venden —van de
+ * regalo—, así que entre ellos decide siempre la antigüedad.
+ *
+ * El `id` desempata al final para que dos corridas con los mismos datos
+ * despubliquen los mismos, y no dependa del orden en que llegaron de la base.
+ *
+ * No toca nada: devuelve los que sobran, y quien llama decide qué hacer con
+ * ellos. Con `tope` en cero sobran todos.
+ */
+export function lasQueSobran<T extends { id: string; createdAt: Date; ventas: number }>(
+  publicados: T[],
+  tope: number,
+): T[] {
+  const ordenados = [...publicados].sort((a, b) =>
+    b.ventas - a.ventas
+    || a.createdAt.getTime() - b.createdAt.getTime()
+    || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+  return ordenados.slice(Math.max(0, tope));
 }

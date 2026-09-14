@@ -1223,14 +1223,12 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
   el plan pago sigue andando.
 - ✅ **11 chequeos nuevos** (VIDA-A a VIDA-K).
 
-- 🔲 **Lo que falta y no se puede escribir todavía**: despublicar las páginas de
-  venta que pasen el tope de Free cuando alguien cae. El modelo de producto
-  digital no existe hasta la Fase 5. El lugar exacto está marcado en el cron.
-  Mientras tanto una cuenta que cae de Pro a Free se queda con más páginas
-  publicadas de las que le tocan — de más y no de menos, que es el lado correcto
-  para equivocarse.
-- 🔲 El mail de "bajaste a Free". Hoy es un aviso dentro de la app, que necesita
-  el panel de la Fase 3 para poder verse.
+- ✅ ~~**Lo que falta y no se puede escribir todavía**: despublicar las páginas de
+  venta que pasen el tope de Free cuando alguien cae.~~ Hecho el 14/09/26, ver
+  *Caer a Free apaga las páginas de más*. Esperaba la Fase 5 y la Fase 5 terminó
+  hace dos semanas sin que nadie volviera a esta línea.
+- ✅ ~~El mail de "bajaste a Free".~~ Hecho el mismo día, en la misma vuelta del
+  cron: `sendCaidaAFreeEmail`, con la lista de lo que se apagó.
 
 ### ✅ La puerta de entrada — HECHA (31/08/26)
 
@@ -1353,8 +1351,7 @@ medias?, ¿quedamos vulnerables?, ¿se entiende lo que decimos?
   para los cuatro roles desde antes; no lo trajo esto.
 - 🔲 **`pruebaYaUsada` no tiene llamador todavía**: la va a usar el botón de
   "probar Starter" del panel. La otra mitad de la regla ya está viva.
-- 🔲 Despublicar las páginas de más al caer a Free: necesita el modelo de producto
-  digital (Fase 5). El lugar exacto está marcado en el cron.
+- ✅ ~~Despublicar las páginas de más al caer a Free.~~ Hecho el 14/09/26.
 
 
 ## CONFIRMACIÓN DE CORREO — HECHA (31/08/26)
@@ -5120,3 +5117,69 @@ a hacer lo vamos a hacer bien, no importa si tarda más"*.
 - El ejemplo de desarrollo (`?ejemplo=1`) sigue siendo un ebook de texto: para
   ver el editor de láminas con contenido hace falta una infografía generada de
   verdad.
+
+---
+
+## Caer a Free apaga las páginas de más — 14/09/26
+
+Estaba anotado dos veces como "no se puede escribir todavía, falta el modelo
+de producto" (Fase 5). La Fase 5 terminó el 02/09 y nadie volvió a esas
+líneas: una cuenta que caía de Pro a Free seguía con **cinco páginas
+publicadas en un plan que vende una**, para siempre. No era el lado seguro:
+era el plan de arriba gratis para quien deje de pagar.
+
+### Qué hace
+
+En la misma vuelta del cron que escribe la caída (`7 bis`):
+
+1. **Apaga las de más.** `despublicarLasDeMas` (en `caida-a-free.ts`) lee lo
+   publicado de la tienda, cuenta las ventas de cada uno y **despublica** —no
+   borra— lo que pasa el tope de Free. Se quedan **las que más vendieron, y a
+   igual venta la más antigua** (`lasQueSobran`). Es la regla que la persona
+   hubiera elegido si le preguntaran; entre las que no vendieron nada, la
+   primera que armó es la principal casi siempre.
+2. **Los bonos y los upsells también**, con la misma regla y por producto, que
+   es como los cuenta el plan. Se revisan los hijos de TODOS los principales
+   publicados, incluidos los que se acaban de apagar: si después cambia cuál
+   queda prendida, la que prende ya tiene que estar dentro del tope.
+3. **El aviso de adentro nombra lo que se apagó**, y sale **el mail**
+   (`sendCaidaAFreeEmail`) con la lista, para quien no entra al panel hace
+   semanas — que es justo el que dejó de pagar. Si apagar falla, el estado ya
+   cayó, el aviso y el mail salen igual, y el error queda escrito.
+
+### ⚠️ La segunda puerta, que es la que lo sostiene
+
+El tope del plan se cobraba en UNA puerta: crear (`topeDe`, contando los que
+existen). Alcanzaba mientras un plan sólo podía subir. Con la caída hay que
+cerrar la otra: **no se publica uno si ya hay tantos publicados como permite
+el plan** (`porQueNoSePublica`). Sin esto, el cron apaga a la noche y ella
+vuelve a publicar a la mañana, y el cron ni siquiera vuelve a mirarla —sólo
+corre para las que cayeron ese día—.
+
+Está en los dos lados con la MISMA función: la ruta `PATCH` cuenta los
+publicados del grupo en la base y corta con 409; la pantalla apaga el botón
+con el mismo texto en una franja ámbar —no roja: al producto no le pasa nada,
+es el plan el que no tiene lugar— y arriba dice "tu plan publica una y tenés
+3: 1 publicada, el resto en borrador". Sólo se ve en una cuenta que cayó;
+con el plan de siempre nunca hay más publicados que el tope.
+
+Sin candado en publicar, a propósito: dos pestañas apretadas en el mismo
+instante consiguen UNA página de más en su propio plan. El alta sí lo lleva
+porque ahí la IA crea tres de una sentada.
+
+### Lo que se cuidó
+
+- **El mail se miró dibujado**, con y sin páginas apagadas, y con un nombre con
+  `<b>` adentro para ver que se escapa. El panel también, con una Free de tres
+  páginas y dos bonos, a 1100 y a 360.
+- 24 chequeos nuevos en `productos-digitales.check` (PUB-*, SOBRA-*, CAIDA-*):
+  las dos funciones puras se ejecutan; la ruta, el cron y la pantalla se leen.
+
+### 🔲 Lo que apareció y es una decisión
+
+- **El dominio propio sigue andando después de caer a Free.** Conectarlo pide
+  Pro (`/dominio` lo corta), pero el que ya está conectado no se toca al caer:
+  `/api/public/dominio` y el middleware no miran el tier. Es SU dominio y lo
+  paga; soltarlo de golpe rompe los anuncios que apuntan ahí. Hay que decidir
+  si se desconecta al caer, si se avisa con días, o si queda como está (que
+  es regalar la función de Pro más visible). No se tocó.

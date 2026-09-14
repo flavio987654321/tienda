@@ -3,8 +3,9 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
-  rolDe, loQueFalta, validarCampos, imagenValida, LARGO_TITULO, LARGO_DESCRIPCION,
+  rolDe, loQueFalta, validarCampos, imagenValida, porQueNoSePublica, LARGO_TITULO, LARGO_DESCRIPCION,
 } from "@/lib/productos-digitales";
+import type { TierDigital } from "@/lib/planes-digitales";
 import { limpiarTexto } from "@/lib/texto-limpio";
 import { desconectarDominio } from "@/lib/dominio-digital";
 
@@ -25,6 +26,7 @@ async function miProducto(userId: string, id: string) {
     where: { id, deletedAt: null, store: { ownerId: userId } },
     select: {
       id: true, name: true, price: true, rolDigital: true, archivoPath: true, isActive: true,
+      storeId: true, padreId: true,
       /* El cobro de la cuenta, para la puerta de publicar. Sólo si HAY token:
          el token en sí no tiene por qué salir de la base para esto. */
       store: { select: { mpAccessToken: true } },
@@ -81,6 +83,35 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       cobroConectado: !!actual.store?.mpAccessToken,
     });
     if (falta) return NextResponse.json({ error: falta }, { status: 409 });
+  }
+
+  /* ⚠️ Y la segunda puerta del tope: cuántos de este grupo YA están publicados.
+   *
+   * Crear ya cuenta contra el plan, pero una cuenta que CAYÓ de plan tiene más
+   * productos que los que le tocan, y lo que la mantiene dentro del plan es esto:
+   * no se publica uno si ya hay tantos publicados como permite. Sin esto, el
+   * cron despublica de noche y ella vuelve a publicar de día, todos los días.
+   *
+   * Se cuenta en la base y no se confía en que la pantalla apagó el botón: el
+   * botón apagado es una cortesía. Y se cuenta sin transacción a propósito:
+   * dos publicaciones en el mismo instante de la misma cuenta son una persona
+   * con dos pestañas, y lo peor que consigue es UNA página de más en su propio
+   * plan. El alta sí lleva candado, porque ahí la IA crea tres de una sentada;
+   * publicar es un clic por vez. */
+  if (publicado === true && !actual.isActive) {
+    const sub = await prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } });
+    const tier = (sub?.tier ?? "FREE") as TierDigital;
+    const publicados = await prisma.product.count({
+      where: {
+        storeId: actual.storeId,
+        rolDigital: rol,
+        deletedAt: null,
+        isActive: true,
+        ...(rol === "PRINCIPAL" ? {} : { padreId: actual.padreId }),
+      },
+    });
+    const sinLugar = porQueNoSePublica(rol, publicados, tier);
+    if (sinLugar) return NextResponse.json({ error: sinLugar }, { status: 409 });
   }
 
   await prisma.product.update({

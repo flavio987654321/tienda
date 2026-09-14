@@ -1503,3 +1503,95 @@ export async function sendCarritoAbandonadoDigitalEmail({
 
   return { error: r.error ? { message: r.error.message } : null };
 }
+
+/**
+ * A quien se le terminó Starter o Pro sin pagar y volvió a Free.
+ *
+ * Lo manda el cron diario en la misma vuelta que escribe la caída. Es el par
+ * del aviso de adentro del panel: el aviso lo ve quien vuelve a entrar, y este
+ * mail es para quien no entra hace semanas — que es justo el que dejó de pagar.
+ *
+ * Dice lo que pasó de verdad, en este orden: no se cerró nada, subió la
+ * comisión, y si se apagaron páginas, CUÁLES. Un mail que dice "volviste a
+ * Free" y se calla que tres páginas dejaron de verse le hace descubrir el
+ * apagón mirando sus anuncios.
+ */
+export async function sendCaidaAFreeEmail({
+  to,
+  userName,
+  planPerdido,
+  topePaginas,
+  quedaron,
+  despublicadas,
+}: {
+  to: string;
+  userName: string | null;
+  /** "Starter" o "Pro": el nombre del plan que se terminó. */
+  planPerdido: string;
+  /** Cuántas páginas de venta publicadas permite Free. */
+  topePaginas: number;
+  /** Las páginas que quedaron publicadas, por nombre. */
+  quedaron: string[];
+  /** Lo que pasó a borrador, con el rol para que se entienda qué es cada cosa. */
+  despublicadas: { name: string; rol: "PRINCIPAL" | "BONO" | "UPSELL" }[];
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const hola = escapeHtml(userName?.trim()) || "ahí";
+  const ETIQUETA = { PRINCIPAL: "Página de venta", BONO: "Bono", UPSELL: "Upsell" } as const;
+  const renglon = (rol: keyof typeof ETIQUETA, texto: string) =>
+    `<li style="margin:0 0 6px;font-size:14px;color:#374151;"><span style="color:#9a3412;font-weight:700;">${ETIQUETA[rol]}</span> · ${escapeHtml(texto)}</li>`;
+
+  const bloqueApagadas = despublicadas.length === 0 ? "" : `
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 8px;">Se apagaron las páginas de más</p>
+          <p style="font-size:14px;color:#374151;line-height:1.6;margin:0 0 12px;">
+            Free permite ${topePaginas === 1 ? "una página de venta publicada" : `${topePaginas} páginas de venta publicadas`}, y
+            ${quedaron.length === 1 ? "quedó publicada" : "quedaron publicadas"}
+            ${quedaron.length === 0 ? "ninguna" : quedaron.map((n) => `<strong>${escapeHtml(n)}</strong>`).join(", ")}.
+            Se dejaron prendidas las que más vendieron y, a igual venta, las más antiguas. Esto pasó a borrador:
+          </p>
+          <ul style="margin:0 0 12px;padding-left:18px;">
+            ${despublicadas.map((d) => renglon(d.rol, d.name)).join("")}
+          </ul>
+          <p style="font-size:13px;color:#7c2d12;line-height:1.6;margin:0;">
+            No se borró nada: el archivo, el texto y las ventas de cada una siguen ahí. Podés cambiar
+            cuál queda publicada desde Productos, despublicando una y publicando otra.
+          </p>
+        </div>`;
+
+  const boton = APP_URL
+    ? `<div style="text-align:center;margin-bottom:24px;">
+         <a href="${APP_URL}/digitales/productos" style="display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Ver mis productos</a>
+       </div>
+       <p style="font-size:14px;color:#374151;text-align:center;margin-bottom:24px;">
+         ¿Querés recuperar lo que tenías? <a href="${APP_URL}/digitales/mi-cuenta" style="color:#ea580c;font-weight:700;">Volvé a Starter o Pro</a> cuando quieras.
+       </p>`
+    : "";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Tu plan ${planPerdido} terminó — tu cuenta sigue abierta, en Free`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#9a3412;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fed7aa;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Tu plan ${escapeHtml(planPerdido)} terminó</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${hola}</strong>,</p>
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:24px;">
+          No se cerró nada y no perdiste nada: tu cuenta, tus productos y tus ventas están donde
+          estaban. Volviste al plan <strong>Free</strong>, así que la comisión por venta sube y las
+          funciones pagas quedan apagadas.
+        </p>
+        ${bloqueApagadas}
+        ${boton}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          ¿Problemas con el pago, o el plan te quedó grande? Respondé este email y lo vemos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}

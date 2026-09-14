@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 import {
-  COPY_ROL, topeDe, loQueFalta, validarCampos, LARGO_TITULO, LARGO_DESCRIPCION,
+  COPY_ROL, topeDe, loQueFalta, validarCampos, porQueNoSePublica, LARGO_TITULO, LARGO_DESCRIPCION,
   type RolDigital,
 } from "@/lib/productos-digitales";
 import { MAX_PDF_MB, avisoDePeso } from "@/lib/subida-digital";
@@ -227,6 +227,12 @@ type Acciones = {
   /** Pedirle a la IA UN bono o UN upsell para un principal que ya existe. */
   pedirFicha: (padre: ProductoEnPantalla, rol: "BONO" | "UPSELL") => void;
   hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
+  /**
+   * Por qué no se puede publicar ÉSTE, o `null` si hay lugar. Es la puerta del
+   * tope sobre lo publicado —la misma que cierra el servidor— y sólo pasa de
+   * `null` cuando la cuenta cayó de plan y tiene más de lo que le toca.
+   */
+  sinLugarPara: (p: ProductoEnPantalla) => string | null;
 };
 
 /* ⚠️ Tarjeta y Grupo viven ACÁ AFUERA y no adentro de la pantalla.
@@ -319,6 +325,9 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
   /* La MISMA regla que usa el servidor al confirmar. Si el aviso cambia, cambia
      en los dos lados a la vez. */
   const avisoPeso = p.archivoPeso ? avisoDePeso(p.archivoPeso) : null;
+  /* Sólo cuando al producto no le falta nada: si le falta el archivo, eso va
+     primero —se arregla acá—, y el tope se le va a decir cuando lo tenga. */
+  const sinLugar = !p.publicado && falta === null ? acc.sinLugarPara(p) : null;
 
   return (
     /* La sombra crece al pasar el mouse. Es lo único que se mueve en la tarjeta
@@ -417,6 +426,18 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   quien no ve la franja roja. Ver ese botón más abajo. */}
               <p id={`falta-${p.id}`} className="text-xs text-red-700 panel-oscuro:text-red-300 font-medium">
                 {falta}
+              </p>
+            </div>
+          )}
+
+          {/* El tope, en ámbar y no en rojo: al producto no le pasa nada, es el
+              plan el que no tiene lugar. Sólo aparece en una cuenta que cayó de
+              plan; con el plan de siempre nunca hay más publicados que el tope. */}
+          {sinLugar && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/25 px-3 py-2">
+              <AlertTriangle aria-hidden className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p id={`falta-${p.id}`} className="text-xs text-amber-800 panel-oscuro:text-amber-300 font-medium">
+                {sinLugar}
               </p>
             </div>
           )}
@@ -867,14 +888,14 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
 
             <button
               onClick={() => acc.publicar(p, !p.publicado)}
-              disabled={apagado || (!p.publicado && falta !== null)}
-              title={porQueApagado ?? (!p.publicado && falta ? falta : undefined)}
+              disabled={apagado || (!p.publicado && (falta !== null || sinLugar !== null))}
+              title={porQueApagado ?? (!p.publicado ? (falta ?? sinLugar ?? undefined) : undefined)}
               /* ⚠️ El `title` NO alcanza: no existe al tocar en un celular y un
                  lector de pantalla no siempre lo anuncia. Con esto, el motivo
                  —la misma franja roja de arriba— se lee junto con el nombre del
                  botón, así que "Publicar, apagado" pasa a ser "Publicar, falta
                  el archivo". Sin él, el botón está gris y no se sabe por qué. */
-              aria-describedby={!p.publicado && falta ? `falta-${p.id}` : undefined}
+              aria-describedby={!p.publicado && (falta || sinLugar) ? `falta-${p.id}` : undefined}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {ocupado ? (
@@ -1045,6 +1066,14 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
               </span>
             </p>
             <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{COPY_ROL[rol].bajada}</p>
+            {/* Más que los del plan: sólo en una cuenta que cayó de plan. Igual
+                que el renglón de las páginas, más arriba. */}
+            {items.length > tope && (
+              <p className="text-[11px] text-amber-700 panel-oscuro:text-amber-300 mt-1 font-medium">
+                Tu plan publica {tope} por producto y tenés {items.length}:
+                {" "}{items.filter((h) => h.publicado).length} publicado{items.filter((h) => h.publicado).length === 1 ? "" : "s"}, el resto en borrador.
+              </p>
+            )}
           </div>
         </div>
 
@@ -1303,6 +1332,13 @@ export default function ProductosClient({
   const principales = productos.filter((p) => p.rol === "PRINCIPAL");
   const hijosDe = (padreId: string, rol: RolDigital) =>
     productos.filter((p) => p.padreId === padreId && p.rol === rol);
+  /* Los publicados del grupo de ÉSTE —las páginas de la cuenta, o los hermanos
+     de su mismo rol—, sin contarlo a él. La misma cuenta que hace el servidor. */
+  const sinLugarPara = (p: ProductoEnPantalla) => {
+    const grupo = p.rol === "PRINCIPAL" ? principales : hijosDe(p.padreId ?? "", p.rol);
+    const publicados = grupo.filter((h) => h.publicado && h.id !== p.id).length;
+    return porQueNoSePublica(p.rol, publicados, tier);
+  };
 
   /* ══════════════════════════════════════════════════════════════════════════
      UN EMBUDO POR VEZ
@@ -1368,6 +1404,7 @@ export default function ProductosClient({
     abrirEbook: setEbookDe,
     pedirFicha: (padre, rol) => setFichaIA({ padre, rol }),
     hijosDe,
+    sinLugarPara,
   };
 
   /* Las acciones del ejemplo: ninguna hace nada. No es prolijidad — la tarjeta
@@ -1384,6 +1421,7 @@ export default function ProductosClient({
     deMentira: true,
     pedirFicha: () => {},
     hijosDe: () => [],
+    sinLugarPara: () => null,
   };
 
   const topePrincipales = topeDe(tier, "PRINCIPAL");
@@ -1589,6 +1627,16 @@ export default function ProductosClient({
           {!llegoAlTope && (
             <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1">
               Con IA salen los tres de una: producto, bono y upsell.
+            </p>
+          )}
+          {/* Más páginas que las del plan: pasa sólo cuando la cuenta cayó de
+              plan. El "5 de 1" de arriba es cierto pero no se explica solo, y
+              lo que la persona necesita saber es cuántas se VEN y qué hacer. */}
+          {principales.length > topePrincipales && (
+            <p className="text-[11px] text-amber-700 panel-oscuro:text-amber-300 mt-1 font-medium">
+              Tu plan publica {topePrincipales === 1 ? "una" : topePrincipales} y tenés {principales.length}:
+              {" "}{principales.filter((p) => p.publicado).length} publicada{principales.filter((p) => p.publicado).length === 1 ? "" : "s"}, el resto en borrador.
+              Para publicar otra, despublicá una.
             </p>
           )}
         </div>

@@ -7,6 +7,7 @@ import {
   sendStoreClosedOwnerEmail,
   sendStoreClosedAffiliateEmail,
   sendTermsUpdatedEmail,
+  sendCaidaAFreeEmail,
 } from "@/lib/resend";
 import { CURRENT_TERMS_VERSION, CURRENT_TERMS_SUMMARY } from "@/lib/legal";
 import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
@@ -14,7 +15,8 @@ import { limpiar } from "@/app/api/cron/cleanup/route";
 import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
 import { closureDeadline, CLOSURE_WARNING_DAYS, getSubscriptionStatus, caidaAFree } from "@/lib/subscription";
-import { PLANES, planDeSuscripcion } from "@/lib/planLimits";
+import { PLANES, planDeSuscripcion, TOPES_DIGITALES } from "@/lib/planLimits";
+import { despublicarLasDeMas, type ResultadoDeLaCaida } from "@/lib/caida-a-free";
 import { applyStoreClosure } from "@/lib/store-closure";
 import { getStoreSnapshot } from "@/lib/asistente-insights";
 import { armarAvisos, filtrarRepetidos } from "@/lib/asistente-avisos";
@@ -552,10 +554,12 @@ export async function GET(req: NextRequest) {
       trialEndsAt: true,
       currentPeriodEnd: true,
       gracePeriodEndsAt: true,
+      user: { select: { email: true, name: true } },
     },
   });
 
   let caidasAFree = 0;
+  let despublicadas = 0;
 
   /* Todo junto y no de a una.
    *
@@ -577,26 +581,58 @@ export async function GET(req: NextRequest) {
       data: caidaAFree(),
     });
 
-    // 🔲 PENDIENTE (Fase 3/5): despublicar las páginas de venta que pasen el tope
-    // de Free. NO se borran — se despublican y ella elige cuáles quedan. Va acá,
-    // en esta misma vuelta, y todavía no se puede escribir porque el modelo de
-    // producto digital no existe. Hasta que exista, una cuenta que cae de Pro a
-    // Free se queda con más páginas publicadas de las que su plan permite.
-    // Es el lado correcto para equivocarse mientras tanto: de más, no de menos.
+    /* ── Las páginas de más se apagan ────────────────────────────────────────
+     *
+     * Free publica una página; quien cae de Pro tenía cinco. Se DESPUBLICAN, no
+     * se borran, y se quedan las que más vendieron: ver `despublicarLasDeMas`.
+     * Esto sí va de a una cuenta —lee lo publicado de cada tienda y elige—,
+     * pero corre sólo para las que cayeron HOY, que son cero casi todos los
+     * días, así que no le cuesta al presupuesto de 60 segundos del cron.
+     *
+     * Una cuenta sin tienda todavía (nunca creó un producto) no tiene nada que
+     * apagar y no aparece en `tiendas`. */
+    const tiendas = await prisma.store.findMany({
+      where: { ownerId: { in: vencidas.map((s) => s.userId) } },
+      select: { id: true, ownerId: true },
+    });
+    const tiendaDe = new Map(tiendas.map((t) => [t.ownerId, t.id]));
+    const apagadoDe = new Map<string, ResultadoDeLaCaida>();
+    for (const sub of vencidas) {
+      const storeId = tiendaDe.get(sub.userId);
+      if (!storeId) continue;
+      try {
+        const r = await despublicarLasDeMas(storeId, "FREE");
+        apagadoDe.set(sub.userId, r);
+        despublicadas += r.despublicadas.length;
+      } catch (e) {
+        /* El estado ya cayó y el aviso de abajo sale igual. Lo que queda es una
+           cuenta con páginas de más —el lado seguro—, y el error escrito. */
+        console.error("[cron] no se pudieron despublicar las páginas de más:", sub.userId, e);
+      }
+    }
+
+    /* Si el par rol+tier no resuelve a ningún plan conocido, el aviso dice
+       "tu plan pago terminó". El default NO puede ser el label de Free:
+       quedaría un aviso que dice "tu plan Free terminó", que es justo lo que
+       no pasó. */
+    const planPerdidoDe = (sub: (typeof vencidas)[number]) => {
+      const claveDelPlan = planDeSuscripcion(sub);
+      return claveDelPlan ? PLANES[claveDelPlan].label : "pago";
+    };
 
     await createNotificationMany(
       vencidas.map((sub) => {
-        /* Si el par rol+tier no resuelve a ningún plan conocido, el aviso dice
-           "tu plan pago terminó". El default NO puede ser el label de Free:
-           quedaría un aviso que dice "tu plan Free terminó", que es justo lo que
-           no pasó. */
-        const claveDelPlan = planDeSuscripcion(sub);
-        const planPerdido = claveDelPlan ? PLANES[claveDelPlan].label : "pago";
+        const apagado = apagadoDe.get(sub.userId);
+        /* El aviso nombra las páginas que se apagaron. Sin eso, la persona
+           descubre que dejaron de verse mirando sus anuncios. */
+        const cuales = apagado && apagado.despublicadas.length > 0
+          ? ` Free permite ${TOPES_DIGITALES.FREE.paginas} página${TOPES_DIGITALES.FREE.paginas === 1 ? "" : "s"} de venta publicada${TOPES_DIGITALES.FREE.paginas === 1 ? "" : "s"}, así que pasaron a borrador: ${apagado.despublicadas.map((d) => d.name).join(", ")}. No se borró nada; podés cambiar cuál queda publicada desde Productos.`
+          : "";
         return {
           userId: sub.userId,
           type: "DIGITAL_DOWNGRADE",
-          title: `Tu plan ${planPerdido} terminó`,
-          body: "Tu cuenta sigue abierta y no perdiste nada: tus productos y tus ventas están donde estaban. Volviste al plan Free, así que la comisión por venta sube y las funciones pagas quedan apagadas. Podés volver a Starter o Pro cuando quieras.",
+          title: `Tu plan ${planPerdidoDe(sub)} terminó`,
+          body: `Tu cuenta sigue abierta y no perdiste nada: tus productos y tus ventas están donde estaban. Volviste al plan Free, así que la comisión por venta sube y las funciones pagas quedan apagadas.${cuales} Podés volver a Starter o Pro cuando quieras.`,
           /* Derecho a Mi cuenta, que es donde se ve lo que pasó y desde donde se
              vuelve a Starter o Pro. Estuvo apuntando a la raíz del panel mientras
              esa pantalla no existía: el aviso hubiera llevado a un 404, y justo
@@ -606,10 +642,27 @@ export async function GET(req: NextRequest) {
       })
     );
 
+    /* Y el mail, para quien no entra al panel hace semanas —que es justo el que
+       dejó de pagar—. Uno por cuenta, con lo que se apagó. Si uno falla, los
+       demás salen igual: el estado ya está escrito y el aviso de adentro ya
+       está, así que un mail que no sale no deja a nadie sin saber. */
+    for (const sub of vencidas) {
+      if (!sub.user?.email) continue;
+      const apagado = apagadoDe.get(sub.userId);
+      await sendCaidaAFreeEmail({
+        to: sub.user.email,
+        userName: sub.user.name,
+        planPerdido: planPerdidoDe(sub),
+        topePaginas: TOPES_DIGITALES.FREE.paginas,
+        quedaron: apagado?.quedaron.map((q) => q.name) ?? [],
+        despublicadas: apagado?.despublicadas.map((d) => ({ name: d.name, rol: d.rol })) ?? [],
+      }).catch((e) => console.error("[cron] mail caída a Free:", sub.user?.email, e));
+    }
+
     caidasAFree = vencidas.length;
   }
 
-  result.digitales = { revisadas: digitales.length, caidasAFree };
+  result.digitales = { revisadas: digitales.length, caidasAFree, despublicadas };
 
   // ── AVISO DE CAMBIO EN LOS TÉRMINOS ────────────────────────────────────────
   // Le escribe SOLO a quien todavía no aceptó la versión vigente y a quien no

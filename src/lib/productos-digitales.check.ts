@@ -12,8 +12,10 @@
  */
 
 import {
-  rolDe, topeDe, loQueFalta, validarCampos, imagenValida, PRECIO_MAXIMO, LARGO_TITULO, ROLES,
+  rolDe, topeDe, loQueFalta, validarCampos, imagenValida, porQueNoSePublica, lasQueSobran,
+  PRECIO_MAXIMO, LARGO_TITULO, ROLES,
 } from "./productos-digitales";
+import { readFileSync } from "node:fs";
 import { TOPES_DIGITALES, EBOOKS_IA_ARRANQUE } from "./planLimits";
 import { TIERS_DIGITALES } from "./planes-digitales";
 
@@ -235,6 +237,111 @@ check("IMG-E", [null, undefined, 5, {}, ""].every((v) => !imagenValida(v)),
   "ni lo que directamente no es texto");
 check("IMG-F", !imagenValida("/uploads/" + "x".repeat(600)),
   "ni una dirección absurdamente larga");
+
+/* ── La segunda puerta del tope: lo publicado ────────────────────────────── */
+
+/* Crear ya cuenta contra el plan, pero una cuenta que CAYÓ de plan tiene más
+   productos que los que le tocan, y lo único que la mantiene dentro del plan es
+   que no pueda publicar uno más si ya hay tantos publicados como permite. Sin
+   esto, el cron despublica de noche y ella vuelve a publicar de día. */
+check("PUB-A", porQueNoSePublica("PRINCIPAL", 0, "FREE") === null,
+  "con lugar, se publica");
+check("PUB-B", porQueNoSePublica("PRINCIPAL", TOPES_DIGITALES.FREE.paginas, "FREE") !== null,
+  "con tantos publicados como permite el plan, no");
+check("PUB-C", porQueNoSePublica("PRINCIPAL", TOPES_DIGITALES.FREE.paginas + 3, "FREE") !== null,
+  "y con más todavía —la cuenta que cayó— tampoco");
+check("PUB-D", porQueNoSePublica("PRINCIPAL", TOPES_DIGITALES.PRO.paginas - 1, "PRO") === null
+  && porQueNoSePublica("PRINCIPAL", TOPES_DIGITALES.PRO.paginas, "PRO") !== null,
+  "mira el tope del plan que se le pasa, no siempre el de Free");
+check("PUB-E", porQueNoSePublica("BONO", TOPES_DIGITALES.FREE.bonos, "FREE") !== null
+  && porQueNoSePublica("UPSELL", TOPES_DIGITALES.FREE.upsells, "FREE") !== null,
+  "los bonos y los upsells tienen su propio tope, por producto");
+/* El texto dice qué hacer y no sólo qué pasó: se muestra tal cual en el botón
+   apagado, y "llegaste al tope" a secas deja a la persona sin saber que
+   despublicar otro es la salida. */
+const textoTope = porQueNoSePublica("PRINCIPAL", 5, "FREE") ?? "";
+check("PUB-F", /Despublic/.test(textoTope) && /Free/.test(textoTope),
+  "el motivo dice qué hacer y nombra el plan");
+check("PUB-G", /permite 1 página de venta publicada/.test(textoTope),
+  "y cuenta en singular cuando el tope es uno");
+
+/* ── Cuáles se apagan cuando hay de más ──────────────────────────────────── */
+
+const dia = (n: number) => new Date(2026, 0, n);
+const publicadas = [
+  { id: "b", createdAt: dia(2), ventas: 0 },
+  { id: "a", createdAt: dia(1), ventas: 0 },
+  { id: "c", createdAt: dia(3), ventas: 7 },
+  { id: "d", createdAt: dia(4), ventas: 2 },
+];
+const ids = (xs: { id: string }[]) => xs.map((x) => x.id).join(",");
+
+check("SOBRA-A", ids(lasQueSobran(publicadas, 1)) === "d,a,b",
+  "con tope 1 queda la que más vendió y sobran las demás");
+check("SOBRA-B", ids(lasQueSobran(publicadas, 2)) === "a,b",
+  "con tope 2 quedan las dos que vendieron");
+/* A igual venta, la más vieja se queda: entre las que no vendieron nada, la
+   primera que armó es la principal casi siempre. */
+check("SOBRA-C", ids(lasQueSobran(publicadas, 3)) === "b",
+  "a igual venta se queda la más antigua");
+check("SOBRA-D", lasQueSobran(publicadas, 4).length === 0 && lasQueSobran(publicadas, 10).length === 0,
+  "con lugar para todas no sobra ninguna");
+check("SOBRA-E", ids(lasQueSobran(publicadas, 0)) === "c,d,a,b",
+  "con tope cero sobran todas, ordenadas de la que más vendió a la que menos");
+/* Dos corridas con los mismos datos apagan las mismas: el `id` desempata al
+   final, y no el orden en que llegaron de la base. */
+const alReves = [...publicadas].reverse();
+check("SOBRA-F", ids(lasQueSobran(alReves, 1)) === ids(lasQueSobran(publicadas, 1)),
+  "no depende del orden en que llegan");
+const empatadas = [
+  { id: "y", createdAt: dia(1), ventas: 0 },
+  { id: "x", createdAt: dia(1), ventas: 0 },
+];
+check("SOBRA-G", ids(lasQueSobran(empatadas, 1)) === "y",
+  "y a igual fecha desempata el id");
+check("SOBRA-H", ids(publicadas) === "b,a,c,d",
+  "no reordena la lista que recibe");
+
+/* ── Y las dos puertas están puestas ─────────────────────────────────────── */
+
+/* La ruta que publica cuenta los publicados del grupo EN LA BASE y le pregunta
+   a la misma función. Y lo hace sólo al pasar de borrador a publicado: guardar
+   un precio en uno que ya está publicado no se corta por el tope. */
+const rutaEditar = readFileSync("src/app/api/digitales/productos/[id]/route.ts", "utf8");
+check("PUB-H",
+  /if \(publicado === true && !actual\.isActive\) \{[\s\S]{0,900}isActive: true,[\s\S]{0,300}porQueNoSePublica\(rol, publicados, tier\)/.test(rutaEditar)
+  && /if \(sinLugar\) return NextResponse\.json\(\{ error: sinLugar \}, \{ status: 409 \}\)/.test(rutaEditar),
+  "la ruta de publicar cuenta los publicados en la base y corta con 409");
+check("PUB-I",
+  /\.\.\.\(rol === "PRINCIPAL" \? \{\} : \{ padreId: actual\.padreId \}\)/.test(rutaEditar),
+  "y para un bono o un upsell cuenta sólo los hermanos de su producto");
+
+/* El cron, en la misma vuelta que escribe la caída, apaga las de más y manda el
+   mail. Y si apagar falla, el estado ya cayó y el aviso sale igual. */
+const cron = readFileSync("src/app/api/cron/daily/route.ts", "utf8");
+check("CAIDA-A",
+  /data: caidaAFree\(\),[\s\S]{0,1500}despublicarLasDeMas\(storeId, "FREE"\)/.test(cron),
+  "el cron apaga las páginas de más justo después de escribir la caída");
+check("CAIDA-B",
+  /try \{\s*const r = await despublicarLasDeMas\([\s\S]{0,300}\} catch \(e\) \{[\s\S]{0,400}console\.error\("\[cron\] no se pudieron despublicar/.test(cron),
+  "si apagar falla, queda escrito y el aviso sale igual");
+check("CAIDA-C",
+  /sendCaidaAFreeEmail\(\{[\s\S]{0,600}despublicadas: apagado\?\.despublicadas/.test(cron),
+  "el mail lleva lo que se apagó");
+check("CAIDA-D",
+  /body: `Tu cuenta sigue abierta[\s\S]{0,400}\$\{cuales\}/.test(cron),
+  "y el aviso de adentro del panel también nombra lo que se apagó");
+
+/* La pantalla apaga el botón con el MISMO motivo que devuelve el servidor, y
+   el ejemplo (`deMentira`) no lo dispara nunca. */
+const panel = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+check("PUB-J",
+  /sinLugarPara = \(p: ProductoEnPantalla\) => \{[\s\S]{0,400}porQueNoSePublica\(p\.rol, publicados, tier\)/.test(panel)
+  && /h\.publicado && h\.id !== p\.id/.test(panel),
+  "la pantalla cuenta los publicados del grupo sin contar al que se quiere publicar");
+check("PUB-K",
+  /disabled=\{apagado \|\| \(!p\.publicado && \(falta !== null \|\| sinLugar !== null\)\)\}/.test(panel),
+  "y el botón de publicar se apaga por el tope igual que por lo que falta");
 
 console.log(fallos === 0
   ? "\nok — el embudo de Productos Digitales se sostiene"
