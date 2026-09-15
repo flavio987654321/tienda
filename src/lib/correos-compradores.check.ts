@@ -14,9 +14,10 @@ import { readFileSync } from "node:fs";
 process.env.NEXTAUTH_SECRET ??= "clave-de-prueba-para-los-chequeos-0123456789";
 
 import {
-  validarCorreoNuevo, saludo, destinatarios, tokenDeBaja, leerTokenDeBaja, enlaceDelBoton, resumenDelEnvio,
+  validarCorreoNuevo, saludo, destinatarios, enlaceDelBoton, resumenDelEnvio,
   urlBajaCorreo, urlBajaCorreoUnClic, ASUNTO_MAX, CUERPO_MAX, MAX_CORREOS_POR_DIA,
 } from "./correos-compradores";
+import { tokenDeBaja, leerTokenDeBaja } from "./correos-compradores-firma";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -68,6 +69,8 @@ const otroCorreo = `${partes[0]}.${Buffer.from("otra@x.com").toString("base64url
 check("TOK-D", leerTokenDeBaja(otroCorreo) === null, "cambiar el correo con la firma de otro no vale: no se puede dar de baja a un tercero");
 check("TOK-E", leerTokenDeBaja(null) === null && leerTokenDeBaja("") === null && leerTokenDeBaja("a.b") === null && leerTokenDeBaja("x".repeat(500)) === null, "basura no vale");
 check("TOK-F", tokenDeBaja("clx0000000000000000000002", "ana@x.com") !== token, "el mismo correo en otra cuenta es otro token: la baja es de la relación");
+check("TOK-H", !/node:crypto/.test(leer("src/lib/correos-compradores.ts")) && /node:crypto/.test(leer("src/lib/correos-compradores-firma.ts")),
+  "lo que importa el navegador no trae crypto: la firma vive aparte");
 check("TOK-G", urlBajaCorreo("https://www.tiendaapps.com/", "a.b.c") === "https://www.tiendaapps.com/correo/baja?t=a.b.c"
   && urlBajaCorreoUnClic("https://www.tiendaapps.com", "a.b.c") === "https://www.tiendaapps.com/api/digitales/baja?t=a.b.c",
   "la página para la persona y la ruta para el click de Gmail son dos direcciones distintas");

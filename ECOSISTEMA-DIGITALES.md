@@ -6190,3 +6190,62 @@ porque "¿vendí?" es la pregunta diaria; Marketing sin árbol porque el riel
 cerrado no tiene lugar (ver `DigitalesSidebar`). Lo que ellos tienen y
 nosotros no: **Tutoriales**. 🔲 Pendiente de decidir: una pantalla de
 "Cómo se usa" o videos cortos por sección.
+
+---
+
+## La oferta de salida (el "downsell pre-compra" de la competencia) — 15/09/26
+
+Flavio mostró el de ellos: un "modal de salida" y una "página de oferta"
+armada con bloques arrastrables (banner, texto, carrusel, timer, oferta con
+producto / descuento / badge / botones / layout). Pidió que ande y que
+cumpla su función, con criterio propio sobre los bloques.
+
+### Qué NO se copió
+
+- **"Cupos reservados 73 %" y el reloj de 09:57**: mentira. Un PDF no se
+  agota y ese reloj se reinicia al recargar. Es la regla de siempre (sin
+  relojes falsos en el upsell ni en el mail de carrito): el que queda mal
+  es el negocio de quien vende, con su nombre.
+- **El editor de bloques**: una página que se ve tres segundos no necesita
+  carrusel. Son seis campos y una vista previa que es EL MISMO componente
+  que abre el checkout (`CartelDeSalida`), vestido con las variables de la
+  página del producto: lo que se ve al editar es lo que ve quien compra.
+
+### Cómo funciona (`lib/oferta-salida`, `/digitales/marketing/salida`)
+
+- Por producto. Dos tipos: **un descuento** (5–50 %) sobre el mismo
+  producto, o **un producto más barato** (otro principal propio; el botón
+  lleva a su `/pagar`).
+- **El descuento es un cupón real**: al guardar se crea/actualiza
+  `SALIDA-<cola del id>` en `CuponDigital`, en la misma transacción,
+  prendido o apagado con la oferta. Lo cobra la misma ruta que cualquier
+  cupón. En Cupones aparece marcado "de la oferta de salida" y sin botón de
+  borrar.
+- **El plazo es de verdad** (6, 24 o 48 h desde que la persona la VIO). El
+  checkout firma la hora con HMAC (`oferta-salida-firma`), el navegador
+  guarda el PRIMER token (recargar no reinicia), y al aceptar y al pagar el
+  token viaja: `/api/digitales/cupon` y `comprar` rechazan el cupón
+  SALIDA-… sin token vivo ("Esa oferta ya venció"). La hora no se puede
+  adelantar (ni en el token ni firmando en el futuro). Así el cartel dice
+  "vale hasta mañana a las 18:23" y es cierto.
+- **Cuándo aparece**: en computadora al sacar el mouse por arriba; en el
+  celular al apretar atrás (se deja una entrada en el historial). Una vez
+  por persona y producto. Nunca en la previa de la dueña ni sin plan.
+- **En el mail de carrito abandonado** (Pro, por el cron): el mismo cartel,
+  con el plazo firmado desde el ENVÍO y el link a `/pagar?oferta=<token>`;
+  el checkout respeta ese token si viene vivo. Cierra el 🔲 "cupón
+  automático en el mail de carrito".
+- Plan: **Starter y Pro al día** (lo que justifica pagar, como las visitas).
+  En Free se ve el formulario apagado y la vista previa.
+- Sin el cupón vivo, o con el otro producto sin publicar, el cartel no se
+  muestra: no se promete lo que al pagar no aplica.
+- Tarjeta en Marketing, fila en los planes, consejo (`CONSEJO_DE_SALIDA`:
+  más grande que cualquier cupón de afuera, y no contarlo).
+
+Migración `20260915230000_oferta_de_salida` (`Product.ofertaSalida`),
+comparada contra la base. `oferta-salida.check.ts` (33). De paso se
+separó `crypto` de lo que importa el navegador (`correos-compradores-firma`,
+`oferta-salida-firma`). 104 chequeos, build ok. Mirado en 1100 y 360.
+
+🔲 Cuántas veces se mostró y cuántas compraron después (Estadísticas).
+🔲 En el celular, además de "atrás": al pasar N segundos sin tocar nada.

@@ -1450,6 +1450,7 @@ export async function sendCarritoAbandonadoDigitalEmail({
   total,
   enlace,
   vendedor,
+  oferta = null,
 }: {
   to: string;
   nombre: string | null;
@@ -1458,6 +1459,12 @@ export async function sendCarritoAbandonadoDigitalEmail({
   /** La página de venta del producto. Nunca un link de pago viejo. */
   enlace: string;
   vendedor: string | null;
+  /**
+   * La oferta de salida, si la vendedora la tiene prendida. El plazo es
+   * cierto: el link lleva la firma con la hora de este envío y el servidor
+   * lo hace cumplir. Ver `lib/oferta-salida`.
+   */
+  oferta?: { titulo: string; texto: string; resumen: string; vence: string; enlace: string; boton: string } | null;
 }): Promise<ResultadoDeEnvio> {
   if (!process.env.RESEND_API_KEY) {
     return { error: { message: "RESEND_API_KEY no configurada" } };
@@ -1493,6 +1500,19 @@ export async function sendCarritoAbandonadoDigitalEmail({
             Terminar la compra
           </a>
         </div>
+
+        ${oferta ? `
+        <div style="border:2px solid #111827;border-radius:12px;padding:18px;margin-bottom:28px;">
+          <p style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;margin:0 0 6px;">Antes de que lo dejes</p>
+          <p style="font-size:17px;font-weight:800;color:#111827;margin:0 0 8px;">${escapeHtml(oferta.titulo)}</p>
+          <p style="font-size:14px;line-height:1.6;color:#374151;margin:0 0 12px;white-space:pre-wrap;">${escapeHtml(oferta.texto)}</p>
+          <p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 4px;">${escapeHtml(oferta.resumen)}</p>
+          <p style="font-size:12.5px;color:#6b7280;margin:0 0 14px;">Vale ${escapeHtml(oferta.vence)}.</p>
+          <a href="${escapeHtml(oferta.enlace)}"
+             style="display:inline-block;background:#111827;color:#fff;padding:12px 26px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">
+            ${escapeHtml(oferta.boton)}
+          </a>
+        </div>` : ""}
 
         <p style="font-size:12.5px;line-height:1.6;color:#9ca3af;margin:0;">
           Si ya no te interesa, no hace falta que hagas nada: este es el único recordatorio que te

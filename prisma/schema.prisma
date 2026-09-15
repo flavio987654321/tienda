@@ -675,6 +675,10 @@ model Product {
   /// negocios con cinco cuentas de anuncios. La forma la declara
   /// `lib/medicion-digital`.
   medicion      String?
+  /// La oferta de salida (el "downsell"): qué se le ofrece a quien se va del
+  /// checkout sin pagar, como JSON. Null = apagada. La forma la declara
+  /// `lib/oferta-salida`; el cupón que crea vive en `CuponDigital`.
+  ofertaSalida  String?
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.

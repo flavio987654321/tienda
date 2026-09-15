@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { leerTokenDeBaja } from "@/lib/correos-compradores";
+import { leerTokenDeBaja } from "@/lib/correos-compradores-firma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

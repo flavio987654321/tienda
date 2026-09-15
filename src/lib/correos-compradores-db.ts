@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { sendCorreoACompradoresEmail } from "@/lib/resend";
 import { siteUrl } from "@/lib/site";
-import {
-  destinatarios, saludo, tokenDeBaja, urlBajaCorreo, urlBajaCorreoUnClic, type Comprador,
-} from "@/lib/correos-compradores";
+import { destinatarios, saludo, urlBajaCorreo, urlBajaCorreoUnClic, type Comprador } from "@/lib/correos-compradores";
+import { tokenDeBaja } from "@/lib/correos-compradores-firma";
 
 /**
  * El mail a compradores contra la base: quiénes lo reciben y mandarlo.

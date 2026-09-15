@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket, Mail } from "lucide-react";
+import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket, Mail, DoorOpen } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { medicionDeLaTienda } from "@/lib/medicion-digital";
@@ -58,6 +58,13 @@ export default async function MarketingPage() {
       titulo: "Cupones de descuento",
       que: "Un código que la persona escribe al pagar: para un lanzamiento, para quien ya te compró, o para cerrar a quien preguntó y no se decidió.",
       accion: "Crear un cupón",
+    },
+    {
+      href: "/digitales/marketing/salida",
+      Icon: DoorOpen,
+      titulo: "Oferta de salida",
+      que: "Cuando alguien se va del pago sin pagar, un cartel con una última oferta: un descuento que vence de verdad, o un producto más barato. También va en el mail de carrito. Starter y Pro.",
+      accion: "Armar la oferta",
     },
     {
       href: "/digitales/marketing/compradores",

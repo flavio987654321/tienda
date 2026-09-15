@@ -2,10 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2, Plus, Ticket, Trash2, Power } from "lucide-react";
 import { validarCuponNuevo, normalizarCodigo, textoDelDescuento, PORCENTAJE_MAXIMO, type TipoDeCupon } from "@/lib/cupones-digitales";
 import { IDEAS_DE_CUPON, cuponDeLaIdea, CONSEJO_DE_CUPON } from "@/lib/plantillas-marketing";
 import ConsejoDeUso from "../../ConsejoDeUso";
+import { esCodigoDeOferta } from "@/lib/oferta-salida";
 
 export type CuponEnPantalla = {
   id: string;
@@ -236,6 +238,13 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
                       <Ticket className="h-4 w-4 text-orange-500" /> {c.codigo}
                     </span>
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${CLASE_ESTADO[c.estado]}`}>{NOMBRE_ESTADO[c.estado]}</span>
+                    {/* El cupón que crea la oferta de salida: se maneja desde
+                        allá, y acá se dice para que nadie lo borre por error. */}
+                    {esCodigoDeOferta(c.codigo) && (
+                      <Link href="/digitales/marketing/salida" className="rounded-full bg-orange-50 panel-oscuro:bg-orange-500/10 px-2 py-0.5 text-[11px] font-bold text-orange-700 panel-oscuro:text-orange-300 hover:underline">
+                        de la oferta de salida
+                      </Link>
+                    )}
                   </div>
                   <p className="mt-1 text-[12.5px] text-gray-600 panel-oscuro:text-gray-400">
                     <span className="font-semibold text-gray-800 panel-oscuro:text-gray-200">{textoDelDescuento(c)} de descuento</span>
@@ -254,7 +263,7 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
                     {tocando === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
                     {c.activo ? "Apagar" : "Prender"}
                   </button>
-                  <button
+                  {!esCodigoDeOferta(c.codigo) && <button
                     type="button"
                     onClick={() => tocar(c, "borrar")}
                     disabled={tocando !== null}
@@ -262,7 +271,7 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
                     className="inline-flex items-center rounded-lg border border-gray-200 panel-oscuro:border-gray-700 p-1.5 text-gray-400 hover:border-red-300 hover:text-red-600 disabled:opacity-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </button>}
                 </div>
               </div>
             </li>

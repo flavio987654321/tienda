@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { leerTokenDeBaja } from "@/lib/correos-compradores";
+import { leerTokenDeBaja } from "@/lib/correos-compradores-firma";
 import { Marco } from "../../newsletter/Marco";
 import { AccionNewsletter } from "../../newsletter/AccionNewsletter";
 

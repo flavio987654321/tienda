@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { origenAnotado } from "@/lib/visitas-digitales";
 import { descuentoDe, normalizarCodigo, type TipoDeCupon } from "@/lib/cupones-digitales";
+import { vistaEnDelToken, venceEnTexto, type HorasDeOferta } from "@/lib/oferta-salida";
+import CartelDeSalida from "@/components/digitales/CartelDeSalida";
 import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } from "lucide-react";
 
 /**
@@ -25,6 +27,17 @@ import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } fro
  * servidor — pero no pueden no coincidir, porque los precios de esta pantalla
  * los puso el servidor y lo único que viaja de vuelta son identificadores.
  */
+
+/**
+ * La oferta de salida, ya decidida por el servidor: qué se ofrece y el
+ * token con la hora en que se mostró (ver `lib/oferta-salida`).
+ */
+export type OfertaEnElCheckout = {
+  titulo: string; texto: string; boton: string; horas: HorasDeOferta; token: string;
+} & (
+  | { tipo: "DESCUENTO"; codigo: string; porcentaje: number; nombre: string; imagen: string | null }
+  | { tipo: "PRODUCTO"; producto: { nombre: string; precio: number; descripcion: string | null; imagen: string | null; href: string } }
+);
 
 type Bono = { id: string; nombre: string; vale: number };
 type Upsell = {
@@ -55,6 +68,8 @@ type Props = {
   avisoDePrevia: string | null;
   botonRedondo: string;
   tarjeta: string;
+  /** Null = sin oferta de salida (apagada, sin plan, o no se puede vender). */
+  oferta: OfertaEnElCheckout | null;
 };
 
 const plata = (n: number) =>
@@ -76,6 +91,14 @@ export default function CheckoutClient(p: Props) {
   const [cupon, setCupon] = useState<{ codigo: string; tipo: TipoDeCupon; valor: number; texto: string } | null>(null);
   const [cuponError, setCuponError] = useState("");
   const [cuponMirando, setCuponMirando] = useState(false);
+  /* ── La oferta de salida ──────────────────────────────────────────────
+     `tokenDeOferta` es la hora en que ESTA persona la vio, firmada. Se
+     guarda en el navegador la primera vez: recargar no reinicia el plazo. Al
+     pagar viaja con el cupón para que el servidor lo haga cumplir. */
+  const [cartel, setCartel] = useState<{ vence: string } | null>(null);
+  const [tokenDeOferta, setTokenDeOferta] = useState<string | null>(null);
+  const [ofertaError, setOfertaError] = useState("");
+  const ofertaMostrada = useRef(false);
   /* ⚠️ El freno del doble click. `useState` no alcanza: dos clics seguidos leen
      el mismo `false` antes de que React vuelva a dibujar, y salen los dos. Con
      un `ref` el segundo ve el `true` en el mismo instante. Es el mismo patrón
@@ -98,28 +121,93 @@ export default function CheckoutClient(p: Props) {
     return { sinCupon, descuento, pagas, valorTotal, ahorro: valorTotal > pagas ? valorTotal - pagas : 0 };
   }, [elegidos, p, cupon]);
 
+  /**
+   * Verifica un cupón contra el servidor y lo deja puesto. `oferta` es el
+   * token de la oferta de salida: el cupón SALIDA-… no vale sin él.
+   * Devuelve el error, o null si quedó aplicado.
+   */
+  async function verificarCupon(c: string, oferta: string | null): Promise<string | null> {
+    try {
+      const r = await fetch("/api/digitales/cupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productoId: p.productoId, codigo: c, ...(oferta ? { oferta } : {}) }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) return d.error ?? "Ese cupón no existe.";
+      setCupon({ codigo: d.codigo, tipo: d.tipo, valor: d.valor, texto: d.texto });
+      setCodigo(d.codigo);
+      return null;
+    } catch {
+      return "No pudimos verificar el cupón. Probá de nuevo.";
+    }
+  }
+
   async function aplicarCupon() {
     const c = normalizarCodigo(codigo);
     if (!c || cuponMirando) return;
     setCuponMirando(true);
     setCuponError("");
-    try {
-      const r = await fetch("/api/digitales/cupon", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productoId: p.productoId, codigo: c }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.ok) {
-        setCupon(null);
-        setCuponError(d.error ?? "Ese cupón no existe.");
-      } else {
-        setCupon({ codigo: d.codigo, tipo: d.tipo, valor: d.valor, texto: d.texto });
-        setCodigo(d.codigo);
-      }
-    } catch {
-      setCuponError("No pudimos verificar el cupón. Probá de nuevo.");
-    }
+    const problema = await verificarCupon(c, null);
+    if (problema) { setCupon(null); setCuponError(problema); }
+    setCuponMirando(false);
+  }
+
+  /* ── Cuándo aparece el cartel ─────────────────────────────────────────
+     En computadora, cuando el mouse sale por arriba (va a cerrar la pestaña
+     o a la barra). En el celular, al apretar atrás: se deja una entrada en
+     el historial para que "atrás" primero muestre el cartel y recién el
+     segundo "atrás" se vaya. Una sola vez por persona y producto: el
+     navegador se acuerda. Nunca mientras está pagando ni en la previa de la
+     dueña. Si ya tenía un cupón puesto y acepta, el de la oferta lo
+     reemplaza: el resumen del precio lo muestra. */
+  const oferta = p.oferta;
+  useEffect(() => {
+    if (!oferta || !p.puedeCobrar) return;
+    const claveVista = `pv_salida_vista_${p.productoId}`;
+    const claveToken = `pv_salida_token_${p.productoId}`;
+    try { if (window.localStorage.getItem(claveVista)) return; } catch { /* sin almacenamiento se muestra igual */ }
+
+    const mostrar = () => {
+      if (ofertaMostrada.current || enVuelo.current) return;
+      ofertaMostrada.current = true;
+      /* El token más viejo que siga vivo: el guardado si lo hay, si no el de
+         esta carga. Así recargar no reinicia el plazo. */
+      let token = oferta.token;
+      try {
+        const guardado = window.localStorage.getItem(claveToken);
+        const vistaEn = guardado ? vistaEnDelToken(guardado) : null;
+        if (guardado && vistaEn && vistaEn + oferta.horas * 3_600_000 > Date.now()) token = guardado;
+        window.localStorage.setItem(claveToken, token);
+        window.localStorage.setItem(claveVista, "1");
+      } catch { /* ídem */ }
+      const vistaEn = vistaEnDelToken(token) ?? Date.now();
+      setTokenDeOferta(token);
+      setCartel({ vence: venceEnTexto(new Date(vistaEn + oferta.horas * 3_600_000)) });
+    };
+
+    const alSalir = (e: MouseEvent) => { if (e.clientY <= 0) mostrar(); };
+    const alVolver = () => { mostrar(); };
+    document.documentElement.addEventListener("mouseleave", alSalir);
+    window.history.pushState({ salida: true }, "", window.location.href);
+    window.addEventListener("popstate", alVolver);
+    return () => {
+      document.documentElement.removeEventListener("mouseleave", alSalir);
+      window.removeEventListener("popstate", alVolver);
+    };
+  }, [oferta, p.productoId, p.puedeCobrar]);
+
+  /* Cerrar el cartel: si se abrió por "atrás", ya se consumió la entrada
+     extra del historial; si se abrió por el mouse, sigue ahí y da igual. */
+  function cerrarCartel() { setCartel(null); }
+
+  async function aceptarOferta() {
+    if (!oferta || oferta.tipo !== "DESCUENTO" || cuponMirando) return;
+    setCuponMirando(true);
+    setOfertaError("");
+    const problema = await verificarCupon(oferta.codigo, tokenDeOferta);
+    if (problema) setOfertaError(problema);
+    else setCartel(null);
     setCuponMirando(false);
   }
 
@@ -152,6 +240,9 @@ export default function CheckoutClient(p: Props) {
           upsells: elegidos,
           /* El CÓDIGO del cupón, nunca el monto: cuánto vale lo decide el servidor. */
           cupon: cupon?.codigo,
+          /* El plazo firmado, para que el servidor lo haga cumplir con el
+             cupón de la oferta de salida. Con otro cupón no hace nada. */
+          oferta: tokenDeOferta ?? undefined,
           /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
              servidor. Una prueba que la escribe el navegador no prueba nada. */
           acepto: true,
@@ -436,6 +527,31 @@ export default function CheckoutClient(p: Props) {
         <a href="/privacidad" className="underline underline-offset-2">Privacidad</a>
         {p.vendedor ? ` · Vende ${p.vendedor} a través de TiendaApps` : " · A través de TiendaApps"}
       </p>
+
+      {/* ── La oferta de salida ──────────────────────────────────────────
+          Un solo cartel, el mismo componente que la vista previa del panel.
+          Con descuento: aplica el cupón y cierra. Con producto más barato:
+          el botón es un link a su pago. */}
+      {cartel && oferta && (
+        <div role="dialog" aria-modal="true" aria-label={oferta.titulo} className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-4 sm:items-center">
+          <CartelDeSalida
+            c={{
+              titulo: oferta.titulo, texto: oferta.texto, boton: oferta.boton, vence: cartel.vence,
+              imagen: oferta.tipo === "DESCUENTO" ? oferta.imagen : oferta.producto.imagen,
+              oferta: oferta.tipo === "DESCUENTO"
+                ? { tipo: "DESCUENTO", nombre: oferta.nombre, antes: cuenta.sinCupon, despues: cuenta.sinCupon - descuentoDe({ tipo: "PORCENTAJE", valor: oferta.porcentaje }, cuenta.sinCupon), porcentaje: oferta.porcentaje }
+                : { tipo: "PRODUCTO", nombre: oferta.producto.nombre, precio: oferta.producto.precio, descripcion: oferta.producto.descripcion },
+            }}
+            tarjeta={p.tarjeta}
+            botonRedondo={p.botonRedondo}
+            onAceptar={aceptarOferta}
+            onCerrar={cerrarCartel}
+            yendo={cuponMirando}
+            error={ofertaError}
+            href={oferta.tipo === "PRODUCTO" ? oferta.producto.href : undefined}
+          />
+        </div>
+      )}
     </div>
   );
 }

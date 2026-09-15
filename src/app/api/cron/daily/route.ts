@@ -33,6 +33,7 @@ import { renovarTokensPorVencer } from "@/lib/facebook-token";
 import { rechazoDeCron } from "@/lib/cron-auth";
 import { sendCarritoAbandonadoDigitalEmail } from "@/lib/resend";
 import { PAGO_EN_CAMINO } from "@/lib/carritos-digitales";
+import { ofertaParaElMail } from "@/lib/oferta-salida-db";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -191,7 +192,7 @@ export async function GET(req: NextRequest) {
           product: {
             select: {
               id: true, name: true, rolDigital: true, isActive: true,
-              slugDigital: true, dominioPropio: true,
+              slugDigital: true, dominioPropio: true, price: true, storeId: true, ofertaSalida: true,
             },
           },
         },
@@ -218,6 +219,10 @@ export async function GET(req: NextRequest) {
           ? `https://${principal.slugDigital}.${dominioDeLaPlataforma()}`
           : `${APP_URL}/p/${principal.id}`;
 
+      // La oferta de salida, si está prendida: el mismo cartel del checkout,
+      // con el plazo firmado desde AHORA. Ver `lib/oferta-salida`. Si falla,
+      // el recordatorio sale igual, sin oferta.
+      const oferta = await ofertaParaElMail(principal, enlace, now).catch((e) => { console.error("[cron] oferta de salida:", e); return null; });
       enviosCarritosD.push(
         sendCarritoAbandonadoDigitalEmail({
           to: correo,
@@ -228,6 +233,7 @@ export async function GET(req: NextRequest) {
           // El nombre del checkout es el que la persona vio al pagar; el de la
           // tienda es de puertas adentro y no lo reconocería.
           vendedor: orden.store.checkoutName || orden.store.name,
+          oferta,
         })
           .then((r) => {
             if (r.error) console.error("[cron] carrito digital:", r.error.message);

@@ -96,6 +96,7 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Visitas y conversión de cada página", on: pago },
     { text: "Embudo y origen de las visitas (UTM)", on: tier === "PRO" },
     { text: "Ver carritos abandonados", on: true },
+    { text: "Oferta de salida a quien se va sin pagar", on: pago },
     { text: "Mail automático de recuperación", on: tier === "PRO" },
     { text: "Mail a tus compradores", on: tier === "PRO" },
     /* "Por producto" no es un detalle: es TODO. Un dominio por cuenta no le sirve

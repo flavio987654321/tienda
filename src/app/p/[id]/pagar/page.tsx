@@ -11,6 +11,12 @@ import CheckoutClient from "./CheckoutClient";
 import VisitaDigital from "../VisitaDigital";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
+import { leerOfertaSalida, codigoDeLaOferta } from "@/lib/oferta-salida";
+import { firmarOferta, leerTokenDeOferta } from "@/lib/oferta-salida-firma";
+import { isSubscriptionActive, SUB_STATUS_SELECT } from "@/lib/subscription";
+import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
+import { direccionBase } from "@/lib/enlaces-compartir";
+import type { OfertaEnElCheckout } from "./CheckoutClient";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -39,10 +45,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ oferta?: string }> };
 
-export default async function PantallaDePago({ params }: Props) {
+export default async function PantallaDePago({ params, searchParams }: Props) {
   const { id } = await params;
+  const { oferta: tokenPedido } = await searchParams;
 
   const fila = await prisma.product.findFirst({
     /* ⚠️ Sin `isActive` en el `where`, a propósito: se busca igual y se decide
@@ -50,11 +57,11 @@ export default async function PantallaDePago({ params }: Props) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, price: true, comparePrice: true, archivoPath: true,
-      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true,
+      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true, ofertaSalida: true,
       store: {
         select: {
-          isPublished: true, mpAccessToken: true, ownerId: true, storeConfig: true,
-          owner: { select: { role: true, name: true } },
+          id: true, isPublished: true, mpAccessToken: true, ownerId: true, storeConfig: true,
+          owner: { select: { role: true, name: true, subscription: { select: SUB_STATUS_SELECT } } },
         },
       },
       hijos: {
@@ -128,6 +135,13 @@ export default async function PantallaDePago({ params }: Props) {
      guardada dice que no hay devolución. Ver `consentimiento-digital`. */
   const dias = diasDeGarantia(pagina);
 
+  /* ── La oferta de salida ──────────────────────────────────────────────────
+     Sólo si se puede vender, si está prendida y si el plan la incluye (Starter
+     y Pro, al día). El plazo se firma ACÁ: si el link ya traía un token
+     válido —el del mail de carrito— se respeta ése, así la cuenta corre desde
+     que se lo mandaron y no desde que abrió. Ver `lib/oferta-salida`. */
+  const oferta = await armarOferta(fila, seLePuedeVender, tokenPedido);
+
   return (
     <div className={CLASES_FUENTES}>
       <div
@@ -179,10 +193,50 @@ export default async function PantallaDePago({ params }: Props) {
           avisoDePrevia={avisoDePrevia}
           botonRedondo={estilo.boton}
           tarjeta={estilo.tarjeta}
+          oferta={oferta}
         />
       </div>
     </div>
   );
+}
+
+type FilaDelPago = {
+  id: string; name: string; price: number; images: string; ofertaSalida: string | null;
+  store: { id: string; owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
+};
+
+async function armarOferta(fila: FilaDelPago, seLePuedeVender: boolean, tokenPedido: string | undefined): Promise<OfertaEnElCheckout | null> {
+  const guardada = leerOfertaSalida(fila.ofertaSalida);
+  if (!seLePuedeVender || !guardada.activa) return null;
+  const sub = fila.store.owner.subscription;
+  if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) return null;
+
+  const token = leerTokenDeOferta(tokenPedido, fila.id, guardada.horas) ? (tokenPedido as string) : firmarOferta(fila.id, Date.now());
+  const comun = { titulo: guardada.titulo, texto: guardada.texto, boton: guardada.boton, horas: guardada.horas, token };
+
+  if (guardada.tipo === "DESCUENTO") {
+    /* El cupón tiene que existir y estar prendido: si la dueña lo borró de
+       Cupones, la oferta no se muestra en vez de prometer algo que al pagar
+       no aplica. */
+    const cupon = await prisma.cuponDigital.findUnique({
+      where: { storeId_codigo: { storeId: fila.store.id, codigo: codigoDeLaOferta(fila.id) } },
+      select: { activo: true, valor: true, tipo: true },
+    });
+    if (!cupon || !cupon.activo || cupon.tipo !== "PORCENTAJE") return null;
+    return { ...comun, tipo: "DESCUENTO", codigo: codigoDeLaOferta(fila.id), porcentaje: cupon.valor, nombre: fila.name, imagen: primeraImagen(fila.images) };
+  }
+
+  if (!guardada.productoId) return null;
+  const otro = await prisma.product.findFirst({
+    where: { id: guardada.productoId, storeId: fila.store.id, rolDigital: "PRINCIPAL", deletedAt: null, isActive: true },
+    select: { id: true, name: true, price: true, description: true, images: true, slugDigital: true, dominioPropio: true },
+  });
+  if (!otro || !(otro.price > 0)) return null;
+  const base = direccionBase(otro, dominioDeLaPlataforma(), process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com");
+  return {
+    ...comun, tipo: "PRODUCTO",
+    producto: { nombre: otro.name, precio: otro.price, descripcion: otro.description, imagen: primeraImagen(otro.images), href: `${base.replace(/\/$/, "")}/pagar` },
+  };
 }
 
 /** La portada. Un JSON roto no puede tumbar la pantalla de pago. */

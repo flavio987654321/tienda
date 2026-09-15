@@ -127,3 +127,8 @@ export const CONSEJO_DE_ENLACES =
 
 export const CONSEJO_DE_MEDICION =
   "Para saber si anda: instalá la extensión Meta Pixel Helper en Chrome y abrí tu página publicada. Tiene que marcar PageView y ViewContent; en la pantalla de pago, InitiateCheckout; y en Gracias, después de una compra real, Purchase. Si no marca nada, el ID está mal copiado.";
+
+/* ── Oferta de salida ────────────────────────────────────────────────────── */
+
+export const CONSEJO_DE_SALIDA =
+  "El descuento de salida tiene que ser más grande que cualquier cupón que repartas afuera: si en la bio hay 10 % y acá 10 %, no hay motivo para quedarse. Y no lo cuentes en ningún lado: es para quien ya estaba por irse, no un precio de lista con otro nombre.";

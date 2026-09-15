@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { normalizarCodigo, porQueNoAplica, descuentoDe, textoDelDescuento, type CuponDigitalPuro } from "@/lib/cupones-digitales";
+import { esCodigoDeOferta, leerOfertaSalida } from "@/lib/oferta-salida";
+import { leerTokenDeOferta } from "@/lib/oferta-salida-firma";
 
 export const runtime = "nodejs";
 
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const producto = await prisma.product.findFirst({
     where: { id: productoId, deletedAt: null, rolDigital: "PRINCIPAL", isActive: true, store: { owner: { role: "DIGITAL" } } },
-    select: { id: true, price: true, storeId: true },
+    select: { id: true, price: true, storeId: true, ofertaSalida: true },
   });
   if (!producto) return NextResponse.json({ error: "Ese cupón no existe." }, { status: 404 });
 
@@ -48,6 +50,16 @@ export async function POST(req: NextRequest) {
   });
   const cupon = fila && (fila.tipo === "PORCENTAJE" || fila.tipo === "PESOS") ? (fila as CuponDigitalPuro) : null;
   if (!cupon) return NextResponse.json({ error: "Ese cupón no existe." }, { status: 404 });
+
+  /* ⚠️ El cupón de la oferta de salida (SALIDA-…) no vale por el código:
+     vale por el plazo firmado que el checkout le mostró a ESTA persona. Sin
+     token, o vencido, no existe. Es lo que hace cierto el "vale hasta las
+     18:23" del cartel. Ver `lib/oferta-salida`. */
+  if (esCodigoDeOferta(cupon.codigo)) {
+    const oferta = leerOfertaSalida(producto.ofertaSalida);
+    const plazo = oferta.activa && oferta.tipo === "DESCUENTO" ? leerTokenDeOferta(cuerpo?.oferta, producto.id, oferta.horas) : null;
+    if (!plazo) return NextResponse.json({ error: "Esa oferta ya venció." }, { status: 400 });
+  }
 
   /* Se mira contra el precio del principal solo: es el piso. Con upsells el
      total es mayor y el cupón aplica con más razón. */
