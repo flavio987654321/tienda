@@ -48,8 +48,23 @@ const PREFIJO = "dv_";
 /** Dónde queda anotado de dónde vino, para que el checkout lo mande con la orden. */
 const CLAVE_ORIGEN = "dv_origen_";
 
-/** Lo que la página de venta anota al entrar y el checkout manda al comprar. */
-export type OrigenCrudo = { referente: string; utmSource: string };
+/** Lo que la página de venta anota al entrar y el checkout manda al comprar.
+    Los tres utm de la campaña viajan crudos, como el resto: los limpia el
+    servidor con `utm-digital`. */
+export type OrigenCrudo = {
+  referente: string;
+  utmSource: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+};
+
+/** Las cuatro etiquetas de la URL de ahora, crudas y como texto. */
+function utmDeLaUrl(): { utmSource: string; utmMedium: string; utmCampaign: string; utmContent: string } {
+  const q = new URLSearchParams(window.location.search);
+  const leer = (k: string) => q.get(k) || "";
+  return { utmSource: leer("utm_source"), utmMedium: leer("utm_medium"), utmCampaign: leer("utm_campaign"), utmContent: leer("utm_content") };
+}
 
 /**
  * De dónde vino esta visita, tal como lo anotó la página de venta. `null` si
@@ -67,9 +82,13 @@ export function origenAnotado(productId: string): OrigenCrudo | null {
     const crudo = localStorage.getItem(`${CLAVE_ORIGEN}${productId}`);
     if (!crudo) return null;
     const o = JSON.parse(crudo) as Partial<OrigenCrudo>;
+    const texto = (v: unknown) => (typeof v === "string" ? v : "");
     return {
-      referente: typeof o.referente === "string" ? o.referente : "",
-      utmSource: typeof o.utmSource === "string" ? o.utmSource : "",
+      referente: texto(o.referente),
+      utmSource: texto(o.utmSource),
+      utmMedium: texto(o.utmMedium),
+      utmCampaign: texto(o.utmCampaign),
+      utmContent: texto(o.utmContent),
     };
   } catch {
     return null;
@@ -131,11 +150,11 @@ export function registrarVisitaDigital(paso: PasoDigital, productId: string): vo
   }
 
   let referente = "";
-  let utmSource = "";
+  let utm = { utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "" };
   if (paso === "pagina") {
     try {
       referente = document.referrer || "";
-      utmSource = new URLSearchParams(window.location.search).get("utm_source") || "";
+      utm = utmDeLaUrl();
     } catch {
       /* Si esto falla la visita se cuenta igual y queda sin origen. El total es
          lo que no se puede perder. */
@@ -145,7 +164,7 @@ export function registrarVisitaDigital(paso: PasoDigital, productId: string): vo
   fetch(`/api/digitales/visita/${productId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paso, referente, utmSource, movil: esMovil() }),
+    body: JSON.stringify({ paso, referente, ...utm, movil: esMovil() }),
     keepalive: true,
   }).catch(() => {});
 }
@@ -163,14 +182,14 @@ export function anotarOrigen(productId: string): void {
   if (typeof window === "undefined") return;
   try {
     let referente = document.referrer || "";
-    const utmSource = new URLSearchParams(window.location.search).get("utm_source") || "";
+    const utm = utmDeLaUrl();
     /* Un referente nuestro —volvió del checkout, o de la página de gracias—
        no es un origen. El utm sí, venga de donde venga. */
     try {
       if (referente && new URL(referente).host === window.location.host) referente = "";
     } catch { /* un referente que no es URL se manda igual; el servidor lo descarta */ }
-    if (!referente && !utmSource) return;
-    localStorage.setItem(`${CLAVE_ORIGEN}${productId}`, JSON.stringify({ referente, utmSource } satisfies OrigenCrudo));
+    if (!referente && !utm.utmSource) return;
+    localStorage.setItem(`${CLAVE_ORIGEN}${productId}`, JSON.stringify({ referente, ...utm } satisfies OrigenCrudo));
   } catch {
     /* Sin almacenamiento la venta queda sin origen. */
   }

@@ -10,6 +10,7 @@ import { normalizarContenido, diasDeGarantia } from "@/lib/pagina-venta";
 import { loQueFalta } from "@/lib/productos-digitales";
 import { COMISION_DIGITAL } from "@/lib/planLimits";
 import { clasificarOrigen } from "@/lib/origen-visita";
+import { campaniaDe } from "@/lib/utm-digital";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
@@ -146,7 +147,9 @@ export async function POST(req: NextRequest) {
      nada anotado queda en null —no "directo": no saber no es lo mismo que
      haber entrado derecho—. Es una métrica: si falta o viene rota, la compra
      sigue igual. */
-  const origenCrudo = (cuerpo.origen ?? null) as { referente?: unknown; utmSource?: unknown } | null;
+  const origenCrudo = (cuerpo.origen ?? null) as {
+    referente?: unknown; utmSource?: unknown; utmMedium?: unknown; utmCampaign?: unknown; utmContent?: unknown;
+  } | null;
   const referenteCrudo = typeof origenCrudo?.referente === "string" ? origenCrudo.referente.trim() : "";
   const utmCrudo = typeof origenCrudo?.utmSource === "string" ? origenCrudo.utmSource.trim() : "";
   /* Sólo se clasifica si hay algo que clasificar: un `origen` vacío, un
@@ -156,6 +159,12 @@ export async function POST(req: NextRequest) {
     referenteCrudo || utmCrudo
       ? clasificarOrigen(referenteCrudo || null, utmCrudo || null, req.headers.get("host"), false)
       : null;
+  /* Y la campaña, limpia y con el medio a lista cerrada, si la visita traía
+     una. Sin utm_source no hay campaña, como en el ping. */
+  const campania = campaniaDe(
+    { medium: origenCrudo?.utmMedium, campaign: origenCrudo?.utmCampaign, content: origenCrudo?.utmContent },
+    utmCrudo,
+  );
   /* El texto exacto se arma más abajo, cuando ya se leyó la página: necesita
      saber si promete garantía. Acá sólo se corta el pedido que no aceptó. */
 
@@ -416,6 +425,9 @@ export async function POST(req: NextRequest) {
           digitalConsentIp: ip,
           digitalConsentTexto: textoAceptado,
           origenVisita,
+          utmMedio: campania?.medio ?? null,
+          utmCampania: campania?.campania ?? null,
+          utmAnuncio: campania ? campania.anuncio || null : null,
           items: { create: ordenPrevia ? itemsDelAgregado(upsells) : armarItems(principal, bonos, upsells) },
           /* ⚠️ La fila de pago nace con la orden, igual que en el checkout de
              tiendas. El webhook la busca por `orderId` para marcarla aprobada y

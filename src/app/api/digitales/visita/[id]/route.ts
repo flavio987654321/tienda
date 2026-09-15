@@ -5,6 +5,7 @@ import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import { clasificarOrigen } from "@/lib/origen-visita";
 import { visitaLegitima } from "@/lib/visita-legitima";
 import { esPasoDigital, MAX_VISITAS_POR_IP, type Dispositivo } from "@/lib/visitas-digitales";
+import { campaniaDe, dondeCae } from "@/lib/utm-digital";
 
 export const runtime = "nodejs";
 
@@ -137,6 +138,36 @@ export async function POST(
       );
     } catch {
       /* Contada sin origen. */
+    }
+
+    /* La campaña, si la visita traía una. Mismo criterio que el origen: aparte
+       y después, en su propio try. Y con el techo: si es una combinación que
+       ya existe hoy, suma; si es nueva y hay lugar, se crea; si es nueva y no
+       hay lugar, cae en "(otras)". Ver `utm-digital`. */
+    try {
+      const campania = campaniaDe(
+        { medium: cuerpo?.utmMedium, campaign: cuerpo?.utmCampaign, content: cuerpo?.utmContent },
+        cuerpo?.utmSource,
+      );
+      if (campania) {
+        const base = { productId: producto.id, date };
+        const existente = await prisma.digitalVisitaCampania.findUnique({
+          where: { productId_date_medio_campania_anuncio: { ...base, ...campania } },
+          select: { id: true },
+        });
+        const distintasHoy = existente ? 0 : await prisma.digitalVisitaCampania.count({ where: base });
+        const claveCampania = { ...base, ...dondeCae(campania, existente !== null, distintasHoy) };
+        await sumarUno(
+          () => prisma.digitalVisitaCampania.upsert({
+            where: { productId_date_medio_campania_anuncio: claveCampania },
+            update: { count: { increment: 1 } },
+            create: { ...claveCampania, count: 1 },
+          }),
+          () => prisma.digitalVisitaCampania.updateMany({ where: claveCampania, data: { count: { increment: 1 } } }),
+        );
+      }
+    } catch {
+      /* Contada sin campaña. */
     }
   }
 

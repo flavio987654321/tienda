@@ -102,5 +102,30 @@ check("TABLA-E", /prisma\.digitalVisita\.deleteMany\(\{\s*where: \{ date: \{ lt:
   && /prisma\.digitalVisitaOrigen\.deleteMany\(\{\s*where: \{ date: \{ lt: corteVisitas \} \}/.test(cleanup),
   "la limpieza las borra con el mismo corte que las visitas de tiendas");
 
+/* ── La campaña (UTM) ────────────────────────────────────────────────────── */
+
+const comprar = leer("src/app/api/digitales/comprar/route.ts");
+check("UTM-A", /utm_campaign/.test(lib) && /utm_content/.test(lib) && /utm_medium/.test(lib) && /body: JSON\.stringify\(\{ paso, referente, \.\.\.utm, movil: esMovil\(\) \}\)/.test(lib),
+  "el ping manda las cuatro etiquetas crudas; las limpia el servidor");
+check("UTM-B", /JSON\.stringify\(\{ referente, \.\.\.utm \} satisfies OrigenCrudo\)/.test(lib),
+  "al entrar se anotan las cuatro, para que la orden las lleve");
+check("UTM-C", /const campania = campaniaDe\(/.test(ruta) && /cuerpo\?\.utmSource,/.test(ruta),
+  "la ruta pasa las etiquetas por utm-digital, con el utm_source como condición");
+check("UTM-D", /prisma\.digitalVisitaCampania\.count\(\{ where: base \}\)/.test(ruta) && /dondeCae\(campania, existente !== null, distintasHoy\)/.test(ruta),
+  "antes de crear una combinación nueva se cuenta cuántas hay hoy: el techo se aplica");
+check("UTM-E", ruta.indexOf("prisma.digitalVisitaOrigen.upsert") < ruta.indexOf("prisma.digitalVisitaCampania")
+  && /\} catch \{\s*\/\* Contada sin campaña\. \*\/\s*\}/.test(ruta),
+  "la campaña va después del origen y en su propio try: si falla, la visita ya está contada");
+check("UTM-F", /utmMedio: campania\?\.medio \?\? null,/.test(comprar) && /utmCampania: campania\?\.campania \?\? null,/.test(comprar)
+  && /const campania = campaniaDe\(/.test(comprar),
+  "la orden guarda la campaña limpia, o null si no la traía");
+check("UTM-G", /model DigitalVisitaCampania \{[\s\S]*@@unique\(\[productId, date, medio, campania, anuncio\]\)/.test(schema)
+  && /utmMedio\s+String\?/.test(schema) && /utmCampania String\?/.test(schema) && /utmAnuncio\s+String\?/.test(schema),
+  "la tabla de campañas y las tres columnas de la orden existen en el esquema");
+const migracionUtm = "prisma/migrations/20260915010000_campanias_digitales/migration.sql";
+check("UTM-H", existsSync(migracionUtm) && /CREATE TABLE IF NOT EXISTS "DigitalVisitaCampania"/.test(leer(migracionUtm))
+  && /ADD COLUMN IF NOT EXISTS "utmMedio"/.test(leer(migracionUtm)),
+  "y tienen su migración, que se puede volver a correr");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);
