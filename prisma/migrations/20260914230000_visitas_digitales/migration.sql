@@ -10,7 +10,9 @@
 -- que es el que decide dónde poner la publicidad.
 --
 -- Dos tablas nuevas y una columna que admite nulos: no toca ninguna fila
--- existente, y volver a correrla no hace nada (IF NOT EXISTS en todo).
+-- existente, y volver a correrla no hace nada (IF NOT EXISTS en todo). Las
+-- claves foráneas van adentro del CREATE TABLE —las tablas son nuevas— y no en
+-- un ALTER aparte, que necesitaría su propio "si no existe".
 
 CREATE TABLE IF NOT EXISTS "DigitalVisita" (
   "id"          TEXT NOT NULL,
@@ -19,7 +21,9 @@ CREATE TABLE IF NOT EXISTS "DigitalVisita" (
   "paso"        TEXT NOT NULL,
   "dispositivo" TEXT NOT NULL,
   "count"       INTEGER NOT NULL DEFAULT 0,
-  CONSTRAINT "DigitalVisita_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "DigitalVisita_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "DigitalVisita_productId_fkey"
+    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "DigitalVisita_productId_date_paso_dispositivo_key"
@@ -27,33 +31,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS "DigitalVisita_productId_date_paso_dispositivo
 CREATE INDEX IF NOT EXISTS "DigitalVisita_productId_date_idx"
   ON "DigitalVisita"("productId", "date" DESC);
 
-DO $$ BEGIN
-  ALTER TABLE "DigitalVisita"
-    ADD CONSTRAINT "DigitalVisita_productId_fkey"
-    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
 CREATE TABLE IF NOT EXISTS "DigitalVisitaOrigen" (
   "id"        TEXT NOT NULL,
   "productId" TEXT NOT NULL,
   "date"      TEXT NOT NULL,
   "source"    TEXT NOT NULL,
   "count"     INTEGER NOT NULL DEFAULT 0,
-  CONSTRAINT "DigitalVisitaOrigen_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "DigitalVisitaOrigen_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "DigitalVisitaOrigen_productId_fkey"
+    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "DigitalVisitaOrigen_productId_date_source_key"
   ON "DigitalVisitaOrigen"("productId", "date", "source");
 CREATE INDEX IF NOT EXISTS "DigitalVisitaOrigen_productId_date_idx"
   ON "DigitalVisitaOrigen"("productId", "date" DESC);
-
-DO $$ BEGIN
-  ALTER TABLE "DigitalVisitaOrigen"
-    ADD CONSTRAINT "DigitalVisitaOrigen_productId_fkey"
-    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
 
 -- De dónde vino la visita que terminó en esta compra. Null en todo lo que ya
 -- existe (órdenes de tiendas, y digitales de antes de esto).

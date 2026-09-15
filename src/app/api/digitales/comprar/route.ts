@@ -146,15 +146,15 @@ export async function POST(req: NextRequest) {
      nada anotado queda en null —no "directo": no saber no es lo mismo que
      haber entrado derecho—. Es una métrica: si falta o viene rota, la compra
      sigue igual. */
-  const origenCrudo = cuerpo.origen;
+  const origenCrudo = (cuerpo.origen ?? null) as { referente?: unknown; utmSource?: unknown } | null;
+  const referenteCrudo = typeof origenCrudo?.referente === "string" ? origenCrudo.referente.trim() : "";
+  const utmCrudo = typeof origenCrudo?.utmSource === "string" ? origenCrudo.utmSource.trim() : "";
+  /* Sólo se clasifica si hay algo que clasificar: un `origen` vacío, un
+     arreglo o un objeto sin nada adentro es "no sé", y clasificar la nada
+     daría "directo", que es una afirmación. */
   const origenVisita =
-    origenCrudo && typeof origenCrudo === "object"
-      ? clasificarOrigen(
-          typeof (origenCrudo as { referente?: unknown }).referente === "string" ? (origenCrudo as { referente: string }).referente : null,
-          typeof (origenCrudo as { utmSource?: unknown }).utmSource === "string" ? (origenCrudo as { utmSource: string }).utmSource : null,
-          req.headers.get("host"),
-          false,
-        )
+    referenteCrudo || utmCrudo
+      ? clasificarOrigen(referenteCrudo || null, utmCrudo || null, req.headers.get("host"), false)
       : null;
   /* El texto exacto se arma más abajo, cuando ya se leyó la página: necesita
      saber si promete garantía. Acá sólo se corta el pedido que no aceptó. */

@@ -62,8 +62,13 @@ check("RUTA-C", /where: \{ id, deletedAt: null, isActive: true, rolDigital: "PRI
   "sólo cuenta un principal publicado");
 check("RUTA-D", /if \(await esLaDuena\(req, producto\.store\.ownerId\)\)/.test(ruta) && /c\.name\.startsWith\("sb-"\)/.test(ruta),
   "la dueña no cuenta, y sólo se le pregunta a Supabase si hay cookie de sesión");
-check("RUTA-E", /try \{\s*await prisma\.digitalVisita\.upsert/.test(ruta),
+check("RUTA-E", /try \{\s*await sumarUno\(\s*\(\) => prisma\.digitalVisita\.upsert/.test(ruta),
   "la escritura va en un try: sin la tabla todavía, no tira 500");
+check("RUTA-E2", /code !== "P2002"\) throw e;/.test(ruta) && /prisma\.digitalVisita\.updateMany\(\{ where: clave, data: \{ count: \{ increment: 1 \} \} \}\)/.test(ruta),
+  "dos primeras visitas del día que llegan juntas no pierden ninguna: la clave duplicada se reintenta como suma");
+check("RUTA-E3", /if \(!ID_RE\.test\(id\)\) return NextResponse\.json\(\{ ok: false \}, \{ status: 404 \}\);/.test(antesDeLaBase)
+  && ruta.indexOf("ID_RE.test(id)") < ruta.indexOf("visitaLegitima("),
+  "un id que no tiene forma de id se rechaza antes del límite por IP y de la base");
 check("RUTA-F", /if \(paso === "pagina"\) \{[\s\S]*prisma\.digitalVisitaOrigen\.upsert/.test(ruta)
   && ruta.indexOf("prisma.digitalVisita.upsert") < ruta.indexOf("prisma.digitalVisitaOrigen.upsert"),
   "el origen se guarda sólo al entrar, y después del total");

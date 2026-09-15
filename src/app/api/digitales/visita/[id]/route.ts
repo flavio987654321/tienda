@@ -8,6 +8,29 @@ import { esPasoDigital, MAX_VISITAS_POR_IP, type Dispositivo } from "@/lib/visit
 
 export const runtime = "nodejs";
 
+/* Mismo formato que valida el resto de la cadena de pagos: cuid de Prisma o
+   UUID. Se mira ANTES de todo: un id de diez mil caracteres no tiene que llegar
+   ni a la clave del límite por IP ni a la base. */
+const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/**
+ * Suma uno a una fila (producto, día, …), creándola si no existe.
+ *
+ * `upsert` no es atómico frente a dos pedidos que llegan JUNTOS a la primera
+ * visita del día: los dos ven que la fila no está, los dos intentan crearla y
+ * el segundo se cae con la clave duplicada — y esa visita se perdía. Cuando
+ * pasa eso, se vuelve a intentar como suma sobre la fila que el otro acaba de
+ * crear. Es la única carrera que tiene esta tabla.
+ */
+async function sumarUno(escribir: () => Promise<unknown>, sumar: () => Promise<unknown>): Promise<void> {
+  try {
+    await escribir();
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "P2002") throw e;
+    await sumar();
+  }
+}
+
 /**
  * POST /api/digitales/visita/[id] con `{ paso, referente?, utmSource? }`.
  *
@@ -41,6 +64,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!ID_RE.test(id)) return NextResponse.json({ ok: false }, { status: 404 });
 
   if (!(await visitaLegitima(req, `digital-visita:${id}`, MAX_VISITAS_POR_IP))) {
     return NextResponse.json({ ok: true, contada: false });
@@ -78,12 +102,16 @@ export async function POST(
      migración, la tabla no existe. Es una métrica —el cliente no lee la
      respuesta— y un 500 acá sólo esconde en los logs los errores que sí hay
      que mirar. */
+  const clave = { productId: producto.id, date, paso, dispositivo };
   try {
-    await prisma.digitalVisita.upsert({
-      where: { productId_date_paso_dispositivo: { productId: producto.id, date, paso, dispositivo } },
-      update: { count: { increment: 1 } },
-      create: { productId: producto.id, date, paso, dispositivo, count: 1 },
-    });
+    await sumarUno(
+      () => prisma.digitalVisita.upsert({
+        where: { productId_date_paso_dispositivo: clave },
+        update: { count: { increment: 1 } },
+        create: { ...clave, count: 1 },
+      }),
+      () => prisma.digitalVisita.updateMany({ where: clave, data: { count: { increment: 1 } } }),
+    );
   } catch {
     return NextResponse.json({ ok: true, contada: false });
   }
@@ -98,11 +126,15 @@ export async function POST(
       const referente = typeof cuerpo?.referente === "string" ? cuerpo.referente : null;
       const utmSource = typeof cuerpo?.utmSource === "string" ? cuerpo.utmSource : null;
       const source = clasificarOrigen(referente, utmSource, req.headers.get("host"), false);
-      await prisma.digitalVisitaOrigen.upsert({
-        where: { productId_date_source: { productId: producto.id, date, source } },
-        update: { count: { increment: 1 } },
-        create: { productId: producto.id, date, source, count: 1 },
-      });
+      const claveOrigen = { productId: producto.id, date, source };
+      await sumarUno(
+        () => prisma.digitalVisitaOrigen.upsert({
+          where: { productId_date_source: claveOrigen },
+          update: { count: { increment: 1 } },
+          create: { ...claveOrigen, count: 1 },
+        }),
+        () => prisma.digitalVisitaOrigen.updateMany({ where: claveOrigen, data: { count: { increment: 1 } } }),
+      );
     } catch {
       /* Contada sin origen. */
     }

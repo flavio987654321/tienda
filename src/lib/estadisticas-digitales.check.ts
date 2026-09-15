@@ -222,6 +222,8 @@ const visitaComp = leer("src/app/p/[id]/VisitaDigital.tsx");
 check("ORDEN-A", /origen: origenAnotado\(p\.productoId\)/.test(checkout), "el checkout manda el origen que anotó la página");
 check("ORDEN-B", /origenVisita,/.test(comprar) && /clasificarOrigen\(/.test(comprar),
   "la ruta lo clasifica con la lista cerrada y lo guarda en la orden");
+check("ORDEN-B2", /referenteCrudo \|\| utmCrudo\s*\? clasificarOrigen\(/.test(comprar),
+  "sin referente ni utm queda null, no \"directo\": clasificar la nada sería afirmar algo");
 check("ORDEN-C", /if \(paso === "pagina"\) anotarOrigen\(productoId\);/.test(visitaComp),
   "la página de venta anota el origen al entrar, antes del dedup del ping");
 
