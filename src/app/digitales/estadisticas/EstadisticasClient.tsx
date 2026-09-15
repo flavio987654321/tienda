@@ -31,7 +31,16 @@ type Props = {
   datos: Estadisticas;
   /** Se llegó al techo de órdenes: los números del rango están incompletos. */
   recortado: boolean;
+  vista: Vista;
 };
+
+export const VISTAS = ["general", "campanias"] as const;
+export type Vista = (typeof VISTAS)[number];
+const NOMBRE_VISTA: Record<Vista, string> = { general: "General", campanias: "Campañas" };
+
+export function esVista(v: unknown): v is Vista {
+  return typeof v === "string" && (VISTAS as readonly string[]).includes(v);
+}
 
 const plata = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -39,12 +48,14 @@ const entero = (n: number) => new Intl.NumberFormat("es-AR").format(n);
 const porcentaje = (n: number | null) =>
   n === null ? "—" : `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 }).format(n)} %`;
 
-export default function EstadisticasClient({ tier, principales, elegido, datos, recortado }: Props) {
+export default function EstadisticasClient({ tier, principales, elegido, datos, recortado, vista }: Props) {
   const { rango, kpis, serie, embudo, porProducto, origenes, posventa, cuando, dispositivos, carritos, campanias } = datos;
-  const href = (cambios: { p?: string | null; rango?: string }) => {
+  const href = (cambios: { p?: string | null; rango?: string; vista?: Vista }) => {
     const q = new URLSearchParams();
     const prod = cambios.p === undefined ? elegido : cambios.p;
     const r = cambios.rango ?? rango.clave;
+    const v = cambios.vista ?? vista;
+    if (v !== "general") q.set("vista", v);
     if (prod) q.set("p", prod);
     if (r !== "30") q.set("rango", r);
     const s = q.toString();
@@ -56,6 +67,29 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
 
   return (
     <div className="space-y-4">
+      {/* ── Las dos solapas ───────────────────────────────────────────────────
+          General contesta "¿vendí, y la página funciona?"; Campañas contesta
+          "¿me rinde el anuncio?". Son dos personas distintas mirando —o la misma
+          en dos momentos— y en una sola página larga se pisaban. Van como
+          solapas y no como dos entradas de la barra lateral: la barra es un
+          riel de íconos y un árbol adentro serían dos íconos sin nombre. */}
+      <div className="flex gap-1 border-b border-gray-200 panel-oscuro:border-gray-800">
+        {(Object.keys(NOMBRE_VISTA) as Vista[]).map((v) => (
+          <Link
+            key={v}
+            href={href({ vista: v })}
+            aria-current={vista === v ? "page" : undefined}
+            className={`-mb-px px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
+              vista === v
+                ? "border-orange-600 text-orange-700 panel-oscuro:text-orange-400"
+                : "border-transparent text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-800 panel-oscuro:hover:text-gray-200"
+            }`}
+          >
+            {NOMBRE_VISTA[v]}
+          </Link>
+        ))}
+      </div>
+
       {/* ── Los selectores ─────────────────────────────────────────────────── */}
       {principales.length > 1 && (
         <Fila>
@@ -78,206 +112,211 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         </p>
       )}
 
-      {/* ── Los cuatro números ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Numero
-          Icon={Receipt}
-          titulo="Ventas"
-          valor={entero(kpis.ventas)}
-          pie={kpis.devueltas > 0 ? `${kpis.devueltas} ${kpis.devueltas === 1 ? "devuelta" : "devueltas"}` : nombreDelElegido ?? "cobradas"}
-        />
-        <Numero
-          Icon={Wallet}
-          titulo="Te quedó"
-          valor={plata(kpis.neto)}
-          pie={kpis.ventas > 0 ? `${plata(kpis.bruto)} cobrados, ${plata(kpis.comision)} de comisión` : "después de la comisión"}
-          destacado
-        />
-        <Numero
-          Icon={TrendingUp}
-          titulo="Ticket promedio"
-          valor={kpis.ticket === null ? "—" : plata(kpis.ticket)}
-          pie="por venta"
-        />
-        {veVisitas ? (
+      {vista === "general" && (<>
+        {/* ── Los cuatro números ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Numero
-            Icon={Percent}
-            titulo="Conversión"
-            valor={porcentaje(kpis.conversion)}
-            pie={kpis.visitas > 0 ? `${entero(kpis.ventas)} de ${entero(kpis.visitas)} visitas` : "todavía sin visitas"}
+            Icon={Receipt}
+            titulo="Ventas"
+            valor={entero(kpis.ventas)}
+            pie={kpis.devueltas > 0 ? `${kpis.devueltas} ${kpis.devueltas === 1 ? "devuelta" : "devueltas"}` : nombreDelElegido ?? "cobradas"}
           />
-        ) : (
-          <Bloqueado bloque="visitas" compacto>
-            <Numero Icon={Percent} titulo="Conversión" valor="3,2 %" pie="8 de 250 visitas" />
-          </Bloqueado>
-        )}
-      </div>
+          <Numero
+            Icon={Wallet}
+            titulo="Te quedó"
+            valor={plata(kpis.neto)}
+            pie={kpis.ventas > 0 ? `${plata(kpis.bruto)} cobrados, ${plata(kpis.comision)} de comisión` : "después de la comisión"}
+            destacado
+          />
+          <Numero
+            Icon={TrendingUp}
+            titulo="Ticket promedio"
+            valor={kpis.ticket === null ? "—" : plata(kpis.ticket)}
+            pie="por venta"
+          />
+          {veVisitas ? (
+            <Numero
+              Icon={Percent}
+              titulo="Conversión"
+              valor={porcentaje(kpis.conversion)}
+              pie={kpis.visitas > 0 ? `${entero(kpis.ventas)} de ${entero(kpis.visitas)} visitas` : "todavía sin visitas"}
+            />
+          ) : (
+            <Bloqueado bloque="visitas" compacto>
+              <Numero Icon={Percent} titulo="Conversión" valor="3,2 %" pie="8 de 250 visitas" />
+            </Bloqueado>
+          )}
+        </div>
 
-      {/* ── Visitas y ventas por día ───────────────────────────────────────── */}
-      <div className="grid md:grid-cols-2 gap-3">
-        {veVisitas ? (
-          <Tarjeta titulo="Visitas" bajada={pieDeSerie(serie.grano, kpis.visitas, "visitas")}>
-            <Grafico puntos={serie.visitas} color="#ea580c" />
-            {dispositivos.pctMovil !== null && (
-              <p className="mt-2 flex items-center gap-1.5 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
-                <Smartphone className="h-3.5 w-3.5 text-orange-500" />
-                {porcentaje(dispositivos.pctMovil)} desde el celular · {porcentaje(100 - dispositivos.pctMovil)} desde una computadora.
-              </p>
-            )}
+        {/* ── Visitas y ventas por día ───────────────────────────────────────── */}
+        <div className="grid md:grid-cols-2 gap-3">
+          {veVisitas ? (
+            <Tarjeta titulo="Visitas" bajada={pieDeSerie(serie.grano, kpis.visitas, "visitas")}>
+              <Grafico puntos={serie.visitas} color="#ea580c" />
+              {dispositivos.pctMovil !== null && (
+                <p className="mt-2 flex items-center gap-1.5 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
+                  <Smartphone className="h-3.5 w-3.5 text-orange-500" />
+                  {porcentaje(dispositivos.pctMovil)} desde el celular · {porcentaje(100 - dispositivos.pctMovil)} desde una computadora.
+                </p>
+              )}
+            </Tarjeta>
+          ) : (
+            <Bloqueado bloque="visitas">
+              <Tarjeta titulo="Visitas" bajada="Cuánta gente entra a tu página cada día.">
+                <Grafico puntos={muestra(serie.ventas.length, 40)} color="#ea580c" />
+              </Tarjeta>
+            </Bloqueado>
+          )}
+          <Tarjeta titulo="Ventas" bajada={pieDeSerie(serie.grano, kpis.ventas, "ventas")}>
+            <Grafico puntos={serie.ventas} color="#059669" />
+          </Tarjeta>
+        </div>
+
+        {/* ── Después de la venta ────────────────────────────────────────────────
+            Lo que pasa con el que ya pagó. Es de todos los planes: Free también
+            vende y también tiene que atender al que compró. */}
+        <Tarjeta titulo="Después de la venta" bajada="Qué pasó con cada compra una vez cobrada.">
+          <Posventa p={posventa} />
+        </Tarjeta>
+
+        {/* ── Cuándo se vende ────────────────────────────────────────────────── */}
+        {puedeVer(tier, "cuando") ? (
+          <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras. Sirve para elegir cuándo publicar o cuándo correr un anuncio.">
+            <CuandoSeVende c={cuando} />
           </Tarjeta>
         ) : (
-          <Bloqueado bloque="visitas">
-            <Tarjeta titulo="Visitas" bajada="Cuánta gente entra a tu página cada día.">
-              <Grafico puntos={muestra(serie.ventas.length, 40)} color="#ea580c" />
+          <Bloqueado bloque="cuando">
+            <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras.">
+              <CuandoSeVende c={{ porDiaSemana: [6, 3, 4, 5, 4, 7, 9], porHora: muestra(24, 6).map((p) => p.value) }} />
             </Tarjeta>
           </Bloqueado>
         )}
-        <Tarjeta titulo="Ventas" bajada={pieDeSerie(serie.grano, kpis.ventas, "ventas")}>
-          <Grafico puntos={serie.ventas} color="#059669" />
-        </Tarjeta>
-      </div>
 
-      {/* ── Después de la venta ────────────────────────────────────────────────
-          Lo que pasa con el que ya pagó. Es de todos los planes: Free también
-          vende y también tiene que atender al que compró. */}
-      <Tarjeta titulo="Después de la venta" bajada="Qué pasó con cada compra una vez cobrada.">
-        <Posventa p={posventa} />
-      </Tarjeta>
-
-      {/* ── Cuándo se vende ────────────────────────────────────────────────── */}
-      {puedeVer(tier, "cuando") ? (
-        <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras. Sirve para elegir cuándo publicar o cuándo correr un anuncio.">
-          <CuandoSeVende c={cuando} />
-        </Tarjeta>
-      ) : (
-        <Bloqueado bloque="cuando">
-          <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras.">
-            <CuandoSeVende c={{ porDiaSemana: [6, 3, 4, 5, 4, 7, 9], porHora: muestra(24, 6).map((p) => p.value) }} />
-          </Tarjeta>
-        </Bloqueado>
-      )}
-
-      {/* ── El embudo ──────────────────────────────────────────────────────── */}
-      {puedeVer(tier, "embudo") ? (
-        <Tarjeta titulo="Embudo" bajada="De los que entraron, cuántos quisieron pagar y cuántos pagaron.">
-          <EmbudoDibujado visitas={embudo.visitas} checkouts={embudo.checkouts} ventas={embudo.ventas}
-            pctCheckout={embudo.pctCheckout} pctVenta={embudo.pctVenta} />
-        </Tarjeta>
-      ) : (
-        <Bloqueado bloque="embudo">
+        {/* ── El embudo ──────────────────────────────────────────────────────── */}
+        {puedeVer(tier, "embudo") ? (
           <Tarjeta titulo="Embudo" bajada="De los que entraron, cuántos quisieron pagar y cuántos pagaron.">
-            <EmbudoDibujado visitas={250} checkouts={40} ventas={8} pctCheckout={16} pctVenta={20} />
+            <EmbudoDibujado visitas={embudo.visitas} checkouts={embudo.checkouts} ventas={embudo.ventas}
+              pctCheckout={embudo.pctCheckout} pctVenta={embudo.pctVenta} />
           </Tarjeta>
-        </Bloqueado>
-      )}
+        ) : (
+          <Bloqueado bloque="embudo">
+            <Tarjeta titulo="Embudo" bajada="De los que entraron, cuántos quisieron pagar y cuántos pagaron.">
+              <EmbudoDibujado visitas={250} checkouts={40} ventas={8} pctCheckout={16} pctVenta={20} />
+            </Tarjeta>
+          </Bloqueado>
+        )}
 
-      {/* ── Por producto, mirando todo ─────────────────────────────────────── */}
-      {!elegido && principales.length > 1 && (
-        <Tarjeta titulo="Por producto" bajada="Cuál de tus páginas anda.">
-          <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
-                  <th className="pb-2 font-bold">Producto</th>
-                  <th className="pb-2 font-bold text-right">Ventas</th>
-                  <th className="pb-2 font-bold text-right">Te quedó</th>
-                  {veVisitas && <th className="pb-2 font-bold text-right">Visitas</th>}
-                  {veVisitas && <th className="pb-2 font-bold text-right">Conversión</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 panel-oscuro:divide-gray-800">
-                {porProducto.map((p) => (
-                  <tr key={p.id} className="text-gray-700 panel-oscuro:text-gray-300">
-                    <td className="py-2.5 pr-3 max-w-[220px]">
-                      <Link href={href({ p: p.id })} className="hover:text-orange-700 panel-oscuro:hover:text-orange-400">
-                        <span className="block truncate">{p.name}</span>
-                      </Link>
-                      {!p.publicada && <span className="text-[11px] text-gray-400 panel-oscuro:text-gray-500">borrador</span>}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums">{entero(p.ventas)}</td>
-                    <td className="py-2.5 text-right tabular-nums font-semibold text-gray-900 panel-oscuro:text-gray-100">{plata(p.neto)}</td>
-                    {veVisitas && <td className="py-2.5 text-right tabular-nums">{entero(p.visitas)}</td>}
-                    {veVisitas && <td className="py-2.5 text-right tabular-nums">{porcentaje(p.conversion)}</td>}
+        {/* ── Por producto, mirando todo ─────────────────────────────────────── */}
+        {!elegido && principales.length > 1 && (
+          <Tarjeta titulo="Por producto" bajada="Cuál de tus páginas anda.">
+            <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+                    <th className="pb-2 font-bold">Producto</th>
+                    <th className="pb-2 font-bold text-right">Ventas</th>
+                    <th className="pb-2 font-bold text-right">Te quedó</th>
+                    {veVisitas && <th className="pb-2 font-bold text-right">Visitas</th>}
+                    {veVisitas && <th className="pb-2 font-bold text-right">Conversión</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Tarjeta>
-      )}
-
-      {/* ── De dónde vinieron: visitas Y ventas ─────────────────────────────── */}
-      {puedeVer(tier, "origenes") ? (
-        <Tarjeta
-          titulo="De dónde vienen"
-          bajada={
-            origenes.conocidas > 0
-              ? `Visitas y ventas por canal. Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís y quedan anotadas ahí.${origenes.ventasSinOrigen > 0 ? ` ${entero(origenes.ventasSinOrigen)} ${origenes.ventasSinOrigen === 1 ? "venta no tiene" : "ventas no tienen"} origen anotado.` : ""}`
-              : "Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís, y cada visita y cada venta quedan anotadas con su canal."
-          }
-        >
-          <Origenes filas={origenes.filas} />
-        </Tarjeta>
-      ) : (
-        <Bloqueado bloque="origenes">
-          <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas y cuál trae las ventas.">
-            <Origenes filas={[
-              { origen: "instagram", visitas: 120, pct: 48, ventas: 5, conversion: 4.2 },
-              { origen: "whatsapp", visitas: 70, pct: 28, ventas: 4, conversion: 5.7 },
-              { origen: "facebook", visitas: 35, pct: 14, ventas: 0, conversion: 0 },
-              { origen: "directo", visitas: 25, pct: 10, ventas: 1, conversion: 4 },
-            ]} />
+                </thead>
+                <tbody className="divide-y divide-gray-100 panel-oscuro:divide-gray-800">
+                  {porProducto.map((p) => (
+                    <tr key={p.id} className="text-gray-700 panel-oscuro:text-gray-300">
+                      <td className="py-2.5 pr-3 max-w-[220px]">
+                        <Link href={href({ p: p.id })} className="hover:text-orange-700 panel-oscuro:hover:text-orange-400">
+                          <span className="block truncate">{p.name}</span>
+                        </Link>
+                        {!p.publicada && <span className="text-[11px] text-gray-400 panel-oscuro:text-gray-500">borrador</span>}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">{entero(p.ventas)}</td>
+                      <td className="py-2.5 text-right tabular-nums font-semibold text-gray-900 panel-oscuro:text-gray-100">{plata(p.neto)}</td>
+                      {veVisitas && <td className="py-2.5 text-right tabular-nums">{entero(p.visitas)}</td>}
+                      {veVisitas && <td className="py-2.5 text-right tabular-nums">{porcentaje(p.conversion)}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Tarjeta>
-        </Bloqueado>
-      )}
+        )}
 
-      {/* ── Campañas: qué anuncio vende ───────────────────────────────────────
-          El escalón de abajo de "De dónde vienen". Para el que paga publicidad
-          es la tabla que le dice qué anuncio apagar. Con el texto para pegar en
-          Meta arriba, porque sin eso nadie arma las etiquetas a mano. */}
-      {puedeVer(tier, "campanias") ? (
-        <Tarjeta
-          titulo="Campañas"
-          bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta. Se arma con las etiquetas UTM del link."
-        >
-          <ParaMeta />
-          <Campanias filas={campanias.filas} conVisitas={campanias.conVisitas} ventasConCampania={campanias.ventasConCampania} ventas={kpis.ventas} />
-        </Tarjeta>
-      ) : (
-        <Bloqueado bloque="campanias">
-          <Tarjeta titulo="Campañas" bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta.">
-            <ParaMeta />
-            <Campanias
-              ventas={9}
-              conVisitas={310}
-              ventasConCampania={8}
-              filas={[
-                { medio: "pago", campania: "lanzamiento", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7, anuncios: [
-                  { anuncio: "video 2", visitas: 140, ventas: 5, neto: 65000, conversion: 3.6 },
-                  { anuncio: "foto", visitas: 80, ventas: 1, neto: 13000, conversion: 1.3 },
-                ] },
-                { medio: "historia", campania: "promo septiembre", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2, anuncios: [
-                  { anuncio: "", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2 },
-                ] },
-              ]}
-            />
-          </Tarjeta>
-        </Bloqueado>
-      )}
-
-      {/* ── Carritos recuperados por el mail automático ─────────────────────
-          El mail es de Pro, así que el número que lo mide también. */}
-      {puedeVer(tier, "carritos") ? (
-        <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar.">
-          <CarritosDibujados c={carritos} />
-        </Tarjeta>
-      ) : (
-        <Bloqueado bloque="carritos">
+        {/* ── Carritos recuperados por el mail automático ─────────────────────
+            El mail es de Pro, así que el número que lo mide también. */}
+        {puedeVer(tier, "carritos") ? (
           <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar.">
-            <CarritosDibujados c={{ abandonados: 31, recordados: 28, recuperados: 6, pctRecuperados: 21.4 }} />
+            <CarritosDibujados c={carritos} />
           </Tarjeta>
-        </Bloqueado>
-      )}
+        ) : (
+          <Bloqueado bloque="carritos">
+            <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar.">
+              <CarritosDibujados c={{ abandonados: 31, recordados: 28, recuperados: 6, pctRecuperados: 21.4 }} />
+            </Tarjeta>
+          </Bloqueado>
+        )}
+      </>)}
+
+      {vista === "campanias" && (<>
+        {/* ── De dónde vinieron: visitas Y ventas ─────────────────────────────── */}
+        {puedeVer(tier, "origenes") ? (
+          <Tarjeta
+            titulo="De dónde vienen"
+            bajada={
+              origenes.conocidas > 0
+                ? `Visitas y ventas por canal. Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís y quedan anotadas ahí.${origenes.ventasSinOrigen > 0 ? ` ${entero(origenes.ventasSinOrigen)} ${origenes.ventasSinOrigen === 1 ? "venta no tiene" : "ventas no tienen"} origen anotado.` : ""}`
+                : "Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís, y cada visita y cada venta quedan anotadas con su canal."
+            }
+          >
+            <Origenes filas={origenes.filas} />
+          </Tarjeta>
+        ) : (
+          <Bloqueado bloque="origenes">
+            <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas y cuál trae las ventas.">
+              <Origenes filas={[
+                { origen: "instagram", visitas: 120, pct: 48, ventas: 5, conversion: 4.2 },
+                { origen: "whatsapp", visitas: 70, pct: 28, ventas: 4, conversion: 5.7 },
+                { origen: "facebook", visitas: 35, pct: 14, ventas: 0, conversion: 0 },
+                { origen: "directo", visitas: 25, pct: 10, ventas: 1, conversion: 4 },
+              ]} />
+            </Tarjeta>
+          </Bloqueado>
+        )}
+
+        {/* ── Campañas: qué anuncio vende ───────────────────────────────────────
+            El escalón de abajo de "De dónde vienen". Para el que paga publicidad
+            es la tabla que le dice qué anuncio apagar. Con el texto para pegar en
+            Meta arriba, porque sin eso nadie arma las etiquetas a mano. */}
+        {puedeVer(tier, "campanias") ? (
+          <Tarjeta
+            titulo="Campañas"
+            bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta. Se arma con las etiquetas UTM del link."
+          >
+            <ParaMeta />
+            <Campanias filas={campanias.filas} conVisitas={campanias.conVisitas} ventasConCampania={campanias.ventasConCampania} ventas={kpis.ventas} />
+          </Tarjeta>
+        ) : (
+          <Bloqueado bloque="campanias">
+            <Tarjeta titulo="Campañas" bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta.">
+              <ParaMeta />
+              <Campanias
+                ventas={9}
+                conVisitas={310}
+                ventasConCampania={8}
+                filas={[
+                  { medio: "pago", campania: "lanzamiento", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7, anuncios: [
+                    { anuncio: "video 2", visitas: 140, ventas: 5, neto: 65000, conversion: 3.6 },
+                    { anuncio: "foto", visitas: 80, ventas: 1, neto: 13000, conversion: 1.3 },
+                  ] },
+                  { medio: "historia", campania: "promo septiembre", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2, anuncios: [
+                    { anuncio: "", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2 },
+                  ] },
+                ]}
+              />
+            </Tarjeta>
+          </Bloqueado>
+        )}
+
+      </>)}
     </div>
   );
 }

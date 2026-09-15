@@ -8,7 +8,7 @@ import { resolverRango, armarEstadisticas, type OrdenCruda, type VisitaCruda } f
 import type { PasoDigital, Dispositivo } from "@/lib/visitas-digitales";
 import { MADURACION_MS } from "@/lib/carritos-digitales";
 import BotonVolver from "../BotonVolver";
-import EstadisticasClient from "./EstadisticasClient";
+import EstadisticasClient, { esVista, type Vista } from "./EstadisticasClient";
 
 export const dynamic = "force-dynamic";
 
@@ -67,12 +67,14 @@ const MOTIVOS = { digital_devolucion: "arrepentimiento", digital_contracargo: "c
 export default async function EstadisticasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ p?: string; rango?: string }>;
+  searchParams: Promise<{ p?: string; rango?: string; vista?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
 
-  const { p, rango: rangoPedido } = await searchParams;
+  const { p, rango: rangoPedido, vista: vistaPedida } = await searchParams;
+  /* La solapa: General o Campañas. Cualquier otra cosa en la URL cae en General. */
+  const vista: Vista = esVista(vistaPedida) ? vistaPedida : "general";
   const hoy = getArgentinaDayKey();
   const rango = resolverRango(rangoPedido, hoy);
 
@@ -88,7 +90,7 @@ export default async function EstadisticasPage({
     const vacio = armarEstadisticas({ rango, ordenes: [], visitas: [], origenes: [], principales: [], elegido: null });
     return (
       <Pantalla>
-        <EstadisticasClient tier={tier} principales={[]} elegido={null} datos={vacio} recortado={false} />
+        <EstadisticasClient tier={tier} principales={[]} elegido={null} datos={vacio} recortado={false} vista={vista} />
       </Pantalla>
     );
   }
@@ -258,6 +260,7 @@ export default async function EstadisticasPage({
         elegido={elegido}
         datos={datos}
         recortado={ordenes.length >= TECHO_DE_ORDENES}
+        vista={vista}
       />
     </Pantalla>
   );
