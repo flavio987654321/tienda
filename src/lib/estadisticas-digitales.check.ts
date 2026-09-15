@@ -198,6 +198,26 @@ check("UTM-I", camp.porMedio.map((m) => m.medio).join(",") === "pago,historia" &
   "el resumen por medio suma las campañas de cada medio; (otras) suma al suyo");
 check("UTM-J", todo.origenes.filas.find((f) => f.origen === "instagram")?.neto === 18400,
   "cada canal lleva la plata que dejaron sus ventas");
+/* Por producto, mirando "Todos": una cuenta Pro tiene hasta cinco páginas con
+   su dominio, y "Instagram trajo 150" sin decir a cuál no sirve. */
+check("UTM-K", camp.filas[0].productId === "a" && camp.filas[0].producto === "Mecánica"
+  && camp.filas.find((f) => f.campania === "promo")?.producto === "Tortas",
+  "en Todos con varios productos, cada campaña dice de qué producto es");
+const mismaEtiqueta = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null, carritos,
+  campanias: [...campanias, { productId: "b", date: "2026-09-12", medio: "pago", campania: "lanzamiento", anuncio: "", count: 7 }] }).campanias;
+check("UTM-L", mismaEtiqueta.filas.filter((f) => f.campania === "lanzamiento").map((f) => `${f.producto}:${f.visitas}`).join(",") === "Mecánica:30,Tortas:7",
+  "la misma etiqueta en dos páginas son DOS filas, nunca una suma");
+check("UTM-M", armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: "a", carritos, campanias }).campanias.filas.every((f) => f.producto === null && f.productId === null),
+  "mirando un producto, las filas no repiten el producto");
+check("UTM-N", armarEstadisticas({ rango, ordenes, visitas, origenes, principales: [principales[0]], elegido: null, carritos, campanias }).campanias.filas.every((f) => f.producto === null)
+  && armarEstadisticas({ rango, ordenes, visitas, origenes, principales: [principales[0]], elegido: null, carritos, campanias }).origenes.filas.every((f) => f.porProducto.length === 0),
+  "con un solo producto no hay nada que repartir: sin producto en las campañas ni reparto en los canales");
+check("UTM-O", ig.porProducto.map((r) => `${r.producto}:${r.visitas}:${r.ventas}:${r.neto}`).join(",") === "Mecánica:30:2:18400"
+  && ig.porProducto.reduce((s, r) => s + r.visitas, 0) === ig.visitas,
+  "cada canal reparte visitas, ventas y plata por producto, y el reparto suma lo del canal");
+check("UTM-P", camp.porMedio[0].porProducto.map((r) => `${r.producto}:${r.visitas}`).join(",") === "Mecánica:35"
+  && camp.porMedio[1].porProducto.map((r) => `${r.producto}:${r.visitas}`).join(",") === "Tortas:15",
+  "cada medio reparte por producto también");
 check("UTM-G", puedeVer("PRO", "campanias") && !puedeVer("STARTER", "campanias") && DESDE_QUE_PLAN.campanias === "PRO",
   "las campañas son de Pro, con el origen y el embudo");
 

@@ -237,7 +237,10 @@ function campanias(d: Estadisticas): Consejo {
   }
   const paraApagar = filas.find((f) => f.visitas >= VISITAS_PARA_APAGAR_UNA_CAMPANIA && f.ventas === 0);
   if (paraApagar) {
-    return { texto: `«${paraApagar.campania}» trajo ${entero(paraApagar.visitas)} visitas y ninguna venta: es la primera para apagar, o para cambiarle el anuncio y ver si era eso.` };
+    /* En "Todos" con varios productos, la campaña se nombra con su producto:
+       la misma etiqueta puede estar rindiendo bien en la otra página. */
+    const cual = `«${paraApagar.campania}»${paraApagar.producto ? ` de ${paraApagar.producto}` : ""}`;
+    return { texto: `${cual} trajo ${entero(paraApagar.visitas)} visitas y ninguna venta: es la primera para apagar, o para cambiarle el anuncio y ver si era eso.` };
   }
   return { texto: "La campaña que convierte mejor es la que merece más presupuesto, aunque no sea la que más visitas trae. Y la que trae visitas y no vende, se apaga antes de gastar más." };
 }

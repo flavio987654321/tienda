@@ -5805,3 +5805,34 @@ nombre de puros espacios saludaba "Hola ,". Cada una con su chequeo.
 🔲 Que la persona pueda cambiar el texto del mensaje de "Escribirle" desde
 Ajustes, en vez del nuestro.
 🔲 Bajar sólo los correos (una columna) para pegar en un envío masivo.
+
+---
+
+## Campañas y canales por producto, mirando "Todos" — 15/09/26
+
+Flavio preguntó cómo funciona la campaña UTM en cada producto y si en los
+gráficos se distingue qué producto trajo qué. La respuesta era "a medias":
+con un producto elegido sí; en "Todos" la tabla sumaba la misma etiqueta de
+dos páginas en una fila. Un agujero real para una cuenta Pro con hasta cinco
+páginas, cada una con su dominio.
+
+Regla que quedó: **una campaña es de un producto**. En "Todos" con más de un
+producto:
+
+- Cada fila de Campañas es "campaña + producto" (la misma etiqueta en dos
+  páginas son dos filas, nunca una suma), con su producto en naranja debajo
+  del medio y sus anuncios colgando.
+- Cada canal de "De dónde vienen" y cada medio de "Por medio" reparten por
+  producto: "Mecánica fácil 150 visitas · 2 ventas · $ 23.920 — Guía de
+  frenos 20 visitas · 0 ventas".
+- El CSV lleva columna Producto en las tres tablas: fila "(todos)" y una por
+  producto debajo, y la campaña con el suyo.
+- El consejo de campañas nombra el producto ("«foto precio» de Guía de frenos
+  trajo 60 visitas y ninguna venta").
+
+Con un solo producto, o con uno elegido arriba, nada de esto aparece: no hay
+entre qué repartir. Vive en `armarEstadisticas` (`Reparto`, `repartir`), con
+chequeos UTM-K a UTM-P y CSV-I a CSV-K. Mirado en 1000 y 360.
+
+De paso: las claves de las filas de la tabla tenían un byte NUL literal
+adentro (el archivo era "binario" para grep); ahora es el escape `\u0000`.

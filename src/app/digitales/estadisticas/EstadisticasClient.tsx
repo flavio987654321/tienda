@@ -333,10 +333,10 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           <Bloqueado bloque="origenes">
             <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas y cuál trae las ventas.">
               <Origenes filas={[
-                { origen: "instagram", visitas: 120, pct: 48, checkouts: 18, ventas: 5, neto: 65000, pctCheckout: 15, conversion: 4.2 },
-                { origen: "whatsapp", visitas: 70, pct: 28, checkouts: 12, ventas: 4, neto: 52000, pctCheckout: 17.1, conversion: 5.7 },
-                { origen: "facebook", visitas: 35, pct: 14, checkouts: 2, ventas: 0, neto: 0, pctCheckout: 5.7, conversion: 0 },
-                { origen: "directo", visitas: 25, pct: 10, checkouts: 3, ventas: 1, neto: 13000, pctCheckout: 12, conversion: 4 },
+                { origen: "instagram", visitas: 120, pct: 48, checkouts: 18, ventas: 5, neto: 65000, pctCheckout: 15, conversion: 4.2, porProducto: [] },
+                { origen: "whatsapp", visitas: 70, pct: 28, checkouts: 12, ventas: 4, neto: 52000, pctCheckout: 17.1, conversion: 5.7, porProducto: [] },
+                { origen: "facebook", visitas: 35, pct: 14, checkouts: 2, ventas: 0, neto: 0, pctCheckout: 5.7, conversion: 0, porProducto: [] },
+                { origen: "directo", visitas: 25, pct: 10, checkouts: 3, ventas: 1, neto: 13000, pctCheckout: 12, conversion: 4, porProducto: [] },
               ]} />
             </Tarjeta>
           </Bloqueado>
@@ -361,19 +361,19 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
             <Tarjeta titulo="Campañas" bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta.">
               <ParaMeta />
               <PorMedio filas={[
-                { medio: "pago", nombre: "Anuncio pago", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7 },
-                { medio: "historia", nombre: "Historia", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2 },
+                { medio: "pago", nombre: "Anuncio pago", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7, porProducto: [] },
+                { medio: "historia", nombre: "Historia", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2, porProducto: [] },
               ]} />
               <Campanias
                 ventas={9}
                 conVisitas={310}
                 ventasConCampania={8}
                 filas={[
-                  { medio: "pago", campania: "lanzamiento", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7, anuncios: [
+                  { medio: "pago", campania: "lanzamiento", productId: null, producto: null, visitas: 220, ventas: 6, neto: 78000, conversion: 2.7, anuncios: [
                     { anuncio: "video 2", visitas: 140, ventas: 5, neto: 65000, conversion: 3.6 },
                     { anuncio: "foto", visitas: 80, ventas: 1, neto: 13000, conversion: 1.3 },
                   ] },
-                  { medio: "historia", campania: "promo septiembre", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2, anuncios: [
+                  { medio: "historia", campania: "promo septiembre", productId: null, producto: null, visitas: 90, ventas: 2, neto: 26000, conversion: 2.2, anuncios: [
                     { anuncio: "", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2 },
                   ] },
                 ]}
@@ -642,6 +642,7 @@ function Origenes({ filas }: { filas: Estadisticas["origenes"]["filas"] }) {
               Te quedó <span className="font-semibold text-gray-800 panel-oscuro:text-gray-200">{plata(f.neto)}</span> por este canal.
             </p>
           )}
+          <Reparto filas={f.porProducto} />
         </li>
       ))}
     </ul>
@@ -786,6 +787,7 @@ function PorMedio({ filas }: { filas: Estadisticas["campanias"]["porMedio"] }) {
               {entero(m.visitas)} visitas · {entero(m.ventas)} {m.ventas === 1 ? "venta" : "ventas"}{m.conversion !== null ? ` · ${porcentaje(m.conversion)}` : ""}
             </p>
             {m.ventas > 0 && <p className="text-[12px] font-semibold tabular-nums text-gray-900 panel-oscuro:text-gray-100">{plata(m.neto)}</p>}
+            <Reparto filas={m.porProducto} />
           </div>
         ))}
       </div>
@@ -830,10 +832,14 @@ function Campanias({ filas, conVisitas, ventasConCampania, ventas }: {
                  campaña ya lo dice todo. */
               const conAnuncios = f.anuncios.some((a) => a.anuncio !== "") || f.anuncios.length > 1;
               return [
-                <tr key={`${f.medio} ${f.campania}`} className="text-gray-900 panel-oscuro:text-gray-100 font-semibold">
+                <tr key={`${f.medio}\u0000${f.campania}\u0000${f.productId ?? ""}`} className="text-gray-900 panel-oscuro:text-gray-100 font-semibold">
                   <td className="py-2.5 pr-3 max-w-[260px]">
                     <span className="block truncate">{f.campania === OTRAS ? "Otras campañas" : f.campania}</span>
-                    <span className="text-[11px] font-medium text-gray-400 panel-oscuro:text-gray-500">{NOMBRE_MEDIO[f.medio]}</span>
+                    {/* En "Todos" con varios productos, cada campaña dice de qué
+                        página es: la misma etiqueta en dos páginas son dos filas. */}
+                    <span className="block truncate text-[11px] font-medium text-gray-400 panel-oscuro:text-gray-500">
+                      {NOMBRE_MEDIO[f.medio]}{f.producto ? <> · <span className="text-orange-700 panel-oscuro:text-orange-400">{f.producto}</span></> : null}
+                    </span>
                   </td>
                   <td className="py-2.5 text-right tabular-nums">{entero(f.visitas)}</td>
                   <td className="py-2.5 text-right tabular-nums">{entero(f.ventas)}</td>
@@ -842,7 +848,7 @@ function Campanias({ filas, conVisitas, ventasConCampania, ventas }: {
                 </tr>,
                 ...(conAnuncios
                   ? f.anuncios.map((a) => (
-                      <tr key={`${f.medio} ${f.campania} ${a.anuncio}`} className="text-gray-600 panel-oscuro:text-gray-400">
+                      <tr key={`${f.medio}\u0000${f.campania}\u0000${f.productId ?? ""}\u0000${a.anuncio}`} className="text-gray-600 panel-oscuro:text-gray-400">
                         <td className="py-2 pl-4 pr-3 max-w-[260px]">
                           <span className="block truncate">↳ {a.anuncio || "sin anuncio"}</span>
                         </td>
@@ -859,6 +865,26 @@ function Campanias({ filas, conVisitas, ventasConCampania, ventas }: {
         </table>
       </div>
     </div>
+  );
+}
+
+/**
+ * Cuánto de un canal o un medio fue a cada producto. Sólo llega con filas
+ * mirando "Todos" con más de un producto (ver `Reparto` en la cuenta); con uno, o
+ * con uno elegido, no se dibuja nada.
+ */
+function Reparto({ filas }: { filas: Estadisticas["origenes"]["filas"][number]["porProducto"] }) {
+  if (filas.length === 0) return null;
+  return (
+    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-gray-500 panel-oscuro:text-gray-400">
+      {filas.map((r) => (
+        <li key={r.productId} className="tabular-nums">
+          <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{r.producto}</span>
+          {" "}{entero(r.visitas)} {r.visitas === 1 ? "visita" : "visitas"} · {entero(r.ventas)} {r.ventas === 1 ? "venta" : "ventas"}
+          {r.ventas > 0 ? <> · {plata(r.neto)}</> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 

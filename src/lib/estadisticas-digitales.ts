@@ -204,6 +204,14 @@ export type Posventa = {
 
 export type Cuando = { porDiaSemana: number[]; porHora: number[] };
 
+/**
+ * Cuánto de un canal, un medio o una campaña fue a cada producto. Sólo se llena
+ * mirando "Todos" con más de un producto: una cuenta Pro tiene hasta cinco
+ * páginas, cada una con su dominio, y "Instagram trajo 150" sin decir a cuál
+ * no sirve para decidir nada. Con un producto, o con uno elegido, va vacío.
+ */
+export type Reparto = { productId: string; producto: string; visitas: number; ventas: number; neto: number };
+
 /** Un canal con su embudo: entraron, abrieron el pago, pagaron. */
 export type FilaDeOrigen = {
   origen: Origen;
@@ -216,10 +224,11 @@ export type FilaDeOrigen = {
   /** Checkouts ÷ visitas y ventas ÷ visitas, en porcentaje. */
   pctCheckout: number | null;
   conversion: number | null;
+  porProducto: Reparto[];
 };
 
 /** Un medio (pago, orgánico, mail…) con lo suyo. */
-export type FilaDeMedio = { medio: Medio; nombre: string; visitas: number; ventas: number; neto: number; conversion: number | null };
+export type FilaDeMedio = { medio: Medio; nombre: string; visitas: number; ventas: number; neto: number; conversion: number | null; porProducto: Reparto[] };
 
 /** Los números de cabecera de la solapa Campañas: sólo lo que vino etiquetado. */
 export type KpisDeCampanias = {
@@ -232,10 +241,18 @@ export type KpisDeCampanias = {
 
 export type Carritos = { abandonados: number; recordados: number; recuperados: number; pctRecuperados: number | null };
 
-/** Una campaña con sus anuncios adentro, de más a menos ventas y después visitas. */
+/**
+ * Una campaña con sus anuncios adentro, de más a menos ventas y después visitas.
+ * Mirando "Todos" con más de un producto, UNA CAMPAÑA ES DE UN PRODUCTO: la
+ * misma etiqueta en el link del ebook y en el del curso son dos filas, cada
+ * una con su producto puesto. Sumarlas escondería cuál rinde.
+ */
 export type FilaDeCampania = {
   medio: Medio;
   campania: string;
+  /** El producto de la fila, sólo en "Todos" con más de un producto; si no, null. */
+  productId: string | null;
+  producto: string | null;
   visitas: number;
   ventas: number;
   neto: number;
@@ -291,6 +308,17 @@ export function armarEstadisticas(entrada: {
 }): Estadisticas {
   const { rango, elegido } = entrada;
   const esDelElegido = (id: string | null) => elegido === null || id === elegido;
+  /* Se reparte por producto sólo cuando hay entre qué repartir. */
+  const repartir = elegido === null && entrada.principales.length > 1;
+  const nombreDe = (id: string | null) => entrada.principales.find((p) => p.id === id)?.name ?? "Otro producto";
+  type Reparte = Map<string, Reparto>;
+  const sumarReparto = (m: Reparte, id: string | null, d: { visitas?: number; ventas?: number; neto?: number }) => {
+    if (!repartir || id === null) return;
+    const r = m.get(id) ?? { productId: id, producto: nombreDe(id), visitas: 0, ventas: 0, neto: 0 };
+    r.visitas += d.visitas ?? 0; r.ventas += d.ventas ?? 0; r.neto += d.neto ?? 0;
+    m.set(id, r);
+  };
+  const repartoOrdenado = (m: Reparte): Reparto[] => [...m.values()].sort((a, b) => b.visitas - a.visitas || b.ventas - a.ventas);
   const carritosDelRango = (entrada.carritos ?? []).filter((c) => enRango(c.dia, rango) && esDelElegido(c.principal));
 
   const ordenes = entrada.ordenes.filter((o) => enRango(o.dia, rango) && esDelElegido(o.principal));
@@ -425,10 +453,10 @@ export function armarEstadisticas(entrada: {
      visita con uno inventado; una SIN origen (de antes de que se guardara, o
      con el almacenamiento bloqueado) se cuenta aparte y se dice. */
   const esOrigen = (s: string): s is Origen => (ORIGENES as readonly string[]).includes(s);
-  const porOrigen = new Map<Origen, { visitas: number; checkouts: number; ventas: number }>();
+  const porOrigen = new Map<Origen, { visitas: number; checkouts: number; ventas: number; porProducto: Reparte }>();
   const cajon = (o: Origen) => {
     let c = porOrigen.get(o);
-    if (!c) { c = { visitas: 0, checkouts: 0, ventas: 0 }; porOrigen.set(o, c); }
+    if (!c) { c = { visitas: 0, checkouts: 0, ventas: 0, porProducto: new Map() }; porOrigen.set(o, c); }
     return c;
   };
   let conocidas = 0;
@@ -436,6 +464,7 @@ export function armarEstadisticas(entrada: {
     if (!esOrigen(o.source)) continue;
     if (o.paso === "pagar") { cajon(o.source).checkouts += o.count; continue; }
     cajon(o.source).visitas += o.count;
+    sumarReparto(cajon(o.source).porProducto, o.productId, { visitas: o.count });
     conocidas += o.count;
   }
   let ventasSinOrigen = 0;
@@ -443,13 +472,16 @@ export function armarEstadisticas(entrada: {
   for (const o of cobradas) {
     if (o.origen === null || !esOrigen(o.origen)) { ventasSinOrigen++; continue; }
     cajon(o.origen).ventas++;
-    netoDeOrigen.set(o.origen, (netoDeOrigen.get(o.origen) ?? 0) + o.total - comisionCongelada(o.total, o.tasa));
+    const netoDeEsta = o.total - comisionCongelada(o.total, o.tasa);
+    netoDeOrigen.set(o.origen, (netoDeOrigen.get(o.origen) ?? 0) + netoDeEsta);
+    sumarReparto(cajon(o.origen).porProducto, o.principal, { ventas: 1, neto: netoDeEsta });
   }
   const filas = ordenarOrigenes(
     [...porOrigen.entries()].map(([origen, c]) => ({
       origen, visitas: c.visitas, pct: pct(c.visitas, conocidas) ?? 0,
       checkouts: c.checkouts, ventas: c.ventas, neto: netoDeOrigen.get(origen) ?? 0,
       pctCheckout: pct(c.checkouts, c.visitas), conversion: pct(c.ventas, c.visitas),
+      porProducto: repartoOrdenado(c.porProducto),
     })),
   );
 
@@ -474,11 +506,15 @@ export function armarEstadisticas(entrada: {
   const esMedio = (m: string): m is Medio => (MEDIOS as readonly string[]).includes(m);
   type Acum = { visitas: number; ventas: number; neto: number };
   const nuevo = (): Acum => ({ visitas: 0, ventas: 0, neto: 0 });
-  const porCampania = new Map<string, { medio: Medio; campania: string; total: Acum; anuncios: Map<string, Acum> }>();
-  const cajonDe = (medio: Medio, campania: string, anuncio: string): Acum => {
-    const k = `${medio}\u0000${campania}`;
+  /* En "Todos" con varios productos, el producto es parte de la clave: la
+     misma etiqueta en dos páginas son dos campañas. Si no, la clave no lo
+     lleva y las filas salen sin producto. */
+  const porCampania = new Map<string, { medio: Medio; campania: string; productId: string | null; total: Acum; anuncios: Map<string, Acum> }>();
+  const cajonDe = (medio: Medio, campania: string, anuncio: string, productId: string | null): Acum => {
+    const prod = repartir ? productId : null;
+    const k = `${medio}\u0000${campania}\u0000${prod ?? ""}`;
     let c = porCampania.get(k);
-    if (!c) { c = { medio, campania, total: nuevo(), anuncios: new Map() }; porCampania.set(k, c); }
+    if (!c) { c = { medio, campania, productId: prod, total: nuevo(), anuncios: new Map() }; porCampania.set(k, c); }
     let a = c.anuncios.get(anuncio);
     if (!a) { a = nuevo(); c.anuncios.set(anuncio, a); }
     return a;
@@ -486,14 +522,14 @@ export function armarEstadisticas(entrada: {
   let conVisitas = 0;
   for (const v of campaniasDelRango) {
     if (!esMedio(v.medio)) continue;
-    cajonDe(v.medio, v.campania, v.anuncio).visitas += v.count;
+    cajonDe(v.medio, v.campania, v.anuncio, v.productId).visitas += v.count;
     conVisitas += v.count;
   }
   let ventasConCampania = 0;
   let brutoConCampania = 0;
   for (const o of cobradas) {
     if (!o.campania || !esMedio(o.campania.medio)) continue;
-    const a = cajonDe(o.campania.medio, o.campania.campania, o.campania.anuncio);
+    const a = cajonDe(o.campania.medio, o.campania.campania, o.campania.anuncio, o.principal);
     a.ventas++;
     a.neto += o.total - comisionCongelada(o.total, o.tasa);
     ventasConCampania++;
@@ -506,7 +542,11 @@ export function armarEstadisticas(entrada: {
       anuncio, ...a, conversion: pct(a.ventas, a.visitas),
     })));
     const total = anuncios.reduce((s, a) => ({ visitas: s.visitas + a.visitas, ventas: s.ventas + a.ventas, neto: s.neto + a.neto }), nuevo());
-    return { medio: c.medio, campania: c.campania, ...total, conversion: pct(total.ventas, total.visitas), anuncios };
+    return {
+      medio: c.medio, campania: c.campania,
+      productId: c.productId, producto: c.productId === null ? null : nombreDe(c.productId),
+      ...total, conversion: pct(total.ventas, total.visitas), anuncios,
+    };
   });
   ordenar(filasDeCampania);
   /* "(otras)" siempre al final: es una bolsa, no una campaña que se pueda mover. */
@@ -515,14 +555,18 @@ export function armarEstadisticas(entrada: {
   /* Por medio: pago, orgánico, mail, historia. Es la misma cuenta que por
      campaña, sumada por el primer nivel. Sólo los medios con algo; "otro" al
      final como bolsa. */
-  const porMedioMap = new Map<Medio, Acum>();
+  const porMedioMap = new Map<Medio, Acum & { porProducto: Reparte }>();
   for (const f of filasDeCampania) {
-    const m = porMedioMap.get(f.medio) ?? nuevo();
+    const m = porMedioMap.get(f.medio) ?? { ...nuevo(), porProducto: new Map() };
     m.visitas += f.visitas; m.ventas += f.ventas; m.neto += f.neto;
+    sumarReparto(m.porProducto, f.productId, { visitas: f.visitas, ventas: f.ventas, neto: f.neto });
     porMedioMap.set(f.medio, m);
   }
   const porMedio: FilaDeMedio[] = ordenar(
-    [...porMedioMap.entries()].map(([medio, a]) => ({ medio, nombre: NOMBRE_MEDIO[medio], ...a, conversion: pct(a.ventas, a.visitas) })),
+    [...porMedioMap.entries()].map(([medio, a]) => ({
+      medio, nombre: NOMBRE_MEDIO[medio], visitas: a.visitas, ventas: a.ventas, neto: a.neto,
+      conversion: pct(a.ventas, a.visitas), porProducto: repartoOrdenado(a.porProducto),
+    })),
   ).sort((a, b) => Number(a.medio === "otro") - Number(b.medio === "otro"));
 
   const netoConCampania = filasDeCampania.reduce((s, f) => s + f.neto, 0);

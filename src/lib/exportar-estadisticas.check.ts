@@ -63,9 +63,33 @@ check("CSV-D", /"Mecánica; ""fácil""";"sí";1;9200;50;2\r\n/.test(general),
   "el nombre del producto con punto y coma y comillas adentro no rompe la fila");
 check("CSV-E", camp.includes("\"'=cmd|' /C calc'!A0\"") && !/\r\n"Anuncio pago";"=cmd/.test(camp) && !/;"=cmd/.test(camp),
   "un nombre de campaña que es una fórmula sale desactivado con el apóstrofo, nunca crudo");
-check("CSV-F", /"Instagram";50;0;1;9200;0;2\r\n/.test(camp), "el canal lleva entraron, al pago, pagaron, te quedó y los porcentajes");
-check("CSV-G", /"Medio";"Visitas";"Ventas";"Te quedó";"Conversión %"\r\n"Anuncio pago";50;1;9200;2\r\n/.test(camp),
+check("CSV-F", /"Instagram";"\(todos\)";50;0;1;9200;0;2\r\n/.test(camp), "el canal lleva entraron, al pago, pagaron, te quedó y los porcentajes");
+check("CSV-G", /"Medio";"Producto";"Visitas";"Ventas";"Te quedó";"Conversión %"\r\n"Anuncio pago";"\(todos\)";50;1;9200;2\r\n/.test(camp),
   "el resumen por medio está");
+check("CSV-G2", !/"Instagram";"Mecánica/.test(camp) && /"Anuncio pago";"=cmd|' \/C calc'!A0";;"\(toda la campaña\)"/.test(camp.replace(/"'=cmd/g, "\"=cmd")),
+  "con un solo producto no hay filas por producto, y la campaña va sin producto");
+/* Con dos productos, mirando Todos: cada canal y cada medio reparten por
+   producto en filas propias, y cada campaña lleva el suyo. */
+const dos = armarEstadisticas({
+  rango,
+  ordenes: [{
+    estado: "CONFIRMED", motivo: null, total: 10000, tasa: 8, dia: "2026-09-10", diaSemana: 3, hora: 21,
+    principal: "a", comprador: "u1", upsell: 0, bajo: true, vencidoSinBajar: false, mail: "ENVIADO", recordada: false,
+    origen: "instagram", campania: { medio: "pago", campania: "promo", anuncio: "" },
+  }],
+  visitas: [{ productId: "a", date: "2026-09-10", paso: "pagina", dispositivo: "movil", count: 50 }, { productId: "b", date: "2026-09-10", paso: "pagina", dispositivo: "movil", count: 20 }],
+  origenes: [{ productId: "a", date: "2026-09-10", paso: "pagina", source: "instagram", count: 50 }, { productId: "b", date: "2026-09-10", paso: "pagina", source: "instagram", count: 20 }],
+  campanias: [{ productId: "a", date: "2026-09-10", medio: "pago", campania: "promo", anuncio: "", count: 50 }, { productId: "b", date: "2026-09-10", medio: "pago", campania: "promo", anuncio: "", count: 20 }],
+  principales: [{ id: "a", name: "Mecánica", publicada: true }, { id: "b", name: "Tortas", publicada: true }],
+  elegido: null,
+});
+const campDos = csvCampanias(dos, "t");
+check("CSV-I", /"Instagram";"\(todos\)";70;0;1;9200;0;1,40\r\n"Instagram";"Mecánica";50;;1;9200;;\r\n"Instagram";"Tortas";20;;0;0;;\r\n/.test(campDos),
+  "con dos productos, debajo del canal va una fila por producto");
+check("CSV-J", /"Anuncio pago";"\(todos\)";70;1;9200;1,40\r\n"Anuncio pago";"Mecánica";50;1;9200;\r\n"Anuncio pago";"Tortas";20;0;0;\r\n/.test(campDos),
+  "y debajo del medio también");
+check("CSV-K", /"Anuncio pago";"promo";"Mecánica";"\(toda la campaña\)";50;1;9200;2\r\n/.test(campDos) && /"Anuncio pago";"promo";"Tortas";"\(toda la campaña\)";20;0;0;0\r\n/.test(campDos),
+  "la misma campaña en dos productos son dos filas, cada una con su producto");
 check("CSV-H", nombreDelArchivo("campanias", d) === "estadisticas-campanias-2026-09-08-a-2026-09-14.csv",
   "el nombre del archivo lleva la solapa y el rango, sin acentos ni espacios");
 

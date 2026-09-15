@@ -132,7 +132,10 @@ check("ORIG-E", /Todavía no se sabe qué canal rinde/.test(consejoPara("origene
 
 const camp = (campania: string, count: number) => ({ productId: "a", date: "2026-09-10", medio: "pago" as const, campania, anuncio: "", count });
 const paraApagar = armar({ visitas: [visita(200)], campanias: [camp("video largo", 80), camp("testimonio", 60)], ordenes: [orden({ campania: { medio: "pago", campania: "testimonio", anuncio: "" } })] });
-check("CAMP-A", /«video largo» trajo 80 visitas y ninguna venta/.test(consejoPara("campanias", paraApagar).texto), "nombra la campaña con visitas y sin ventas");
+check("CAMP-A", /«video largo» de Mecánica fácil trajo 80 visitas y ninguna venta/.test(consejoPara("campanias", paraApagar).texto),
+  "nombra la campaña con visitas y sin ventas, y en Todos con varios productos dice de cuál es");
+const paraApagarUno = armar({ elegido: "a", visitas: [visita(200)], campanias: [camp("video largo", 80)], ordenes: [] });
+check("CAMP-A2", /«video largo» trajo 80 visitas/.test(consejoPara("campanias", paraApagarUno).texto), "mirando un producto, no repite el producto");
 const todasVenden = armar({ visitas: [visita(200)], campanias: [camp("testimonio", 60)], ordenes: [orden({ campania: { medio: "pago", campania: "testimonio", anuncio: "" } })] });
 check("CAMP-B", /merece más presupuesto/.test(consejoPara("campanias", todasVenden).texto), "si todas venden, el consejo general");
 

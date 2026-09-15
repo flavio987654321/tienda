@@ -105,21 +105,29 @@ export function csvCampanias(d: Estadisticas, titulo: string): string {
     fila("Te quedó por campañas", c.kpis.neto),
     fila("Conversión %", pctOVacio(c.kpis.conversion)),
     "",
-    fila("Canal", "Entraron", "Abrieron el pago", "Pagaron", "Te quedó", "Al pago %", "Conversión %"),
+    fila("Canal", "Producto", "Entraron", "Abrieron el pago", "Pagaron", "Te quedó", "Al pago %", "Conversión %"),
   ];
+  /* Mirando "Todos" con varios productos, debajo de cada canal y cada medio va
+     una fila por producto (sin embudo: sólo entraron, pagaron y te quedó). */
   for (const f of d.origenes.filas) {
-    lineas.push(fila(NOMBRE_ORIGEN[f.origen], f.visitas, f.checkouts, f.ventas, f.neto, pctOVacio(f.pctCheckout), pctOVacio(f.conversion)));
+    lineas.push(fila(NOMBRE_ORIGEN[f.origen], "(todos)", f.visitas, f.checkouts, f.ventas, f.neto, pctOVacio(f.pctCheckout), pctOVacio(f.conversion)));
+    for (const r of f.porProducto) {
+      lineas.push(fila(NOMBRE_ORIGEN[f.origen], r.producto, r.visitas, null, r.ventas, r.neto, null, null));
+    }
   }
-  lineas.push("", fila("Medio", "Visitas", "Ventas", "Te quedó", "Conversión %"));
+  lineas.push("", fila("Medio", "Producto", "Visitas", "Ventas", "Te quedó", "Conversión %"));
   for (const m of c.porMedio) {
-    lineas.push(fila(m.nombre, m.visitas, m.ventas, m.neto, pctOVacio(m.conversion)));
+    lineas.push(fila(m.nombre, "(todos)", m.visitas, m.ventas, m.neto, pctOVacio(m.conversion)));
+    for (const r of m.porProducto) {
+      lineas.push(fila(m.nombre, r.producto, r.visitas, r.ventas, r.neto, null));
+    }
   }
-  lineas.push("", fila("Medio", "Campaña", "Anuncio", "Visitas", "Ventas", "Te quedó", "Conversión %"));
+  lineas.push("", fila("Medio", "Campaña", "Producto", "Anuncio", "Visitas", "Ventas", "Te quedó", "Conversión %"));
   for (const f of c.filas) {
     const nombre = f.campania === OTRAS ? "Otras campañas" : f.campania;
-    lineas.push(fila(NOMBRE_MEDIO[f.medio], nombre, "(toda la campaña)", f.visitas, f.ventas, f.neto, pctOVacio(f.conversion)));
+    lineas.push(fila(NOMBRE_MEDIO[f.medio], nombre, f.producto, "(toda la campaña)", f.visitas, f.ventas, f.neto, pctOVacio(f.conversion)));
     for (const a of f.anuncios) {
-      lineas.push(fila(NOMBRE_MEDIO[f.medio], nombre, a.anuncio || "(sin anuncio)", a.visitas, a.ventas, a.neto, pctOVacio(a.conversion)));
+      lineas.push(fila(NOMBRE_MEDIO[f.medio], nombre, f.producto, a.anuncio || "(sin anuncio)", a.visitas, a.ventas, a.neto, pctOVacio(a.conversion)));
     }
   }
   return BOM + lineas.join("\r\n") + "\r\n";
