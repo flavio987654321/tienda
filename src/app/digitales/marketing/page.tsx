@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Film, TrendingUp, ArrowRight, Share2, BarChart3 } from "lucide-react";
+import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { medicionDeLaTienda } from "@/lib/medicion-digital";
@@ -48,6 +48,13 @@ export default async function MarketingPage() {
       titulo: "Enlaces para compartir",
       que: "El link de cada producto para Instagram, WhatsApp, Facebook, TikTok, YouTube y mail, con la etiqueta puesta. Después en Estadísticas ves cuál trae ventas.",
       accion: "Armar los links",
+    },
+    {
+      href: "/digitales/marketing/cupones",
+      Icon: Ticket,
+      titulo: "Cupones de descuento",
+      que: "Un código que la persona escribe al pagar: para un lanzamiento, para quien ya te compró, o para cerrar a quien preguntó y no se decidió.",
+      accion: "Crear un cupón",
     },
     {
       href: "/digitales/configuracion?tab=meta",

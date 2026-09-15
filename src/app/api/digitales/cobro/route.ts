@@ -238,9 +238,9 @@ async function acreditar(idDelPago: string) {
   const orden = await prisma.order.findUnique({
     where: { id: ordenId },
     select: {
-      id: true, status: true, total: true, lockedCommissionRate: true,
+      id: true, status: true, total: true, lockedCommissionRate: true, cuponCodigo: true,
       buyer: { select: { email: true, name: true } },
-      store: { select: { ownerId: true, owner: { select: { role: true, name: true } } } },
+      store: { select: { id: true, ownerId: true, owner: { select: { role: true, name: true } } } },
       items: {
         select: {
           id: true,
@@ -303,6 +303,17 @@ async function acreditar(idDelPago: string) {
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({ where: { id: orden.id }, data: { status: "CONFIRMED" } });
+
+    /* El cupón gasta un uso recién ACÁ, con la plata acreditada: un carrito
+       abandonado con cupón no consume nada. `updateMany` por (tienda, código):
+       si la dueña lo borró entre la compra y el pago, no hay nada que sumar y
+       no es un error. */
+    if (orden.cuponCodigo) {
+      await tx.cuponDigital.updateMany({
+        where: { storeId: orden.store.id, codigo: orden.cuponCodigo },
+        data: { usos: { increment: 1 } },
+      });
+    }
 
     await tx.payment.updateMany({
       where: { orderId: orden.id },

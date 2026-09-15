@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { origenAnotado } from "@/lib/visitas-digitales";
-import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle } from "lucide-react";
+import { descuentoDe, normalizarCodigo, type TipoDeCupon } from "@/lib/cupones-digitales";
+import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } from "lucide-react";
 
 /**
  * El formulario de pago.
@@ -68,6 +69,13 @@ export default function CheckoutClient(p: Props) {
      de fábrica no es consentimiento: es un cartel. */
   const [acepto, setAcepto] = useState(false);
   const [yendo, setYendo] = useState(false);
+  /* El cupón: lo que se escribe, y lo que el servidor dijo que vale. El
+     precio de abajo se calcula con `descuentoDe`, la misma función que va a
+     usar la ruta al cobrar: la pantalla no puede prometer un número distinto. */
+  const [codigo, setCodigo] = useState("");
+  const [cupon, setCupon] = useState<{ codigo: string; tipo: TipoDeCupon; valor: number; texto: string } | null>(null);
+  const [cuponError, setCuponError] = useState("");
+  const [cuponMirando, setCuponMirando] = useState(false);
   /* ⚠️ El freno del doble click. `useState` no alcanza: dos clics seguidos leen
      el mismo `false` antes de que React vuelva a dibujar, y salen los dos. Con
      un `ref` el segundo ve el `true` en el mismo instante. Es el mismo patrón
@@ -83,10 +91,37 @@ export default function CheckoutClient(p: Props) {
       .filter((u) => elegidos.includes(u.id))
       .reduce((s, u) => s + (u.regular ?? u.precio), 0);
 
-    const pagas = p.totalBase + sumaUpsells;
+    const sinCupon = p.totalBase + sumaUpsells;
+    const descuento = cupon ? descuentoDe(cupon, sinCupon) : 0;
+    const pagas = sinCupon - descuento;
     const valorTotal = p.regular + valorBonos + regularUpsells;
-    return { pagas, valorTotal, ahorro: valorTotal > pagas ? valorTotal - pagas : 0 };
-  }, [elegidos, p]);
+    return { sinCupon, descuento, pagas, valorTotal, ahorro: valorTotal > pagas ? valorTotal - pagas : 0 };
+  }, [elegidos, p, cupon]);
+
+  async function aplicarCupon() {
+    const c = normalizarCodigo(codigo);
+    if (!c || cuponMirando) return;
+    setCuponMirando(true);
+    setCuponError("");
+    try {
+      const r = await fetch("/api/digitales/cupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productoId: p.productoId, codigo: c }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) {
+        setCupon(null);
+        setCuponError(d.error ?? "Ese cupón no existe.");
+      } else {
+        setCupon({ codigo: d.codigo, tipo: d.tipo, valor: d.valor, texto: d.texto });
+        setCodigo(d.codigo);
+      }
+    } catch {
+      setCuponError("No pudimos verificar el cupón. Probá de nuevo.");
+    }
+    setCuponMirando(false);
+  }
 
   const mailValido = /^[^@\s]+@[^@\s]+\.[^@.\s]+$/.test(email.trim());
 
@@ -115,6 +150,8 @@ export default function CheckoutClient(p: Props) {
           nombre: nombre.trim() || undefined,
           /* Sólo identificadores. Ningún precio viaja desde acá. */
           upsells: elegidos,
+          /* El CÓDIGO del cupón, nunca el monto: cuánto vale lo decide el servidor. */
+          cupon: cupon?.codigo,
           /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
              servidor. Una prueba que la escribe el navegador no prueba nada. */
           acepto: true,
@@ -332,7 +369,47 @@ export default function CheckoutClient(p: Props) {
             );
           })}
 
+          {/* ── El cupón ─────────────────────────────────────────────────
+              Chico y abajo del detalle: quien tiene uno lo busca; quien no,
+              no tiene que ver un campo vacío que le sugiera salir a buscarlo. */}
+          <div className="mt-4">
+            {cupon ? (
+              <p className="flex items-center justify-between gap-2 text-[13px] text-[color:var(--pv-ok)]">
+                <span className="inline-flex items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5" /> Cupón {cupon.codigo} · {cupon.texto}</span>
+                <button type="button" onClick={() => { setCupon(null); setCodigo(""); }} className="text-[12px] underline underline-offset-2 text-[color:var(--pv-tenue)]">sacar</button>
+              </p>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  aria-label="Código de cupón"
+                  value={codigo}
+                  onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setCuponError(""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarCupon(); } }}
+                  maxLength={20}
+                  placeholder="¿Tenés un cupón?"
+                  autoComplete="off"
+                  className={`min-w-0 flex-1 border-2 border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)] px-3 py-2 text-[13px] uppercase text-[color:var(--pv-tinta)] outline-none focus:border-[color:var(--pv-acento)] ${p.botonRedondo}`}
+                />
+                <button
+                  type="button"
+                  onClick={aplicarCupon}
+                  disabled={cuponMirando || !codigo.trim()}
+                  className={`shrink-0 border-2 border-[color:var(--pv-acento)] px-3 py-2 text-[13px] font-bold text-[color:var(--pv-acento)] transition hover:bg-[color:var(--pv-acento)] hover:text-[color:var(--pv-sobre)] disabled:opacity-40 ${p.botonRedondo}`}
+                >
+                  {cuponMirando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                </button>
+              </div>
+            )}
+            {cuponError && <p role="alert" className="mt-2 bg-[color:var(--pv-fuerte)] px-3 py-2 text-[12.5px] font-medium text-[color:var(--pv-tinta)]">{cuponError}</p>}
+          </div>
+
           <div className="mt-4 border-t-2 border-[color:var(--pv-linea)] pt-3">
+            {cuenta.descuento > 0 && (
+              <p className="flex justify-between text-sm text-[color:var(--pv-tenue)]">
+                <span>Cupón {cupon?.codigo}</span>
+                <span className="tabular-nums">−{plata(cuenta.descuento)}</span>
+              </p>
+            )}
             {cuenta.valorTotal > cuenta.pagas && (
               <p className="flex justify-between text-sm text-[color:var(--pv-tenue)]">
                 <span>Valor total</span>

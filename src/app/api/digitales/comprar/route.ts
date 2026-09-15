@@ -11,6 +11,7 @@ import { loQueFalta } from "@/lib/productos-digitales";
 import { COMISION_DIGITAL } from "@/lib/planLimits";
 import { clasificarOrigen } from "@/lib/origen-visita";
 import { campaniaDe } from "@/lib/utm-digital";
+import { normalizarCodigo, porQueNoAplica, descuentoDe, type CuponDigitalPuro } from "@/lib/cupones-digitales";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
@@ -320,10 +321,31 @@ export async function POST(req: NextRequest) {
   /* Un agregado cobra SÓLO los upsells: el principal y los bonos ya están
      pagados y entregados. Cobrarlos de nuevo sería el peor error posible en la
      pantalla que aparece justo después de pagar. */
-  const total = ordenPrevia ? totalDelAgregado(upsells) : totalDeLaCompra(principal, upsells);
-  if (!(total > 0)) {
+  const totalSinCupon = ordenPrevia ? totalDelAgregado(upsells) : totalDeLaCompra(principal, upsells);
+  if (!(totalSinCupon > 0)) {
     return NextResponse.json({ error: "Esta compra no está disponible ahora mismo." }, { status: 409 });
   }
+
+  /* ── El cupón, si vino ────────────────────────────────────────────────────
+     Del navegador llega el CÓDIGO; cuánto vale lo decide el cupón leído de la
+     base ahora, con las reglas de `cupones-digitales`. Si no aplica se dice
+     por qué y no se cobra: cobrar el precio entero a quien creyó tener
+     descuento es la queja más segura que existe. Un agregado no lleva cupón. */
+  let cuponAplicado: { codigo: string; descuento: number } | null = null;
+  const codigoPedido = normalizarCodigo(cuerpo.cupon);
+  if (codigoPedido && !ordenPrevia) {
+    const fila = await prisma.cuponDigital.findUnique({
+      where: { storeId_codigo: { storeId: producto.store.id, codigo: codigoPedido } },
+      select: { codigo: true, tipo: true, valor: true, productId: true, venceAt: true, topeUsos: true, usos: true, activo: true },
+    });
+    const cupon = fila && (fila.tipo === "PORCENTAJE" || fila.tipo === "PESOS") ? (fila as CuponDigitalPuro) : null;
+    const motivo = cupon ? porQueNoAplica(cupon, { productId: producto.id, total: totalSinCupon }) : "Ese cupón no existe.";
+    if (!cupon || motivo) {
+      return NextResponse.json({ error: motivo ?? "Ese cupón no existe." }, { status: 400 });
+    }
+    cuponAplicado = { codigo: cupon.codigo, descuento: descuentoDe(cupon, totalSinCupon) };
+  }
+  const total = totalSinCupon - (cuponAplicado?.descuento ?? 0);
 
   /* ── Qué comisión le corresponde ────────────────────────────────────────
    *
@@ -428,6 +450,8 @@ export async function POST(req: NextRequest) {
           utmMedio: campania?.medio ?? null,
           utmCampania: campania?.campania ?? null,
           utmAnuncio: campania ? campania.anuncio || null : null,
+          cuponCodigo: cuponAplicado?.codigo ?? null,
+          descuento: cuponAplicado?.descuento ?? 0,
           items: { create: ordenPrevia ? itemsDelAgregado(upsells) : armarItems(principal, bonos, upsells) },
           /* ⚠️ La fila de pago nace con la orden, igual que en el checkout de
              tiendas. El webhook la busca por `orderId` para marcarla aprobada y

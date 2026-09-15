@@ -342,6 +342,7 @@ model Store {
   orders              Order[]
   affiliates          Affiliate[]
   coupons             Coupon[]
+  cuponesDigital      CuponDigital[]
   affiliateGoals      AffiliateGoal[]
   leads               Lead[]
   publicReviews       PublicReview[]
@@ -693,6 +694,7 @@ model Product {
   visitasDigital  DigitalVisita[]
   origenesDigital DigitalVisitaOrigen[]
   campaniasDigital DigitalVisitaCampania[]
+  cuponesDigital  CuponDigital[]
 
   @@index([deletedAt])
   // Todo lo que se le pide a esta tabla arranca por la tienda: el catálogo que
@@ -832,6 +834,11 @@ model Order {
   utmMedio    String?
   utmCampania String?
   utmAnuncio  String?
+  /// El cupón digital con que se compró y cuánto descontó, en pesos. `total`
+  /// ya viene descontado: esto es la explicación, no un número que se reste
+  /// de nuevo. Null / 0 en las órdenes sin cupón y en las de tiendas.
+  cuponCodigo String?
+  descuento   Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1224,6 +1231,34 @@ model DigitalVisitaCampania {
 
   @@unique([productId, date, medio, campania, anuncio])
   @@index([productId, date(sort: Desc)])
+}
+
+/// Un cupón de descuento de Productos Digitales. Es de la CUENTA (una cuenta
+/// Pro tiene hasta cinco páginas) y puede valer para todas o para un producto.
+/// El código se guarda en mayúsculas y es único por cuenta. `usos` se suma al
+/// CONFIRMARSE la compra, no al crearla: un carrito abandonado no gasta usos.
+/// Lo que vale, cuánto y hasta cuándo lo decide `lib/cupones-digitales`.
+model CuponDigital {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Mayúsculas, letras, números y guiones; 3 a 20.
+  codigo    String
+  /// "PORCENTAJE" (1–90) o "PESOS" (un monto fijo). Texto y no enum, como `concepto`.
+  tipo      String
+  valor     Int
+  /// Null = vale para todos los principales de la cuenta.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  venceAt   DateTime?
+  /// Null = sin tope.
+  topeUsos  Int?
+  usos      Int      @default(0)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, codigo])
+  @@index([productId])
 }
 
 model CupoIA {

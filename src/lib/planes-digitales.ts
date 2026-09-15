@@ -86,6 +86,7 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Textos y mails con IA", on: pago },
     { text: "Sasha, la asistente", on: pago },
     { text: "Entrega automática con token", on: true },
+    { text: "Cupones de descuento", on: true },
     /* Estadísticas en tres escalones, que es donde la competencia pone el
        candado y lo que le da al de Free un motivo para subir: las ventas las
        ve todo el mundo —ya las paga con su comisión—; las visitas y la

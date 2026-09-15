@@ -5942,3 +5942,48 @@ Marketing pasó de dos tarjetas a cuatro: Enlaces, **Píxel** (con estado:
 
 `lib/enlaces-compartir.ts` puro, con `enlaces-compartir.check.ts` (19).
 Mirado en 720 y 360.
+
+---
+
+## Marketing, paso 3: cupones de descuento — 15/09/26
+
+Un código que la persona escribe en el checkout. Es de la CUENTA (una Pro
+tiene hasta cinco páginas) y vale para todas o para un producto. De todos los
+planes: el descuento lo pone la vendedora de su margen, la comisión se calcula
+sobre lo que se cobra.
+
+### Dónde se decide la plata
+
+⚠️ **El navegador manda el CÓDIGO, nunca un monto.** La ruta de compra lee el
+cupón de la base en ese momento, decide con `porQueNoAplica` (apagado,
+vencido, agotado, de otro producto, o deja la compra por debajo de
+`MINIMO_A_COBRAR` = $ 100 porque Mercado Pago no cobra cero), calcula con
+`descuentoDe` y resta. Si no aplica, no cobra y dice por qué: cobrar el
+precio entero a quien creyó tener descuento es la queja más segura que existe.
+El checkout muestra el precio nuevo con la MISMA `descuentoDe` (ruta pública
+`/api/digitales/cupon`, con tope por IP, que contesta lo mínimo: ni usos ni
+vencimiento). La oferta de después de pagar no lleva cupón.
+
+- `usos` se suma **al confirmarse el pago**, en la misma transacción del
+  webhook: un carrito abandonado con cupón no gasta nada.
+- `Order.cuponCodigo` + `Order.descuento`: `total` ya viene descontado, esto
+  es la explicación. El detalle de la venta lo muestra.
+- Reglas en `lib/cupones-digitales`: código 3–20 [A-Z0-9-] normalizado,
+  porcentaje hasta 90 (el 100 % es un regalo, se hace mandando el archivo),
+  monto fijo, vence al final del día argentino, tope de usos, 50 cupones por
+  cuenta.
+- Pantalla `/digitales/marketing/cupones`: crear (valida con la misma función
+  que la ruta, avisa antes de mandar), lista con estado (activo / apagado /
+  vencido / agotado), apagar / prender, borrar con confirmación. Apagar es lo
+  normal: las ventas que ya lo usaron lo nombran.
+- Checkout: campo chico adentro del resumen del precio ("¿Tenés un cupón?").
+  El chequeo PAN-E de `compra-digital` (dos campos, uno obligatorio) lo
+  excluye a propósito: no está entre el botón y el pago, y quien tiene un
+  cupón lo busca.
+
+Migración `20260915180000_cupones_digitales` (tabla nueva con FKs adentro,
+dos columnas con default en Order), comparada contra la base real.
+`cupones-digitales.check.ts` (28). Build local ok. Mirado en 720 y 360.
+
+🔲 Cupón automático en el mail de carrito abandonado ("volvé con 10 %").
+🔲 Cupones en Estadísticas: cuántas ventas con cupón y cuánto se descontó.

@@ -144,6 +144,8 @@ export default async function DetalleDeVentaPage({
       total: true,
       createdAt: true,
       lockedCommissionRate: true,
+      cuponCodigo: true,
+      descuento: true,
       digitalConsentAt: true,
       digitalConsentIp: true,
       digitalConsentTexto: true,
@@ -255,6 +257,12 @@ export default async function DetalleDeVentaPage({
 
           <div className="shrink-0 text-right">
             <p className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">{plata(orden.total)}</p>
+            {/* Con cupón, el total ya viene descontado: esto es la explicación. */}
+            {orden.cuponCodigo && orden.descuento > 0 && (
+              <p className="mt-0.5 text-[12px] text-gray-500 panel-oscuro:text-gray-400">
+                cupón <span className="font-mono font-bold text-gray-700 panel-oscuro:text-gray-300">{orden.cuponCodigo}</span> · −{plata(orden.descuento)}
+              </p>
+            )}
             {cobrada && comision > 0 && (
               <p className="mt-0.5 text-[12px] text-gray-500 panel-oscuro:text-gray-400">
                 te quedó <span className="font-bold text-orange-600">{plata(orden.total - comision)}</span>
