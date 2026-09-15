@@ -89,7 +89,8 @@ function visitas(d: Estadisticas): Consejo {
   }
   const pctMovil = d.dispositivos.pctMovil;
   if (pctMovil !== null && pctMovil >= CASI_TODO_CELULAR) {
-    return { texto: `${Math.round(pctMovil / 10)} de cada 10 entran desde el celular. Abrí tu página desde el tuyo: el título, el precio y el botón de comprar tienen que verse sin bajar.` };
+    const cuantos = pctMovil >= 95 ? "Casi todos" : `${Math.round(pctMovil / 10)} de cada 10`;
+    return { texto: `${cuantos} entran desde el celular. Abrí tu página desde el tuyo: el título, el precio y el botón de comprar tienen que verse sin bajar.` };
   }
   return { texto: "Un día con muchas visitas y ninguna venta fue algo que trajo curiosos y no compradores: mirá qué publicaste ese día. Las visitas se guardan dos años, así que desde «Todo» se compara con el año pasado." };
 }
@@ -165,6 +166,9 @@ function embudo(d: Estadisticas): Consejo {
   if (e.pctVenta !== null && e.checkouts >= CHECKOUTS_PARA_OPINAR && e.pctVenta < POCOS_TERMINAN_DE_PAGAR) {
     return { texto: `Abren el pago y no pagan: sólo ${entero(Math.round(e.pctVenta))} de cada 100 terminan. Suele ser desconfianza en el momento de pagar. Ayuda decir en la página que el archivo llega al instante al correo y que hay devolución.` };
   }
+  if (e.ventas === 0) {
+    return { texto: `${entero(e.checkouts)} ${e.checkouts === 1 ? "abrió" : "abrieron"} el pago y todavía nadie terminó. Con pocos casos puede ser azar; si sigue así, mirá el momento de pagar: que el precio final no sorprenda y que se vea que el archivo llega al instante.` };
+  }
   return { texto: "El embudo está sano: la mayoría de los que abren el pago, pagan. Para vender más hace falta traer más gente, no tocar la página." };
 }
 
@@ -203,15 +207,25 @@ function origenes(d: Estadisticas): Consejo {
   if (filas.length === 0) {
     return { texto: "Un link abierto desde WhatsApp o desde la app de Instagram muchas veces llega sin decir de dónde vino, y se cuenta como directo. Por eso la etiqueta: con ?utm_source=whatsapp al final del link, ese canal queda anotado aunque el celular no lo diga." };
   }
-  const masTrae = filas[0];
-  const mejorPaga = [...filas]
+  /* La lista viene con Directo y Otro al final aunque traigan más: para el
+     consejo se busca el de más visitas de verdad. */
+  const masTrae = [...filas].sort((a, b) => b.visitas - a.visitas)[0];
+  const esBolsa = masTrae.origen === "directo" || masTrae.origen === "otro";
+  if (esBolsa && masTrae.pct >= 50) {
+    return { texto: "La mayoría llega sin decir de dónde vino y cae en Directo. Casi siempre es un link pegado en WhatsApp o abierto desde la app de Instagram: agregales ?utm_source=whatsapp (o instagram) y van a aparecer con su canal." };
+  }
+  const conNombre = filas.filter((f) => f.origen !== "directo" && f.origen !== "otro");
+  const mejorPaga = [...conNombre]
     .filter((f) => f.visitas >= VISITAS_PARA_COMPARAR_CANALES && f.conversion !== null)
     .sort((a, b) => (b.conversion ?? 0) - (a.conversion ?? 0))[0];
-  if (mejorPaga && mejorPaga.origen !== masTrae.origen && (mejorPaga.conversion ?? 0) > (masTrae.conversion ?? 0)) {
+  if (!esBolsa && mejorPaga && mejorPaga.origen !== masTrae.origen && (mejorPaga.conversion ?? 0) > (masTrae.conversion ?? 0)) {
     return { texto: `${NOMBRE_ORIGEN[masTrae.origen]} trae más gente, pero en ${NOMBRE_ORIGEN[mejorPaga.origen]} es donde más pagan. Vale más un mensaje ahí que un posteo allá.` };
   }
   if (d.origenes.ventasSinOrigen > 0) {
     return { texto: `${pocas(d.origenes.ventasSinOrigen, "venta no tiene", "ventas no tienen")} canal anotado: llegaron sin etiqueta y sin que el navegador dijera de dónde. Cuanto más links lleven ?utm_source=..., menos ventas quedan sin saber de dónde salieron.` };
+  }
+  if (esBolsa || conNombre.length === 0) {
+    return { texto: "Todavía no se sabe qué canal rinde: etiquetá cada link que compartas con ?utm_source=... y en unos días esta lista te dice dónde vale la pena estar." };
   }
   return { texto: `${NOMBRE_ORIGEN[masTrae.origen]} es tu canal: trae las visitas y las ventas. Antes de abrir otro, exprimí ese.` };
 }

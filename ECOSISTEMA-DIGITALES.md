@@ -5751,7 +5751,7 @@ nada" y no enseñaba para qué sirve ni qué hacer con él.
 ### Consejos en Estadísticas
 
 Cada bloque (nueve) tiene UN consejo abajo, con lamparita, elegido mirando
-los datos en `lib/consejos-estadisticas.ts` (puro, 31 chequeos):
+los datos en `lib/consejos-estadisticas.ts` (puro, 35 chequeos):
 
 - **Sin datos** explica para qué sirve el bloque y cómo hacer que se mueva:
   "se cuenta una visita por persona por día, las tuyas no cuentan con la
@@ -5791,9 +5791,16 @@ los datos en `lib/consejos-estadisticas.ts` (puro, 31 chequeos):
 
 Para que la pantalla y el archivo filtren igual, lo puro salió a
 `lib/ventas-digitales.ts` (rangos, lectura limpia de la dirección, el
-`where`, el mensaje y los enlaces; 30 chequeos) y lo que toca la base a
+`where`, el mensaje y los enlaces; 38 chequeos) y lo que toca la base a
 `lib/ventas-digitales-db.ts` (`contextoDeVentas`, el `select` y el mapeo
 compartidos). La página quedó en la mitad. Mirado en 360 y 768, vacío y lleno.
+
+Auditoría del commit (antes de deployar) encontró y corrigió cuatro cosas que
+los chequeos no veían: el embudo con visitas, gente al pago y CERO ventas
+decía "sano"; "De dónde vienen" tomaba la primera fila como el canal que más
+trae, pero Directo va último aunque traiga más (y "exprimí Directo" no es un
+consejo: ahora manda a etiquetar); 100 % celular decía "10 de cada 10"; un
+nombre de puros espacios saludaba "Hola ,". Cada una con su chequeo.
 
 🔲 Que la persona pueda cambiar el texto del mensaje de "Escribirle" desde
 Ajustes, en vez del nuestro.

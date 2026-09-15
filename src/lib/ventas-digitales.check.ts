@@ -68,6 +68,7 @@ check("MSJ-A", m1.cuerpo.startsWith("Hola Ana,") && /todavía no bajaste el arch
   "al que no bajó se le pregunta si le llegó el mail, por el nombre de pila");
 const m2 = mensajeParaElComprador({ nombre: null, producto: "Mecánica fácil", sinBajar: false });
 check("MSJ-B", m2.cuerpo.startsWith("Hola,") && /cómo te fue/.test(m2.cuerpo), "al que bajó se le pregunta cómo le fue, y sin nombre no se inventa uno");
+check("MSJ-B2", mensajeParaElComprador({ nombre: "   ", producto: "X", sinBajar: false }).cuerpo.startsWith("Hola,\n"), "un nombre de puros espacios no saluda \"Hola ,\"");
 const mail = enlaceDeMail("ana@mail.com", { asunto: "A & B", cuerpo: "línea 1\nlínea 2" });
 check("MSJ-C", mail === "mailto:ana%40mail.com?subject=A%20%26%20B&body=l%C3%ADnea%201%0Al%C3%ADnea%202", "el mailto codifica el &, los acentos y los saltos");
 const wa = (t: string | null) => enlaceDeWhatsApp(t, { cuerpo: "hola" });

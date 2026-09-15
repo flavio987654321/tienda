@@ -146,7 +146,8 @@ export function dondeVentas(storeId: string, c: ConsultaDeVentas, elegido: strin
  * en su correo y lo cambia antes de mandar.
  */
 export function mensajeParaElComprador(v: { nombre: string | null; producto: string; sinBajar: boolean }): { asunto: string; cuerpo: string } {
-  const hola = v.nombre ? `Hola ${v.nombre.trim().split(/\s+/)[0]},` : "Hola,";
+  const pila = v.nombre?.trim().split(/\s+/)[0];
+  const hola = pila ? `Hola ${pila},` : "Hola,";
   if (v.sinBajar) {
     return {
       asunto: `Tu compra de ${v.producto}`,

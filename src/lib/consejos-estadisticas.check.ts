@@ -79,6 +79,9 @@ const sanoEmbudo = armar({ visitas: [visita(200), visita(40, "pagar")], ordenes:
 check("EMB-C", /El embudo está sano/.test(consejoPara("embudo", sanoEmbudo).texto), "con 30 de 40 pagando, el consejo es traer más gente");
 const poquitas = armar({ visitas: [visita(10)] });
 check("EMB-D", /poca gente para sacar conclusiones/.test(consejoPara("embudo", poquitas).texto), "con diez visitas no opina");
+const nadiePago = armar({ visitas: [visita(40), visita(3, "pagar")] });
+check("EMB-E", /3 abrieron el pago y todavía nadie terminó/.test(consejoPara("embudo", nadiePago).texto) && !/sano/.test(consejoPara("embudo", nadiePago).texto),
+  "40 visitas, 3 al pago y cero ventas NO es un embudo sano: lo dice");
 
 /* ── Visitas y celular ───────────────────────────────────────────────────── */
 
@@ -86,6 +89,7 @@ const celular = armar({ visitas: [visita(90), { ...visita(10), dispositivo: "esc
 check("VIS-A", /9 de cada 10 entran desde el celular/.test(consejoPara("visitas", celular).texto), "con 90 % móvil manda a mirar la página en el celular");
 const parejo = armar({ visitas: [visita(50), { ...visita(50), dispositivo: "escritorio" as const }] });
 check("VIS-B", /se guardan dos años/.test(consejoPara("visitas", parejo).texto), "si no, el consejo general, que además dice cuánto se guardan");
+check("VIS-C", /^Casi todos entran desde el celular/.test(consejoPara("visitas", armar({ visitas: [visita(100)] })).texto), "con el 100 % móvil no dice \"10 de cada 10\"");
 
 /* ── Por producto ────────────────────────────────────────────────────────── */
 
@@ -117,6 +121,12 @@ const unCanal = armar({ visitas: [visita(150)], origenes: [origen("instagram", 1
 check("ORIG-B", /Instagram es tu canal/.test(consejoPara("origenes", unCanal).texto), "con un canal solo, exprimirlo");
 const sinOrigen = armar({ visitas: [visita(150)], origenes: [origen("instagram", 120)], ordenes: [orden({ origen: "instagram" }), orden({ comprador: "u2" })] });
 check("ORIG-C", /1 venta no tiene canal anotado/.test(consejoPara("origenes", sinOrigen).texto), "con ventas sin canal, pide más etiquetas");
+const casiTodoDirecto = armar({ visitas: [visita(150)], origenes: [origen("directo", 120), origen("instagram", 30)], ordenes: [orden({ origen: "directo" })] });
+check("ORIG-D", /La mayoría llega sin decir de dónde vino/.test(consejoPara("origenes", casiTodoDirecto).texto) && !/Directo es tu canal/.test(consejoPara("origenes", casiTodoDirecto).texto),
+  "si el que más trae es Directo, el consejo es etiquetar, no \"exprimir Directo\" (aunque la lista lo ponga último)");
+const directoChico = armar({ visitas: [visita(150)], origenes: [origen("directo", 40), origen("instagram", 30), origen("whatsapp", 25)], ordenes: [orden({ origen: "instagram" })] });
+check("ORIG-E", /Todavía no se sabe qué canal rinde/.test(consejoPara("origenes", directoChico).texto),
+  "Directo primero pero sin mayoría: no lo nombra como canal ni lo compara (\"un posteo en Directo\" no existe)");
 
 /* ── Campañas ────────────────────────────────────────────────────────────── */
 
