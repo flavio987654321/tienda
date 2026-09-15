@@ -3,7 +3,7 @@ import { sumarDiasCalendario, diasEntreDias } from "@/lib/fechas-comerciales";
 import { granoPara, serieParaGrafico, type Grano, type Punto } from "@/lib/serie-grafico";
 import { ORIGENES, ordenarOrigenes, type Origen } from "@/lib/origen-visita";
 import type { PasoDigital, Dispositivo } from "@/lib/visitas-digitales";
-import { MEDIOS, OTRAS, type Medio } from "@/lib/utm-digital";
+import { MEDIOS, OTRAS, NOMBRE_MEDIO, type Medio } from "@/lib/utm-digital";
 import type { TierDigital } from "@/lib/planes-digitales";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -102,7 +102,8 @@ export type Bloque =
   | "embudo"
   | "origenes"    // visitas y ventas por origen
   | "campanias"   // visitas y ventas por campaña y anuncio (UTM)
-  | "carritos";   // recuperados por el mail automático
+  | "carritos"    // recuperados por el mail automático
+  | "exportar";   // bajar la solapa como planilla
 
 /** El plan más bajo que ve cada bloque. */
 export const DESDE_QUE_PLAN: Record<Bloque, TierDigital> = {
@@ -114,6 +115,9 @@ export const DESDE_QUE_PLAN: Record<Bloque, TierDigital> = {
   origenes: "PRO",
   campanias: "PRO",
   carritos: "PRO",
+  /* Exportar es lo que se cobra, no los números: Free los ve en pantalla. La
+     competencia lo apaga en su plan gratis, y es donde va el candado. */
+  exportar: "STARTER",
 };
 
 const ORDEN: TierDigital[] = ["FREE", "STARTER", "PRO"];
@@ -207,9 +211,23 @@ export type FilaDeOrigen = {
   pct: number;
   checkouts: number;
   ventas: number;
+  /** Lo que dejaron las ventas de ese canal, después de la comisión. */
+  neto: number;
   /** Checkouts ÷ visitas y ventas ÷ visitas, en porcentaje. */
   pctCheckout: number | null;
   conversion: number | null;
+};
+
+/** Un medio (pago, orgánico, mail…) con lo suyo. */
+export type FilaDeMedio = { medio: Medio; nombre: string; visitas: number; ventas: number; neto: number; conversion: number | null };
+
+/** Los números de cabecera de la solapa Campañas: sólo lo que vino etiquetado. */
+export type KpisDeCampanias = {
+  visitas: number;
+  ventas: number;
+  neto: number;
+  conversion: number | null;
+  ticket: number | null;
 };
 
 export type Carritos = { abandonados: number; recordados: number; recuperados: number; pctRecuperados: number | null };
@@ -237,7 +255,7 @@ export type Estadisticas = {
   porProducto: { id: string; name: string; publicada: boolean; ventas: number; neto: number; visitas: number; conversion: number | null }[];
   origenes: { filas: FilaDeOrigen[]; conocidas: number; ventasSinOrigen: number };
   /** Las campañas del período. `conVisitas` es cuántas visitas traían campaña. */
-  campanias: { filas: FilaDeCampania[]; conVisitas: number; ventasConCampania: number };
+  campanias: { filas: FilaDeCampania[]; conVisitas: number; ventasConCampania: number; kpis: KpisDeCampanias; porMedio: FilaDeMedio[] };
   carritos: Carritos;
 };
 
@@ -421,14 +439,16 @@ export function armarEstadisticas(entrada: {
     conocidas += o.count;
   }
   let ventasSinOrigen = 0;
+  const netoDeOrigen = new Map<Origen, number>();
   for (const o of cobradas) {
     if (o.origen === null || !esOrigen(o.origen)) { ventasSinOrigen++; continue; }
     cajon(o.origen).ventas++;
+    netoDeOrigen.set(o.origen, (netoDeOrigen.get(o.origen) ?? 0) + o.total - comisionCongelada(o.total, o.tasa));
   }
   const filas = ordenarOrigenes(
     [...porOrigen.entries()].map(([origen, c]) => ({
       origen, visitas: c.visitas, pct: pct(c.visitas, conocidas) ?? 0,
-      checkouts: c.checkouts, ventas: c.ventas,
+      checkouts: c.checkouts, ventas: c.ventas, neto: netoDeOrigen.get(origen) ?? 0,
       pctCheckout: pct(c.checkouts, c.visitas), conversion: pct(c.ventas, c.visitas),
     })),
   );
@@ -470,12 +490,14 @@ export function armarEstadisticas(entrada: {
     conVisitas += v.count;
   }
   let ventasConCampania = 0;
+  let brutoConCampania = 0;
   for (const o of cobradas) {
     if (!o.campania || !esMedio(o.campania.medio)) continue;
     const a = cajonDe(o.campania.medio, o.campania.campania, o.campania.anuncio);
     a.ventas++;
     a.neto += o.total - comisionCongelada(o.total, o.tasa);
     ventasConCampania++;
+    brutoConCampania += o.total;
   }
   const ordenar = <T extends { ventas: number; visitas: number }>(xs: T[]) =>
     xs.sort((a, b) => b.ventas - a.ventas || b.visitas - a.visitas);
@@ -490,12 +512,34 @@ export function armarEstadisticas(entrada: {
   /* "(otras)" siempre al final: es una bolsa, no una campaña que se pueda mover. */
   filasDeCampania.sort((a, b) => Number(a.campania === OTRAS) - Number(b.campania === OTRAS));
 
+  /* Por medio: pago, orgánico, mail, historia. Es la misma cuenta que por
+     campaña, sumada por el primer nivel. Sólo los medios con algo; "otro" al
+     final como bolsa. */
+  const porMedioMap = new Map<Medio, Acum>();
+  for (const f of filasDeCampania) {
+    const m = porMedioMap.get(f.medio) ?? nuevo();
+    m.visitas += f.visitas; m.ventas += f.ventas; m.neto += f.neto;
+    porMedioMap.set(f.medio, m);
+  }
+  const porMedio: FilaDeMedio[] = ordenar(
+    [...porMedioMap.entries()].map(([medio, a]) => ({ medio, nombre: NOMBRE_MEDIO[medio], ...a, conversion: pct(a.ventas, a.visitas) })),
+  ).sort((a, b) => Number(a.medio === "otro") - Number(b.medio === "otro"));
+
+  const netoConCampania = filasDeCampania.reduce((s, f) => s + f.neto, 0);
+  const kpisDeCampanias: KpisDeCampanias = {
+    visitas: conVisitas,
+    ventas: ventasConCampania,
+    neto: netoConCampania,
+    conversion: pct(ventasConCampania, conVisitas),
+    ticket: ventasConCampania > 0 ? brutoConCampania / ventasConCampania : null,
+  };
+
   return {
     rango, kpis, serie,
     dispositivos: { movil, escritorio, pctMovil: pct(movil, movil + escritorio) },
     embudo, posventa, cuando, porProducto,
     origenes: { filas, conocidas, ventasSinOrigen },
-    campanias: { filas: filasDeCampania, conVisitas, ventasConCampania },
+    campanias: { filas: filasDeCampania, conVisitas, ventasConCampania, kpis: kpisDeCampanias, porMedio },
     carritos,
   };
 }

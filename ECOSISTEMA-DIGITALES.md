@@ -5702,3 +5702,39 @@ comparada contra la base real.
 Las tres barras de cada canal van sobre la misma escala, así se ve a simple
 vista dónde se cae cada uno: Instagram trae mucho y pocos abren el pago;
 WhatsApp trae menos y casi todos pagan. Mirado en 1000 y 360.
+
+---
+
+## Campañas: números arriba, plata por canal, por medio y exportar — 15/09/26
+
+Flavio comparó nuestra solapa Campañas vacía con la de la competencia: la
+nuestra decía "todavía no hay nada" dos veces y parecía rota; la de ellos
+muestra los números en cero y parece lo que es, esperando datos. Y tienen
+exportar, apagado en Free.
+
+- **Cuatro números arriba de Campañas, siempre**: visitas con campaña,
+  ventas atribuidas, te quedó por campañas, conversión (con el ticket). En
+  cero también. Son sólo lo que vino ETIQUETADO; lo que no trae etiqueta
+  está en General.
+- **La plata por canal**: cada canal del embudo dice cuánto dejó.
+- **Por medio**: pago / orgánico / mail / historia, chips arriba de la tabla
+  de campañas. Es la primera pregunta de quien paga anuncios: ¿lo pago rinde
+  más que lo gratis?
+- **Exportar** la solapa que se está mirando como planilla (CSV con punto y
+  coma y BOM, que Excel en castellano abre sin preguntar). **Desde Starter**
+  (es la exportación lo que se cobra: Free ve los números en pantalla);
+  Campañas sólo Pro porque el bloque es de Pro. El botón sigue la regla y la
+  ruta la vuelve a mirar. Tope de 30 por hora: armar el archivo es la
+  consulta entera.
+
+⚠️ **Lo importante de exportar es `celda`**, en `lib/exportar-estadisticas`.
+Los nombres de campaña los escribió un desconocido desde la URL, y una
+planilla EJECUTA una celda que empieza con `=`, `+`, `-` o `@`. Un bot que
+visite con `utm_campaign==cmd|...` dejaría una bomba esperando a que la
+dueña abra su propio archivo. Toda celda así se antepone con un apóstrofo
+(adentro de las comillas), y hay chequeo con esa bomba exacta
+(`exportar-estadisticas.check.ts`, CEL-* y CSV-E).
+
+Para que la pantalla y el archivo digan lo mismo, la consulta salió de la
+página a `lib/estadisticas-digitales-db.ts` (`cargarEstadisticas`), y las
+dos salidas la comparten. Mirado en 1000 lleno, vacío y en Free.

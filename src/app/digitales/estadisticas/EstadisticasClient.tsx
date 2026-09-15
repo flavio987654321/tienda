@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent, Download, Undo2, PackagePlus, Mail, Users, Smartphone } from "lucide-react";
+import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent, Download, Undo2, PackagePlus, Mail, Users, Smartphone, FileDown } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
   puedeVer, DESDE_QUE_PLAN, RANGOS, NOMBRE_RANGO,
@@ -73,7 +73,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           en dos momentos— y en una sola página larga se pisaban. Van como
           solapas y no como dos entradas de la barra lateral: la barra es un
           riel de íconos y un árbol adentro serían dos íconos sin nombre. */}
-      <div className="flex gap-1 border-b border-gray-200 panel-oscuro:border-gray-800">
+      <div className="flex items-end gap-1 border-b border-gray-200 panel-oscuro:border-gray-800">
         {(Object.keys(NOMBRE_VISTA) as Vista[]).map((v) => (
           <Link
             key={v}
@@ -88,6 +88,26 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
             {NOMBRE_VISTA[v]}
           </Link>
         ))}
+        {/* Exportar la solapa que se está mirando, como planilla. Un enlace a la
+            ruta —el navegador baja el archivo— con la misma consulta que la
+            pantalla. Con candado en Free (y en Starter para Campañas): la regla
+            es la de `DESDE_QUE_PLAN`, la ruta la vuelve a mirar. */}
+        {puedeVer(tier, "exportar") && (vista === "general" || puedeVer(tier, "campanias")) ? (
+          <a
+            href={`/api/digitales/estadisticas/exportar?${new URLSearchParams({ vista, ...(elegido ? { p: elegido } : {}), rango: rango.clave }).toString()}`}
+            className="ml-auto mb-1.5 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-700 panel-oscuro:hover:text-orange-400"
+          >
+            <FileDown className="h-3.5 w-3.5" /> Exportar
+          </a>
+        ) : (
+          <Link
+            href="/digitales/mi-cuenta"
+            aria-label={`Exportar: disponible desde ${COPY_DIGITAL[vista === "campanias" ? DESDE_QUE_PLAN.campanias : DESDE_QUE_PLAN.exportar].nombre}`}
+            className="ml-auto mb-1.5 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-400 panel-oscuro:text-gray-500"
+          >
+            <Lock className="h-3.5 w-3.5 text-orange-500" /> Exportar · desde {COPY_DIGITAL[vista === "campanias" ? DESDE_QUE_PLAN.campanias : DESDE_QUE_PLAN.exportar].nombre}
+          </Link>
+        )}
       </div>
 
       {/* ── Los selectores ─────────────────────────────────────────────────── */}
@@ -257,6 +277,29 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
       </>)}
 
       {vista === "campanias" && (<>
+        {/* ── Los números de la solapa, siempre a la vista ──────────────────────
+            En cero también: una solapa que sólo dice "todavía no hay nada" parece
+            rota; con los cuatro números en cero parece lo que es, esperando datos.
+            Son sólo lo que vino ETIQUETADO: visitas con campaña y ventas con
+            campaña. Lo que no trae etiqueta está en General. */}
+        {puedeVer(tier, "campanias") ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Numero Icon={TrendingUp} titulo="Visitas con campaña" valor={entero(campanias.kpis.visitas)} pie={kpis.visitas > 0 ? `de ${entero(kpis.visitas)} visitas en total` : "de las que traen etiqueta"} />
+            <Numero Icon={Receipt} titulo="Ventas atribuidas" valor={entero(campanias.kpis.ventas)} pie={kpis.ventas > 0 ? `de ${entero(kpis.ventas)} ventas en total` : "a alguna campaña"} />
+            <Numero Icon={Wallet} titulo="Te quedó por campañas" valor={plata(campanias.kpis.neto)} pie="después de la comisión" destacado />
+            <Numero Icon={Percent} titulo="Conversión" valor={porcentaje(campanias.kpis.conversion)} pie={campanias.kpis.ticket !== null ? `ticket ${plata(campanias.kpis.ticket)}` : "de las visitas con campaña"} />
+          </div>
+        ) : (
+          <Bloqueado bloque="campanias" compacto>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Numero Icon={TrendingUp} titulo="Visitas con campaña" valor="310" pie="de 620 visitas en total" />
+              <Numero Icon={Receipt} titulo="Ventas atribuidas" valor="8" pie="de 11 ventas en total" />
+              <Numero Icon={Wallet} titulo="Te quedó por campañas" valor="$ 104.000" pie="después de la comisión" destacado />
+              <Numero Icon={Percent} titulo="Conversión" valor="2,6 %" pie="ticket $ 13.000" />
+            </div>
+          </Bloqueado>
+        )}
+
         {/* ── De dónde vinieron: visitas Y ventas ─────────────────────────────── */}
         {puedeVer(tier, "origenes") ? (
           <Tarjeta
@@ -273,10 +316,10 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           <Bloqueado bloque="origenes">
             <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas y cuál trae las ventas.">
               <Origenes filas={[
-                { origen: "instagram", visitas: 120, pct: 48, checkouts: 18, ventas: 5, pctCheckout: 15, conversion: 4.2 },
-                { origen: "whatsapp", visitas: 70, pct: 28, checkouts: 12, ventas: 4, pctCheckout: 17.1, conversion: 5.7 },
-                { origen: "facebook", visitas: 35, pct: 14, checkouts: 2, ventas: 0, pctCheckout: 5.7, conversion: 0 },
-                { origen: "directo", visitas: 25, pct: 10, checkouts: 3, ventas: 1, pctCheckout: 12, conversion: 4 },
+                { origen: "instagram", visitas: 120, pct: 48, checkouts: 18, ventas: 5, neto: 65000, pctCheckout: 15, conversion: 4.2 },
+                { origen: "whatsapp", visitas: 70, pct: 28, checkouts: 12, ventas: 4, neto: 52000, pctCheckout: 17.1, conversion: 5.7 },
+                { origen: "facebook", visitas: 35, pct: 14, checkouts: 2, ventas: 0, neto: 0, pctCheckout: 5.7, conversion: 0 },
+                { origen: "directo", visitas: 25, pct: 10, checkouts: 3, ventas: 1, neto: 13000, pctCheckout: 12, conversion: 4 },
               ]} />
             </Tarjeta>
           </Bloqueado>
@@ -292,12 +335,17 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
             bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta. Se arma con las etiquetas UTM del link."
           >
             <ParaMeta />
+            <PorMedio filas={campanias.porMedio} />
             <Campanias filas={campanias.filas} conVisitas={campanias.conVisitas} ventasConCampania={campanias.ventasConCampania} ventas={kpis.ventas} />
           </Tarjeta>
         ) : (
           <Bloqueado bloque="campanias">
             <Tarjeta titulo="Campañas" bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta.">
               <ParaMeta />
+              <PorMedio filas={[
+                { medio: "pago", nombre: "Anuncio pago", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7 },
+                { medio: "historia", nombre: "Historia", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2 },
+              ]} />
               <Campanias
                 ventas={9}
                 conVisitas={310}
@@ -541,6 +589,11 @@ function Origenes({ filas }: { filas: Estadisticas["origenes"]["filas"] }) {
             <div className="h-2 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: ancho(f.ventas) }} /></div>
             <span className="tabular-nums text-gray-700 panel-oscuro:text-gray-300 text-right min-w-[8ch]">{entero(f.ventas)}{f.conversion !== null ? <span className="text-gray-400 panel-oscuro:text-gray-500"> · {porcentaje(f.conversion)}</span> : null}</span>
           </div>
+          {f.ventas > 0 && (
+            <p className="mt-1.5 text-right text-[12px] text-gray-500 panel-oscuro:text-gray-400">
+              Te quedó <span className="font-semibold text-gray-800 panel-oscuro:text-gray-200">{plata(f.neto)}</span> por este canal.
+            </p>
+          )}
         </li>
       ))}
     </ul>
@@ -662,6 +715,31 @@ function ParaMeta() {
           {PARAMETROS_PARA_META}
         </code>
         <BotonCopiar valor={PARAMETROS_PARA_META} que="los parámetros para Meta" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Por medio: pago, orgánico, mail, historia. Es la primera pregunta de quien
+ * paga anuncios —¿lo pago rinde más que lo gratis?— y va antes del detalle por
+ * campaña. Chips, no tabla: son cuatro o cinco cosas.
+ */
+function PorMedio({ filas }: { filas: Estadisticas["campanias"]["porMedio"] }) {
+  if (filas.length === 0) return null;
+  return (
+    <div className="mb-4">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500 mb-2">Por medio</p>
+      <div className="flex flex-wrap gap-2">
+        {filas.map((m) => (
+          <div key={m.medio} className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50/60 panel-oscuro:bg-gray-800/40 px-3.5 py-2.5 min-w-[150px]">
+            <p className="text-[12.5px] font-bold text-gray-800 panel-oscuro:text-gray-200">{m.nombre}</p>
+            <p className="text-[12px] tabular-nums text-gray-600 panel-oscuro:text-gray-400">
+              {entero(m.visitas)} visitas · {entero(m.ventas)} {m.ventas === 1 ? "venta" : "ventas"}{m.conversion !== null ? ` · ${porcentaje(m.conversion)}` : ""}
+            </p>
+            {m.ventas > 0 && <p className="text-[12px] font-semibold tabular-nums text-gray-900 panel-oscuro:text-gray-100">{plata(m.neto)}</p>}
+          </div>
+        ))}
       </div>
     </div>
   );

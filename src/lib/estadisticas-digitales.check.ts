@@ -190,6 +190,14 @@ check("UTM-E", !camp.filas.some((f) => f.campania === "x" || f.campania === "vie
   "un medio inventado y una campaña fuera del rango no entran");
 check("UTM-F", armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: "b", carritos, campanias }).campanias.filas.map((f) => f.campania).join(",") === "promo",
   "mirando un producto, sólo sus campañas");
+check("UTM-H", camp.kpis.visitas === 50 && camp.kpis.ventas === 2 && camp.kpis.neto === 18400 && camp.kpis.conversion === 4
+  && camp.kpis.ticket === 10000,
+  "los números de cabecera de Campañas son sólo lo etiquetado: visitas y ventas con campaña, y su plata");
+check("UTM-I", camp.porMedio.map((m) => m.medio).join(",") === "pago,historia" && camp.porMedio[0].visitas === 35
+  && camp.porMedio[0].ventas === 2 && camp.porMedio[0].neto === 18400,
+  "el resumen por medio suma las campañas de cada medio; (otras) suma al suyo");
+check("UTM-J", todo.origenes.filas.find((f) => f.origen === "instagram")?.neto === 18400,
+  "cada canal lleva la plata que dejaron sus ventas");
 check("UTM-G", puedeVer("PRO", "campanias") && !puedeVer("STARTER", "campanias") && DESDE_QUE_PLAN.campanias === "PRO",
   "las campañas son de Pro, con el origen y el embudo");
 
@@ -225,7 +233,10 @@ const pagina = "src/app/digitales/estadisticas/page.tsx";
 const cliente = "src/app/digitales/estadisticas/EstadisticasClient.tsx";
 check("PANT-A", existsSync(pagina) && existsSync(cliente), "la pantalla existe");
 if (existsSync(pagina) && existsSync(cliente)) {
-  const p = leer(pagina);
+  /* La consulta vive en la librería de base, que comparten la pantalla y la
+     exportación; la página sólo la llama. */
+  const p = leer("src/lib/estadisticas-digitales-db.ts");
+  const pag = leer(pagina);
   const c = leer(cliente);
   const barra = readFileSync("src/app/digitales/DigitalesSidebar.tsx", "utf8");
   check("PANT-B", /armarEstadisticas\(/.test(p) && /resolverRango\(/.test(p),
@@ -240,7 +251,7 @@ if (existsSync(pagina) && existsSync(cliente)) {
     "la pantalla bloquea por plan cada bloque que no es de Free");
   check("PANT-D2", !/puedeVer\(tier, "posventa"\)/.test(c) && /<Posventa p=\{posventa\} \/>/.test(c),
     "lo de después de la venta se dibuja sin candado: es de todos");
-  check("PANT-E", /<BotonVolver/.test(p), "tiene botón de volver");
+  check("PANT-E", /<BotonVolver/.test(pag), "tiene botón de volver");
   check("PANT-F", /href: "\/digitales\/estadisticas"/.test(barra), "está en la barra lateral");
   check("PANT-G", /Disponible desde/.test(c), "un bloque bloqueado dice desde qué plan se ve");
   check("PANT-H", /timeZone: AR_TZ, weekday: "short", hour: "numeric", hourCycle: "h23"/.test(p),
