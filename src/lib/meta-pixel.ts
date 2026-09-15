@@ -6,6 +6,15 @@
 // `storeConfig.analytics.facebookPixelId` y mide a los compradores de esa
 // tienda. Son dos pixeles distintos, de dos dueños distintos.
 
+/** El host de la plataforma, con y sin `www`, y `localhost` en desarrollo. */
+export function esHostDeLaPlataforma(host: string): boolean {
+  const h = host.toLowerCase().split(":")[0];
+  if (h === "localhost" || h === "127.0.0.1") return true;
+  let propio = "tiendaapps.com";
+  try { propio = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com").hostname.replace(/^www./, ""); } catch { /* el valor por defecto */ }
+  return h === propio || h === `www.${propio}`;
+}
+
 /** Único lugar donde se lee el ID. Vacío o ausente = pixel apagado, sin romper nada. */
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID?.trim() || null;
 
@@ -47,11 +56,25 @@ export const RUTAS_EXCLUIDAS_PIXEL = [
   // pidiendo asistencia no tiene que quedar etiquetada en un sistema
   // publicitario. Decisión explícita, no la revuelvan sin preguntar.
   "/canasta",
+  // La página de venta de un producto digital, su checkout y su gracias: ahí
+  // vive el píxel de la vendedora (ver `lib/medicion-digital`). Hasta el
+  // 15/09/26 no estaba en la lista y el nuestro cargaba encima.
+  "/p",
 ] as const;
 
-/** `true` si en esta ruta corresponde cargar el pixel de plataforma. */
-export function pixelHabilitadoEn(pathname: string): boolean {
+/**
+ * `true` si en esta ruta corresponde cargar el pixel de plataforma.
+ *
+ * ⚠️ `host` es lo que el navegador muestra en la barra. Un subdominio
+ * (`mitienda.tiendaapps.com`) o un dominio propio llegan REESCRITOS por el
+ * middleware a `/tienda/...` o `/p/...`, pero el navegador sigue viendo `/`:
+ * mirar sólo la ruta no alcanza. Si el host no es el nuestro, la página es de
+ * un comerciante o de una vendedora digital, y el píxel de plataforma no va.
+ * Sin `host` (servidor, o antes de montar) se mira sólo la ruta, como antes.
+ */
+export function pixelHabilitadoEn(pathname: string, host?: string | null): boolean {
   if (!META_PIXEL_ID) return false;
+  if (host && !esHostDeLaPlataforma(host)) return false;
   // Comparación por segmento, no por texto suelto: si no, el prefijo "/tienda"
   // se comería "/tiendas" (el directorio público, que sí es de plataforma).
   return !RUTAS_EXCLUIDAS_PIXEL.some(

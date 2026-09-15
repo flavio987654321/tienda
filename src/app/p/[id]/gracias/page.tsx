@@ -6,6 +6,8 @@ import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
 import GraciasClient from "./GraciasClient";
+import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
+import { medicionDeLaTienda } from "@/lib/medicion-digital";
 
 /** Lo más que puede llevar una orden de un embudo, con el doble de margen. */
 const TECHO_DE_UNA_ORDEN =
@@ -53,7 +55,7 @@ export default async function Gracias({ params, searchParams }: Props) {
       id: true, name: true, paginaVenta: true,
       store: {
         select: {
-          isPublished: true,
+          isPublished: true, storeConfig: true,
           owner: { select: { role: true, name: true } },
         },
       },
@@ -96,6 +98,12 @@ export default async function Gracias({ params, searchParams }: Props) {
         style={variablesDePagina(pagina) as React.CSSProperties}
         className="min-h-screen overflow-x-clip [overflow-wrap:anywhere] bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased"
       >
+        {/* PageView acá; Purchase lo dispara GraciasClient cuando la compra se
+            confirma de verdad, una vez por orden. Ver `lib/medicion-digital`. */}
+        {(() => {
+          const m = medicionDeLaTienda(fila.store.storeConfig);
+          return <StoreTrackingScripts facebookPixelId={m.pixelId} googleAnalyticsId={m.gaId} clarityProjectId={m.clarityId} />;
+        })()}
         <GraciasClient
           productoId={fila.id}
           nombre={fila.name}

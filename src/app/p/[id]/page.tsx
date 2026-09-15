@@ -6,6 +6,8 @@ import { normalizarContenido } from "@/lib/pagina-venta";
 import PaginaDeVenta, { type ProductoParaPagina } from "@/components/digitales/PaginaDeVenta";
 import PaginaEnVivo from "./PaginaEnVivo";
 import VisitaDigital from "./VisitaDigital";
+import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
+import { medicionDeLaTienda, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 
 export const runtime = "nodejs";
@@ -46,7 +48,7 @@ async function loQueSeMuestra(id: string) {
     select: {
       id: true, name: true, description: true, price: true, comparePrice: true,
       images: true, isActive: true, paginaVenta: true,
-      store: { select: { ownerId: true, name: true, whatsappNumber: true } },
+      store: { select: { ownerId: true, name: true, whatsappNumber: true, storeConfig: true } },
       hijos: {
         where: { deletedAt: null, rolDigital: "BONO", isActive: true },
         orderBy: { createdAt: "asc" },
@@ -169,6 +171,20 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
           mirándose. Un borrador tampoco cuenta —lo ve sólo ella—, y el servidor
           lo descarta igual; `apagado` sólo ahorra el ping. */}
       <VisitaDigital paso="pagina" productoId={fila.id} apagado={!fila.isActive} />
+      {/* El píxel de Meta, GA y Clarity que la dueña pegó en Configuración:
+          PageView y ViewContent. Sólo en la página publicada: un borrador lo
+          ve ella sola y medirlo es medirse. Ver `lib/medicion-digital`. */}
+      {fila.isActive && (() => {
+        const m = medicionDeLaTienda(fila.store.storeConfig);
+        return (
+          <StoreTrackingScripts
+            facebookPixelId={m.pixelId}
+            googleAnalyticsId={m.gaId}
+            clarityProjectId={m.clarityId}
+            viewContent={{ contentId: fila.id, value: fila.price, currency: MONEDA_DIGITAL }}
+          />
+        );
+      })()}
       <PaginaDeVenta {...datos} />
     </div>
   );

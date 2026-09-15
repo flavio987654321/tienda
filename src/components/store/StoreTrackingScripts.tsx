@@ -15,7 +15,7 @@ const CURRENCY_RE = /^[A-Z]{3}$/;
 const EM_HASH_RE = /^[a-f0-9]{64}$/;
 
 export function StoreTrackingScripts({
-  googleAnalyticsId, facebookPixelId, clarityProjectId, viewContent, purchase,
+  googleAnalyticsId, facebookPixelId, clarityProjectId, viewContent, initiateCheckout, purchase,
 }: {
   googleAnalyticsId?: string;
   facebookPixelId?: string;
@@ -23,6 +23,8 @@ export function StoreTrackingScripts({
   clarityProjectId?: string;
   /** Producto que se está viendo — dispara ViewContent (además del PageView de siempre). */
   viewContent?: { contentId: string; value: number; currency: string };
+  /** Se abrió la pantalla de pago de un producto — dispara InitiateCheckout. Lo usa el checkout digital. */
+  initiateCheckout?: { contentId: string; value: number; currency: string };
   /** Compra recién confirmada — dispara Purchase. `emHash` (SHA-256 del email del comprador,
    * calculado en el servidor) habilita coincidencias avanzadas sin exponer el email en el navegador. */
   purchase?: { eventId: string; value: number; currency: string; emHash?: string };
@@ -36,6 +38,8 @@ export function StoreTrackingScripts({
 
   const vc = viewContent && CONTENT_ID_RE.test(viewContent.contentId) && CURRENCY_RE.test(viewContent.currency) && Number.isFinite(viewContent.value)
     ? viewContent : null;
+  const ic = initiateCheckout && CONTENT_ID_RE.test(initiateCheckout.contentId) && CURRENCY_RE.test(initiateCheckout.currency) && Number.isFinite(initiateCheckout.value)
+    ? initiateCheckout : null;
   const purch = purchase && CONTENT_ID_RE.test(purchase.eventId) && CURRENCY_RE.test(purchase.currency) && Number.isFinite(purchase.value)
     ? purchase : null;
   const emHash = purch?.emHash && EM_HASH_RE.test(purch.emHash) ? purch.emHash : null;
@@ -80,6 +84,7 @@ export function StoreTrackingScripts({
               fbq('init', '${validPixelId}');
               fbq('track', 'PageView');
               ${vc ? `fbq('track', 'ViewContent', {content_ids: ['${vc.contentId}'], content_type: 'product', value: ${vc.value}, currency: '${vc.currency}'});` : ""}
+              ${ic ? `fbq('track', 'InitiateCheckout', {content_ids: ['${ic.contentId}'], content_type: 'product', value: ${ic.value}, currency: '${ic.currency}'});` : ""}
               ${purch ? `${emHash ? `fbq('set', 'userData', {em: '${emHash}'});` : ""}
               fbq('track', 'Purchase', {value: ${purch.value}, currency: '${purch.currency}'}, {eventID: '${purch.eventId}'});` : ""}`}
           </Script>

@@ -9,6 +9,8 @@ import { totalDeLaCompra, type ItemDeCompra } from "@/lib/compra-digital";
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import CheckoutClient from "./CheckoutClient";
 import VisitaDigital from "../VisitaDigital";
+import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
+import { medicionDeLaTienda, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -51,7 +53,7 @@ export default async function PantallaDePago({ params }: Props) {
       rolDigital: true, paginaVenta: true, images: true, isActive: true,
       store: {
         select: {
-          isPublished: true, mpAccessToken: true, ownerId: true,
+          isPublished: true, mpAccessToken: true, ownerId: true, storeConfig: true,
           owner: { select: { role: true, name: true } },
         },
       },
@@ -135,6 +137,19 @@ export default async function PantallaDePago({ params }: Props) {
         {/* El segundo escalón del embudo: abrió el checkout. Con la previa de la
             dueña apagado; el servidor la descartaría igual. */}
         <VisitaDigital paso="pagar" productoId={fila.id} apagado={!seLePuedeVender} />
+        {/* PageView + InitiateCheckout, con el precio del principal. Sólo cuando
+            de verdad se puede comprar: la previa de la dueña no es un checkout. */}
+        {seLePuedeVender && (() => {
+          const m = medicionDeLaTienda(fila.store.storeConfig);
+          return (
+            <StoreTrackingScripts
+              facebookPixelId={m.pixelId}
+              googleAnalyticsId={m.gaId}
+              clarityProjectId={m.clarityId}
+              initiateCheckout={{ contentId: fila.id, value: fila.price, currency: MONEDA_DIGITAL }}
+            />
+          );
+        })()}
         <CheckoutClient
           productoId={fila.id}
           nombre={fila.name}

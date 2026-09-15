@@ -56,6 +56,11 @@ for (const ruta of [
   "/canasta/campana",
   "/canasta/terminos",
   "/canasta/seguimiento/abc123",
+  // La página de venta de un producto digital, su checkout y su gracias: ahí
+  // vive el píxel de la vendedora. Hasta el 15/09/26 no estaban acá.
+  "/p/ckabc123",
+  "/p/ckabc123/pagar",
+  "/p/ckabc123/gracias",
 ]) {
   chequear(ruta, pixelHabilitadoEn(ruta) === false);
 }
@@ -96,6 +101,20 @@ chequear("/videos (empieza con /v)", pixelHabilitadoEn("/videos") === true);
 chequear("/canastas", pixelHabilitadoEn("/canastas") === true);
 chequear("/canasta-regalo", pixelHabilitadoEn("/canasta-regalo") === true);
 chequear("/seguimientos", pixelHabilitadoEn("/seguimientos") === true);
+
+// Con el host: un subdominio o un dominio propio llegan reescritos y el
+// navegador ve "/". Sólo el host dice que la página es de una vendedora.
+process.env.NEXT_PUBLIC_APP_URL = "https://www.tiendaapps.com";
+console.log("\nPor host — en un dominio que no es el nuestro, el pixel NO debe cargar:");
+chequear("/ en mitienda.tiendaapps.com (subdominio)", pixelHabilitadoEn("/", "mitienda.tiendaapps.com") === false);
+chequear("/ en midominio.com.ar (dominio propio)", pixelHabilitadoEn("/", "midominio.com.ar") === false);
+chequear("/pagar en midominio.com.ar", pixelHabilitadoEn("/pagar", "midominio.com.ar") === false);
+console.log("\nPor host — en el nuestro sí:");
+chequear("/precios en www.tiendaapps.com", pixelHabilitadoEn("/precios", "www.tiendaapps.com") === true);
+chequear("/precios en tiendaapps.com (apex)", pixelHabilitadoEn("/precios", "tiendaapps.com") === true);
+chequear("/ en localhost:3000", pixelHabilitadoEn("/", "localhost:3000") === true);
+chequear("/tienda/x en www.tiendaapps.com sigue excluida por ruta", pixelHabilitadoEn("/tienda/x", "www.tiendaapps.com") === false);
+chequear("/p/abc en www.tiendaapps.com sigue excluida por ruta", pixelHabilitadoEn("/p/abc", "www.tiendaapps.com") === false);
 
 console.log(
   fallos === 0

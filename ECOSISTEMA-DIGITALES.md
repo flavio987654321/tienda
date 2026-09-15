@@ -5836,3 +5836,51 @@ chequeos UTM-K a UTM-P y CSV-I a CSV-K. Mirado en 1000 y 360.
 
 De paso: las claves de las filas de la tabla tenían un byte NUL literal
 adentro (el archivo era "binario" para grep); ahora es el escape `\u0000`.
+
+---
+
+## Marketing, paso 1: el píxel que se guardaba y nadie leía — 15/09/26
+
+Flavio pidió revisar Marketing ("está re flojo"). Antes de agregar nada se
+miró qué había, y apareció el hueco más grave de todos:
+
+⚠️ **Configuración → Meta guardaba el píxel de Meta, GA y Clarity y NINGUNA
+página digital lo leía.** `StoreTrackingScripts` estaba montado sólo en
+`/tienda/...`. Alguien pegaba su píxel, corría anuncios, y Meta no veía ni un
+PageView. El plan decía "queda cubierta sola" desde el 01/09 y era falso.
+
+Y el segundo, del mismo tema: el píxel **de la plataforma** (el nuestro, en el
+root layout) sí cargaba en `/p/...` —no estaba en `RUTAS_EXCLUIDAS_PIXEL`— y
+en un dominio propio la ruta que ve el navegador es `/`, así que tampoco lo
+excluía. Con el de la vendedora ahora puesto, los dos convivirían y
+`fbq('track','Purchase')` le pegaría a los dos.
+
+### Lo que quedó
+
+- `lib/medicion-digital.ts`: lee los tres IDs de `storeConfig` (una sola
+  función, que ahora usa también Configuración) y `marcarCompraEnElNavegador`.
+- Los tres pasos miden: `/p/[id]` PageView + ViewContent (sólo publicada; la
+  previa del editor no); `/pagar` PageView + InitiateCheckout (sólo cuando se
+  puede comprar); `/gracias` PageView, y **Purchase cuando la compra se
+  confirma de verdad**: la persona vuelve de Mercado Pago antes del aviso de
+  pago, así que Purchase sale del navegador cuando `estado-compra` dice
+  "listo", una sola vez por orden (el navegador se acuerda), con el id de la
+  orden como `eventID` por si un día se suma la API de conversiones.
+- `estado-compra` devuelve el `total` con "listo". **Sin el correo
+  hasheado**: es una ruta pública por id de orden y un hash de un correo se
+  revierte por diccionario; el chequeo GRA-E de `compra-digital` lo frenó.
+  Las coincidencias avanzadas, si algún día, van por el servidor.
+- `StoreTrackingScripts` ganó el prop opcional `initiateCheckout` (tiendas
+  no lo usa; no cambia nada ahí), con la misma lista blanca que ViewContent.
+- Píxel de plataforma: `/p` en la lista de excluidas, y `pixelHabilitadoEn`
+  ahora también mira el **host**: si no es el nuestro (subdominio o dominio
+  propio), no carga. `MetaPixel` toma el host con `useSyncExternalStore`
+  recién en el navegador. Esto arregla de paso las tiendas con dominio
+  propio, donde el nuestro también cargaba encima del del comerciante.
+
+Chequeos: `medicion-digital.check.ts` (20) y `meta-pixel.check.ts` con las
+rutas digitales y los hosts. En local no se pudo ver en vivo: el único
+producto es un borrador y un borrador no mide. Se prueba con la compra real.
+
+🔲 Marketing tiene que mostrar el estado del píxel ("puesto / falta") con el
+link a Configuración, cuando se arme la pantalla como centro.

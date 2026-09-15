@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth-session";
+import { medicionDeLaTienda } from "@/lib/medicion-digital";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import BotonVolver from "../BotonVolver";
@@ -21,21 +22,6 @@ import ConfiguracionClient from "./ConfiguracionClient";
  * es un componente de servidor que le pasa sus datos al del navegador, así que
  * todo lo que se lea acá termina viajando adentro del HTML.
  */
-/** Los tres IDs de medición que guarda `storeConfig`, o vacíos. */
-function leerAnalytics(raw: string | null | undefined): { pixelId: string; gaId: string; clarityId: string } {
-  try {
-    const c = JSON.parse(raw || "{}") as { analytics?: Record<string, unknown> };
-    const a = c.analytics ?? {};
-    return {
-      pixelId: typeof a.facebookPixelId === "string" ? a.facebookPixelId : "",
-      gaId: typeof a.googleAnalyticsId === "string" ? a.googleAnalyticsId : "",
-      clarityId: typeof a.clarityProjectId === "string" ? a.clarityProjectId : "",
-    };
-  } catch {
-    return { pixelId: "", gaId: "", clarityId: "" };
-  }
-}
-
 export default async function ConfiguracionPage({
   searchParams,
 }: {
@@ -81,7 +67,7 @@ export default async function ConfiguracionPage({
   /* Los IDs de medición viven adentro de `storeConfig`, que es un JSON. Un
      config roto no puede tumbar la pantalla entera: se lee lo que se puede y lo
      demás queda vacío. */
-  const medicion = leerAnalytics(store?.storeConfig);
+  const medicion = medicionDeLaTienda(store?.storeConfig);
 
   /* Cuántas páginas hay publicadas, para el aviso de cambiar la dirección: si
      hay links compartidos por ahí, cambiarla los rompe. Se cuenta acá y no se

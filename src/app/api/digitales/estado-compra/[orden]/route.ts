@@ -45,7 +45,7 @@ export async function GET(
   const fila = await prisma.order.findUnique({
     where: { id: orden },
     select: {
-      status: true,
+      status: true, total: true,
       store: { select: { owner: { select: { role: true } } } },
       items: {
         select: {
@@ -85,5 +85,8 @@ export async function GET(
 
   if (archivos.length === 0) return NextResponse.json({ estado: "esperando" });
 
-  return NextResponse.json({ estado: "listo", archivos });
+  /* Con "listo" viaja el total, para medir la compra en el navegador (ver
+     `marcarCompraEnElNavegador`). Nada de la persona: esta ruta es pública
+     por id de orden, y hasta un correo hasheado se revierte por diccionario. */
+  return NextResponse.json({ estado: "listo", archivos, total: fila.total });
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Download, CheckCircle2, Mail, AlertTriangle, Clock } from "lucide-react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
+import { marcarCompraEnElNavegador } from "@/lib/medicion-digital";
 
 /**
  * Lo que se ve después de pagar: la espera, los archivos y una última oferta.
@@ -76,6 +77,11 @@ export default function GraciasClient(p: Props) {
         if (d.estado === "listo" && Array.isArray(d.archivos)) {
           setArchivos(d.archivos);
           setEstado("listo");
+          /* La compra está confirmada: recién ahora se mide (Purchase en Meta,
+             purchase en GA), una vez por orden en este navegador. */
+          if (typeof d.total === "number") {
+            marcarCompraEnElNavegador({ ordenId: p.ordenId!, total: d.total });
+          }
           return; // se corta solo: ya no hay nada que esperar
         }
         if (d.estado === "cancelado" || d.estado === "desconocido") {

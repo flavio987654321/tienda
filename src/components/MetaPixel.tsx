@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { META_PIXEL_ID, pixelHabilitadoEn } from "@/lib/meta-pixel";
@@ -13,11 +13,19 @@ import { META_PIXEL_ID, pixelHabilitadoEn } from "@/lib/meta-pixel";
  * En una tienda de un comerciante esto no renderiza nada: ahí manda
  * `StoreTrackingScripts`, que es el pixel del dueño de la tienda.
  */
+/** El host no cambia mientras la página vive: no hay nada a qué suscribirse. */
+const nadaQueEscuchar = () => () => {};
+
 export default function MetaPixel() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const habilitado = pixelHabilitadoEn(pathname);
+  /* El host se sabe recién en el navegador: en un dominio propio la ruta es
+     `/` y sólo el host dice que es la página de una vendedora. Hasta saberlo
+     no se carga nada; el script es `afterInteractive`, así que no se pierde
+     ningún PageView por esperar al montaje. */
+  const host = useSyncExternalStore(nadaQueEscuchar, () => window.location.host, () => null);
+  const habilitado = host !== null && pixelHabilitadoEn(pathname, host);
 
   // El <Script> de abajo dispara el PageView de la primera carga. El efecto se
   // ocupa SOLO de las navegaciones que vienen después: en Next el cambio de
