@@ -18,19 +18,34 @@ import { Copy, Check, ExternalLink } from "lucide-react";
  * pensar que la de tiendaapps se apagó — y no se apaga nunca, en ningún plan.
  * Esa es la promesa de la Fase 5 bis y se rompe con una omisión.
  *
+ * ── Y qué es cada una ──────────────────────────────────────────────────────
+ *
+ * Dos direcciones sin nombre son dos renglones iguales, y una tercera —la
+ * del pago— sería un misterio. Cada renglón lleva un rótulo y una línea de
+ * para qué sirve: la página es la que se reparte; el pago directo es para
+ * quien ya dijo que sí por WhatsApp y no necesita leer nada más. Es lo que
+ * la competencia muestra en su inicio ("tu tienda" / "tu checkout") y acá
+ * faltaba.
+ *
  * Este es el único pedazo del panel que necesita JavaScript. El resto —el
  * selector incluido— son enlaces, así que el panel se puede usar igual si el
  * navegador tarda en despertar.
  */
 
+/** La ruta del pago directo, colgada de la dirección del producto. */
+export const RUTA_DE_PAGO = "/pagar";
+
 export default function Direcciones({
   slug,
   dominioBase,
   dominioPropio,
+  conPago = false,
 }: {
   slug: string | null;
   dominioBase: string;
   dominioPropio: string | null;
+  /** Agrega el renglón del pago directo, sobre la dirección principal. */
+  conPago?: boolean;
 }) {
   const [copiado, setCopiado] = useState<string | null>(null);
 
@@ -45,20 +60,33 @@ export default function Direcciones({
     }
   }
 
-  const filas = [
-    ...(dominioPropio ? [{ texto: dominioPropio, tuyo: true }] : []),
-    ...(slug ? [{ texto: `${slug}.${dominioBase}`, tuyo: false }] : []),
+  const principal = dominioPropio ?? (slug ? `${slug}.${dominioBase}` : null);
+  const filas: { texto: string; tuyo: boolean; rotulo: string; paraQue: string }[] = [
+    ...(dominioPropio ? [{ texto: dominioPropio, tuyo: true, rotulo: "Tu dominio", paraQue: "Tu página de venta, con tu marca. Es la que va en la bio, en los anuncios y en las historias." }] : []),
+    ...(slug ? [{
+      texto: `${slug}.${dominioBase}`, tuyo: false,
+      rotulo: dominioPropio ? "Dirección de TiendaApps" : "Tu página",
+      paraQue: dominioPropio
+        ? "Sigue andando siempre, en todos los planes. Si el dominio deja de estar, la gente llega igual por acá."
+        : "Tu página de venta. Es la que va en la bio, en los anuncios y en las historias.",
+    }] : []),
+    ...(conPago && principal ? [{
+      texto: `${principal}${RUTA_DE_PAGO}`, tuyo: false, rotulo: "Directo al pago",
+      paraQue: "Saltea la página y abre el pago. Para quien ya te dijo que sí por WhatsApp y no necesita leer nada más.",
+    }] : []),
   ];
 
   if (filas.length === 0) return null;
 
   return (
     <div className="space-y-1.5">
-      {filas.map(({ texto, tuyo }) => (
+      {filas.map(({ texto, tuyo, rotulo, paraQue }) => (
         <div
           key={texto}
-          className="flex items-center gap-2 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-950/50 px-3 py-2"
+          className="rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-950/50 px-3 py-2"
         >
+          <p className="text-[10.5px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">{rotulo}</p>
+          <div className="flex items-center gap-2">
           {/* `min-w-0` + `break-all`: una dirección larga en 360 se llevaba
               puestos los dos botones de la derecha. */}
           <span
@@ -93,6 +121,8 @@ export default function Direcciones({
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
+          </div>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{paraQue}</p>
         </div>
       ))}
     </div>

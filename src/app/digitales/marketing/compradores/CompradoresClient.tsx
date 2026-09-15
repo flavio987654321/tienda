@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, Mail, Send, ArrowRight } from "lucide-react";
 import { validarCorreoNuevo, saludo, ASUNTO_MAX, CUERPO_MAX } from "@/lib/correos-compradores";
+import { PLANTILLAS_DE_CORREO, correoDeLaPlantilla, CONSEJO_DE_CORREO } from "@/lib/plantillas-marketing";
+import ConsejoDeUso from "../../ConsejoDeUso";
 
 export type CorreoEnPantalla = {
   id: string;
@@ -58,6 +60,19 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
   const borrador = { asunto, cuerpo, productId: productId || null, enlaceProductId: enlaceProductId || null };
   const problema = asunto || cuerpo ? (() => { const r = validarCorreoNuevo(borrador); return r.ok ? null : r.problema; })() : null;
   const enlazado = productos.find((p) => p.id === enlaceProductId) ?? null;
+
+  /* Una plantilla carga asunto y mensaje con el nombre del producto elegido
+     (o del primero, si es "a todos"), y sugiere el botón cuando conviene.
+     Es un borrador: se cambia antes de mandar. */
+  function usarPlantilla(clave: string) {
+    const p = PLANTILLAS_DE_CORREO.find((x) => x.clave === clave);
+    if (!p) return;
+    const producto = productos.find((x) => x.id === productId) ?? productos[0] ?? null;
+    const c = correoDeLaPlantilla(p, producto?.name ?? null);
+    setAsunto(c.asunto); setCuerpo(c.cuerpo);
+    setEnlaceProductId(p.conBoton && producto ? producto.id : "");
+    setError(null);
+  }
 
   async function seguirHasta(id: string, primero: Resultado): Promise<Resultado> {
     let total = { ...primero };
@@ -137,6 +152,24 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
       {/* ── Escribir ──────────────────────────────────────────────────────── */}
       {esPro && (
         <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm space-y-4">
+          {/* Tres mails de ejemplo: para qué se usa esto, con el texto ya
+              escrito. Un click lo carga y se cambia antes de mandar. */}
+          <div>
+            <p className="text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Empezá de un ejemplo</p>
+            <div className="flex flex-wrap gap-2">
+              {PLANTILLAS_DE_CORREO.map((p) => (
+                <button
+                  key={p.clave}
+                  type="button"
+                  onClick={() => usarPlantilla(p.clave)}
+                  className="rounded-full border border-gray-200 panel-oscuro:border-gray-700 px-3 py-1.5 text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:bg-orange-50/60 panel-oscuro:hover:bg-orange-500/10"
+                >
+                  {p.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="para" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Para</label>
@@ -180,6 +213,8 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
               <p className="mt-4 text-[10.5px] text-gray-400">Recibís este mail porque le compraste a {vendedor?.trim() || "…"}. · No quiero recibir más mails</p>
             </div>
           )}
+
+          <ConsejoDeUso>{CONSEJO_DE_CORREO}</ConsejoDeUso>
 
           {problema && <p className="text-sm font-medium text-red-600">{problema}</p>}
           {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}

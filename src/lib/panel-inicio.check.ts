@@ -217,7 +217,7 @@ check("PAN-V",
    propio haría pensar que la de tiendaapps se apagó, y no se apaga nunca. */
 check("PAN-W",
   /dominioPropio \? \[\{ texto: dominioPropio/.test(direcciones) &&
-  /slug \? \[\{ texto: `\$\{slug\}\.\$\{dominioBase\}`/.test(direcciones),
+  /slug \? \[\{\s*texto: `\$\{slug\}\.\$\{dominioBase\}`/.test(direcciones),
   "se muestran el dominio propio y la dirección de siempre, no una sola");
 
 /* La operación real es COPIARLA: se pega en un anuncio o en un mensaje, y en un

@@ -6119,3 +6119,74 @@ decidirlo aparte.
 
 `cupones-digitales.check.ts` +2 (RUTA-B2, RUTA-B3). 102 chequeos, tsc y
 eslint limpios.
+
+---
+
+## Ejemplos y consejos en Marketing, y qué es cada dirección — 15/09/26
+
+Flavio: *"todo esto que corregiste y agregaste, ¿da ejemplos o consejos de
+cómo se usa y para qué es?"* A medias: cada pantalla tenía una bajada y
+pistas chicas, pero ninguna decía PARA QUÉ ni mostraba una bien hecha.
+
+### Lo que quedó (`lib/plantillas-marketing`, puro y chequeado)
+
+- **Cupones**: "Tres cupones que funcionan", arriba del formulario, cada
+  uno con su por qué y un click que lo carga (HOY10 · 10 % · 3 días, para
+  quien pregunta y no se decide; VOLVE20 · 20 % · sin vencimiento, para
+  quien ya compró; LANZAMIENTO · 30 % · 7 días · 50 usos). Cada idea pasa
+  por `validarCuponNuevo`: lo que se sugiere se puede crear. Y un consejo
+  adentro del formulario: porcentaje para lo caro, pesos para lo barato,
+  y siempre con vencimiento o tope.
+- **Mail a compradores**: tres plantillas ("Salió el siguiente" con botón,
+  "Actualicé el archivo", "¿Cómo te fue?") que cargan asunto y mensaje con
+  el nombre del producto elegido; pasan por `validarCorreoNuevo` y no
+  arrancan con "Hola" (el saludo con nombre lo pone el envío). Consejo:
+  uno cada tanto y con algo adentro, porque quien se baja no vuelve.
+- **Enlaces**: consejo de cuáles venden (bio de Instagram y WhatsApp: el
+  link que se toca cuando ya te vieron) y para qué sirve el nombre de
+  campaña (comparar dos cosas en el mismo canal).
+- **Medición**: cómo saber si anda (Meta Pixel Helper: PageView y
+  ViewContent en la página, InitiateCheckout en el pago, Purchase en
+  Gracias después de una compra real).
+- `ConsejoDeUso`: el mismo foquito amarillo de Estadísticas, para que se
+  lea como una sola voz. Uno por pantalla, con la razón adentro, sin
+  porcentajes inventados (`plantillas-marketing.check.ts` lo vigila).
+
+### Inicio: qué es cada dirección
+
+La competencia muestra "tu tienda" y "tu checkout" en su inicio. Acá
+`Direcciones` mostraba una o dos direcciones sin nombre. Ahora cada renglón
+lleva rótulo y para qué sirve —"Tu dominio" / "Tu página" (la que va en la
+bio y en los anuncios), "Dirección de TiendaApps" (sigue andando siempre,
+en todos los planes) y **"Directo al pago"** (`<dirección>/pagar`: saltea
+la página, para quien ya dijo que sí por WhatsApp)—. El pago directo sólo
+en Inicio (`conPago`), sobre la dirección principal; `/pagar` resuelve en
+subdominio y en dominio propio porque el middleware conserva la ruta.
+
+### Cambiar el subdominio o el dominio, y los links de Marketing
+
+Preguntado: *"¿qué pasa con los links de Marketing cuando se cambia el
+dominio?"* Los enlaces para compartir NO se guardan: se arman al abrir la
+pantalla desde `direccionBase` (dominio propio > subdominio > /p/id), así
+que al cambiar cualquiera de los dos, la pantalla muestra los nuevos al
+instante. Lo que ya se repartió con la dirección VIEJA:
+
+- Subdominio cambiado → la vieja deja de funcionar (la pantalla de
+  Dirección lo advierte en negrita antes de guardar). No hay redirección.
+- Dominio propio agregado → suma, no reemplaza: el subdominio sigue.
+- Dominio propio con Pro caído → redirige 307 al subdominio con la misma
+  ruta y query (los `?utm` llegan enteros).
+- El botón del mail a compradores guarda el link tal como salió, y está
+  bien: ese mail ya se mandó.
+
+### La jerarquía de la barra
+
+Se comparó con la competencia (Inicio · Estadísticas · Ventas · Marketing
+con árbol · Personalización · Diseño de ebooks · Tutoriales · Mi cuenta ·
+Configuraciones). La nuestra queda como está: Inicio · Productos · Ventas ·
+Carritos · Estadísticas · Marketing · Configuración · Mi cuenta. Productos
+primero porque sin producto no hay nada; Ventas antes de Estadísticas
+porque "¿vendí?" es la pregunta diaria; Marketing sin árbol porque el riel
+cerrado no tiene lugar (ver `DigitalesSidebar`). Lo que ellos tienen y
+nosotros no: **Tutoriales**. 🔲 Pendiente de decidir: una pantalla de
+"Cómo se usa" o videos cortos por sección.

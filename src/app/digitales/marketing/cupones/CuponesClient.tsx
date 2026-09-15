@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Ticket, Trash2, Power } from "lucide-react";
 import { validarCuponNuevo, normalizarCodigo, textoDelDescuento, PORCENTAJE_MAXIMO, type TipoDeCupon } from "@/lib/cupones-digitales";
+import { IDEAS_DE_CUPON, cuponDeLaIdea, CONSEJO_DE_CUPON } from "@/lib/plantillas-marketing";
+import ConsejoDeUso from "../../ConsejoDeUso";
 
 export type CuponEnPantalla = {
   id: string;
@@ -34,10 +36,12 @@ const CLASE_INPUT = "w-full px-4 py-3 rounded-2xl border border-gray-200 panel-o
  * están en `validarCuponNuevo`, la misma función que corre la ruta: acá se
  * avisa antes de mandar, allá se decide.
  */
-export default function CuponesClient({ cupones, productos, tope }: {
+export default function CuponesClient({ cupones, productos, tope, hoy }: {
   cupones: CuponEnPantalla[];
   productos: { id: string; name: string }[];
   tope: number;
+  /** El día de hoy en Argentina, "YYYY-MM-DD": para calcular el vencimiento de las ideas. */
+  hoy: string;
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(cupones.length === 0);
@@ -53,6 +57,18 @@ export default function CuponesClient({ cupones, productos, tope }: {
   const enVuelo = useRef(false);
 
   const borrador = { codigo, tipo, valor, productId: productId || undefined, venceAt, topeUsos };
+
+  /* Una idea carga el formulario y lo abre; la persona la cambia antes de
+     crear. Es un borrador, no un botón de "crear": el código y el número
+     los tiene que ver ella. */
+  function usarIdea(clave: string) {
+    const idea = IDEAS_DE_CUPON.find((i) => i.clave === clave);
+    if (!idea) return;
+    const c = cuponDeLaIdea(idea, hoy);
+    setCodigo(c.codigo); setTipo(c.tipo); setValor(c.valor); setVenceAt(c.venceAt); setTopeUsos(c.topeUsos); setProductId("");
+    setError(null);
+    setAbierto(true);
+  }
   const problema = codigo || valor ? (() => { const r = validarCuponNuevo(borrador); return r.ok ? null : r.problema; })() : null;
 
   async function crear() {
@@ -100,6 +116,35 @@ export default function CuponesClient({ cupones, productos, tope }: {
 
   return (
     <div className="space-y-4">
+      {/* ── Tres ideas ─────────────────────────────────────────────────────
+          Para qué se usa un cupón, con el ejemplo armado: un click lo carga
+          en el formulario. Van SIEMPRE, no sólo en vacío: la segunda idea
+          sirve recién cuando ya hay ventas. */}
+      <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+        <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Tres cupones que funcionan</p>
+        <p className="mt-0.5 mb-3 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">Tocá uno y queda cargado en el formulario para que lo cambies antes de crearlo.</p>
+        <ul className="grid gap-2 sm:grid-cols-3">
+          {IDEAS_DE_CUPON.map((i) => (
+            <li key={i.clave}>
+              <button
+                type="button"
+                onClick={() => usarIdea(i.clave)}
+                disabled={cupones.length >= tope}
+                className="h-full w-full rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 p-3.5 text-left transition-colors hover:border-orange-300 hover:bg-orange-50/60 panel-oscuro:hover:bg-orange-500/10 disabled:opacity-40"
+              >
+                <p className="text-[12.5px] font-bold text-gray-900 panel-oscuro:text-gray-100">{i.nombre}</p>
+                <p className="mt-1 font-mono text-[12px] font-black tracking-wider text-orange-600">
+                  {i.codigo} · {i.tipo === "PORCENTAJE" ? `${i.valor} %` : `$ ${i.valor}`}
+                  {i.diasDeVida !== null && ` · ${i.diasDeVida} días`}
+                  {i.topeUsos !== null && ` · ${i.topeUsos} usos`}
+                </p>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{i.porQue}</p>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* ── Crear ─────────────────────────────────────────────────────────── */}
       <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
         {!abierto ? (
@@ -152,6 +197,8 @@ export default function CuponesClient({ cupones, productos, tope }: {
                 </div>
               </div>
             </div>
+
+            <ConsejoDeUso>{CONSEJO_DE_CUPON}</ConsejoDeUso>
 
             {problema && <p className="text-sm font-medium text-red-600">{problema}</p>}
             {error && <p className="text-sm font-medium text-red-600">{error}</p>}

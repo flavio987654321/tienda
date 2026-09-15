@@ -5,6 +5,8 @@ import Link from "next/link";
 import { BarChart3, Loader2, Check } from "lucide-react";
 import { LARGO_ID_MEDICION, validarPixelId, validarGaId, validarClarityId } from "@/lib/tracking-ids";
 import type { Medicion } from "@/lib/medicion-digital";
+import { CONSEJO_DE_MEDICION } from "@/lib/plantillas-marketing";
+import ConsejoDeUso from "../../../ConsejoDeUso";
 
 /**
  * La medición de ESTE producto: su píxel de Meta, su GA, su Clarity.
@@ -118,6 +120,8 @@ export default function MedicionDelProducto({ productoId, actual, delaCuenta }: 
           Mide la página, el pago y la compra confirmada, con el id de este producto.
         </p>
       </div>
+
+      <ConsejoDeUso className="mt-4">{CONSEJO_DE_MEDICION}</ConsejoDeUso>
     </div>
   );
 }

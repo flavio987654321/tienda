@@ -298,6 +298,7 @@ export default async function DigitalesPage({
                     slug={elegido.slugDigital}
                     dominioBase={dominioBase}
                     dominioPropio={elegido.dominioPropio}
+                    conPago
                   />
                 ) : (
                   /* Sin dirección no se puede repartir nada, así que no alcanza

@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 import { MAX_CUPONES_POR_CUENTA, estadoDelCupon, type CuponDigitalPuro } from "@/lib/cupones-digitales";
+import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import BotonVolver from "../../BotonVolver";
 import CuponesClient, { type CuponEnPantalla } from "./CuponesClient";
 
@@ -80,7 +81,7 @@ export default async function CuponesPage() {
         </p>
       </div>
 
-      <CuponesClient cupones={cupones} productos={productos} tope={MAX_CUPONES_POR_CUENTA} />
+      <CuponesClient cupones={cupones} productos={productos} tope={MAX_CUPONES_POR_CUENTA} hoy={getArgentinaDayKey()} />
     </div>
   );
 }

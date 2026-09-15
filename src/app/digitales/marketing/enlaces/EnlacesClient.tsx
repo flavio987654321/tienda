@@ -6,6 +6,8 @@ import { AlertTriangle, BarChart3, ArrowRight, Tag } from "lucide-react";
 import { CANALES, direccionBase, enlaceParaCompartir, campaniaLimpia, type ProductoParaCompartir } from "@/lib/enlaces-compartir";
 import { PARAMETROS_PARA_META } from "@/lib/utm-digital";
 import BotonCopiar from "../../ventas/BotonCopiar";
+import { CONSEJO_DE_ENLACES } from "@/lib/plantillas-marketing";
+import ConsejoDeUso from "../../ConsejoDeUso";
 
 /**
  * La lista de canales con su link. Sin dirección: es una pantalla de copiar
@@ -128,6 +130,8 @@ export default function EnlacesClient({ productos, dominioPlataforma, appUrl }: 
           })}
         </ul>
       </div>
+
+      <ConsejoDeUso>{CONSEJO_DE_ENLACES}</ConsejoDeUso>
 
       {/* ── Anuncios en Meta ─────────────────────────────────────────────── */}
       <div className="rounded-3xl border border-orange-100 panel-oscuro:border-orange-500/20 bg-orange-50/60 panel-oscuro:bg-orange-500/10 p-5">
