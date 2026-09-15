@@ -5987,3 +5987,71 @@ dos columnas con default en Order), comparada contra la base real.
 
 🔲 Cupón automático en el mail de carrito abandonado ("volvé con 10 %").
 🔲 Cupones en Estadísticas: cuántas ventas con cupón y cuánto se descontó.
+
+---
+
+## Marketing, pasos 4 y 5: el order bump ya estaba, y el mail a compradores — 15/09/26
+
+### El order bump YA EXISTÍA
+
+El inventario del 15/09 anotó "4. Order bump: agregá X por $Y antes de
+pagar (el upsell es después)". Era falso: el upsell se ofrece **antes de
+pagar**, en el checkout ("Sumá a tu compra", un click, `CheckoutClient`),
+y si no lo tomó, otra vez en Gracias (el "agregado"). Lo que confundió fue
+la tarjeta de Marketing, que lo llamaba "Upsells post-compra". Se corrigió
+la tarjeta (ahora dice que se ofrece antes y después) y no se construyó
+nada: no hay que agregar una segunda oferta al lado de la que ya está.
+
+### Mail a tus compradores (Pro)
+
+Escribirle a todos los que compraron un producto —o cualquiera de la
+cuenta—: lanzar el siguiente, avisar que se actualizó el archivo, pedir
+una opinión. `/digitales/marketing/compradores`.
+
+⚠️ **El dominio de envío es nuestro y lo comparten todas las cuentas: una
+denuncia de spam la pagan todas.** De ahí cada regla:
+
+- Recibe **sólo quien PAGÓ** (`Order.status = CONFIRMED`, del producto
+  elegido o de la cuenta). Nunca una lista importada, ni pendientes, ni
+  canceladas. Uno por correo.
+- Sólo **Pro al día** (`isSubscriptionActive`, como el recordatorio de
+  carritos), y `MAX_CORREOS_POR_DIA` = 2 por cuenta.
+- Sale de NUESTRA dirección con el nombre de la vendedora adelante
+  (limpio de comillas y signos) y `replyTo` a su correo: le contestan a
+  ella. El cuerpo es texto plano escapado: nada de HTML de ella con
+  nuestro dominio.
+- **Baja en cada mail**, dos veces: el link del pie y las cabeceras
+  `List-Unsubscribe` / `List-Unsubscribe-Post` (el botón que Gmail pone al
+  lado del remitente). Token HMAC `<storeId>.<correo>.<firma>`, sin fila por
+  destinatario; no se puede dar de baja a un tercero sin la firma. La baja
+  es por (cuenta, correo) —`BajaCorreoDigital`—, no por campaña: quien se
+  baja no vuelve a recibir de esa cuenta. Los de baja no aparecen en
+  ningún número de la pantalla.
+- El GET de `/api/digitales/baja` NO da de baja: redirige a
+  `/correo/baja`, que tiene el botón (POST). Los escáneres de Gmail abren
+  los links solos. Mismo esquema y misma justificación que
+  `newsletter/baja` (anotada en `rutas-abiertas.check`).
+- El envío se retoma: página de 32 compradores ordenados por correo desde
+  el cursor, se le sacan las bajas, sale de a 8, y el cursor pasa al
+  último de la PÁGINA (una página entera de bajas también avanza). Cursor
+  guardado DESPUÉS de mandar; corte a los 8 s ANTES de otra página; la
+  pantalla sigue sola hasta terminar y si cerró la pestaña queda "Seguir
+  mandando" en el historial. Contadores con `increment`.
+- El botón opcional lleva a un producto propio con la etiqueta
+  `email / mail` y el asunto (sin acentos, con guiones) como campaña:
+  la venta que venga del mail se ve en Estadísticas → Campañas.
+- Vista previa en la pantalla ("Así les llega") con el saludo, el cuerpo,
+  el botón y el pie; confirmación con el número de personas antes de
+  mandar.
+
+Migración `20260915210000_correos_a_compradores` (`CorreoDigital`,
+`BajaCorreoDigital`), comparada contra la base real. `sendCorreoACompradoresEmail`
+en `resend.ts`. `correos-compradores.check.ts` (37). Build local ok. Mirado
+en 720 y 360, y el mail con y sin botón / nombre.
+
+🔲 El recordatorio de carrito abandonado no mira `BajaCorreoDigital`: es
+   un mail sobre SU compra a medias, no una novedad, pero quien pidió no
+   recibir más de una cuenta quizás tampoco quiera ése. Decidir.
+🔲 Rebotes duros y denuncias de spam del webhook de Resend → baja
+   automática (el newsletter de tiendas ya lo hace).
+🔲 Cuántos abrieron / clickearon: no se mide. El botón con UTM es lo único.

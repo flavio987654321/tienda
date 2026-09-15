@@ -343,6 +343,8 @@ model Store {
   affiliates          Affiliate[]
   coupons             Coupon[]
   cuponesDigital      CuponDigital[]
+  correosDigital      CorreoDigital[]
+  bajasDeCorreo       BajaCorreoDigital[]
   affiliateGoals      AffiliateGoal[]
   leads               Lead[]
   publicReviews       PublicReview[]
@@ -695,6 +697,7 @@ model Product {
   origenesDigital DigitalVisitaOrigen[]
   campaniasDigital DigitalVisitaCampania[]
   cuponesDigital  CuponDigital[]
+  correosDigital  CorreoDigital[]
 
   @@index([deletedAt])
   // Todo lo que se le pide a esta tabla arranca por la tienda: el catálogo que
@@ -1238,6 +1241,50 @@ model DigitalVisitaCampania {
 /// El código se guarda en mayúsculas y es único por cuenta. `usos` se suma al
 /// CONFIRMARSE la compra, no al crearla: un carrito abandonado no gasta usos.
 /// Lo que vale, cuánto y hasta cuándo lo decide `lib/cupones-digitales`.
+/// Un mail de la vendedora a quienes le compraron. Pro. Ver
+/// `lib/correos-compradores`: quién lo recibe se calcula al mandar (los
+/// compradores confirmados del producto, o de la cuenta, menos las bajas),
+/// no se guarda una lista. `cursor` es el último correo al que salió, para
+/// retomar si el envío se corta: la lista va ordenada por correo.
+model CorreoDigital {
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// A los compradores de este principal; null = de toda la cuenta.
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  asunto        String
+  cuerpo        String
+  /// El botón del mail, ya armado con su etiqueta UTM. Null = sin botón.
+  enlace        String?
+  /// El texto del botón ("Ver <producto>"). Va con `enlace`.
+  botonTexto    String?
+  /// Cuántos había cuando se mandó.
+  destinatarios Int
+  enviados      Int      @default(0)
+  fallidos      Int      @default(0)
+  /// ENVIANDO | LISTO
+  estado        String   @default("ENVIANDO")
+  cursor        String?
+  createdAt     DateTime @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([productId])
+}
+
+/// Quien pidió no recibir más mails de ESTA cuenta. Por (cuenta, correo) y
+/// no por campaña: la baja es de la relación, no del mail que la provocó.
+model BajaCorreoDigital {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Minúsculas, sin espacios: se compara contra el correo de la orden.
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, email])
+}
+
 model CuponDigital {
   id        String   @id @default(cuid())
   storeId   String

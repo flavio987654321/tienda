@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket } from "lucide-react";
+import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket, Mail } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { medicionDeLaTienda } from "@/lib/medicion-digital";
@@ -16,14 +16,17 @@ import BotonVolver from "../BotonVolver";
  * se lee como que el panel está a medio hacer. Cuando haya una herramienta más,
  * se agrega su tarjeta acá; hasta entonces esta lista es corta y es honesta.
  *
- * ── Por qué los upsells post-compra aparecen acá si ya existían ────────────
+ * ── Por qué los upsells aparecen acá si ya existían ────────────────────────
  *
- * Porque existían y **nadie sabía que existían**. La oferta de después de pagar
- * está hecha desde hace rato —es "el agregado" de `comprar/route.ts`: cuando
- * llega el identificador de una compra confirmada se cobran sólo los upsells,
- * sin el principal ni los bonos, porque eso ya lo pagó— pero se carga adentro de
- * la tarjeta del producto, tres pantallazos abajo. Una función que no se
- * encuentra es una función que no se usa.
+ * Porque existían y **nadie sabía que existían**. El upsell se ofrece ANTES
+ * de pagar, en el checkout (el "order bump" de la competencia: un click y se
+ * suma) y, si no lo tomó, DESPUÉS de pagar —"el agregado" de
+ * `comprar/route.ts`: cuando llega el identificador de una compra confirmada
+ * se cobran sólo los upsells, sin el principal ni los bonos, porque eso ya lo
+ * pagó—. Pero se carga adentro de la tarjeta del producto, tres pantallazos
+ * abajo. Una función que no se encuentra es una función que no se usa.
+ * ⚠️ Esta tarjeta decía "post-compra", y por eso el inventario del 15/09
+ * anotó "falta el order bump" cuando ya estaba hecho.
  *
  * Así que la tarjeta no lleva a una pantalla nueva: lleva a Productos, que es
  * donde se cargan. Lo que se arregla acá es el camino, no la función.
@@ -57,6 +60,13 @@ export default async function MarketingPage() {
       accion: "Crear un cupón",
     },
     {
+      href: "/digitales/marketing/compradores",
+      Icon: Mail,
+      titulo: "Mail a tus compradores",
+      que: "Escribiles a todos los que te compraron con un solo mail: para lanzar el siguiente, avisar que actualizaste el archivo, o pedir una opinión. Es del plan Pro.",
+      accion: "Escribirles",
+    },
+    {
       href: "/digitales/configuracion?tab=meta",
       Icon: BarChart3,
       titulo: "Píxel de Meta y Analytics",
@@ -75,8 +85,8 @@ export default async function MarketingPage() {
     {
       href: "/digitales/productos",
       Icon: TrendingUp,
-      titulo: "Upsells post-compra",
-      que: "La oferta que aparece después de pagar, con su propio precio. Ya está andando: se carga en cada producto, abajo de los bonos.",
+      titulo: "Upsells",
+      que: "Un producto más, con su propio precio, que se ofrece dos veces: antes de pagar, con un click (\"Sumá a tu compra\"), y si no lo tomó, otra vez después de pagar. Ya está andando: se carga en cada producto, abajo de los bonos.",
       accion: "Ir a Productos",
     },
   ];

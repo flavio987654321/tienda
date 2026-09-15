@@ -1703,3 +1703,100 @@ export async function sendDominioEnFreeEmail({
     `,
   });
 }
+
+/**
+ * Un mail de la vendedora a quienes le compraron. Productos Digitales, Pro.
+ *
+ * ── De quién sale ───────────────────────────────────────────────────────────
+ *
+ * Sale de NUESTRA dirección (el dominio verificado en Resend es el nuestro)
+ * con el nombre de la vendedora adelante, y con `replyTo` a su correo: quien
+ * contesta le contesta a ella, no a un buzón nuestro que nadie lee. El
+ * nombre se limpia de comillas y de signos: una comilla suelta en el
+ * remitente hace que Resend rechace el mail entero.
+ *
+ * ── La salida ───────────────────────────────────────────────────────────────
+ *
+ * Las dos cabeceras `List-Unsubscribe` (Gmail las muestra al lado del
+ * remitente) y el link del pie. El mismo criterio que el newsletter de
+ * tiendas: el botón de irse tiene que estar más a mano que el de spam, porque
+ * el de spam lo pagan todas las cuentas, que comparten el dominio.
+ *
+ * El cuerpo es texto plano de la vendedora, escapado y con los saltos de
+ * línea respetados. Nada de HTML de ella: un mail que ella arma con etiquetas
+ * es un mail que sale con nuestro dominio y con lo que ella quiera adentro.
+ */
+export async function sendCorreoACompradoresEmail({
+  to,
+  saludo,
+  asunto,
+  cuerpo,
+  boton,
+  producto,
+  vendedor,
+  replyTo,
+  bajaUrl,
+  bajaPostUrl,
+}: {
+  to: string;
+  /** "Hola Ana," — lo arma `saludo` de `correos-compradores`. */
+  saludo: string;
+  asunto: string;
+  cuerpo: string;
+  /** El botón, o null. */
+  boton: { texto: string; url: string } | null;
+  /** Qué compró, para el pie: "porque compraste «X»". Null = "porque le compraste". */
+  producto: string | null;
+  vendedor: string | null;
+  replyTo: string | null;
+  bajaUrl: string;
+  bajaPostUrl: string;
+}): Promise<ResultadoDeEnvio> {
+  if (!process.env.RESEND_API_KEY) {
+    return { error: { message: "RESEND_API_KEY no configurada" } };
+  }
+
+  const quien = (vendedor ?? "").replace(/["<>\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
+  const direccion = FROM.match(/<([^>]+)>/)?.[1] ?? FROM;
+  const from = quien ? `"${quien} · TiendaApps" <${direccion}>` : FROM;
+  const motivo = producto
+    ? `Recibís este mail porque compraste «${producto}»${quien ? ` a ${quien}` : ""}.`
+    : `Recibís este mail porque le compraste${quien ? ` a ${quien}` : " a esta vendedora"}.`;
+
+  const r = await resend.emails.send({
+    from,
+    to,
+    subject: asunto,
+    ...(replyTo ? { replyTo } : {}),
+    headers: {
+      "List-Unsubscribe": `<${bajaPostUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        ${quien ? `<p style="font-size:13px;color:#6b7280;margin:0 0 18px;font-weight:600;">${escapeHtml(quien)}</p>` : ""}
+
+        <p style="font-size:15px;line-height:1.7;color:#374151;margin:0 0 12px;">${escapeHtml(saludo)}</p>
+        <p style="font-size:15px;line-height:1.7;color:#374151;margin:0 0 24px;white-space:pre-wrap;">${escapeHtml(cuerpo)}</p>
+
+        ${boton ? `
+        <div style="text-align:center;margin:0 0 28px;">
+          <a href="${escapeHtml(boton.url)}"
+             style="display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            ${escapeHtml(boton.texto)}
+          </a>
+        </div>` : ""}
+
+        <div style="border-top:1px solid #e5e7eb;margin-top:24px;padding-top:16px;text-align:center;">
+          <p style="font-size:11px;color:#9ca3af;line-height:1.7;margin:0 0 6px;">${escapeHtml(motivo)}</p>
+          <p style="font-size:11px;color:#9ca3af;margin:0;">
+            <a href="${escapeHtml(bajaUrl)}" style="color:#6b7280;text-decoration:underline;">No quiero recibir más mails</a>
+            &nbsp;·&nbsp; ${quien ? `${escapeHtml(quien)} vende a través de TiendaApps` : "TiendaApps"}
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  return { error: r.error ? { message: r.error.message } : null };
+}

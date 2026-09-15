@@ -56,6 +56,7 @@ const ESCRIBE = /export async function (POST|PUT|PATCH|DELETE)/;
 const PERMITIDAS: Record<string, string> = {
   "newsletter/confirmar": "el token del mail ES la credencial; sin token no hace nada",
   "newsletter/baja": "igual que confirmar, y contesta lo mismo con token válido o no para que no se puedan adivinar",
+  "digitales/baja": "igual que newsletter/baja: el token firmado (HMAC) es la credencial, sin token válido no escribe, y con uno válido el upsert es idempotente",
 };
 
 function rutas(dir: string, acum: string[] = []): string[] {

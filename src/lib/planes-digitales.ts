@@ -97,6 +97,7 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Embudo y origen de las visitas (UTM)", on: tier === "PRO" },
     { text: "Ver carritos abandonados", on: true },
     { text: "Mail automático de recuperación", on: tier === "PRO" },
+    { text: "Mail a tus compradores", on: tier === "PRO" },
     /* "Por producto" no es un detalle: es TODO. Un dominio por cuenta no le sirve
        a quien vende en dos nichos, que es el caso que hace falta cubrir para que
        los 5 productos de Pro tengan sentido. */
