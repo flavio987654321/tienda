@@ -85,8 +85,10 @@ if (existsSync(ruta)) {
   check("RUTA-E", /checkRateLimit\(`exportar-estadisticas:\$\{user\.id\}`/.test(r), "tiene tope de ritmo: armar el archivo es la consulta entera");
   check("RUTA-F", /"Content-Disposition": `attachment; filename=/.test(r) && /"Cache-Control": "no-store"/.test(r),
     "baja como archivo y no se cachea");
-  check("RUTA-G", /puedeVer\(tier, "exportar"\) && \(vista === "general" \|\| puedeVer\(tier, "campanias"\)\)/.test(c) && /Exportar · desde/.test(c),
+  check("RUTA-G", /puedeVer\(tier, "exportar"\) && \(vista === "general" \|\| puedeVer\(tier, "campanias"\)\)/.test(c) && /Exportar<span[^>]*> · desde/.test(c),
     "el botón sigue la misma regla y en el plan que no lo tiene dice desde cuál");
+  check("RUTA-I", /!hayQueExportar \? \(/.test(c) && /title="Nada para exportar en este período"/.test(c) && /kpis\.ventas \+ kpis\.devueltas \+ kpis\.visitas > 0/.test(c),
+    "sin nada en el rango, el botón está apagado: una planilla vacía parece un error");
   check("RUTA-H", puedeVer("STARTER", "exportar") && !puedeVer("FREE", "exportar") && DESDE_QUE_PLAN.exportar === "STARTER",
     "exportar es desde Starter: es lo que se cobra, los números Free los ve en pantalla");
 }

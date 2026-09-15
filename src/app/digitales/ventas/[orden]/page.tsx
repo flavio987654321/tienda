@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import {
   AlertTriangle, Ban, CheckCircle2, Clock, Download, FileText, Mail, Monitor,
-  RotateCcw, ShieldCheck, User as Persona,
+  RotateCcw, ShieldCheck, User as Persona, MessageCircle,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { comisionCongelada } from "@/lib/compra-digital";
 import { DIAS_DEL_PERMISO } from "@/lib/entrega-digital";
+import { mensajeParaElComprador, enlaceDeMail, enlaceDeWhatsApp } from "@/lib/ventas-digitales";
 import BotonVolver from "../../BotonVolver";
 import BotonCopiar from "../BotonCopiar";
 import BotonReenviar from "../BotonReenviar";
@@ -308,6 +309,22 @@ export default async function DetalleDeVentaPage({
         </Fila>
         {orden.buyer.name && <Fila etiqueta="Nombre">{orden.buyer.name}</Fila>}
         {orden.buyer.phone && <Fila etiqueta="Teléfono">{orden.buyer.phone}</Fila>}
+        {/* Escribirle, con el mensaje ya escrito: distinto si bajó el archivo o
+            no. Sólo en una cobrada: a quien no pagó no hay nada que preguntarle.
+            Abre su correo con el borrador; no manda nada solo. */}
+        {cobrada && orden.buyer.email && (() => {
+          const principal = orden.items.find((i) => i.product.rolDigital === "PRINCIPAL") ?? orden.items[0];
+          const sinBajar = orden.items.some((i) => i.descargas[0] && i.descargas[0].descargas === 0);
+          const mensaje = mensajeParaElComprador({ nombre: orden.buyer.name, producto: principal?.product.name ?? "tu compra", sinBajar });
+          const wa = enlaceDeWhatsApp(orden.buyer.phone, mensaje);
+          const clase = "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-600";
+          return (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a href={enlaceDeMail(orden.buyer.email, mensaje)} className={clase}><Mail className="h-3.5 w-3.5" /> Escribirle</a>
+              {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className={clase}><MessageCircle className="h-3.5 w-3.5" /> WhatsApp</a>}
+            </div>
+          );
+        })()}
       </Bloque>
 
       {/* ── Qué se llevó, y si lo bajó ─────────────────────────────────── */}

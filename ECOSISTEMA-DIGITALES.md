@@ -5738,3 +5738,63 @@ dueña abra su propio archivo. Toda celda así se antepone con un apóstrofo
 Para que la pantalla y el archivo digan lo mismo, la consulta salió de la
 página a `lib/estadisticas-digitales-db.ts` (`cargarEstadisticas`), y las
 dos salidas la comparten. Mirado en 1000 lleno, vacío y en Free.
+
+---
+
+## Consejos en cada bloque, y Tus ventas por producto, por fecha, escribirle y exportar — 15/09/26
+
+Flavio miró Estadísticas y Tus ventas en su cuenta (vacía) y las vio flojas:
+"se ven muy vacíos todos". Parte es que están en cero —nada reemplaza a ver
+una venta real ahí—, y parte era cierto: cada bloque decía "todavía no hay
+nada" y no enseñaba para qué sirve ni qué hacer con él.
+
+### Consejos en Estadísticas
+
+Cada bloque (nueve) tiene UN consejo abajo, con lamparita, elegido mirando
+los datos en `lib/consejos-estadisticas.ts` (puro, 31 chequeos):
+
+- **Sin datos** explica para qué sirve el bloque y cómo hacer que se mueva:
+  "se cuenta una visita por persona por día, las tuyas no cuentan con la
+  sesión abierta; poné el link en la bio de Instagram y el estado de WhatsApp".
+- **Con datos** dice lo que los números piden: "2 compras cobradas siguen sin
+  bajar → Ir a Tus ventas"; "la mayoría paga los martes cerca de las 21 h,
+  publicá un par de horas antes"; "abren el pago y no pagan: sólo 20 de cada
+  100 terminan"; "Instagram trae más gente, pero en WhatsApp es donde más
+  pagan"; "«foto precio» trajo 60 visitas y ninguna venta: la primera para
+  apagar".
+- **Con pocos datos no inventa**: "todavía son pocas ventas para sacar una
+  regla". Los umbrales están arriba de cada regla, con su motivo.
+- Los bloques **bloqueados por plan no llevan consejo**: sería un consejo
+  sobre números de muestra (chequeo PANT-B).
+- De paso quedó dicho en pantalla que **las visitas se guardan dos años**
+  (era un 🔲 pendiente).
+
+### Tus ventas
+
+- ✅ **Por producto**: con más de un principal, fila Todos / producto. Filtra
+  la lista Y los números de arriba.
+- ✅ **Por fecha**: Todo · Hoy · 7 días · Este mes · Mes pasado. Los rangos de
+  quien hace cuentas contra lo que liquidó Mercado Pago. Los cuatro números
+  pasaron a ser del período: Te quedó · Ventas · Sin bajar · Sin pagar (el
+  "Este mes" que era una tarjeta ahora es un chip).
+- ✅ **Escribirle** en cada venta cobrada y en el detalle: un `mailto:` con el
+  mensaje ya escrito, distinto si bajó el archivo ("¿te llegó el mail?") o no
+  ("¿cómo te fue?"), y **WhatsApp** si dejó un celular que parece argentino
+  (se normaliza +54 / 0 / 15; si no parece un celular, no hay botón). No manda
+  nada solo: abre el borrador y la persona lo cambia.
+- ✅ **Exportar** la lista que se está mirando (mismos filtros) como CSV: fecha,
+  estado, correo, nombre, producto, bonos, cobrado, comisión, te quedó, si lo
+  bajó, id. Desde Starter, misma regla que el de Estadísticas
+  (`DESDE_QUE_PLAN.exportar`); la ruta vuelve a mirar el plan; 30 por hora;
+  techo de 5.000 filas con aviso adentro del archivo. El nombre lo escribió el
+  comprador: pasa por la misma `celda` que desactiva fórmulas.
+
+Para que la pantalla y el archivo filtren igual, lo puro salió a
+`lib/ventas-digitales.ts` (rangos, lectura limpia de la dirección, el
+`where`, el mensaje y los enlaces; 30 chequeos) y lo que toca la base a
+`lib/ventas-digitales-db.ts` (`contextoDeVentas`, el `select` y el mapeo
+compartidos). La página quedó en la mitad. Mirado en 360 y 768, vacío y lleno.
+
+🔲 Que la persona pueda cambiar el texto del mensaje de "Escribirle" desde
+Ajustes, en vez del nuestro.
+🔲 Bajar sólo los correos (una columna) para pegar en un envío masivo.

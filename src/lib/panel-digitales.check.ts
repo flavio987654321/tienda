@@ -838,6 +838,11 @@ chequear("el scroll se cuelga de un ancla y no de la barra pegada",
  */
 const ventasPag = soloCodigo(readFileSync("src/app/digitales/ventas/page.tsx", "utf8"));
 const ventasCli = soloCodigo(readFileSync("src/app/digitales/ventas/VentasClient.tsx", "utf8"));
+/* Lo que la pantalla y la exportación comparten vive en dos libs: lo puro
+   (leer la dirección, el where) y lo que toca la base (el contexto, el select,
+   el formato). Las garantías de abajo se miran donde el código está ahora. */
+const ventasLib = soloCodigo(readFileSync("src/lib/ventas-digitales.ts", "utf8"));
+const ventasDb = soloCodigo(readFileSync("src/lib/ventas-digitales-db.ts", "utf8"));
 
 /* En el menú, y arriba: enterrada abajo obligaría a pasar por Configuración
    para llegar a lo que más se mira. */
@@ -857,21 +862,22 @@ chequear("la comisión de una venta vieja sale del porcentaje congelado en la or
    tiene que estar anclada a su tienda igual: sin el `storeId`, un filtro mal
    armado muestra las ventas de todo el mundo. */
 chequear("sólo se leen las ventas de la tienda de quien mira",
-  /storeId: store\.id/.test(ventasPag) && ventasPag.includes('user.role !== "DIGITAL"'));
+  /dondeVentas\(store\.id, consulta, elegido\)/.test(ventasDb) && /^\s*storeId,$/m.test(ventasLib) &&
+  ventasPag.includes('user.role !== "DIGITAL"') && ventasPag.includes("contextoDeVentas(user.id"));
 
 /* Todo lo que llega por la dirección se limpia: el estado sale de una lista
    nuestra, la búsqueda tiene tope de largo y la página es un entero sano. */
 chequear("el filtro sólo puede ser uno de los nuestros, nunca texto crudo",
-  ventasPag.includes("esFiltro(parametros.estado)") && ventasPag.includes("FILTROS[filtro]"));
+  ventasLib.includes("esClaveDeEstado(estado) ? estado : null") && ventasLib.includes("FILTROS_ESTADO[c.estado]"));
 chequear("la búsqueda entra recortada y la página es un entero sano",
-  /slice\(0, 120\)/.test(ventasPag) && /Number\.isFinite\(pedida\)/.test(ventasPag));
+  /slice\(0, LARGO_MAXIMO_DE_BUSQUEDA\)/.test(ventasLib) && /LARGO_MAXIMO_DE_BUSQUEDA = 120/.test(ventasLib) && /Number\.isFinite\(pedida\)/.test(ventasLib));
 
 /* La fecha se arma en el servidor y con la zona escrita. Formateada en el
    navegador, el mismo texto sale distinto en el servidor (que corre en UTC) y en
    la máquina de quien mira: React avisa de la hidratación y una venta de las
    22:30 aparece con la fecha del día siguiente. */
 chequear("las fechas se formatean en el servidor y con la zona de Argentina",
-  ventasPag.includes("America/Argentina/Buenos_Aires") && !ventasCli.includes("DateTimeFormat"));
+  ventasDb.includes("America/Argentina/Buenos_Aires") && !ventasCli.includes("DateTimeFormat"));
 
 /* ⚠️ No se inventa un estado de descarga donde no hay permiso: una línea sin
    archivo no puede decir "0 de 5", porque eso afirma que hay algo esperando. */
@@ -925,7 +931,7 @@ chequear("ninguna consulta de lista sale sin techo", listasSinTecho.length === 0
 /* Y la única que crece para siempre —las ventas— pagina de verdad: `skip` y
    `take` van juntos. Con `take` solo, la página 2 muestra la 1. */
 chequear("Ventas pagina en el servidor, no sólo recorta",
-  /skip: \(pagina - 1\) \* POR_PAGINA/.test(ventasPag) && /take: POR_PAGINA/.test(ventasPag));
+  /skip: \(consulta\.pagina - 1\) \* POR_PAGINA/.test(ventasPag) && /take: POR_PAGINA/.test(ventasPag));
 
 /* ══════════════════════════════════════════════════════════════════════════
    17. CADA TIPO DE CUENTA LEE SU PROPIO DOCUMENTO

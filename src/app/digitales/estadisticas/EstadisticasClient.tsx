@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent, Download, Undo2, PackagePlus, Mail, Users, Smartphone, FileDown } from "lucide-react";
+import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent, Download, Undo2, PackagePlus, Mail, Users, Smartphone, FileDown, Lightbulb } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
   puedeVer, DESDE_QUE_PLAN, RANGOS, NOMBRE_RANGO,
   type Estadisticas, type Bloque,
 } from "@/lib/estadisticas-digitales";
 import { NOMBRE_ORIGEN } from "@/lib/origen-visita";
+import { consejoPara, type BloqueConConsejo } from "@/lib/consejos-estadisticas";
 import { NOMBRE_MEDIO, OTRAS, PARAMETROS_PARA_META } from "@/lib/utm-digital";
 import BotonCopiar from "../ventas/BotonCopiar";
 import type { Punto } from "@/lib/serie-grafico";
@@ -64,6 +65,11 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
 
   const veVisitas = puedeVer(tier, "visitas");
   const nombreDelElegido = principales.find((p) => p.id === elegido)?.name ?? null;
+  /* Hay algo que exportar en la solapa que se mira: en General, alguna venta,
+     devolución o visita; en Campañas, alguna visita o venta con etiqueta. */
+  const hayQueExportar = vista === "general"
+    ? kpis.ventas + kpis.devueltas + kpis.visitas > 0
+    : campanias.kpis.visitas + campanias.kpis.ventas + origenes.conocidas > 0;
 
   return (
     <div className="space-y-4">
@@ -91,8 +97,18 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         {/* Exportar la solapa que se está mirando, como planilla. Un enlace a la
             ruta —el navegador baja el archivo— con la misma consulta que la
             pantalla. Con candado en Free (y en Starter para Campañas): la regla
-            es la de `DESDE_QUE_PLAN`, la ruta la vuelve a mirar. */}
-        {puedeVer(tier, "exportar") && (vista === "general" || puedeVer(tier, "campanias")) ? (
+            es la de `DESDE_QUE_PLAN`, la ruta la vuelve a mirar. Y apagado si
+            en este rango no hay nada: una planilla vacía parece un error. El
+            candado manda sobre el apagado. */}
+        {puedeVer(tier, "exportar") && (vista === "general" || puedeVer(tier, "campanias")) && !hayQueExportar ? (
+          <span
+            aria-disabled="true"
+            title="Nada para exportar en este período"
+            className="ml-auto mb-1.5 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-800 px-2.5 py-1.5 text-[12px] font-semibold text-gray-300 panel-oscuro:text-gray-600"
+          >
+            <FileDown className="h-3.5 w-3.5" /> Exportar
+          </span>
+        ) : puedeVer(tier, "exportar") && (vista === "general" || puedeVer(tier, "campanias")) ? (
           <a
             href={`/api/digitales/estadisticas/exportar?${new URLSearchParams({ vista, ...(elegido ? { p: elegido } : {}), rango: rango.clave }).toString()}`}
             className="ml-auto mb-1.5 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-700 panel-oscuro:hover:text-orange-400"
@@ -105,7 +121,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
             aria-label={`Exportar: disponible desde ${COPY_DIGITAL[vista === "campanias" ? DESDE_QUE_PLAN.campanias : DESDE_QUE_PLAN.exportar].nombre}`}
             className="ml-auto mb-1.5 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-400 panel-oscuro:text-gray-500"
           >
-            <Lock className="h-3.5 w-3.5 text-orange-500" /> Exportar · desde {COPY_DIGITAL[vista === "campanias" ? DESDE_QUE_PLAN.campanias : DESDE_QUE_PLAN.exportar].nombre}
+            <Lock className="h-3.5 w-3.5 text-orange-500" /> Exportar<span className="hidden sm:inline"> · desde {COPY_DIGITAL[vista === "campanias" ? DESDE_QUE_PLAN.campanias : DESDE_QUE_PLAN.exportar].nombre}</span>
           </Link>
         )}
       </div>
@@ -171,7 +187,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         {/* ── Visitas y ventas por día ───────────────────────────────────────── */}
         <div className="grid md:grid-cols-2 gap-3">
           {veVisitas ? (
-            <Tarjeta titulo="Visitas" bajada={pieDeSerie(serie.grano, kpis.visitas, "visitas")}>
+            <Tarjeta titulo="Visitas" bajada={pieDeSerie(serie.grano, kpis.visitas, "visitas")} consejo={{ bloque: "visitas", datos }}>
               <Grafico puntos={serie.visitas} color="#ea580c" />
               {dispositivos.pctMovil !== null && (
                 <p className="mt-2 flex items-center gap-1.5 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
@@ -187,7 +203,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
               </Tarjeta>
             </Bloqueado>
           )}
-          <Tarjeta titulo="Ventas" bajada={pieDeSerie(serie.grano, kpis.ventas, "ventas")}>
+          <Tarjeta titulo="Ventas" bajada={pieDeSerie(serie.grano, kpis.ventas, "ventas")} consejo={{ bloque: "ventas", datos }}>
             <Grafico puntos={serie.ventas} color="#059669" />
           </Tarjeta>
         </div>
@@ -195,13 +211,13 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         {/* ── Después de la venta ────────────────────────────────────────────────
             Lo que pasa con el que ya pagó. Es de todos los planes: Free también
             vende y también tiene que atender al que compró. */}
-        <Tarjeta titulo="Después de la venta" bajada="Qué pasó con cada compra una vez cobrada.">
+        <Tarjeta titulo="Después de la venta" bajada="Qué pasó con cada compra una vez cobrada." consejo={{ bloque: "posventa", datos }}>
           <Posventa p={posventa} />
         </Tarjeta>
 
         {/* ── Cuándo se vende ────────────────────────────────────────────────── */}
         {puedeVer(tier, "cuando") ? (
-          <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras. Sirve para elegir cuándo publicar o cuándo correr un anuncio.">
+          <Tarjeta titulo="Cuándo se vende" bajada="En qué día y a qué hora cierran las compras. Sirve para elegir cuándo publicar o cuándo correr un anuncio." consejo={{ bloque: "cuando", datos }}>
             <CuandoSeVende c={cuando} />
           </Tarjeta>
         ) : (
@@ -214,7 +230,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
 
         {/* ── El embudo ──────────────────────────────────────────────────────── */}
         {puedeVer(tier, "embudo") ? (
-          <Tarjeta titulo="Embudo" bajada="De los que entraron, cuántos quisieron pagar y cuántos pagaron.">
+          <Tarjeta titulo="Embudo" bajada="De los que entraron, cuántos quisieron pagar y cuántos pagaron." consejo={{ bloque: "embudo", datos }}>
             <EmbudoDibujado visitas={embudo.visitas} checkouts={embudo.checkouts} ventas={embudo.ventas}
               pctCheckout={embudo.pctCheckout} pctVenta={embudo.pctVenta} />
           </Tarjeta>
@@ -228,7 +244,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
 
         {/* ── Por producto, mirando todo ─────────────────────────────────────── */}
         {!elegido && principales.length > 1 && (
-          <Tarjeta titulo="Por producto" bajada="Cuál de tus páginas anda.">
+          <Tarjeta titulo="Por producto" bajada="Cuál de tus páginas anda." consejo={{ bloque: "porProducto", datos }}>
             <div className="overflow-x-auto -mx-5 px-5">
               <table className="w-full text-sm">
                 <thead>
@@ -264,7 +280,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         {/* ── Carritos recuperados por el mail automático ─────────────────────
             El mail es de Pro, así que el número que lo mide también. */}
         {puedeVer(tier, "carritos") ? (
-          <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar.">
+          <Tarjeta titulo="Carritos recuperados" bajada="Compras que quedaron en la puerta, a cuántas les escribió el mail automático y cuántas volvieron a pagar." consejo={{ bloque: "carritos", datos }}>
             <CarritosDibujados c={carritos} />
           </Tarjeta>
         ) : (
@@ -304,6 +320,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
         {puedeVer(tier, "origenes") ? (
           <Tarjeta
             titulo="De dónde vienen"
+            consejo={{ bloque: "origenes", datos }}
             bajada={
               origenes.conocidas > 0
                 ? `El embudo de cada canal: cuántos entraron, cuántos abrieron el pago y cuántos pagaron. Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís y quedan anotadas ahí.${origenes.ventasSinOrigen > 0 ? ` ${entero(origenes.ventasSinOrigen)} ${origenes.ventasSinOrigen === 1 ? "venta no tiene" : "ventas no tienen"} origen anotado.` : ""}`
@@ -333,6 +350,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           <Tarjeta
             titulo="Campañas"
             bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta. Se arma con las etiquetas UTM del link."
+            consejo={{ bloque: "campanias", datos }}
           >
             <ParaMeta />
             <PorMedio filas={campanias.porMedio} />
@@ -408,12 +426,42 @@ function Chip({ href, activo, children }: { href: string; activo: boolean; child
   );
 }
 
-function Tarjeta({ titulo, bajada, children }: { titulo: string; bajada: string; children: React.ReactNode }) {
+/**
+ * Una tarjeta con título, bajada y, abajo, el consejo del bloque. El consejo lo
+ * elige `consejoPara` mirando los datos: sin datos explica para qué sirve el
+ * bloque, con datos dice qué hacer con ellos. Los bloques bloqueados no lo
+ * llevan: se los pasa borrosos y con números de muestra, y un consejo sobre
+ * números de muestra sería una mentira.
+ */
+function Tarjeta({ titulo, bajada, consejo, children }: {
+  titulo: string; bajada: string; consejo?: { bloque: BloqueConConsejo; datos: Estadisticas }; children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+    <div className="h-full rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
       <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{titulo}</p>
       <p className="mt-0.5 mb-4 text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{bajada}</p>
       {children}
+      {consejo && <Consejo {...consejoPara(consejo.bloque, consejo.datos)} />}
+    </div>
+  );
+}
+
+/** El consejo al pie de una tarjeta: una lamparita, el texto y, si hay, a dónde ir. */
+function Consejo({ texto, accion }: { texto: string; accion?: { texto: string; href: string } }) {
+  return (
+    <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-amber-50/70 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/20 px-3.5 py-3">
+      <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+      <p className="text-[12.5px] leading-relaxed text-amber-950 panel-oscuro:text-amber-100/90">
+        {texto}
+        {accion && (
+          <>
+            {" "}
+            <Link href={accion.href} className="inline-flex items-center gap-0.5 font-bold text-orange-700 panel-oscuro:text-orange-400 hover:underline">
+              {accion.texto} <ArrowRight className="h-3 w-3" />
+            </Link>
+          </>
+        )}
+      </p>
     </div>
   );
 }
@@ -448,8 +496,8 @@ function Numero({ Icon, titulo, valor, pie, destacado = false }: {
 function Bloqueado({ bloque, compacto = false, children }: { bloque: Bloque; compacto?: boolean; children: React.ReactNode }) {
   const desde = COPY_DIGITAL[DESDE_QUE_PLAN[bloque]].nombre;
   return (
-    <div className="relative">
-      <div className="pointer-events-none select-none blur-[3px] opacity-60" aria-hidden="true">{children}</div>
+    <div className="relative h-full">
+      <div className="h-full pointer-events-none select-none blur-[3px] opacity-60" aria-hidden="true">{children}</div>
       <Link
         href="/digitales/mi-cuenta"
         className={`absolute inset-0 flex items-center justify-center rounded-3xl ${compacto ? "p-2" : "p-4"}`}

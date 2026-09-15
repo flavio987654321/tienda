@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { LinkDelPanel as Link } from "../SalidaSinGuardar";
 import {
   Search, X, Loader2, ChevronLeft, ChevronRight, ShoppingBag,
-  CheckCircle2, Clock, Ban, Download, AlertTriangle, ArrowRight,
+  CheckCircle2, Clock, Ban, Download, AlertTriangle, ArrowRight, Mail, MessageCircle, FileDown, Lock,
 } from "lucide-react";
+import {
+  RANGOS_VENTAS, NOMBRE_RANGO_VENTAS, direccionDeVentas,
+  mensajeParaElComprador, enlaceDeMail, enlaceDeWhatsApp,
+} from "@/lib/ventas-digitales";
+import { COPY_DIGITAL } from "@/lib/planes-digitales";
+import { DESDE_QUE_PLAN } from "@/lib/estadisticas-digitales";
 import BotonReenviar from "./BotonReenviar";
 
 /**
@@ -25,6 +31,13 @@ import BotonReenviar from "./BotonReenviar";
  * arruga o se va de costado, y el dato que más se busca —cuánto me quedó— queda
  * fuera de la pantalla. La tarjeta pone el importe arriba y a la derecha, donde
  * el ojo lo encuentra sin scrollear.
+ *
+ * ── Escribirle ──────────────────────────────────────────────────────────────
+ *
+ * Cada venta cobrada tiene un botón para escribirle a quien compró. Es un
+ * `mailto:` con el mensaje ya escrito —distinto si bajó el archivo o no—, y un
+ * chat de WhatsApp si dejó un teléfono que parece un celular. No manda nada
+ * solo: abre el correo de la persona con el borrador, y ella lo cambia y lo manda.
  */
 
 export type LineaDeVenta = {
@@ -48,15 +61,18 @@ export type VentaEnPantalla = {
   neto: number;
   comprador: string;
   nombre: string | null;
+  telefono: string | null;
   lineas: LineaDeVenta[];
 };
 
+/** Un principal vivo, para el selector de arriba. */
+export type ProductoDelFiltro = { id: string; name: string };
+
+/** Los números de arriba: del producto y el rango elegidos. */
 export type Resumen = {
   ventas: number;
   bruto: number;
   neto: number;
-  ventasDelMes: number;
-  brutoDelMes: number;
   sinBajar: number;
   esperando: number;
 };
@@ -71,30 +87,27 @@ const FILTROS = [
   { clave: "canceladas", label: "Canceladas" },
 ] as const;
 
-/** Arma la dirección de la pantalla con lo que cambia y deja el resto igual. */
-function direccion(cambios: { estado?: string | null; q?: string; pagina?: number }) {
-  const p = new URLSearchParams();
-  if (cambios.estado) p.set("estado", cambios.estado);
-  if (cambios.q) p.set("q", cambios.q);
-  /* La página 1 no se escribe: es la dirección limpia, la que se comparte. */
-  if (cambios.pagina && cambios.pagina > 1) p.set("pagina", String(cambios.pagina));
-  const cola = p.toString();
-  return cola ? `/digitales/ventas?${cola}` : "/digitales/ventas";
-}
-
 export default function VentasClient({
-  ventas, resumen, filtro, q, pagina, paginas,
+  ventas, resumen, filtro, q, rango, pagina, paginas, productos, elegido, puedeExportar,
 }: {
   ventas: VentaEnPantalla[];
   resumen: Resumen;
   filtro: string | null;
   q: string;
+  rango: string;
   pagina: number;
   paginas: number;
+  productos: ProductoDelFiltro[];
+  elegido: string | null;
+  puedeExportar: boolean;
 }) {
   const router = useRouter();
   const [texto, setTexto] = useState(q);
   const [buscando, arrancar] = useTransition();
+
+  /** La dirección con lo que ya está elegido, cambiando sólo lo que se pasa. */
+  const ir = (cambios: { p?: string | null; estado?: string | null; q?: string; rango?: string | null; pagina?: number }) =>
+    direccionDeVentas({ p: elegido, estado: filtro, q, rango, ...cambios });
 
   function buscar(e: React.FormEvent) {
     e.preventDefault();
@@ -103,22 +116,50 @@ export default function VentasClient({
        cuando en realidad no se buscó nada. Y al buscar se vuelve a la página 1:
        quedarse en la 3 de un resultado que tiene una sola es una lista vacía sin
        explicación. */
-    arrancar(() => router.push(direccion({ estado: filtro, q: texto.trim().slice(0, 120) })));
+    arrancar(() => router.push(ir({ q: texto.trim().slice(0, 120) })));
   }
 
   function limpiar() {
     setTexto("");
-    arrancar(() => router.push(direccion({ estado: filtro })));
+    arrancar(() => router.push(ir({ q: "" })));
   }
+
+  const nombreDelElegido = productos.find((prod) => prod.id === elegido)?.name ?? null;
+  const nombreDelRango = NOMBRE_RANGO_VENTAS[rango as keyof typeof NOMBRE_RANGO_VENTAS] ?? "Todo";
+  const hayFiltro = !!filtro || !!q || !!elegido || rango !== "todo";
 
   return (
     <>
+      {/* ── Por producto ────────────────────────────────────────────────────
+          Sólo con más de una página: con una, "Todos" y el producto son lo
+          mismo. El elegido viaja en la dirección con el resto, y los cuatro
+          números de abajo son los de ese producto. En el celular la fila se
+          desplaza de costado en vez de apilarse: con seis productos, apilados
+          empujan el resumen fuera de la pantalla. */}
+      {productos.length > 1 && (
+        <Fila>
+          <Chip href={ir({ p: null })} activo={!elegido}>Todos</Chip>
+          {productos.map((prod) => (
+            <Chip key={prod.id} href={ir({ p: prod.id })} activo={elegido === prod.id}>{prod.name}</Chip>
+          ))}
+        </Fila>
+      )}
+
+      {/* ── Por fecha ───────────────────────────────────────────────────────
+          Los rangos de quien hace cuentas: "este mes" y "el mes pasado" son
+          los que se cotejan contra lo que liquidó Mercado Pago. */}
+      <Fila>
+        {RANGOS_VENTAS.map((r) => (
+          <Chip key={r} href={ir({ rango: r })} activo={rango === r}>{NOMBRE_RANGO_VENTAS[r]}</Chip>
+        ))}
+      </Fila>
+
       {/* ── El resumen ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato titulo="Te quedó" valor={plata(resumen.neto)} pie={`de ${plata(resumen.bruto)} vendidos`} fuerte />
-        <Dato titulo="Ventas" valor={String(resumen.ventas)} pie={resumen.ventas === 1 ? "cobrada" : "cobradas"} />
-        <Dato titulo="Este mes" valor={plata(resumen.brutoDelMes)} pie={`${resumen.ventasDelMes} ${resumen.ventasDelMes === 1 ? "venta" : "ventas"}`} />
+        <Dato titulo="Ventas" valor={String(resumen.ventas)} pie={nombreDelElegido ?? (rango === "todo" ? (resumen.ventas === 1 ? "cobrada" : "cobradas") : nombreDelRango.toLowerCase())} />
         <Dato titulo="Sin bajar" valor={String(resumen.sinBajar)} pie={resumen.sinBajar === 1 ? "archivo pago" : "archivos pagos"} />
+        <Dato titulo="Sin pagar" valor={String(resumen.esperando)} pie={resumen.esperando === 1 ? "compra a medias" : "compras a medias"} />
       </div>
 
       {/* Un aviso, no una tarjeta más: es lo único del resumen sobre lo que hay
@@ -128,19 +169,19 @@ export default function VentasClient({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
             Hay {resumen.sinBajar} {resumen.sinBajar === 1 ? "archivo pago que nadie bajó" : "archivos pagos que nadie bajó"} todavía.
-            Suele ser el mail que se fue a spam: escribile a quien compró y pasale el enlace de nuevo.
+            Suele ser el mail que se fue a spam: escribile a quien compró con el botón de cada venta, o reenviale el mail.
           </span>
         </p>
       )}
 
-      {/* ── Filtros y búsqueda ──────────────────────────────────────────── */}
+      {/* ── Filtros, búsqueda y exportar ──────────────────────────────────── */}
       <div className="mt-6 flex flex-wrap items-center gap-2">
         {FILTROS.map((f) => {
           const activo = (f.clave ?? null) === (filtro ?? null);
           return (
             <Link
               key={f.label}
-              href={direccion({ estado: f.clave, q })}
+              href={ir({ estado: f.clave })}
               className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
                 activo
                   ? "bg-orange-600 text-white"
@@ -148,12 +189,38 @@ export default function VentasClient({
               }`}
             >
               {f.label}
-              {f.clave === "esperando" && resumen.esperando > 0 && (
-                <span className={`ml-1.5 ${activo ? "opacity-80" : "text-orange-500"}`}>{resumen.esperando}</span>
-              )}
             </Link>
           );
         })}
+        {/* Bajar la lista que se está mirando —mismos filtros— como planilla.
+            Un enlace a la ruta: el navegador baja el archivo. Con candado en
+            Free, como el de Estadísticas; la ruta vuelve a mirar el plan. Y
+            apagado cuando la lista está vacía: un botón que baja una planilla
+            sin filas parece roto. El candado manda sobre el apagado. */}
+        {puedeExportar && ventas.length === 0 ? (
+          <span
+            aria-disabled="true"
+            title="Nada para exportar todavía"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-800 px-2.5 py-1.5 text-[12px] font-semibold text-gray-300 panel-oscuro:text-gray-600"
+          >
+            <FileDown className="h-3.5 w-3.5" /> Exportar
+          </span>
+        ) : puedeExportar ? (
+          <a
+            href={`/api/digitales/ventas/exportar${ir({}).replace("/digitales/ventas", "")}`}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-700 panel-oscuro:hover:text-orange-400"
+          >
+            <FileDown className="h-3.5 w-3.5" /> Exportar
+          </a>
+        ) : (
+          <Link
+            href="/digitales/mi-cuenta"
+            aria-label={`Exportar: disponible desde ${COPY_DIGITAL[DESDE_QUE_PLAN.exportar].nombre}`}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-400 panel-oscuro:text-gray-500"
+          >
+            <Lock className="h-3.5 w-3.5 text-orange-500" /> Exportar<span className="hidden sm:inline"> · desde {COPY_DIGITAL[DESDE_QUE_PLAN.exportar].nombre}</span>
+          </Link>
+        )}
       </div>
 
       <form onSubmit={buscar} className="mt-3 flex gap-2">
@@ -194,7 +261,7 @@ export default function VentasClient({
 
       {/* ── La lista ────────────────────────────────────────────────────── */}
       {ventas.length === 0 ? (
-        <Vacio hayFiltro={!!filtro || !!q} />
+        <Vacio hayFiltro={hayFiltro} />
       ) : (
         <div className="mt-5 space-y-3">
           {ventas.map((v) => <Venta key={v.id} v={v} />)}
@@ -204,22 +271,39 @@ export default function VentasClient({
       {/* ── Las páginas ─────────────────────────────────────────────────── */}
       {paginas > 1 && (
         <div className="mt-6 flex items-center justify-between">
-          <Paso
-            href={direccion({ estado: filtro, q, pagina: pagina - 1 })}
-            puede={pagina > 1}
-            lado="antes"
-          />
+          <Paso href={ir({ pagina: pagina - 1 })} puede={pagina > 1} lado="antes" />
           <span className="text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
             Página {pagina} de {paginas}
           </span>
-          <Paso
-            href={direccion({ estado: filtro, q, pagina: pagina + 1 })}
-            puede={pagina < paginas}
-            lado="despues"
-          />
+          <Paso href={ir({ pagina: pagina + 1 })} puede={pagina < paginas} lado="despues" />
         </div>
       )}
     </>
+  );
+}
+
+/** Una fila de chips que en el celular se desplaza de costado. */
+function Fila({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="-mx-4 sm:mx-0 px-4 sm:px-0 mb-2 overflow-x-auto">
+      <div className="flex gap-2 w-max sm:w-auto sm:flex-wrap">{children}</div>
+    </div>
+  );
+}
+
+function Chip({ href, activo, children }: { href: string; activo: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={activo ? "page" : undefined}
+      className={`shrink-0 max-w-[180px] truncate rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors ${
+        activo
+          ? "bg-gray-900 panel-oscuro:bg-gray-100 text-white panel-oscuro:text-gray-900"
+          : "bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-800 text-gray-600 panel-oscuro:text-gray-400 hover:border-orange-300"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -316,7 +400,12 @@ function Venta({ v }: { v: VentaEnPantalla }) {
           abrir. Reenviar, en cambio, sólo en las cobradas: en una que nadie pagó
           no hay nada que mandar. */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3">
-        {v.estado === "COBRADA" ? <BotonReenviar ordenId={v.id} /> : <span />}
+        {v.estado === "COBRADA" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Escribirle v={v} />
+            <BotonReenviar ordenId={v.id} />
+          </div>
+        ) : <span />}
 
         <Link
           href={`/digitales/ventas/${v.id}`}
@@ -327,6 +416,32 @@ function Venta({ v }: { v: VentaEnPantalla }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * Escribirle a quien compró: el correo con el mensaje ya escrito, y WhatsApp
+ * si dejó un celular. El mensaje cambia si bajó el archivo o no; el producto
+ * que se nombra es el principal, no el bono.
+ */
+function Escribirle({ v }: { v: VentaEnPantalla }) {
+  if (!v.comprador) return null;
+  const principal = v.lineas.find((l) => !l.esBono && !l.esUpsell) ?? v.lineas[0];
+  const sinBajar = v.lineas.some((l) => l.bajadas === 0);
+  const mensaje = mensajeParaElComprador({ nombre: v.nombre, producto: principal?.producto ?? "tu compra", sinBajar });
+  const wa = enlaceDeWhatsApp(v.telefono, mensaje);
+  const clase = "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-600";
+  return (
+    <>
+      <a href={enlaceDeMail(v.comprador, mensaje)} className={clase}>
+        <Mail className="h-3.5 w-3.5" /> Escribirle
+      </a>
+      {wa && (
+        <a href={wa} target="_blank" rel="noopener noreferrer" className={clase} aria-label="Escribirle por WhatsApp">
+          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+        </a>
+      )}
+    </>
   );
 }
 
@@ -377,7 +492,7 @@ function Vacio({ hayFiltro }: { hayFiltro: boolean }) {
         <>
           <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">No hay ventas con eso</p>
           <p className="mt-1 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
-            Probá con otro filtro, o sacá la búsqueda.
+            Probá con otro filtro, otra fecha, o sacá la búsqueda.
           </p>
         </>
       ) : (
