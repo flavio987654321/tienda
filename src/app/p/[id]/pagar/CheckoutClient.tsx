@@ -187,7 +187,9 @@ export default function CheckoutClient(p: Props) {
     };
 
     const alSalir = (e: MouseEvent) => { if (e.clientY <= 0) mostrar(); };
-    const alVolver = () => { mostrar(); };
+    /* Si el cartel ya salió (por el mouse), la entrada extra del historial
+       sigue ahí: este "atrás" la consume y hay que irse de verdad. */
+    const alVolver = () => { if (ofertaMostrada.current) window.history.back(); else mostrar(); };
     document.documentElement.addEventListener("mouseleave", alSalir);
     window.history.pushState({ salida: true }, "", window.location.href);
     window.addEventListener("popstate", alVolver);
