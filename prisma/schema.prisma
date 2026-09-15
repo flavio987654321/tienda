@@ -686,6 +686,7 @@ model Product {
   expenses        VehicleExpense[]
   visitasDigital  DigitalVisita[]
   origenesDigital DigitalVisitaOrigen[]
+  campaniasDigital DigitalVisitaCampania[]
 
   @@index([deletedAt])
   // Todo lo que se le pide a esta tabla arranca por la tienda: el catálogo que
@@ -817,6 +818,14 @@ model Order {
   /// decir "Instagram trajo 500 visitas y 12 ventas" y no sólo las visitas.
   /// Null en las órdenes de tiendas y en las digitales de antes de esto.
   origenVisita String?
+  /// La campaña, con el mismo viaje que `origenVisita`: `utm_medium` pasado a
+  /// la lista cerrada de `utm-digital` ("pago", "organico", "mail", "historia",
+  /// "otro"), y `utm_campaign` / `utm_content` limpios y recortados. Es lo que
+  /// permite decir "el anuncio 'video2' trajo 3 ventas". Null cuando la visita
+  /// no traía etiquetas, en tiendas, y en lo digital de antes de esto.
+  utmMedio    String?
+  utmCampania String?
+  utmAnuncio  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1169,6 +1178,36 @@ model DigitalVisitaOrigen {
   count     Int    @default(0)
 
   @@unique([productId, date, source])
+  @@index([productId, date(sort: Desc)])
+}
+
+/// La campaña de cada visita a la página de venta, por día. Una fila por
+/// (producto, día, medio, campaña, anuncio). Es el escalón de abajo de
+/// `DigitalVisitaOrigen`: aquélla dice "vino de Instagram", ésta dice "del
+/// anuncio 'video2' de la campaña 'lanzamiento', pago". Para el que paga
+/// publicidad es LA tabla: es la que le dice qué anuncio apagar.
+///
+/// ⚠️ `campania` y `anuncio` son TEXTO DEL VISITANTE —lo que trae la URL— y
+/// van en la clave, así que acá hay dos defensas que las otras tablas no
+/// necesitan, las dos en `lib/utm-digital`: cada texto se limpia y se recorta
+/// antes de entrar, y hay un techo de combinaciones distintas por producto y
+/// por día; pasado el techo todo cae en una sola fila "(otras)". Sin eso, un
+/// bot con nombres inventados llena la tabla en una tarde. `medio` sale de una
+/// lista cerrada, como `source` en la de orígenes.
+///
+/// Sólo se escribe cuando la visita traía `utm_source`: una campaña sin fuente
+/// no es una campaña, es alguien jugando con la URL.
+model DigitalVisitaCampania {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  date      String // "2026-09-14", día argentino
+  medio     String // una de MEDIOS
+  campania  String // limpio, ≤ LARGO_UTM
+  anuncio   String // limpio, ≤ LARGO_UTM; "" si no vino
+  count     Int    @default(0)
+
+  @@unique([productId, date, medio, campania, anuncio])
   @@index([productId, date(sort: Desc)])
 }
 
