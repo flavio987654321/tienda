@@ -11,7 +11,7 @@ export function esHostDeLaPlataforma(host: string): boolean {
   const h = host.toLowerCase().split(":")[0];
   if (h === "localhost" || h === "127.0.0.1") return true;
   let propio = "tiendaapps.com";
-  try { propio = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com").hostname.replace(/^www./, ""); } catch { /* el valor por defecto */ }
+  try { propio = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com").hostname.replace(/^www\./, ""); } catch { /* el valor por defecto */ }
   return h === propio || h === `www.${propio}`;
 }
 

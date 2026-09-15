@@ -87,6 +87,11 @@ check("RUTA-A", /const codigoPedido = normalizarCodigo\(cuerpo\.cupon\)/.test(co
   && /const total = totalSinCupon - \(cuponAplicado\?\.descuento \?\? 0\)/.test(comprar),
   "la compra lee el CÓDIGO, busca el cupón en la base, decide si aplica y descuenta ella");
 check("RUTA-B", /if \(codigoPedido && !ordenPrevia\)/.test(comprar), "un agregado (la oferta de después de pagar) no lleva cupón");
+check("RUTA-B2", /checkRateLimit\(`digital-cupon:\$\{ip\}`, INTENTOS_DE_CUPON_POR_HORA/.test(comprar) && /checkRateLimit\(`digital-cupon:\$\{ip\}`, INTENTOS_POR_HORA/.test(publica)
+  && /const INTENTOS_DE_CUPON_POR_HORA = 30;/.test(comprar) && /const INTENTOS_POR_HORA = 30;/.test(publica),
+  "adivinar códigos por la compra cuesta lo mismo que por la ruta pública: misma clave y mismo tope por IP");
+check("RUTA-B3", /cupon\.usos \+= await prisma\.order\.count\(\{[\s\S]*?cuponCodigo: cupon\.codigo, status: "PENDING",[\s\S]*?RESERVA_DE_CUPON_MS/.test(comprar),
+  "una compra abierta con cupón reserva el uso: el tope no se sobrevende entre la compra y el pago");
 check("RUTA-C", /storeId_codigo: \{ storeId: producto\.store\.id, codigo: codigoPedido \}/.test(comprar), "el cupón es de LA TIENDA del producto: el de otra vendedora no vale");
 check("RUTA-D", /cuponCodigo: cuponAplicado\?\.codigo \?\? null,\n\s+descuento: cuponAplicado\?\.descuento \?\? 0,/.test(comprar), "la orden guarda con qué cupón y cuánto descontó");
 check("RUTA-E", /if \(orden\.cuponCodigo\) \{\n\s+await tx\.cuponDigital\.updateMany\(\{\n\s+where: \{ storeId: orden\.store\.id, codigo: orden\.cuponCodigo \},\n\s+data: \{ usos: \{ increment: 1 \} \},/.test(cobro)

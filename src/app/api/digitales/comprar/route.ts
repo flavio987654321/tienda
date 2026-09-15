@@ -24,6 +24,10 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 /* Mismo formato que valida el resto de la cadena de pagos: cuid de Prisma o UUID. */
 const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+/** Intentos de cupón por IP y hora. Es el mismo número que `/api/digitales/cupon`. */
+const INTENTOS_DE_CUPON_POR_HORA = 30;
+/** Cuánto tiempo una compra abierta con cupón le reserva un uso. */
+const RESERVA_DE_CUPON_MS = 60 * 60_000;
 
 /* Largos de lo que se escribe en el checkout. Cortos: son para reconocer a la
    persona y para el mail de recuperación, no para escribir una carta. */
@@ -334,11 +338,35 @@ export async function POST(req: NextRequest) {
   let cuponAplicado: { codigo: string; descuento: number } | null = null;
   const codigoPedido = normalizarCodigo(cuerpo.cupon);
   if (codigoPedido && !ordenPrevia) {
+    /* ⚠️ El mismo tope que `/api/digitales/cupon` (30 por hora y por IP), y con
+       la MISMA clave. Sin esto, adivinar códigos por acá era treinta veces más
+       barato que por la ruta pensada para probarlos: el tope de arriba es por
+       minuto y deja 900 intentos por hora. Encontrado en la auditoría del 15/09. */
+    try {
+      if (!(await checkRateLimit(`digital-cupon:${ip}`, INTENTOS_DE_CUPON_POR_HORA, 60 * 60_000))) {
+        return NextResponse.json({ error: "Demasiados intentos con cupones. Esperá un rato." }, { status: 429 });
+      }
+    } catch {
+      /* Sin Redis se sigue: el tope por minuto de arriba sí frenó. */
+    }
     const fila = await prisma.cuponDigital.findUnique({
       where: { storeId_codigo: { storeId: producto.store.id, codigo: codigoPedido } },
       select: { codigo: true, tipo: true, valor: true, productId: true, venceAt: true, topeUsos: true, usos: true, activo: true },
     });
-    const cupon = fila && (fila.tipo === "PORCENTAJE" || fila.tipo === "PESOS") ? (fila as CuponDigitalPuro) : null;
+    const cupon = fila && (fila.tipo === "PORCENTAJE" || fila.tipo === "PESOS") ? ({ ...fila } as CuponDigitalPuro) : null;
+    /* Los usos se gastan al confirmarse el pago, así que entre la compra y el
+       pago un cupón con tope puede "sobrevenderse": diez personas abren el
+       pago con el último uso y las diez pagan. Se cuentan también las órdenes
+       PENDIENTES recientes con este cupón como usos en curso: quien abrió el
+       pago hace un rato tiene ese uso reservado; si no paga, se libera solo. */
+    if (cupon && cupon.topeUsos !== null) {
+      cupon.usos += await prisma.order.count({
+        where: {
+          storeId: producto.store.id, cuponCodigo: cupon.codigo, status: "PENDING",
+          createdAt: { gte: new Date(Date.now() - RESERVA_DE_CUPON_MS) },
+        },
+      });
+    }
     const motivo = cupon ? porQueNoAplica(cupon, { productId: producto.id, total: totalSinCupon }) : "Ese cupón no existe.";
     if (!cupon || motivo) {
       return NextResponse.json({ error: motivo ?? "Ese cupón no existe." }, { status: 400 });

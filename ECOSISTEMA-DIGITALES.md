@@ -6055,3 +6055,67 @@ en 720 y 360, y el mail con y sin botón / nombre.
 🔲 Rebotes duros y denuncias de spam del webhook de Resend → baja
    automática (el newsletter de tiendas ya lo hace).
 🔲 Cuántos abrieron / clickearon: no se mide. El botón con UTM es lo único.
+
+---
+
+## Auditoría de los nueve commits sin deployar — 15/09/26 (tarde)
+
+Se releyó todo lo que cambió desde el deploy del 14/09 (consejos, ventas,
+campañas por producto, píxel, medición por producto, enlaces, cupones,
+mail a compradores), buscando plata mal contada, puertas sin dueño y
+entradas públicas sin tope. Lo que apareció:
+
+### Arreglado
+
+- ⚠️ **Adivinar cupones por la ruta de compra era 30 veces más barato que
+  por la ruta pública.** `/api/digitales/cupon` tiene 30 intentos por hora
+  y por IP; `/api/digitales/comprar` tiene 15 por MINUTO (900 por hora), y
+  con un cupón inválido contesta antes de crear la orden — o sea que era
+  la ruta ideal para probar códigos. Ahora, si viene un cupón, la compra
+  pasa por el MISMO tope con la MISMA clave (`digital-cupon:<ip>`).
+- ⚠️ **Un cupón con tope se podía sobrevender.** Los usos se gastan al
+  confirmarse el pago (a propósito: un carrito abandonado no gasta), pero
+  eso dejaba una ventana: diez personas abren el pago con el último uso y
+  las diez pagan. Ahora las órdenes PENDIENTES de la última hora con ese
+  cupón cuentan como usos en curso: quien abrió el pago tiene el uso
+  reservado, y si no paga se libera solo. La ruta pública no lo mira (es
+  sólo para mostrar el precio): alguien puede ver "aplica" y al pagar
+  recibir "ya se usó todas las veces", que es el mensaje correcto.
+- `esHostDeLaPlataforma`: el `replace(/^www./)` tenía el punto sin escapar.
+  Cosmético, no cambiaba nada en la práctica.
+
+### Mirado y está bien
+
+- Comisión y preferencia de Mercado Pago salen del `total` YA descontado;
+  `Order.descuento` explica la diferencia con la suma de ítems.
+- Cupones: crear/apagar/borrar con el dueño en el `where`; el producto del
+  cupón tiene que ser propio; la ruta pública no cuenta usos ni vencimiento.
+- Medición por producto: PATCH con dueño y sólo PRINCIPAL; los IDs pasan
+  por `validarMedicion` al guardar Y por las listas blancas de
+  `StoreTrackingScripts` al dibujar, así que lo que entra al `<script>`
+  son letras y números.
+- `estado-compra` devuelve el total (público por id de orden, que es un
+  cuid) y nada de la persona.
+- Ventas: lista, resumen, detalle y exportación parten del mismo `where`
+  con el `storeId` del dueño; el producto pedido por la dirección se
+  verifica contra los suyos; techo de 5.000 filas y 30 exportaciones por
+  hora.
+- Mail a compradores: Pro al día, dos por día, productos propios, baja con
+  firma. Concurrencia: dos "seguir" a la vez sobre el mismo envío podrían
+  repetir una página (la pantalla lo impide; no se puso candado en la
+  base porque un candado antes de mandar pierde la página si la función
+  muere, que es peor). Anotado.
+
+### Un cambio que toca a TIENDAS, a propósito
+
+El píxel de la plataforma ahora se apaga por HOST además de por ruta: en
+`mecanica.tiendaapps.com` o en un dominio propio el navegador ve `/`, y
+sólo por ruta el nuestro cargaba junto al del comerciante. Eso también
+apaga el nuestro en los subdominios de tiendas (`tienda.tiendaapps.com`),
+donde antes SÍ cargaba al lado del de la tienda — y ésa es exactamente la
+regla de siempre ("dos píxeles, nunca juntos"), así que se deja. Si se
+quiere el píxel de plataforma en las tiendas por subdominio, hay que
+decidirlo aparte.
+
+`cupones-digitales.check.ts` +2 (RUTA-B2, RUTA-B3). 102 chequeos, tsc y
+eslint limpios.
