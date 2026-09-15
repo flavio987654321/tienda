@@ -5909,3 +5909,36 @@ anuncios. Entonces:
 
 Chequeos PROD-*, VAL-*, RUTA-*, BASE-A en `medicion-digital.check.ts` (33).
 Build local ok.
+
+---
+
+## Marketing, paso 2: enlaces para compartir con la etiqueta puesta — 15/09/26
+
+Se construyó todo Campañas y no había ningún lugar donde sacar un link
+etiquetado: nadie escribe `?utm_source=instagram&utm_medium=bio` a mano en el
+celular. `/digitales/marketing/enlaces` es el otro extremo del cable.
+
+- Un producto (selector si hay más de uno), un nombre de campaña opcional
+  (pasa por `limpiarUtm` y se muestra cómo va a quedar: lo que se ve es lo
+  que se cuenta), y **un link por canal** con botón de copiar: Instagram
+  biografía, Instagram historia/reel, WhatsApp, Facebook, TikTok, YouTube,
+  Mail. Cada canal lleva un `utm_source` que `clasificarOrigen` conoce y un
+  `utm_medium` que `medioDe` entiende: el chequeo CANAL-* hace entrar cada
+  link por las mismas funciones que la visita real y exige que se cuente
+  como se ve.
+- La dirección base con la misma prioridad que Productos: dominio propio,
+  si no `slug.tiendaapps.com`, si no la larga. Un dominio pelado lleva la
+  barra antes del `?`.
+- Sin publicar lo avisa arriba: repartir el link de un borrador es repartir
+  un 404.
+- El texto para Meta también está acá, con la aclaración de NO usar un link
+  de arriba en un anuncio.
+- Es de todos los planes: el link es un link. Lo que se paga es ver los
+  números (Campañas es de Pro).
+
+Marketing pasó de dos tarjetas a cuatro: Enlaces, **Píxel** (con estado:
+"puesto" o "todavía no", y a dónde ir), Reels, Upsells. Lo pendiente de arriba
+(mostrar el estado del píxel en Marketing) quedó hecho.
+
+`lib/enlaces-compartir.ts` puro, con `enlaces-compartir.check.ts` (19).
+Mirado en 720 y 360.

@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Film, TrendingUp, ArrowRight } from "lucide-react";
+import { Film, TrendingUp, ArrowRight, Share2, BarChart3 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
+import { prisma } from "@/lib/prisma";
+import { medicionDeLaTienda } from "@/lib/medicion-digital";
 import BotonVolver from "../BotonVolver";
 
 /**
@@ -33,7 +35,29 @@ export default async function MarketingPage() {
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
 
+  /* Si hay píxel en la cuenta, para decirlo en la tarjeta. El de cada
+     producto no se mira acá: es una tarjeta, no un informe. */
+  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { storeConfig: true } });
+  const medicion = medicionDeLaTienda(store?.storeConfig);
+  const hayPixel = !!medicion.pixelId;
+
   const herramientas = [
+    {
+      href: "/digitales/marketing/enlaces",
+      Icon: Share2,
+      titulo: "Enlaces para compartir",
+      que: "El link de cada producto para Instagram, WhatsApp, Facebook, TikTok, YouTube y mail, con la etiqueta puesta. Después en Estadísticas ves cuál trae ventas.",
+      accion: "Armar los links",
+    },
+    {
+      href: "/digitales/configuracion?tab=meta",
+      Icon: BarChart3,
+      titulo: "Píxel de Meta y Analytics",
+      que: hayPixel
+        ? "Tu píxel está puesto: mide la página, el pago y cada compra confirmada. Si un producto tiene su propia cuenta de anuncios, se le pone el suyo desde su Dirección."
+        : "Todavía no pusiste el píxel. Sin él, Meta no ve qué anuncio vendió y no puede volver a mostrarle tu página a quien la vio y no compró.",
+      accion: hayPixel ? "Ver la configuración" : "Poner el píxel",
+    },
     {
       href: "/digitales/marketing/reels",
       Icon: Film,
