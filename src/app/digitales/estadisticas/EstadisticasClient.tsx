@@ -656,7 +656,7 @@ function Campanias({ filas, conVisitas, ventasConCampania, ventas }: {
                  campaña ya lo dice todo. */
               const conAnuncios = f.anuncios.some((a) => a.anuncio !== "") || f.anuncios.length > 1;
               return [
-                <tr key={`${f.medio}-${f.campania}`} className="text-gray-900 panel-oscuro:text-gray-100 font-semibold">
+                <tr key={`${f.medio} ${f.campania}`} className="text-gray-900 panel-oscuro:text-gray-100 font-semibold">
                   <td className="py-2.5 pr-3 max-w-[260px]">
                     <span className="block truncate">{f.campania === OTRAS ? "Otras campañas" : f.campania}</span>
                     <span className="text-[11px] font-medium text-gray-400 panel-oscuro:text-gray-500">{NOMBRE_MEDIO[f.medio]}</span>
@@ -668,7 +668,7 @@ function Campanias({ filas, conVisitas, ventasConCampania, ventas }: {
                 </tr>,
                 ...(conAnuncios
                   ? f.anuncios.map((a) => (
-                      <tr key={`${f.medio}-${f.campania}-${a.anuncio}`} className="text-gray-600 panel-oscuro:text-gray-400">
+                      <tr key={`${f.medio} ${f.campania} ${a.anuncio}`} className="text-gray-600 panel-oscuro:text-gray-400">
                         <td className="py-2 pl-4 pr-3 max-w-[260px]">
                           <span className="block truncate">↳ {a.anuncio || "sin anuncio"}</span>
                         </td>

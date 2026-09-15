@@ -43,6 +43,7 @@ export async function limpiar() {
     abandonedCarts,
     visitasDigitales,
     origenesDigitales,
+    campaniasDigitales,
   ] = await Promise.all([
     // Sesiones de NextAuth ya expiradas
     prisma.session.deleteMany({
@@ -95,6 +96,9 @@ export async function limpiar() {
     prisma.digitalVisitaOrigen.deleteMany({
       where: { date: { lt: corteVisitas } },
     }),
+    prisma.digitalVisitaCampania.deleteMany({
+      where: { date: { lt: corteVisitas } },
+    }),
   ]);
 
   // Va al final y aparte del `Promise.all`: es lo único acá que sale a internet.
@@ -115,11 +119,12 @@ export async function limpiar() {
       abandonedCarts: abandonedCarts.count,
       visitasDigitales: visitasDigitales.count,
       origenesDigitales: origenesDigitales.count,
+      campaniasDigitales: campaniasDigitales.count,
     },
     total: sessions.count + clicks.count + notifications.count +
            adminLogs.count + coupons.count + storeViews.count +
            storeViewSources.count + funnelSteps.count + abandonedCarts.count +
-           visitasDigitales.count + origenesDigitales.count,
+           visitasDigitales.count + origenesDigitales.count + campaniasDigitales.count,
     ranAt: now.toISOString(),
   });
 }

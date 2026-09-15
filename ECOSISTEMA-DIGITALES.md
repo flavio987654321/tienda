@@ -5666,3 +5666,10 @@ tenemos, y no hay nadie que la pida todavía. Queda anotado.
 - 🔲 **Cuando haya una cuenta con publicidad real**: mirar si 50
   combinaciones por día alcanzan (una cuenta normal usa 15) y si el
   "(otras)" aparece alguna vez.
+- ✅ **Relectura antes del deploy (paso 5):** la tabla de campañas no estaba
+  en el cron de limpieza —se habría acumulado para siempre— y las claves de
+  las filas de la tabla podían chocar con nombres con guión. Las dos
+  corregidas. Lo que queda abierto y es inherente a cualquier UTM: un bot
+  con IPs de sobra puede meter hasta 50 nombres inventados por producto y
+  por día; se van al fondo de la lista (se ordena por ventas y visitas) y
+  los borra la limpieza a los 2 años.
