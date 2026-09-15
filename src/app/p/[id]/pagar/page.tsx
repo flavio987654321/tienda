@@ -10,7 +10,7 @@ import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import CheckoutClient from "./CheckoutClient";
 import VisitaDigital from "../VisitaDigital";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
-import { medicionDeLaTienda, MONEDA_DIGITAL } from "@/lib/medicion-digital";
+import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -50,7 +50,7 @@ export default async function PantallaDePago({ params }: Props) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, price: true, comparePrice: true, archivoPath: true,
-      rolDigital: true, paginaVenta: true, images: true, isActive: true,
+      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true,
       store: {
         select: {
           isPublished: true, mpAccessToken: true, ownerId: true, storeConfig: true,
@@ -140,7 +140,7 @@ export default async function PantallaDePago({ params }: Props) {
         {/* PageView + InitiateCheckout, con el precio del principal. Sólo cuando
             de verdad se puede comprar: la previa de la dueña no es un checkout. */}
         {seLePuedeVender && (() => {
-          const m = medicionDeLaTienda(fila.store.storeConfig);
+          const m = medicionDelProducto(fila.medicion, fila.store.storeConfig);
           return (
             <StoreTrackingScripts
               facebookPixelId={m.pixelId}

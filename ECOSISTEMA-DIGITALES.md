@@ -5884,3 +5884,28 @@ producto es un borrador y un borrador no mide. Se prueba con la compra real.
 
 🔲 Marketing tiene que mostrar el estado del píxel ("puesto / falta") con el
 link a Configuración, cuando se arme la pantalla como centro.
+
+### Y por producto — 15/09/26
+
+Flavio: "el píxel y cada uno de esos también debe funcionar con cada
+producto". Tenía razón: era uno por cuenta. Con un solo píxel Meta igual
+distingue productos (todos los eventos llevan `content_ids` con el id del
+producto; Purchase no lo llevaba y ahora sí), pero una cuenta Pro con cinco
+páginas y cinco dominios puede ser cinco negocios con cinco cuentas de
+anuncios. Entonces:
+
+- `Product.medicion` (JSON, migración `20260915150000_medicion_por_producto`,
+  comparada contra la base real): el píxel, el GA y el Clarity de ESA página.
+  Reemplazan al de la cuenta **campo por campo**; vacío = el de la cuenta.
+  `medicionDelProducto(delProducto, storeConfig)` es lo que leen las tres
+  páginas públicas.
+- Se edita en la pantalla de **Dirección del producto**, abajo del dominio
+  propio: es lo mismo, cosas de ESTA página y no de la cuenta. Dice qué usa
+  hoy ("vacío: usa el de la cuenta (111111…)").
+- Ruta `PATCH /api/digitales/productos/[id]/medicion`: sesión digital, tope
+  de ritmo, `validarMedicion` (mismas reglas de `tracking-ids` que
+  Configuración: lo que se guarda va adentro de un <script> público),
+  `updateMany` con el dueño en el `where`.
+
+Chequeos PROD-*, VAL-*, RUTA-*, BASE-A en `medicion-digital.check.ts` (33).
+Build local ok.

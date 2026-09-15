@@ -6,6 +6,8 @@ import { fechaDeSoltar } from "@/lib/dominio-digital";
 import BotonVolver from "../../../BotonVolver";
 import DireccionClient from "./DireccionClient";
 import DominioPropio from "./DominioPropio";
+import MedicionDelProducto from "./MedicionDelProducto";
+import { medicionGuardadaEnElProducto, medicionDeLaTienda } from "@/lib/medicion-digital";
 import { getUserSubscription } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +39,7 @@ export default async function DireccionPage({ params }: Props) {
      visite — se entrega con la compra. */
   const producto = await prisma.product.findFirst({
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL", store: { ownerId: user.id } },
-    select: { id: true, name: true, slugDigital: true, dominioPropio: true, isActive: true },
+    select: { id: true, name: true, slugDigital: true, dominioPropio: true, isActive: true, medicion: true, store: { select: { storeConfig: true } } },
   });
   if (!producto) notFound();
 
@@ -83,6 +85,12 @@ export default async function DireccionPage({ params }: Props) {
           dominioActual={producto.dominioPropio}
           direccion={producto.slugDigital ? direccionDelProducto(producto.slugDigital) : null}
           seSueltaEl={seSueltaEl}
+        />
+
+        <MedicionDelProducto
+          productoId={producto.id}
+          actual={medicionGuardadaEnElProducto(producto.medicion)}
+          delaCuenta={medicionDeLaTienda(producto.store.storeConfig)}
         />
       </div>
     </div>

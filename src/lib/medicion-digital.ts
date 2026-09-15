@@ -29,9 +29,20 @@
    un hash de un correo se revierte por diccionario. Si algún día hace falta,
    va por la API de conversiones desde el servidor, no por acá.
 
+   ── Por producto ──────────────────────────────────────────────────────────
+
+   El de la cuenta vale para todas las páginas. Pero una cuenta Pro tiene
+   hasta cinco, cada una con su dominio, y pueden ser cinco negocios con cinco
+   cuentas de anuncios: cada producto puede tener EL SUYO, que reemplaza al de
+   la cuenta campo por campo (`Product.medicion`, JSON). Vacío = el de la
+   cuenta. Y todos los eventos llevan el id del producto en `content_ids`,
+   así con un solo píxel Meta igual sabe qué producto se vio y cuál se compró.
+
    Lo que lee la configuración es puro y lo comparten la pantalla de
-   Configuración y las tres páginas públicas. Probado en
+   Configuración, la de cada producto y las tres páginas públicas. Probado en
    `medicion-digital.check.ts`. */
+
+import { validarGaId, validarPixelId, validarClarityId, extraerClarityId } from "@/lib/tracking-ids";
 
 export type Medicion = { pixelId: string; gaId: string; clarityId: string };
 
@@ -52,6 +63,49 @@ export function medicionDeLaTienda(raw: string | null | undefined): Medicion {
   }
 }
 
+/** La medición guardada en el producto (`Product.medicion`), o vacía. Mismo JSON que devuelve `validarMedicion`. */
+export function medicionGuardadaEnElProducto(raw: string | null | undefined): Medicion {
+  try {
+    const m = JSON.parse(raw || "{}") as Record<string, unknown>;
+    return {
+      pixelId: typeof m.pixelId === "string" ? m.pixelId.trim() : "",
+      gaId: typeof m.gaId === "string" ? m.gaId.trim() : "",
+      clarityId: typeof m.clarityId === "string" ? m.clarityId.trim() : "",
+    };
+  } catch {
+    return SIN_MEDICION;
+  }
+}
+
+/**
+ * La medición que va en la página de UN producto: la suya donde la tenga, la
+ * de la cuenta donde no. Campo por campo: puede tener píxel propio y usar el
+ * Clarity de la cuenta.
+ */
+export function medicionDelProducto(delProducto: string | null | undefined, storeConfig: string | null | undefined): Medicion {
+  const p = medicionGuardadaEnElProducto(delProducto);
+  const c = medicionDeLaTienda(storeConfig);
+  return { pixelId: p.pixelId || c.pixelId, gaId: p.gaId || c.gaId, clarityId: p.clarityId || c.clarityId };
+}
+
+/**
+ * Lo que llega de la pantalla del producto, verificado con las mismas reglas
+ * que Configuración: lo que se guarda termina adentro de un <script> público.
+ * Devuelve el JSON para guardar, o el problema en castellano. Los tres vacíos
+ * es válido y quiere decir "el de la cuenta": se guarda `null`.
+ */
+export function validarMedicion(body: unknown): { ok: true; medicion: string | null } | { ok: false; problema: string } {
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const pixelId = typeof b.pixelId === "string" ? b.pixelId.trim() : "";
+  const gaId = typeof b.gaId === "string" ? b.gaId.trim() : "";
+  const clarity = typeof b.clarityId === "string" ? b.clarityId : "";
+  const problema = validarPixelId(pixelId) ?? validarGaId(gaId) ?? validarClarityId(clarity);
+  if (problema) return { ok: false, problema };
+  const clarityId = clarity.trim() ? extraerClarityId(clarity) : "";
+  if (!pixelId && !gaId && !clarityId) return { ok: true, medicion: null };
+  return { ok: true, medicion: JSON.stringify({ pixelId, gaId, clarityId }) };
+}
+
 /** Todos los precios digitales van en pesos: ver "Los precios van en PESOS" en el plan. */
 export const MONEDA_DIGITAL = "ARS";
 
@@ -65,7 +119,7 @@ type ConFbq = { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) 
  * vez por orden en este navegador. Devuelve si disparó algo. Sin píxel ni GA
  * cargados no hace nada: no hay a quién avisarle.
  */
-export function marcarCompraEnElNavegador(c: { ordenId: string; total: number }): boolean {
+export function marcarCompraEnElNavegador(c: { ordenId: string; productoId: string; total: number }): boolean {
   if (typeof window === "undefined") return false;
   const w = window as unknown as ConFbq;
   if (!w.fbq && !w.gtag) return false;
@@ -77,10 +131,10 @@ export function marcarCompraEnElNavegador(c: { ordenId: string; total: number })
        un duplicado raro a no medir la compra. */
   }
   if (w.fbq) {
-    w.fbq("track", "Purchase", { value: c.total, currency: MONEDA_DIGITAL }, { eventID: c.ordenId });
+    w.fbq("track", "Purchase", { content_ids: [c.productoId], content_type: "product", value: c.total, currency: MONEDA_DIGITAL }, { eventID: c.ordenId });
   }
   if (w.gtag) {
-    w.gtag("event", "purchase", { transaction_id: c.ordenId, value: c.total, currency: MONEDA_DIGITAL });
+    w.gtag("event", "purchase", { transaction_id: c.ordenId, value: c.total, currency: MONEDA_DIGITAL, items: [{ item_id: c.productoId }] });
   }
   try { window.localStorage.setItem(clave, "1"); } catch { /* ídem */ }
   return true;

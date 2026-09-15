@@ -666,6 +666,12 @@ model Product {
   /// @unique por cuenta, o sea UNO. Pro tiene cinco productos y cada uno lleva
   /// el suyo, así que el dominio tiene que colgar del producto.
   dominioPropio String? @unique
+  /// La medición de ESTA página (píxel de Meta, GA, Clarity), como JSON. Vacío
+  /// o sin una clave = usa el de la cuenta (`Store.storeConfig.analytics`).
+  /// Una cuenta Pro tiene hasta 5 páginas con dominio propio: pueden ser cinco
+  /// negocios con cinco cuentas de anuncios. La forma la declara
+  /// `lib/medicion-digital`.
+  medicion      String?
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.

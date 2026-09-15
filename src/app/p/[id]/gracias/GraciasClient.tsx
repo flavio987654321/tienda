@@ -80,7 +80,7 @@ export default function GraciasClient(p: Props) {
           /* La compra está confirmada: recién ahora se mide (Purchase en Meta,
              purchase en GA), una vez por orden en este navegador. */
           if (typeof d.total === "number") {
-            marcarCompraEnElNavegador({ ordenId: p.ordenId!, total: d.total });
+            marcarCompraEnElNavegador({ ordenId: p.ordenId!, productoId: p.productoId, total: d.total });
           }
           return; // se corta solo: ya no hay nada que esperar
         }
@@ -103,7 +103,7 @@ export default function GraciasClient(p: Props) {
     }
     preguntar();
     return () => { vivo = false; };
-  }, [p.ordenId]);
+  }, [p.ordenId, p.productoId]);
 
   async function sumar(upsellId: string) {
     if (enVuelo.current) return;

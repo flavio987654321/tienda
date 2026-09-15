@@ -7,7 +7,7 @@ import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
 import GraciasClient from "./GraciasClient";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
-import { medicionDeLaTienda } from "@/lib/medicion-digital";
+import { medicionDelProducto } from "@/lib/medicion-digital";
 
 /** Lo más que puede llevar una orden de un embudo, con el doble de margen. */
 const TECHO_DE_UNA_ORDEN =
@@ -52,7 +52,7 @@ export default async function Gracias({ params, searchParams }: Props) {
   const fila = await prisma.product.findFirst({
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
-      id: true, name: true, paginaVenta: true,
+      id: true, name: true, paginaVenta: true, medicion: true,
       store: {
         select: {
           isPublished: true, storeConfig: true,
@@ -101,7 +101,7 @@ export default async function Gracias({ params, searchParams }: Props) {
         {/* PageView acá; Purchase lo dispara GraciasClient cuando la compra se
             confirma de verdad, una vez por orden. Ver `lib/medicion-digital`. */}
         {(() => {
-          const m = medicionDeLaTienda(fila.store.storeConfig);
+          const m = medicionDelProducto(fila.medicion, fila.store.storeConfig);
           return <StoreTrackingScripts facebookPixelId={m.pixelId} googleAnalyticsId={m.gaId} clarityProjectId={m.clarityId} />;
         })()}
         <GraciasClient
