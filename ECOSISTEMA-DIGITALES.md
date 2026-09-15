@@ -5673,3 +5673,32 @@ tenemos, y no hay nadie que la pida todavía. Queda anotado.
   con IPs de sobra puede meter hasta 50 nombres inventados por producto y
   por día; se van al fondo de la lista (se ordena por ventas y visitas) y
   los borra la limpieza a los 2 años.
+
+---
+
+## Estadísticas en dos solapas, y el embudo por canal — 15/09/26 (madrugada)
+
+Flavio vio que la competencia separa "General" de "Campañas UTM" y nosotros
+lo teníamos todo en una página larga donde "¿vendí?" y "¿me rinde el
+anuncio?" se pisaban. Ahora son **dos solapas** arriba de Estadísticas
+—**General** y **Campañas**—, con el mismo selector de producto y de rango,
+y la solapa en la URL. Solapas y no submenú de la barra: la barra de
+digitales es un riel de íconos y un árbol adentro serían dos íconos sin
+nombre (está escrito en la propia barra).
+
+- **General**: los cuatro números, visitas y ventas por día, después de la
+  venta, cuándo se vende, embudo, por producto, carritos recuperados.
+- **Campañas** (Pro): de dónde vienen, campañas por anuncio, el texto para Meta.
+
+Y con la separación entró lo que ellos tienen y nos faltaba: **el embudo
+por canal** — de los que vinieron de Instagram, cuántos abrieron el pago y
+cuántos pagaron. Pedía saber el origen también en el paso "pagar", y el
+referente de ese pedido no sirve (es nuestra propia página): el navegador
+manda el que la página **anotó al entrar**, así los dos pasos miden lo
+mismo. `DigitalVisitaOrigen` ganó la columna `paso` (por defecto "pagina",
+que es lo que era todo lo escrito) y la clave pasó a incluirla. Migración
+comparada contra la base real.
+
+Las tres barras de cada canal van sobre la misma escala, así se ve a simple
+vista dónde se cae cada uno: Instagram trae mucho y pocos abren el pago;
+WhatsApp trae menos y casi todos pagan. Mirado en 1000 y 360.

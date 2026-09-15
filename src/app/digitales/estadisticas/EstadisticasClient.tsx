@@ -263,7 +263,7 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
             titulo="De dónde vienen"
             bajada={
               origenes.conocidas > 0
-                ? `Visitas y ventas por canal. Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís y quedan anotadas ahí.${origenes.ventasSinOrigen > 0 ? ` ${entero(origenes.ventasSinOrigen)} ${origenes.ventasSinOrigen === 1 ? "venta no tiene" : "ventas no tienen"} origen anotado.` : ""}`
+                ? `El embudo de cada canal: cuántos entraron, cuántos abrieron el pago y cuántos pagaron. Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís y quedan anotadas ahí.${origenes.ventasSinOrigen > 0 ? ` ${entero(origenes.ventasSinOrigen)} ${origenes.ventasSinOrigen === 1 ? "venta no tiene" : "ventas no tienen"} origen anotado.` : ""}`
                 : "Agregá ?utm_source=instagram (o whatsapp, facebook, email…) al link que compartís, y cada visita y cada venta quedan anotadas con su canal."
             }
           >
@@ -273,10 +273,10 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           <Bloqueado bloque="origenes">
             <Tarjeta titulo="De dónde vienen" bajada="Instagram, WhatsApp, un anuncio, un mail: qué canal trae las visitas y cuál trae las ventas.">
               <Origenes filas={[
-                { origen: "instagram", visitas: 120, pct: 48, ventas: 5, conversion: 4.2 },
-                { origen: "whatsapp", visitas: 70, pct: 28, ventas: 4, conversion: 5.7 },
-                { origen: "facebook", visitas: 35, pct: 14, ventas: 0, conversion: 0 },
-                { origen: "directo", visitas: 25, pct: 10, ventas: 1, conversion: 4 },
+                { origen: "instagram", visitas: 120, pct: 48, checkouts: 18, ventas: 5, pctCheckout: 15, conversion: 4.2 },
+                { origen: "whatsapp", visitas: 70, pct: 28, checkouts: 12, ventas: 4, pctCheckout: 17.1, conversion: 5.7 },
+                { origen: "facebook", visitas: 35, pct: 14, checkouts: 2, ventas: 0, pctCheckout: 5.7, conversion: 0 },
+                { origen: "directo", visitas: 25, pct: 10, checkouts: 3, ventas: 1, pctCheckout: 12, conversion: 4 },
               ]} />
             </Tarjeta>
           </Bloqueado>
@@ -510,27 +510,36 @@ function EmbudoDibujado({ visitas, checkouts, ventas, pctCheckout, pctVenta }: {
   );
 }
 
-function Origenes({ filas }: { filas: { origen: keyof typeof NOMBRE_ORIGEN; visitas: number; pct: number; ventas: number; conversion: number | null }[] }) {
+/**
+ * Cada canal con su embudo: entraron → abrieron el pago → pagaron. Las tres
+ * barras van sobre la misma escala (el canal con más visitas llena la suya),
+ * así que a simple vista se ve dónde se cae cada canal: Instagram trae mucho
+ * y pocos abren el pago; WhatsApp trae menos y casi todos pagan.
+ */
+function Origenes({ filas }: { filas: Estadisticas["origenes"]["filas"] }) {
   if (filas.length === 0) {
     return <p className="text-[12.5px] text-gray-400 panel-oscuro:text-gray-500">Todavía no hay visitas con origen en este período.</p>;
   }
   const max = Math.max(1, ...filas.map((f) => f.visitas));
+  const ancho = (n: number) => `${Math.min(100, (n / max) * 100)}%`;
   return (
-    <ul className="space-y-3">
+    <ul className="divide-y divide-gray-100 panel-oscuro:divide-gray-800">
       {filas.map((f) => (
-        <li key={f.origen}>
-          <div className="flex items-baseline justify-between gap-3 mb-1">
-            <p className="text-sm text-gray-700 panel-oscuro:text-gray-300">{NOMBRE_ORIGEN[f.origen]}</p>
-            <p className="text-sm tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0 text-right">
-              <span className="font-bold">{entero(f.visitas)}</span>
-              <span className="font-medium text-gray-400 panel-oscuro:text-gray-500"> visitas</span>
-              <span className="block sm:inline sm:ml-2 font-medium text-gray-500 panel-oscuro:text-gray-400">
-                {entero(f.ventas)} {f.ventas === 1 ? "venta" : "ventas"}{f.conversion !== null && f.visitas > 0 ? ` · ${porcentaje(f.conversion)}` : ""}
-              </span>
-            </p>
+        <li key={f.origen} className="py-3 first:pt-0 last:pb-0">
+          <div className="flex items-baseline justify-between gap-3 mb-1.5">
+            <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">{NOMBRE_ORIGEN[f.origen]}</p>
+            <p className="text-[12px] tabular-nums text-gray-500 panel-oscuro:text-gray-400 shrink-0">{porcentaje(f.pct)} de las visitas</p>
           </div>
-          <div className="h-2 w-full rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden">
-            <div className="h-full rounded-full bg-orange-500" style={{ width: `${(f.visitas / max) * 100}%` }} />
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 text-[12px]">
+            <span className="text-gray-500 panel-oscuro:text-gray-400">Entraron</span>
+            <div className="h-2 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden"><div className="h-full rounded-full bg-orange-500" style={{ width: ancho(f.visitas) }} /></div>
+            <span className="tabular-nums font-semibold text-gray-900 panel-oscuro:text-gray-100 text-right min-w-[8ch]">{entero(f.visitas)}</span>
+            <span className="text-gray-500 panel-oscuro:text-gray-400">Al pago</span>
+            <div className="h-2 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden"><div className="h-full rounded-full bg-amber-500" style={{ width: ancho(f.checkouts) }} /></div>
+            <span className="tabular-nums text-gray-700 panel-oscuro:text-gray-300 text-right min-w-[8ch]">{entero(f.checkouts)}{f.pctCheckout !== null ? <span className="text-gray-400 panel-oscuro:text-gray-500"> · {porcentaje(f.pctCheckout)}</span> : null}</span>
+            <span className="text-gray-500 panel-oscuro:text-gray-400">Pagaron</span>
+            <div className="h-2 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: ancho(f.ventas) }} /></div>
+            <span className="tabular-nums text-gray-700 panel-oscuro:text-gray-300 text-right min-w-[8ch]">{entero(f.ventas)}{f.conversion !== null ? <span className="text-gray-400 panel-oscuro:text-gray-500"> · {porcentaje(f.conversion)}</span> : null}</span>
           </div>
         </li>
       ))}

@@ -1162,9 +1162,17 @@ model DigitalVisita {
   @@index([productId, date(sort: Desc)])
 }
 
-/// De dónde vinieron las visitas a la página de venta, por día. Una fila por
-/// (producto, día, origen). Sólo del paso "pagina": el checkout se abre desde
-/// la propia página, así que su referente sería siempre nosotros.
+/// De dónde vinieron las visitas a la página de venta, por día y por paso.
+/// Una fila por (producto, día, paso, origen). Con `paso` "pagina" es de
+/// dónde vino el que entró; con "pagar", de dónde había venido el que abrió
+/// el checkout. Junto con las ventas de `Order.origenVisita` arman el embudo
+/// POR CANAL: de los que vinieron de Instagram, cuántos quisieron pagar y
+/// cuántos pagaron.
+///
+/// El origen del paso "pagar" no sale del referente de ese pedido —sería
+/// siempre nuestra propia página— sino del que la página anotó al entrar y
+/// el navegador manda con el ping (ver `anotarOrigen`). `paso` nació con
+/// valor por defecto "pagina" porque la tabla existió primero sin él.
 ///
 /// `source` sale de la lista cerrada de `src/lib/origen-visita.ts`, la misma
 /// que usan las tiendas: un `utm_source` reconocido cae en su etiqueta, uno
@@ -1174,10 +1182,11 @@ model DigitalVisitaOrigen {
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   date      String
+  paso      String  @default("pagina") // "pagina" | "pagar"
   source    String // una de ORIGENES
   count     Int    @default(0)
 
-  @@unique([productId, date, source])
+  @@unique([productId, date, paso, source])
   @@index([productId, date(sort: Desc)])
 }
 

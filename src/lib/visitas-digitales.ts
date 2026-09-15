@@ -159,6 +159,15 @@ export function registrarVisitaDigital(paso: PasoDigital, productId: string): vo
       /* Si esto falla la visita se cuenta igual y queda sin origen. El total es
          lo que no se puede perder. */
     }
+  } else {
+    /* Al abrir el pago el referente es nuestra propia página y no dice nada.
+       Lo que dice algo es de dónde había venido: lo que la página anotó al
+       entrar. Con eso el servidor arma el embudo por canal. */
+    const anotado = origenAnotado(productId);
+    if (anotado) {
+      referente = anotado.referente;
+      utm = { utmSource: anotado.utmSource, utmMedium: anotado.utmMedium ?? "", utmCampaign: anotado.utmCampaign ?? "", utmContent: anotado.utmContent ?? "" };
+    }
   }
 
   fetch(`/api/digitales/visita/${productId}`, {

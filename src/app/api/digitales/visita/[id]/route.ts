@@ -117,28 +117,33 @@ export async function POST(
     return NextResponse.json({ ok: true, contada: false });
   }
 
-  /* De dónde vino, sólo al entrar a la página. Va DESPUÉS del total y en su
-     propio try: el total es el número que no se puede perder; si esto falla,
-     la visita ya quedó contada y sólo no se sabe de dónde vino. La etiqueta la
+  /* De dónde vino, en los dos pasos. Va DESPUÉS del total y en su propio
+     try: el total es el número que no se puede perder; si esto falla, la
+     visita ya quedó contada y sólo no se sabe de dónde vino. La etiqueta la
      decide el servidor con la lista cerrada de `origen-visita`: del navegador
-     se acepta el hecho crudo, nunca la clasificación. */
+     se acepta el hecho crudo, nunca la clasificación.
+
+     En "pagar" el referente que llega no es el de ese pedido —sería nuestra
+     propia página— sino el que la página anotó al entrar; así el origen de
+     los dos pasos mide lo mismo y el embudo por canal quiere decir algo. */
+  try {
+    const referente = typeof cuerpo?.referente === "string" ? cuerpo.referente : null;
+    const utmSource = typeof cuerpo?.utmSource === "string" ? cuerpo.utmSource : null;
+    const source = clasificarOrigen(referente, utmSource, req.headers.get("host"), false);
+    const claveOrigen = { productId: producto.id, date, paso, source };
+    await sumarUno(
+      () => prisma.digitalVisitaOrigen.upsert({
+        where: { productId_date_paso_source: claveOrigen },
+        update: { count: { increment: 1 } },
+        create: { ...claveOrigen, count: 1 },
+      }),
+      () => prisma.digitalVisitaOrigen.updateMany({ where: claveOrigen, data: { count: { increment: 1 } } }),
+    );
+  } catch {
+    /* Contada sin origen. */
+  }
+
   if (paso === "pagina") {
-    try {
-      const referente = typeof cuerpo?.referente === "string" ? cuerpo.referente : null;
-      const utmSource = typeof cuerpo?.utmSource === "string" ? cuerpo.utmSource : null;
-      const source = clasificarOrigen(referente, utmSource, req.headers.get("host"), false);
-      const claveOrigen = { productId: producto.id, date, source };
-      await sumarUno(
-        () => prisma.digitalVisitaOrigen.upsert({
-          where: { productId_date_source: claveOrigen },
-          update: { count: { increment: 1 } },
-          create: { ...claveOrigen, count: 1 },
-        }),
-        () => prisma.digitalVisitaOrigen.updateMany({ where: claveOrigen, data: { count: { increment: 1 } } }),
-      );
-    } catch {
-      /* Contada sin origen. */
-    }
 
     /* La campaña, si la visita traía una. Mismo criterio que el origen: aparte
        y después, en su propio try. Y con el techo: si es una combinación que

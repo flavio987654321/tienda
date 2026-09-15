@@ -46,8 +46,8 @@ check("PING-D", /navigator\.webdriver/.test(lib) && /localStorage\.getItem\(clav
   "el cliente descarta navegadores manejados por script y deduplica por día");
 check("PING-E", /timeZone: "America\/Argentina\/Buenos_Aires"/.test(lib),
   "el día del dedup es el argentino, el mismo que guarda el servidor");
-check("PING-F", /if \(paso === "pagina"\) \{[\s\S]*document\.referrer/.test(lib),
-  "el referente y el utm sólo van al entrar: el checkout se abre desde nuestra propia página");
+check("PING-F", /if \(paso === "pagina"\) \{[\s\S]*document\.referrer/.test(lib) && /const anotado = origenAnotado\(productId\);/.test(lib),
+  "al entrar va el referente de verdad; al abrir el pago va el que la página anotó al entrar, no el nuestro");
 
 /* ── La ruta ─────────────────────────────────────────────────────────────── */
 
@@ -69,9 +69,10 @@ check("RUTA-E2", /code !== "P2002"\) throw e;/.test(ruta) && /prisma\.digitalVis
 check("RUTA-E3", /if \(!ID_RE\.test\(id\)\) return NextResponse\.json\(\{ ok: false \}, \{ status: 404 \}\);/.test(antesDeLaBase)
   && ruta.indexOf("ID_RE.test(id)") < ruta.indexOf("visitaLegitima("),
   "un id que no tiene forma de id se rechaza antes del límite por IP y de la base");
-check("RUTA-F", /if \(paso === "pagina"\) \{[\s\S]*prisma\.digitalVisitaOrigen\.upsert/.test(ruta)
-  && ruta.indexOf("prisma.digitalVisita.upsert") < ruta.indexOf("prisma.digitalVisitaOrigen.upsert"),
-  "el origen se guarda sólo al entrar, y después del total");
+check("RUTA-F", /const claveOrigen = \{ productId: producto\.id, date, paso, source \};/.test(ruta)
+  && ruta.indexOf("prisma.digitalVisita.upsert") < ruta.indexOf("prisma.digitalVisitaOrigen.upsert")
+  && ruta.indexOf("prisma.digitalVisitaOrigen.upsert") < ruta.indexOf("if (paso === \"pagina\") {"),
+  "el origen se guarda en los dos pasos con el paso en la clave, después del total y antes de la campaña");
 check("RUTA-G", /clasificarOrigen\(referente, utmSource, req\.headers\.get\("host"\), false\)/.test(ruta),
   "la etiqueta la decide el servidor con la lista cerrada de origen-visita");
 
@@ -87,8 +88,13 @@ check("TABLA-A2", /const dispositivo: Dispositivo = cuerpo\?\.movil === true \? 
   "el dispositivo lo decide el servidor con el hecho crudo, comparado con true exacto");
 check("TABLA-A3", /matchMedia\("\(pointer: coarse\)"\)/.test(lib) && /movil: esMovil\(\)/.test(lib),
   "el cliente manda si el puntero es grueso, no el ancho de la ventana");
-check("TABLA-B", /model DigitalVisitaOrigen \{[\s\S]*@@unique\(\[productId, date, source\]\)/.test(schema),
-  "DigitalVisitaOrigen: una fila por producto, día y origen");
+check("TABLA-B", /model DigitalVisitaOrigen \{[\s\S]*@@unique\(\[productId, date, paso, source\]\)/.test(schema)
+  && /paso      String  @default\("pagina"\)/.test(schema),
+  "DigitalVisitaOrigen: una fila por producto, día, paso y origen; el paso nació con 'pagina' por defecto");
+const migracionPaso = "prisma/migrations/20260915020000_origen_por_paso/migration.sql";
+check("TABLA-B2", existsSync(migracionPaso) && /ADD COLUMN IF NOT EXISTS "paso" TEXT NOT NULL DEFAULT 'pagina'/.test(leer(migracionPaso))
+  && /DROP INDEX IF EXISTS "DigitalVisitaOrigen_productId_date_source_key"/.test(leer(migracionPaso)),
+  "la migración agrega el paso con su valor por defecto y cambia la clave; se puede volver a correr");
 check("TABLA-C", /model DigitalVisita \{[\s\S]*?onDelete: Cascade/.test(schema) && /model DigitalVisitaOrigen \{[\s\S]*?onDelete: Cascade/.test(schema),
   "borrar el producto se lleva sus visitas");
 check("TABLA-D", existsSync(migracion)

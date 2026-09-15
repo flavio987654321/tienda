@@ -184,7 +184,7 @@ export default async function EstadisticasPage({
     sinTabla(prisma.digitalVisitaOrigen.findMany({
       where: { productId: { in: idsDePrincipales }, date: { gte: rango.desde, lte: rango.hasta } },
       take: TECHO_DE_ORIGENES,
-      select: { productId: true, date: true, source: true, count: true },
+      select: { productId: true, date: true, paso: true, source: true, count: true },
     })),
     sinTabla(prisma.digitalVisitaCampania.findMany({
       where: { productId: { in: idsDePrincipales }, date: { gte: rango.desde, lte: rango.hasta } },
@@ -241,7 +241,7 @@ export default async function EstadisticasPage({
     rango,
     ordenes: ordenesCrudas,
     visitas: visitas.map((v): VisitaCruda => ({ ...v, paso: v.paso as PasoDigital, dispositivo: v.dispositivo as Dispositivo })),
-    origenes,
+    origenes: origenes.map((o) => ({ ...o, paso: o.paso as PasoDigital })),
     campanias,
     principales,
     elegido,

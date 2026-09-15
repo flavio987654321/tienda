@@ -157,7 +157,7 @@ export type OrdenCruda = {
 };
 
 export type VisitaCruda = { productId: string; date: string; paso: PasoDigital; dispositivo: Dispositivo; count: number };
-export type OrigenCrudo = { productId: string; date: string; source: string; count: number };
+export type OrigenCrudo = { productId: string; date: string; paso: PasoDigital; source: string; count: number };
 export type CampaniaCruda = { productId: string; date: string; medio: string; campania: string; anuncio: string; count: number };
 export type PrincipalCrudo = { id: string; name: string; publicada: boolean };
 
@@ -200,7 +200,17 @@ export type Posventa = {
 
 export type Cuando = { porDiaSemana: number[]; porHora: number[] };
 
-export type FilaDeOrigen = { origen: Origen; visitas: number; pct: number; ventas: number; conversion: number | null };
+/** Un canal con su embudo: entraron, abrieron el pago, pagaron. */
+export type FilaDeOrigen = {
+  origen: Origen;
+  visitas: number;
+  pct: number;
+  checkouts: number;
+  ventas: number;
+  /** Checkouts ÷ visitas y ventas ÷ visitas, en porcentaje. */
+  pctCheckout: number | null;
+  conversion: number | null;
+};
 
 export type Carritos = { abandonados: number; recordados: number; recuperados: number; pctRecuperados: number | null };
 
@@ -397,15 +407,16 @@ export function armarEstadisticas(entrada: {
      visita con uno inventado; una SIN origen (de antes de que se guardara, o
      con el almacenamiento bloqueado) se cuenta aparte y se dice. */
   const esOrigen = (s: string): s is Origen => (ORIGENES as readonly string[]).includes(s);
-  const porOrigen = new Map<Origen, { visitas: number; ventas: number }>();
+  const porOrigen = new Map<Origen, { visitas: number; checkouts: number; ventas: number }>();
   const cajon = (o: Origen) => {
     let c = porOrigen.get(o);
-    if (!c) { c = { visitas: 0, ventas: 0 }; porOrigen.set(o, c); }
+    if (!c) { c = { visitas: 0, checkouts: 0, ventas: 0 }; porOrigen.set(o, c); }
     return c;
   };
   let conocidas = 0;
   for (const o of origenes) {
     if (!esOrigen(o.source)) continue;
+    if (o.paso === "pagar") { cajon(o.source).checkouts += o.count; continue; }
     cajon(o.source).visitas += o.count;
     conocidas += o.count;
   }
@@ -416,7 +427,9 @@ export function armarEstadisticas(entrada: {
   }
   const filas = ordenarOrigenes(
     [...porOrigen.entries()].map(([origen, c]) => ({
-      origen, visitas: c.visitas, pct: pct(c.visitas, conocidas) ?? 0, ventas: c.ventas, conversion: pct(c.ventas, c.visitas),
+      origen, visitas: c.visitas, pct: pct(c.visitas, conocidas) ?? 0,
+      checkouts: c.checkouts, ventas: c.ventas,
+      pctCheckout: pct(c.checkouts, c.visitas), conversion: pct(c.ventas, c.visitas),
     })),
   );
 

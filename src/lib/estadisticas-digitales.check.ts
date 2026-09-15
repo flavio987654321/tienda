@@ -88,10 +88,12 @@ const visitas: VisitaCruda[] = [
   { productId: "a", date: "2026-09-01", paso: "pagina", dispositivo: "movil", count: 1000 },
 ];
 const origenes: OrigenCrudo[] = [
-  { productId: "a", date: "2026-09-10", source: "instagram", count: 30 },
-  { productId: "a", date: "2026-09-10", source: "directo", count: 20 },
-  { productId: "b", date: "2026-09-14", source: "whatsapp", count: 40 },
-  { productId: "b", date: "2026-09-14", source: "inventado", count: 10 },
+  { productId: "a", date: "2026-09-10", paso: "pagina", source: "instagram", count: 30 },
+  { productId: "a", date: "2026-09-10", paso: "pagar", source: "instagram", count: 6 },
+  { productId: "a", date: "2026-09-10", paso: "pagina", source: "directo", count: 20 },
+  { productId: "b", date: "2026-09-14", paso: "pagina", source: "whatsapp", count: 40 },
+  { productId: "b", date: "2026-09-14", paso: "pagar", source: "whatsapp", count: 8 },
+  { productId: "b", date: "2026-09-14", paso: "pagina", source: "inventado", count: 10 },
 ];
 const principales = [
   { id: "a", name: "Mecánica", publicada: true },
@@ -169,6 +171,8 @@ const ig = todo.origenes.filas.find((f) => f.origen === "instagram")!;
 check("ORIG-B", ig.visitas === 30 && ig.ventas === 2 && ig.conversion !== null && Math.round(ig.conversion * 10) === 67
   && todo.origenes.ventasSinOrigen === 1,
   "cada origen con sus ventas y su conversión; la venta sin origen se cuenta aparte");
+check("ORIG-C", ig.checkouts === 6 && ig.pctCheckout === 20 && todo.origenes.conocidas === 90,
+  "el embudo por canal: los del paso 'pagar' son checkouts y no suman a las visitas conocidas");
 
 /* Campañas */
 const camp = todo.campanias;
