@@ -5610,3 +5610,59 @@ ping y el origen anotado (`visitas-digitales.check.ts`); la consulta en
 - 🔲 **Lo que queda para después:** exportar a PDF/CSV como Métricas de
   tiendas; comparar contra el período anterior; los rebotes reales del mail
   (webhook de Resend).
+
+---
+
+## Campañas UTM — 14/09/26 (noche)
+
+Flavio trajo la pantalla "Campañas UTM" de la competencia y preguntó qué era.
+Un UTM son las etiquetas del link (`?utm_source=instagram&utm_medium=pago&
+utm_campaign=lanzamiento&utm_content=video2`): la persona no nota nada, la
+página lo lee al entrar y anota de dónde vino y de qué anuncio. Para el que
+paga publicidad es LA métrica: "el anuncio 'video2' trajo 3 ventas y el
+'foto' ninguna" es lo que le dice qué apagar. Nosotros teníamos sólo el
+`utm_source` (el canal); esto baja un escalón: **campaña y anuncio**, con
+visitas **y ventas**.
+
+Hecho **de a un paso, con la cabeza en el abuso** (pedido explícito: nada
+de apuro, nada que abra la puerta a bots), porque acá lo que se guarda es
+texto que manda un desconocido desde la URL y termina en la clave de una
+tabla y en la pantalla de la dueña:
+
+1. **La base** — `DigitalVisitaCampania` (producto, día, medio, campaña,
+   anuncio, cuenta) y `Order.utmMedio/utmCampania/utmAnuncio`. Migración
+   comparada contra la base real antes de escribirla.
+2. **La limpieza** — `lib/utm-digital`, pura y probada con lo que mandaría
+   un bot (`utm-digital.check.ts`, 26 chequeos):
+   - el **medio va a lista cerrada** (pago / orgánico / mail / historia /
+     otro), con las palabras que ponen Meta, Google y la gente;
+   - campaña y anuncio se **limpian** (sin control, sin ángulos ni
+     comillas, espacios juntos, minúsculas, 80 caracteres);
+   - **campaña sólo si vino con `utm_source`**: una campaña sin fuente es
+     alguien jugando con la URL;
+   - **techo de 50 combinaciones por producto y por día**; la 51 cae en una
+     sola fila `(otras)`, y `(otras)` no se puede mandar desde la URL —lo
+     agarró el chequeo TECHO-E: como los paréntesis están permitidos,
+     alguien podía mandarlo y mezclarse con la bolsa.
+3. **El ping y la orden** — el navegador manda las cuatro etiquetas crudas
+   al entrar y las anota con el origen; la ruta del ping aplica el techo
+   (una que ya existe suma, una nueva entra si hay lugar), aparte y después
+   del origen, en su propio try; la ruta de comprar guarda la campaña
+   limpia en la orden, o null.
+4. **La cuenta y la pantalla** — bloque **"Campañas"** en Estadísticas,
+   **sólo Pro** (con el origen, el embudo y los carritos: "¿dónde
+   invierto?"): campaña → anuncio → visitas, ventas, conversión, te quedó,
+   de más a menos ventas, `(otras)` al final. Arriba el cuadro **"Si hacés
+   anuncios en Meta, pegá esto una sola vez"** con
+   `utm_source=facebook&utm_medium=pago&utm_campaign={{campaign.name}}&utm_content={{ad.name}}`
+   y botón de copiar: Meta completa los comodines, así cada anuncio se
+   etiqueta solo. Mirado en 1100, 768 y 360 (la tabla desplaza de costado).
+
+Lo que **no** se hizo, a propósito: conectar la cuenta de Meta Ads para ver
+el gasto y el ROAS (lo que ellos llaman UTMIFLOW y cobran en su plan más
+caro). Es una integración con la API de Meta, pide permisos que no
+tenemos, y no hay nadie que la pida todavía. Queda anotado.
+
+- 🔲 **Cuando haya una cuenta con publicidad real**: mirar si 50
+  combinaciones por día alcanzan (una cuenta normal usa 15) y si el
+  "(otras)" aparece alguna vez.

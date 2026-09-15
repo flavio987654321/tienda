@@ -13,8 +13,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import {
   resolverRango, armarEstadisticas, puedeVer, DESDE_QUE_PLAN, RANGOS, DIAS_DE_TODO,
-  type OrdenCruda, type VisitaCruda, type OrigenCrudo, type Bloque,
+  type OrdenCruda, type VisitaCruda, type OrigenCrudo, type CampaniaCruda, type Bloque,
 } from "./estadisticas-digitales";
+import { OTRAS } from "./utm-digital";
 import { DIAS_RETENCION_VISITAS } from "./retencion";
 import { featuresDigital } from "./planes-digitales";
 
@@ -48,7 +49,7 @@ check("PLAN-B", (["visitas", "cuando"] as Bloque[]).every((b) => puedeVer("START
   && !puedeVer("STARTER", "embudo") && !puedeVer("STARTER", "origenes") && !puedeVer("STARTER", "carritos"),
   "Starter responde \"¿la página funciona?\": suma visitas, conversión y cuándo se vende");
 check("PLAN-C", bloques.every((b) => puedeVer("PRO", b))
-  && (["embudo", "origenes", "carritos"] as Bloque[]).every((b) => DESDE_QUE_PLAN[b] === "PRO"),
+  && (["embudo", "origenes", "campanias", "carritos"] as Bloque[]).every((b) => DESDE_QUE_PLAN[b] === "PRO"),
   "Pro responde \"¿dónde invierto?\": embudo, origen y carritos recuperados son suyos");
 check("PLAN-D", DESDE_QUE_PLAN.ventas === "FREE" && DESDE_QUE_PLAN.posventa === "FREE",
   "las ventas y lo de después nunca se bloquean: ya las paga con la comisión");
@@ -64,13 +65,15 @@ check("PLAN-E",
 const rango = resolverRango("7", HOY); // 08 al 14
 const base: Omit<OrdenCruda, "estado" | "total" | "tasa" | "dia" | "principal"> = {
   motivo: null, diaSemana: 3, hora: 21, comprador: "u1", upsell: 0,
-  bajo: true, vencidoSinBajar: false, mail: "ENVIADO", recordada: false, origen: null,
+  bajo: true, vencidoSinBajar: false, mail: "ENVIADO", recordada: false, origen: null, campania: null,
 };
 const orden = (o: Partial<OrdenCruda> & Pick<OrdenCruda, "estado" | "total" | "tasa" | "dia" | "principal">): OrdenCruda => ({ ...base, ...o });
 
 const ordenes: OrdenCruda[] = [
-  orden({ estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a", comprador: "u1", upsell: 3000, origen: "instagram" }),
-  orden({ estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a", comprador: "u2", bajo: false, vencidoSinBajar: true, mail: "FALLO", origen: "instagram" }),
+  orden({ estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a", comprador: "u1", upsell: 3000, origen: "instagram",
+    campania: { medio: "pago", campania: "lanzamiento", anuncio: "video2" } }),
+  orden({ estado: "CONFIRMED", total: 10000, tasa: 8, dia: "2026-09-10", principal: "a", comprador: "u2", bajo: false, vencidoSinBajar: true, mail: "FALLO", origen: "instagram",
+    campania: { medio: "pago", campania: "lanzamiento", anuncio: "foto" } }),
   orden({ estado: "CONFIRMED", total: 20000, tasa: 2, dia: "2026-09-14", principal: "b", comprador: "u1", bajo: null, mail: null, recordada: true, diaSemana: 0, hora: 9 }),
   orden({ estado: "DEVUELTA", total: 10000, tasa: 8, dia: "2026-09-12", principal: "a", motivo: "contracargo", comprador: "u3" }),
   /* Fuera del rango: no cuenta. */
@@ -103,7 +106,16 @@ const carritos = [
   /* Fuera del rango: no cuenta. */
   { dia: "2026-09-01", principal: "a", recordado: true },
 ];
-const todo = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null, carritos });
+const campanias: CampaniaCruda[] = [
+  { productId: "a", date: "2026-09-10", medio: "pago", campania: "lanzamiento", anuncio: "video2", count: 20 },
+  { productId: "a", date: "2026-09-10", medio: "pago", campania: "lanzamiento", anuncio: "foto", count: 10 },
+  { productId: "b", date: "2026-09-14", medio: "historia", campania: "promo", anuncio: "", count: 15 },
+  { productId: "a", date: "2026-09-10", medio: "pago", campania: OTRAS, anuncio: "", count: 5 },
+  /* Un medio inventado no entra; una fuera de rango tampoco. */
+  { productId: "a", date: "2026-09-10", medio: "banana", campania: "x", anuncio: "", count: 99 },
+  { productId: "a", date: "2026-09-01", medio: "pago", campania: "vieja", anuncio: "", count: 99 },
+];
+const todo = armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: null, carritos, campanias });
 
 check("CUENTA-A", todo.kpis.ventas === 3 && todo.kpis.devueltas === 1 && todo.kpis.bruto === 40000,
   "3 ventas, 1 devuelta, bruto 40.000; la de fuera del rango no cuenta");
@@ -158,6 +170,25 @@ check("ORIG-B", ig.visitas === 30 && ig.ventas === 2 && ig.conversion !== null &
   && todo.origenes.ventasSinOrigen === 1,
   "cada origen con sus ventas y su conversión; la venta sin origen se cuenta aparte");
 
+/* Campañas */
+const camp = todo.campanias;
+check("UTM-A", camp.conVisitas === 50 && camp.ventasConCampania === 2 && camp.filas.length === 3,
+  "campañas: 50 visitas con campaña, 2 ventas con campaña, 3 campañas (una es la bolsa)");
+check("UTM-B", camp.filas[0].campania === "lanzamiento" && camp.filas[0].medio === "pago" && camp.filas[0].visitas === 30
+  && camp.filas[0].ventas === 2 && camp.filas[0].neto === 18400 && camp.filas[0].conversion !== null && Math.round(camp.filas[0].conversion * 10) === 67,
+  "la que más vendió va primera, con visitas, ventas, neto y conversión sumados");
+check("UTM-C", camp.filas[0].anuncios.map((a) => a.anuncio).join(",") === "video2,foto"
+  && camp.filas[0].anuncios[0].visitas === 20 && camp.filas[0].anuncios[0].ventas === 1 && camp.filas[0].anuncios[0].conversion === 5,
+  "adentro, cada anuncio con lo suyo, el que más vendió primero");
+check("UTM-D", camp.filas.at(-1)?.campania === OTRAS && camp.filas.at(-1)?.visitas === 5,
+  "\"(otras)\" siempre al final: es una bolsa");
+check("UTM-E", !camp.filas.some((f) => f.campania === "x" || f.campania === "vieja"),
+  "un medio inventado y una campaña fuera del rango no entran");
+check("UTM-F", armarEstadisticas({ rango, ordenes, visitas, origenes, principales, elegido: "b", carritos, campanias }).campanias.filas.map((f) => f.campania).join(",") === "promo",
+  "mirando un producto, sólo sus campañas");
+check("UTM-G", puedeVer("PRO", "campanias") && !puedeVer("STARTER", "campanias") && DESDE_QUE_PLAN.campanias === "PRO",
+  "las campañas son de Pro, con el origen y el embudo");
+
 /* Carritos */
 check("CARR-A", todo.carritos.abandonados === 3 && todo.carritos.recordados === 3
   && todo.carritos.recuperados === 1 && todo.carritos.pctRecuperados !== null && Math.round(todo.carritos.pctRecuperados * 10) === 333,
@@ -201,7 +232,7 @@ if (existsSync(pagina) && existsSync(cliente)) {
     "las devueltas se buscan como canceladas con el pago devuelto, que es como quedan");
   check("PANT-C2", /changedBy: \{ in: Object\.keys\(MOTIVOS\) \}/.test(p) && /digital_devolucion/.test(p) && /digital_contracargo/.test(p),
     "el motivo de la devolución sale de la historia de la orden");
-  check("PANT-D", (["visitas", "cuando", "embudo", "origenes", "carritos"] as Bloque[]).every((b) => new RegExp(`puedeVer\\(tier, "${b}"\\)`).test(c)),
+  check("PANT-D", (["visitas", "cuando", "embudo", "origenes", "campanias", "carritos"] as Bloque[]).every((b) => new RegExp(`puedeVer\\(tier, "${b}"\\)`).test(c)),
     "la pantalla bloquea por plan cada bloque que no es de Free");
   check("PANT-D2", !/puedeVer\(tier, "posventa"\)/.test(c) && /<Posventa p=\{posventa\} \/>/.test(c),
     "lo de después de la venta se dibuja sin candado: es de todos");
@@ -212,6 +243,9 @@ if (existsSync(pagina) && existsSync(cliente)) {
     "el día de la semana y la hora se leen en hora argentina, no en la del servidor");
   check("PANT-I", /MADURACION_MS/.test(p) && /status: "PENDING"/.test(p) && /carritos: pendientes\.map/.test(p),
     "los carritos se cuentan con la misma maduración que la pantalla de Carritos, y por producto");
+  check("PANT-J", /prisma\.digitalVisitaCampania\.findMany/.test(p) && /utmMedio: true, utmCampania: true, utmAnuncio: true,/.test(p)
+    && /PARAMETROS_PARA_META/.test(c) && /Campañas/.test(c),
+    "la página trae las campañas y la orden con sus etiquetas; la pantalla las dibuja con el texto para Meta");
 }
 
 /* ── El origen viaja con la orden ────────────────────────────────────────── */

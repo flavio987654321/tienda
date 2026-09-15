@@ -3,6 +3,7 @@ import { sumarDiasCalendario, diasEntreDias } from "@/lib/fechas-comerciales";
 import { granoPara, serieParaGrafico, type Grano, type Punto } from "@/lib/serie-grafico";
 import { ORIGENES, ordenarOrigenes, type Origen } from "@/lib/origen-visita";
 import type { PasoDigital, Dispositivo } from "@/lib/visitas-digitales";
+import { MEDIOS, OTRAS, type Medio } from "@/lib/utm-digital";
 import type { TierDigital } from "@/lib/planes-digitales";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -100,6 +101,7 @@ export type Bloque =
   | "cuando"      // por día de la semana y por hora
   | "embudo"
   | "origenes"    // visitas y ventas por origen
+  | "campanias"   // visitas y ventas por campaña y anuncio (UTM)
   | "carritos";   // recuperados por el mail automático
 
 /** El plan más bajo que ve cada bloque. */
@@ -110,6 +112,7 @@ export const DESDE_QUE_PLAN: Record<Bloque, TierDigital> = {
   cuando: "STARTER",
   embudo: "PRO",
   origenes: "PRO",
+  campanias: "PRO",
   carritos: "PRO",
 };
 
@@ -149,10 +152,13 @@ export type OrdenCruda = {
   recordada: boolean;
   /** De dónde vino la visita que terminó acá. */
   origen: string | null;
+  /** Y de qué campaña, si la traía. */
+  campania: { medio: string; campania: string; anuncio: string } | null;
 };
 
 export type VisitaCruda = { productId: string; date: string; paso: PasoDigital; dispositivo: Dispositivo; count: number };
 export type OrigenCrudo = { productId: string; date: string; source: string; count: number };
+export type CampaniaCruda = { productId: string; date: string; medio: string; campania: string; anuncio: string; count: number };
 export type PrincipalCrudo = { id: string; name: string; publicada: boolean };
 
 /** Una compra que quedó a medias: llegó al pago y no pagó. */
@@ -198,6 +204,17 @@ export type FilaDeOrigen = { origen: Origen; visitas: number; pct: number; venta
 
 export type Carritos = { abandonados: number; recordados: number; recuperados: number; pctRecuperados: number | null };
 
+/** Una campaña con sus anuncios adentro, de más a menos ventas y después visitas. */
+export type FilaDeCampania = {
+  medio: Medio;
+  campania: string;
+  visitas: number;
+  ventas: number;
+  neto: number;
+  conversion: number | null;
+  anuncios: { anuncio: string; visitas: number; ventas: number; neto: number; conversion: number | null }[];
+};
+
 export type Estadisticas = {
   rango: Rango;
   kpis: Kpis;
@@ -209,6 +226,8 @@ export type Estadisticas = {
   /** Cuánto dejó cada página, de más a menos. Vacío si se mira un producto solo. */
   porProducto: { id: string; name: string; publicada: boolean; ventas: number; neto: number; visitas: number; conversion: number | null }[];
   origenes: { filas: FilaDeOrigen[]; conocidas: number; ventasSinOrigen: number };
+  /** Las campañas del período. `conVisitas` es cuántas visitas traían campaña. */
+  campanias: { filas: FilaDeCampania[]; conVisitas: number; ventasConCampania: number };
   carritos: Carritos;
 };
 
@@ -240,6 +259,7 @@ export function armarEstadisticas(entrada: {
   principales: PrincipalCrudo[];
   elegido: string | null;
   carritos?: CarritoCrudo[];
+  campanias?: CampaniaCruda[];
 }): Estadisticas {
   const { rango, elegido } = entrada;
   const esDelElegido = (id: string | null) => elegido === null || id === elegido;
@@ -248,6 +268,7 @@ export function armarEstadisticas(entrada: {
   const ordenes = entrada.ordenes.filter((o) => enRango(o.dia, rango) && esDelElegido(o.principal));
   const visitas = entrada.visitas.filter((v) => enRango(v.date, rango) && esDelElegido(v.productId));
   const origenes = entrada.origenes.filter((v) => enRango(v.date, rango) && esDelElegido(v.productId));
+  const campaniasDelRango = (entrada.campanias ?? []).filter((v) => enRango(v.date, rango) && esDelElegido(v.productId));
   const cobradas = ordenes.filter((o) => o.estado === "CONFIRMED");
   const devueltas = ordenes.filter((o) => o.estado === "DEVUELTA");
 
@@ -412,11 +433,56 @@ export function armarEstadisticas(entrada: {
     pctRecuperados: pct(recuperados, recordados),
   };
 
+  /* ── Las campañas: visitas y ventas por campaña, y adentro por anuncio ──
+     Una campaña es (medio, nombre); sus anuncios cuelgan. Las visitas salen de
+     la tabla sumada; las ventas de la orden. Un medio fuera de la lista se
+     descarta, como un origen inventado. "(otras)" —las que pasaron el techo—
+     figura como una campaña más, al final. */
+  const esMedio = (m: string): m is Medio => (MEDIOS as readonly string[]).includes(m);
+  type Acum = { visitas: number; ventas: number; neto: number };
+  const nuevo = (): Acum => ({ visitas: 0, ventas: 0, neto: 0 });
+  const porCampania = new Map<string, { medio: Medio; campania: string; total: Acum; anuncios: Map<string, Acum> }>();
+  const cajonDe = (medio: Medio, campania: string, anuncio: string): Acum => {
+    const k = `${medio}\u0000${campania}`;
+    let c = porCampania.get(k);
+    if (!c) { c = { medio, campania, total: nuevo(), anuncios: new Map() }; porCampania.set(k, c); }
+    let a = c.anuncios.get(anuncio);
+    if (!a) { a = nuevo(); c.anuncios.set(anuncio, a); }
+    return a;
+  };
+  let conVisitas = 0;
+  for (const v of campaniasDelRango) {
+    if (!esMedio(v.medio)) continue;
+    cajonDe(v.medio, v.campania, v.anuncio).visitas += v.count;
+    conVisitas += v.count;
+  }
+  let ventasConCampania = 0;
+  for (const o of cobradas) {
+    if (!o.campania || !esMedio(o.campania.medio)) continue;
+    const a = cajonDe(o.campania.medio, o.campania.campania, o.campania.anuncio);
+    a.ventas++;
+    a.neto += o.total - comisionCongelada(o.total, o.tasa);
+    ventasConCampania++;
+  }
+  const ordenar = <T extends { ventas: number; visitas: number }>(xs: T[]) =>
+    xs.sort((a, b) => b.ventas - a.ventas || b.visitas - a.visitas);
+  const filasDeCampania: FilaDeCampania[] = [...porCampania.values()].map((c) => {
+    const anuncios = ordenar([...c.anuncios.entries()].map(([anuncio, a]) => ({
+      anuncio, ...a, conversion: pct(a.ventas, a.visitas),
+    })));
+    const total = anuncios.reduce((s, a) => ({ visitas: s.visitas + a.visitas, ventas: s.ventas + a.ventas, neto: s.neto + a.neto }), nuevo());
+    return { medio: c.medio, campania: c.campania, ...total, conversion: pct(total.ventas, total.visitas), anuncios };
+  });
+  ordenar(filasDeCampania);
+  /* "(otras)" siempre al final: es una bolsa, no una campaña que se pueda mover. */
+  filasDeCampania.sort((a, b) => Number(a.campania === OTRAS) - Number(b.campania === OTRAS));
+
   return {
     rango, kpis, serie,
     dispositivos: { movil, escritorio, pctMovil: pct(movil, movil + escritorio) },
     embudo, posventa, cuando, porProducto,
     origenes: { filas, conocidas, ventasSinOrigen },
+    campanias: { filas: filasDeCampania, conVisitas, ventasConCampania },
     carritos,
   };
 }

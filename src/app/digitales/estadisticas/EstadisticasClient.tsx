@@ -6,6 +6,8 @@ import {
   type Estadisticas, type Bloque,
 } from "@/lib/estadisticas-digitales";
 import { NOMBRE_ORIGEN } from "@/lib/origen-visita";
+import { NOMBRE_MEDIO, OTRAS, PARAMETROS_PARA_META } from "@/lib/utm-digital";
+import BotonCopiar from "../ventas/BotonCopiar";
 import type { Punto } from "@/lib/serie-grafico";
 
 /**
@@ -38,7 +40,7 @@ const porcentaje = (n: number | null) =>
   n === null ? "—" : `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 }).format(n)} %`;
 
 export default function EstadisticasClient({ tier, principales, elegido, datos, recortado }: Props) {
-  const { rango, kpis, serie, embudo, porProducto, origenes, posventa, cuando, dispositivos, carritos } = datos;
+  const { rango, kpis, serie, embudo, porProducto, origenes, posventa, cuando, dispositivos, carritos, campanias } = datos;
   const href = (cambios: { p?: string | null; rango?: string }) => {
     const q = new URLSearchParams();
     const prod = cambios.p === undefined ? elegido : cambios.p;
@@ -225,6 +227,40 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
               { origen: "facebook", visitas: 35, pct: 14, ventas: 0, conversion: 0 },
               { origen: "directo", visitas: 25, pct: 10, ventas: 1, conversion: 4 },
             ]} />
+          </Tarjeta>
+        </Bloqueado>
+      )}
+
+      {/* ── Campañas: qué anuncio vende ───────────────────────────────────────
+          El escalón de abajo de "De dónde vienen". Para el que paga publicidad
+          es la tabla que le dice qué anuncio apagar. Con el texto para pegar en
+          Meta arriba, porque sin eso nadie arma las etiquetas a mano. */}
+      {puedeVer(tier, "campanias") ? (
+        <Tarjeta
+          titulo="Campañas"
+          bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta. Se arma con las etiquetas UTM del link."
+        >
+          <ParaMeta />
+          <Campanias filas={campanias.filas} conVisitas={campanias.conVisitas} ventasConCampania={campanias.ventasConCampania} ventas={kpis.ventas} />
+        </Tarjeta>
+      ) : (
+        <Bloqueado bloque="campanias">
+          <Tarjeta titulo="Campañas" bajada="Qué campaña y qué anuncio traen visitas, y cuáles terminan en venta.">
+            <ParaMeta />
+            <Campanias
+              ventas={9}
+              conVisitas={310}
+              ventasConCampania={8}
+              filas={[
+                { medio: "pago", campania: "lanzamiento", visitas: 220, ventas: 6, neto: 78000, conversion: 2.7, anuncios: [
+                  { anuncio: "video 2", visitas: 140, ventas: 5, neto: 65000, conversion: 3.6 },
+                  { anuncio: "foto", visitas: 80, ventas: 1, neto: 13000, conversion: 1.3 },
+                ] },
+                { medio: "historia", campania: "promo septiembre", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2, anuncios: [
+                  { anuncio: "", visitas: 90, ventas: 2, neto: 26000, conversion: 2.2 },
+                ] },
+              ]}
+            />
           </Tarjeta>
         </Bloqueado>
       )}
@@ -554,6 +590,99 @@ function CuandoSeVende({ c }: { c: Estadisticas["cuando"] }) {
       <div>
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500 mb-1">Por hora</p>
         <Grafico puntos={porHora} color="#ea580c" todasLasEtiquetas />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * El texto para pegar en Meta. Meta reemplaza los dos comodines por el nombre
+ * real de la campaña y del anuncio, así que se pega una vez y listo. Va con
+ * botón de copiar: es largo y con llaves, a mano se escribe mal.
+ */
+function ParaMeta() {
+  return (
+    <div className="mb-4 rounded-2xl border border-orange-100 panel-oscuro:border-orange-500/20 bg-orange-50/60 panel-oscuro:bg-orange-500/10 p-3.5">
+      <p className="text-[12.5px] font-bold text-gray-800 panel-oscuro:text-gray-200">Si hacés anuncios en Meta, pegá esto una sola vez</p>
+      <p className="mt-0.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+        En cada anuncio: <strong>Seguimiento → Parámetros de URL</strong>. Meta completa solo el nombre de la campaña y del
+        anuncio, y acá aparece cuál vendió. Para un posteo o un mensaje, agregale al link{" "}
+        <code className="rounded bg-white panel-oscuro:bg-gray-900 px-1 break-all">?utm_source=instagram&utm_campaign=promo</code>.
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-3 py-2 text-[11.5px] text-gray-700 panel-oscuro:text-gray-300">
+          {PARAMETROS_PARA_META}
+        </code>
+        <BotonCopiar valor={PARAMETROS_PARA_META} que="los parámetros para Meta" />
+      </div>
+    </div>
+  );
+}
+
+/** Las campañas, y adentro sus anuncios. Una campaña sin anuncio distinguido no repite la fila. */
+function Campanias({ filas, conVisitas, ventasConCampania, ventas }: {
+  filas: Estadisticas["campanias"]["filas"]; conVisitas: number; ventasConCampania: number; ventas: number;
+}) {
+  if (filas.length === 0) {
+    return (
+      <p className="text-[12.5px] text-gray-400 panel-oscuro:text-gray-500">
+        Todavía no llegó ninguna visita con campaña en este período.
+      </p>
+    );
+  }
+  const sinCampania = ventas - ventasConCampania;
+  return (
+    <div>
+      <p className="mb-3 text-[12px] text-gray-500 panel-oscuro:text-gray-400">
+        {entero(conVisitas)} {conVisitas === 1 ? "visita vino" : "visitas vinieron"} con campaña
+        {sinCampania > 0 ? ` · ${entero(sinCampania)} ${sinCampania === 1 ? "venta no tiene" : "ventas no tienen"} campaña anotada` : ""}.
+      </p>
+      {/* Ancho mínimo y números sin cortar: en el celular la tabla desplaza de
+          costado en vez de apretarse hasta que las columnas se pisan. */}
+      <div className="overflow-x-auto -mx-5 px-5">
+        <table className="w-full min-w-[540px] text-sm [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">
+          <thead>
+            <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+              <th className="pb-2 font-bold">Campaña · anuncio</th>
+              <th className="pb-2 pl-3 font-bold text-right">Visitas</th>
+              <th className="pb-2 pl-3 font-bold text-right">Ventas</th>
+              <th className="pb-2 pl-3 font-bold text-right">Conv.</th>
+              <th className="pb-2 pl-3 font-bold text-right">Te quedó</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 panel-oscuro:divide-gray-800">
+            {filas.map((f) => {
+              /* Si la campaña tiene un solo anuncio y es el vacío, la fila de la
+                 campaña ya lo dice todo. */
+              const conAnuncios = f.anuncios.some((a) => a.anuncio !== "") || f.anuncios.length > 1;
+              return [
+                <tr key={`${f.medio}-${f.campania}`} className="text-gray-900 panel-oscuro:text-gray-100 font-semibold">
+                  <td className="py-2.5 pr-3 max-w-[260px]">
+                    <span className="block truncate">{f.campania === OTRAS ? "Otras campañas" : f.campania}</span>
+                    <span className="text-[11px] font-medium text-gray-400 panel-oscuro:text-gray-500">{NOMBRE_MEDIO[f.medio]}</span>
+                  </td>
+                  <td className="py-2.5 text-right tabular-nums">{entero(f.visitas)}</td>
+                  <td className="py-2.5 text-right tabular-nums">{entero(f.ventas)}</td>
+                  <td className="py-2.5 text-right tabular-nums">{porcentaje(f.conversion)}</td>
+                  <td className="py-2.5 text-right tabular-nums">{plata(f.neto)}</td>
+                </tr>,
+                ...(conAnuncios
+                  ? f.anuncios.map((a) => (
+                      <tr key={`${f.medio}-${f.campania}-${a.anuncio}`} className="text-gray-600 panel-oscuro:text-gray-400">
+                        <td className="py-2 pl-4 pr-3 max-w-[260px]">
+                          <span className="block truncate">↳ {a.anuncio || "sin anuncio"}</span>
+                        </td>
+                        <td className="py-2 text-right tabular-nums">{entero(a.visitas)}</td>
+                        <td className="py-2 text-right tabular-nums">{entero(a.ventas)}</td>
+                        <td className="py-2 text-right tabular-nums">{porcentaje(a.conversion)}</td>
+                        <td className="py-2 text-right tabular-nums">{plata(a.neto)}</td>
+                      </tr>
+                    ))
+                  : []),
+              ];
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

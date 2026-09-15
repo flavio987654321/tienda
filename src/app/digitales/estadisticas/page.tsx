@@ -43,6 +43,8 @@ const TECHO_DE_ORDENES = 20_000;
 const TECHO_DE_VISITAS = 20_000;
 /** De orígenes: 730 × 5 × 11 etiquetas, si todas aparecieran todos los días. */
 const TECHO_DE_ORIGENES = 50_000;
+/** De campañas: 730 × 5 × 50 combinaciones, el techo por día de `utm-digital`. */
+const TECHO_DE_CAMPANIAS = 200_000;
 
 /**
  * Día de la semana (0 domingo … 6 sábado) y hora (0–23) en la Argentina. Con
@@ -128,7 +130,7 @@ export default async function EstadisticasPage({
   const sinTabla = <T,>(consulta: Promise<T[]>): Promise<T[]> => consulta.catch(() => []);
 
   const ahora = new Date();
-  const [ordenes, visitas, origenes, pendientes] = await Promise.all([
+  const [ordenes, visitas, origenes, campanias, pendientes] = await Promise.all([
     prisma.order.findMany({
       /* Las cobradas, y las que se cobraron y se deshicieron. ⚠️ Una devolución
          NO tiene estado propio en la base: la orden queda CANCELLED con el pago
@@ -147,6 +149,7 @@ export default async function EstadisticasPage({
       select: {
         status: true, total: true, lockedCommissionRate: true, createdAt: true,
         buyerId: true, recordatorioAt: true, origenVisita: true,
+        utmMedio: true, utmCampania: true, utmAnuncio: true,
         /* Todas las líneas: la primera dice de qué principal es la orden, las
            de rol UPSELL suman su plata, y los permisos dicen si bajó algo. */
         items: {
@@ -180,6 +183,11 @@ export default async function EstadisticasPage({
       where: { productId: { in: idsDePrincipales }, date: { gte: rango.desde, lte: rango.hasta } },
       take: TECHO_DE_ORIGENES,
       select: { productId: true, date: true, source: true, count: true },
+    })),
+    sinTabla(prisma.digitalVisitaCampania.findMany({
+      where: { productId: { in: idsDePrincipales }, date: { gte: rango.desde, lte: rango.hasta } },
+      take: TECHO_DE_CAMPANIAS,
+      select: { productId: true, date: true, medio: true, campania: true, anuncio: true, count: true },
     })),
     /* Las compras que quedaron en la puerta: PENDING con la misma maduración
        que la pantalla de Carritos, para que los dos números coincidan. Con su
@@ -221,6 +229,9 @@ export default async function EstadisticasPage({
       mail: mail === "ENVIADO" || mail === "FALLO" ? mail : null,
       recordada: o.recordatorioAt !== null,
       origen: o.origenVisita,
+      campania: o.utmMedio && o.utmCampania
+        ? { medio: o.utmMedio, campania: o.utmCampania, anuncio: o.utmAnuncio ?? "" }
+        : null,
     };
   });
 
@@ -229,6 +240,7 @@ export default async function EstadisticasPage({
     ordenes: ordenesCrudas,
     visitas: visitas.map((v): VisitaCruda => ({ ...v, paso: v.paso as PasoDigital, dispositivo: v.dispositivo as Dispositivo })),
     origenes,
+    campanias,
     principales,
     elegido,
     carritos: pendientes.map((c) => ({
