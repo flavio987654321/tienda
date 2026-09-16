@@ -235,8 +235,15 @@ async function armarOferta(fila: FilaDelPago, seLePuedeVender: boolean, tokenPed
   const base = direccionBase(otro, dominioDeLaPlataforma(), process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com");
   return {
     ...comun, tipo: "PRODUCTO",
-    producto: { nombre: otro.name, precio: otro.price, descripcion: otro.description, imagen: primeraImagen(otro.images), href: `${base.replace(/\/$/, "")}/pagar` },
+    producto: { nombre: otro.name, precio: otro.price, descripcion: recortar(otro.description), imagen: primeraImagen(otro.images), href: `${base.replace(/\/$/, "")}/pagar` },
   };
+}
+
+/** La descripción del otro producto, a un párrafo: el cartel no es su página. */
+function recortar(texto: string | null): string | null {
+  const t = (texto ?? "").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  return t.length > 220 ? `${t.slice(0, 217).trimEnd()}…` : t;
 }
 
 /** La portada. Un JSON roto no puede tumbar la pantalla de pago. */

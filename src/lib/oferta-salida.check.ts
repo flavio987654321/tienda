@@ -109,7 +109,7 @@ check("CHK-A", /e\.clientY <= 0\) mostrar\(\)/.test(checkout) && /addEventListen
   "aparece al sacar el mouse o al apretar atrás, una sola vez por persona");
 check("CHK-B", /vistaEn \+ oferta\.horas \* 3_600_000 > Date\.now\(\)\) token = guardado/.test(checkout) && /oferta: tokenDeOferta \?\? undefined/.test(checkout),
   "recargar no reinicia el plazo (se guarda el primer token) y el token viaja al pagar");
-check("CHK-C", /verificarCupon\(oferta\.codigo, tokenDeOferta\)/.test(checkout) && /import CartelDeSalida from "@\/components\/digitales\/CartelDeSalida"/.test(checkout) && /import CartelDeSalida from "@\/components\/digitales\/CartelDeSalida"/.test(editor),
+check("CHK-C", /verificarCupon\(oferta\.codigo, tokenDeOferta\)/.test(checkout) && /import CartelDeSalida from "@\/components\/digitales\/CartelDeSalida"/.test(checkout) && /import CartelDeSalida, \{ type ParteDelCartel \} from "@\/components\/digitales\/CartelDeSalida"/.test(editor) && /alTocar=\{esPago \? irA : undefined\}/.test(editor),
   "aceptar aplica el cupón por la ruta pública con el token; el cartel del checkout y el de la vista previa son el mismo componente");
 check("CHK-D", !/cupos|reservad|quedan \d|00:\d\d|setInterval/i.test(cartel) && /Vale \{c\.vence\}/.test(cartel), "el cartel no tiene cupos ni cuenta regresiva: dice hasta cuándo, y es cierto");
 check("EDIT-A", /validarOfertaSalida\(o\)/.test(editor) && /key=\{elegido\?\.id/.test(editorPage) && /variablesDePagina\(pagina\)/.test(editorPage),

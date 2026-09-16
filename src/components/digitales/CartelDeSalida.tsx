@@ -12,7 +12,21 @@ import { Clock, X } from "lucide-react";
  *
  * Lo que dice es lo que es: el plazo viene calculado del servidor y se
  * cumple. Sin "quedan pocos", sin reloj que cuenta hacia atrás.
+ *
+ * ── Nada se corta ───────────────────────────────────────────────────────────
+ *
+ * El nombre del producto y el texto van enteros: si la oferta no se lee
+ * completa, la persona no sabe qué está por comprar. El cartel crece lo que
+ * haga falta; en un celular chico, el fondo se desplaza.
+ *
+ * ── Tocar para editar ───────────────────────────────────────────────────────
+ *
+ * Con `alTocar`, el título, el texto y el botón son clicables y avisan qué
+ * parte se tocó: la vista previa del panel lleva al campo. Sin `alTocar`
+ * (el checkout) son texto común.
  */
+
+export type ParteDelCartel = "titulo" | "texto" | "boton";
 
 export type ContenidoDelCartel = {
   titulo: string;
@@ -30,7 +44,7 @@ export type ContenidoDelCartel = {
 const plata = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
-export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, onCerrar, yendo = false, error = "", href }: {
+export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, onCerrar, yendo = false, error = "", href, alTocar }: {
   c: ContenidoDelCartel;
   tarjeta: string;
   botonRedondo: string;
@@ -41,8 +55,14 @@ export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, on
   error?: string;
   /** Para el producto más barato: el botón es un link a su pago. */
   href?: string;
+  /** Sólo en la vista previa del panel: qué parte se tocó. */
+  alTocar?: (parte: ParteDelCartel) => void;
 }) {
   const claseBoton = `flex w-full items-center justify-center gap-2 bg-[color:var(--pv-acento)] px-5 py-3.5 text-[15px] font-extrabold text-[color:var(--pv-sobre)] transition hover:opacity-90 disabled:opacity-60 ${botonRedondo}`;
+  /* En la previa, cada parte editable se marca al pasar el mouse. */
+  const editable = alTocar ? "cursor-pointer rounded-md outline-offset-4 hover:outline hover:outline-2 hover:outline-dashed hover:outline-[color:var(--pv-acento)]" : "";
+  const tocar = (parte: ParteDelCartel) => (alTocar ? { onClick: () => alTocar(parte), title: "Tocá para editar" } : {});
+
   return (
     <div className={`relative w-full max-w-md border-2 border-[color:var(--pv-acento)] bg-[color:var(--pv-tarjeta)] p-5 shadow-2xl sm:p-6 ${tarjeta}`}>
       {onCerrar && (
@@ -51,26 +71,26 @@ export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, on
         </button>
       )}
       <p className="pr-6 text-[10px] font-extrabold uppercase tracking-widest text-[color:var(--pv-acento)]">Antes de irte</p>
-      <h2 className="mt-1 text-xl font-extrabold leading-tight text-[color:var(--pv-tinta)]">{c.titulo}</h2>
-      <p className="mt-2 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[color:var(--pv-tenue)]">{c.texto}</p>
+      <h2 {...tocar("titulo")} className={`mt-1 text-xl font-extrabold leading-tight text-[color:var(--pv-tinta)] [overflow-wrap:anywhere] ${editable}`}>{c.titulo}</h2>
+      <p {...tocar("texto")} className={`mt-2 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[color:var(--pv-tenue)] [overflow-wrap:anywhere] ${editable}`}>{c.texto}</p>
 
-      <div className="mt-4 flex items-center gap-3 border-t-2 border-[color:var(--pv-linea)] pt-4">
+      <div className="mt-4 flex items-start gap-3 border-t-2 border-[color:var(--pv-linea)] pt-4">
         {c.imagen && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={c.imagen} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-[color:var(--pv-tinta)]">{c.oferta.nombre}</p>
+          <p className="text-sm font-bold leading-snug text-[color:var(--pv-tinta)] [overflow-wrap:anywhere]">{c.oferta.nombre}</p>
           {c.oferta.tipo === "DESCUENTO" ? (
-            <p className="mt-0.5 text-base font-extrabold text-[color:var(--pv-tinta)]">
+            <p className="mt-1 text-base font-extrabold text-[color:var(--pv-tinta)]">
               <s className="mr-2 text-sm font-normal opacity-55">{plata(c.oferta.antes)}</s>
               {plata(c.oferta.despues)}
               <span className="ml-2 rounded-full bg-[color:var(--pv-fuerte)] px-2 py-0.5 text-[11px] font-bold text-[color:var(--pv-tinta)]">−{c.oferta.porcentaje} %</span>
             </p>
           ) : (
             <>
-              <p className="mt-0.5 text-base font-extrabold text-[color:var(--pv-tinta)]">{plata(c.oferta.precio)}</p>
-              {c.oferta.descripcion && <p className="mt-0.5 line-clamp-2 text-[12px] text-[color:var(--pv-tenue)]">{c.oferta.descripcion}</p>}
+              <p className="mt-1 text-base font-extrabold text-[color:var(--pv-tinta)]">{plata(c.oferta.precio)}</p>
+              {c.oferta.descripcion && <p className="mt-1 text-[12.5px] leading-relaxed text-[color:var(--pv-tenue)] [overflow-wrap:anywhere]">{c.oferta.descripcion}</p>}
             </>
           )}
         </div>
@@ -84,7 +104,9 @@ export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, on
       {error && <p role="alert" className="mt-3 bg-[color:var(--pv-fuerte)] px-3 py-2 text-[12.5px] font-medium text-[color:var(--pv-tinta)]">{error}</p>}
 
       <div className="mt-4 space-y-2">
-        {href ? (
+        {alTocar ? (
+          <button type="button" onClick={() => alTocar("boton")} title="Tocá para editar" className={`${claseBoton} ${editable}`}>{c.boton}</button>
+        ) : href ? (
           <a href={href} className={claseBoton}>{c.boton}</a>
         ) : (
           <button type="button" onClick={onAceptar} disabled={yendo} className={claseBoton}>{yendo ? "Un momento…" : c.boton}</button>

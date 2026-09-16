@@ -10,7 +10,7 @@ import {
 } from "@/lib/oferta-salida";
 import { descuentoDe } from "@/lib/cupones-digitales";
 import { CONSEJO_DE_SALIDA } from "@/lib/plantillas-marketing";
-import CartelDeSalida from "@/components/digitales/CartelDeSalida";
+import CartelDeSalida, { type ParteDelCartel } from "@/components/digitales/CartelDeSalida";
 import ConsejoDeUso from "../../ConsejoDeUso";
 
 export type ProductoDeSalida = {
@@ -48,6 +48,21 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
   /* La hora de "ahora" para la vista previa, fija al abrir: un reloj que
      cambia en cada dibujo hace saltar el texto del plazo. */
   const [abiertaEn] = useState(() => Date.now());
+  /* Tocar una parte del cartel lleva al campo: se enfoca, se desplaza a la
+     vista y se marca un momento. */
+  const refTitulo = useRef<HTMLInputElement>(null);
+  const refTexto = useRef<HTMLTextAreaElement>(null);
+  const refBoton = useRef<HTMLInputElement>(null);
+  const [resaltado, setResaltado] = useState<ParteDelCartel | null>(null);
+  function irA(parte: ParteDelCartel) {
+    const el = (parte === "titulo" ? refTitulo : parte === "texto" ? refTexto : refBoton).current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus({ preventScroll: true });
+    setResaltado(parte);
+    window.setTimeout(() => setResaltado((r) => (r === parte ? null : r)), 1600);
+  }
+  const marca = (parte: ParteDelCartel) => (resaltado === parte ? " ring-2 ring-orange-400 border-orange-400" : "");
 
   const otros = productos.filter((p) => p.id !== elegido?.id);
   const r = validarOfertaSalida(o);
@@ -147,7 +162,7 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] items-start">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_470px] items-start">
         {/* ── El formulario ─────────────────────────────────────────────── */}
         <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm space-y-4">
           <label className="flex items-center justify-between gap-3">
@@ -209,16 +224,16 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
 
           <div>
             <label htmlFor="titulo" className={CLASE_LABEL}>Título</label>
-            <input id="titulo" value={o.titulo} disabled={!esPago} maxLength={TITULO_MAX} onChange={(e) => tocar("titulo", e.target.value)} placeholder="Antes de que te vayas…" className={CLASE_INPUT} />
+            <input ref={refTitulo} id="titulo" value={o.titulo} disabled={!esPago} maxLength={TITULO_MAX} onChange={(e) => tocar("titulo", e.target.value)} placeholder="Antes de que te vayas…" className={CLASE_INPUT + marca("titulo")} />
           </div>
           <div>
             <label htmlFor="texto" className={CLASE_LABEL}>Texto</label>
-            <textarea id="texto" value={o.texto} disabled={!esPago} maxLength={TEXTO_MAX} rows={3} onChange={(e) => tocar("texto", e.target.value)} placeholder="Sé que el precio puede ser una traba…" className={`${CLASE_INPUT} resize-y`} />
+            <textarea ref={refTexto} id="texto" value={o.texto} disabled={!esPago} maxLength={TEXTO_MAX} rows={3} onChange={(e) => tocar("texto", e.target.value)} placeholder="Sé que el precio puede ser una traba…" className={`${CLASE_INPUT} resize-y${marca("texto")}`} />
             <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">{o.texto.length} / {TEXTO_MAX}. Una o dos frases, como se lo dirías en persona.</p>
           </div>
           <div>
             <label htmlFor="boton" className={CLASE_LABEL}>Botón</label>
-            <input id="boton" value={o.boton} disabled={!esPago} maxLength={BOTON_MAX} onChange={(e) => tocar("boton", e.target.value)} placeholder="Sí, lo quiero" className={CLASE_INPUT} />
+            <input ref={refBoton} id="boton" value={o.boton} disabled={!esPago} maxLength={BOTON_MAX} onChange={(e) => tocar("boton", e.target.value)} placeholder="Sí, lo quiero" className={CLASE_INPUT + marca("boton")} />
           </div>
 
           <ConsejoDeUso>{CONSEJO_DE_SALIDA}</ConsejoDeUso>
@@ -248,12 +263,26 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
           <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-400">
             <DoorOpen className="h-3.5 w-3.5" /> Así lo ve quien se va
           </p>
+          {/* Tal cual el checkout: el fondo oscurecido y el cartel encima, con
+              los colores y la letra de la página de este producto. Tocar una
+              parte lleva al campo. */}
           <div
             style={estilo.vars as React.CSSProperties}
-            className={`${estilo.fuentes} flex items-center justify-center rounded-3xl bg-[color:var(--pv-fondo)] p-4 antialiased text-[color:var(--pv-tinta)]`}
+            className={`${estilo.fuentes} flex items-center justify-center rounded-3xl bg-[color:var(--pv-fondo)] p-3 antialiased text-[color:var(--pv-tinta)] sm:p-5`}
           >
-            <CartelDeSalida c={cartel} tarjeta={estilo.tarjeta} botonRedondo={estilo.boton} onCerrar={() => {}} />
+            <div className="flex w-full items-center justify-center rounded-2xl bg-black/55 p-3 sm:p-4">
+              <CartelDeSalida c={cartel} tarjeta={estilo.tarjeta} botonRedondo={estilo.boton} onCerrar={() => {}} alTocar={esPago ? irA : undefined} />
+            </div>
           </div>
+          <p className="mt-2 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            En la computadora aparece así, en el medio del pago, con el fondo oscurecido. En el celular sube desde abajo. Tocá el título, el texto o el botón para editarlos.
+          </p>
+          {cartel.imagen === null && (
+            <p className="mt-1.5 text-[12px] leading-relaxed text-amber-700 panel-oscuro:text-amber-300">
+              {o.tipo === "PRODUCTO" ? "Ese producto" : "Este producto"} no tiene portada, así que el cartel sale sin foto.{" "}
+              <Link href={`/digitales/productos/${o.tipo === "PRODUCTO" && otro ? otro.id : elegido.id}`} className="font-bold underline">Cargarla en Productos</Link>.
+            </p>
+          )}
         </div>
       </div>
     </div>

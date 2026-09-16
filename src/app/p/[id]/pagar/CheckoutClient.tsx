@@ -535,7 +535,7 @@ export default function CheckoutClient(p: Props) {
           Con descuento: aplica el cupón y cierra. Con producto más barato:
           el botón es un link a su pago. */}
       {cartel && oferta && (
-        <div role="dialog" aria-modal="true" aria-label={oferta.titulo} className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-4 sm:items-center">
+        <div role="dialog" aria-modal="true" aria-label={oferta.titulo} className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/55 p-4 sm:items-center">
           <CartelDeSalida
             c={{
               titulo: oferta.titulo, texto: oferta.texto, boton: oferta.boton, vence: cartel.vence,
