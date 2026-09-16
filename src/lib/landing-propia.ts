@@ -54,6 +54,7 @@ import { Element, Text, type ChildNode, type Document } from "domhandler";
 import { findAll, findOne, removeElement, textContent, prependChild } from "domutils";
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
+import { revisarLanding } from "@/lib/landing-revision";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -237,8 +238,36 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   const hoja = css.filter(Boolean).join("\n");
   const html = (hoja ? `<style>\n${hoja}\n</style>\n` : "") + cuerpo;
   const inventario = inventariar(cuerpo, fuentes, avisosDelCrudo(docCrudo));
+  /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
+     `lib/landing-revision`. */
+  inventario.hallazgos = revisarLanding(textoVisible(cuerpo), {
+    comprar: inventario.comprar, precio: inventario.precio, opiniones: inventario.opiniones, css: hoja,
+  });
 
   return { ok: true, landing: { html, bytes: Buffer.byteLength(html, "utf8"), titulo, inventario, quitado } };
+}
+
+/**
+ * Lo que se lee en la pantalla, sin etiquetas: es sobre esto que corre la
+ * revisión.
+ *
+ * ⚠️ Los trozos se unen con un ESPACIO, no pegados. `textContent` los pega
+ * —"<h1>Curso</h1><p>Quedan…" da "CursoQuedan"— y ahí la revisión deja de
+ * ver la frase: busca palabras enteras. Un espacio de más no molesta a
+ * nadie; uno de menos esconde un hallazgo.
+ */
+function textoVisible(cuerpo: string): string {
+  const doc = parseDocument(cuerpo);
+  for (const el of findAll((e) => e.name === "style" || e.name === "script" || e.name === "svg", doc.children)) removeElement(el);
+  const trozos: string[] = [];
+  const recorrer = (nodos: ChildNode[]) => {
+    for (const n of nodos) {
+      if (n.type === "text") trozos.push((n as Text).data);
+      else if (n instanceof Element) { trozos.push(" "); recorrer(n.children as ChildNode[]); trozos.push(" "); }
+    }
+  };
+  recorrer(doc.children as ChildNode[]);
+  return trozos.join("");
 }
 
 function hueco(el: Element): string {
@@ -272,7 +301,7 @@ function avisosDelCrudo(doc: Document): string[] {
 
 function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): InventarioDeLanding {
   const doc = parseDocument(cuerpo);
-  const inv: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [...new Set(fuentes)], avisos };
+  const inv: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [...new Set(fuentes)], avisos, hallazgos: [] };
   for (const el of findAll(() => true, doc.children)) {
     const h = hueco(el);
     if (h === "precio") inv.precio++;

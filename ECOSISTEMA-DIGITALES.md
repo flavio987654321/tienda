@@ -6550,3 +6550,46 @@ Mirado en 1500 y 360.
 🔲 Los bloques vivos: reloj real, opiniones verificadas y aviso de ventas
    (los huecos ya se leen; hoy se sacan si no hay con qué llenarlos).
 🔲 Auditoría antes de deployar: es HTML ajeno, es lo más delicado hasta ahora.
+
+---
+
+## La revisión: qué pasa si le piden a Claude algo que no va — 16/09/26
+
+Flavio: "¿y si piden algo que no va? No tenemos un tester de si está bien o
+mal". Tenía razón a medias: la lista de control miraba lo estructural (sin
+botón, fotos que faltan, scripts) pero **no lo que DICE la página**, que es
+lo que trae problemas legales. Claude escribe lo que le piden: si le piden
+testimonios, los inventa.
+
+### `lib/landing-revision`
+
+Corre sola al subir, sobre el **texto visible**, y devuelve hallazgos en
+castellano con qué hacer. Dos niveles:
+
+- **traba** (no se puede prender): sólo una — que no haya ningún botón que
+  lleve al pago. Una página de venta sin botón de compra es gastar visitas.
+  Lo hace cumplir también la ruta, no sólo la pantalla.
+- **aviso**: todo lo demás. No somos el juez de lo que puede decir su
+  negocio; se lo decimos con el motivo y decide ella.
+
+Lo que mira hoy: escasez inventada ("quedan 3 cupos"), relojes escritos a
+mano, testimonios adentro del HTML (sin el hueco de opiniones), cantidades
+de ventas que nadie puede comprobar, el precio escrito a mano (queda viejo
+al cambiarlo en Productos), otra plataforma nombrada (la de la amiga decía
+"checkout de Shopify" tres veces), garantías con plazo, envíos en un
+producto digital, y `position:fixed` (tapa el botón en celulares chicos).
+
+Cada aviso aclara que miramos palabras, no entendemos el texto: puede
+saltar de más o pasar algo por alto, y la última palabra es de ella.
+
+### Un bug de verdad, encontrado probando
+
+`textContent` pega el texto de dos bloques sin espacio —"<h1>Curso</h1>
+<p>Quedan…" daba "CursoQuedan"— y con eso la revisión dejaba de ver la
+frase, porque busca palabras enteras. Ahora los trozos se unen con un
+espacio. Chequeo REV-I.
+
+Contra los archivos reales: la landing de la amiga da 7 hallazgos (1 traba
++ 6 avisos, todos ciertos); la generada con nuestras instrucciones, 0.
+
+`landing-propia.check.ts` (47 → 58). 105 chequeos, tsc, eslint y build ok.

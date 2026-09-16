@@ -15,6 +15,8 @@ import {
   limpiarLanding, limpiarCss, limpiarDeclaraciones, armarLanding, nombreDeFoto, claveDeLink, primerElemento,
   LANDING_MAX_BYTES,
 } from "./landing-propia";
+import { revisarLanding, tieneTraba } from "./landing-revision";
+import { leerInventario } from "./landing-estado";
 import { instruccionesParaClaude, HUECOS_EXPLICADOS } from "./landing-instrucciones";
 
 let fallos = 0;
@@ -139,6 +141,47 @@ check("INS-E", instruccionesParaClaude({ nombre: "x", descripcion: null, precio:
   "lo que escribe sobre el diseño va adentro del mismo texto; sin nada, queda la ayuda");
 check("INS-D", /360 px/.test(inst) && /position: fixed/.test(inst) && /castellano de Argentina/.test(inst) && /MIS INDICACIONES DE DISEÑO/.test(inst),
   "piden celular, sin fijos, en castellano de acá, y dejan el lugar para el pedido de diseño");
+
+/* ── La revisión: qué DICE la página ─────────────────────────────────────── */
+
+const nada = { comprar: 1, precio: 1, opiniones: false, css: "" };
+const revisar = (t: string, x: Partial<typeof nada> = {}) => revisarLanding(t, { ...nada, ...x });
+const dice = (t: string, x: Partial<typeof nada> = {}) => revisar(t, x).map((h) => h.que).join(" | ");
+
+check("REV-A", revisar("Comprá el ebook", { comprar: 0 })[0]?.nivel === "traba" && tieneTraba(revisar("x", { comprar: 0 }))
+  && !tieneTraba(revisar("Quedan 3 cupos y mirá los testimonios")),
+  "lo único que traba es no tener botón de compra: lo demás avisa, porque el texto es de ella");
+check("REV-B", /pocos lugares o cupos/.test(dice("Apurate: quedan solo 3 cupos disponibles.")) && /pocos lugares o cupos/.test(dice("Cupos limitados para esta camada."))
+  && !/pocos lugares/.test(dice("Quedan muchas recetas por probar.")),
+  "la escasez inventada se marca, y una frase inocente con «quedan» no");
+check("REV-C", /reloj o una cuenta regresiva/.test(dice("La oferta termina en 14:59")) && /reloj o una cuenta regresiva/.test(dice("Precio reservado por 10 minutos")),
+  "un reloj escrito a mano se marca: sin su programa queda clavado y sigue siendo mentira");
+check("REV-D", /opiniones o testimonios/.test(dice('"Me cambió la vida, lo recomiendo a todos los que dudan" Ana P. "Excelente material, muy completo y claro" Jorge R.'))
+  && !/opiniones o testimonios/.test(dice('"Me cambió la vida, lo recomiendo a todos los que dudan" Ana P.', { opiniones: true })),
+  "los testimonios escritos adentro se marcan; con el hueco de opiniones verificadas, no");
+check("REV-E", /cantidad de gente o de ventas/.test(dice("Más de 3.500 alumnos ya lo hicieron")) && !/cantidad de gente/.test(dice("31 recetas probadas")),
+  "un número de ventas que nadie puede comprobar se marca; la cantidad de recetas no");
+check("REV-F", /precio escrito adentro del texto/.test(dice("Llevátelo por $ 12.900")) && /En ningún lado se ve el precio/.test(dice("Comprá ahora", { precio: 0 }))
+  && !/precio/.test(dice("Comprá ahora")),
+  "el precio a mano se marca (queda viejo al cambiarlo en Productos), y la página sin precio también");
+check("REV-G", /Nombra a Shopify/.test(dice("El pago se procesa por el checkout de Shopify")) && /garantía con plazo/.test(dice("Garantía de 30 días o te devolvemos tu dinero"))
+  && /Habla de envíos/.test(dice("Envío gratis a todo el país")),
+  "otra plataforma nombrada, una garantía con plazo y un envío en un producto digital");
+check("REV-H", /pegado a la pantalla/.test(dice("Hola", { css: ".barra{position:fixed;top:0}" })) && revisar("Hola").length === 0,
+  "una barra fija se avisa (tapa el botón en celulares chicos); un texto limpio no dice nada");
+check("REV-I", (() => {
+  /* El texto de dos bloques NO se pega: "<h1>Curso</h1><p>Quedan…" daría
+     "CursoQuedan" y la revisión dejaría de ver la frase. */
+  const r = limpiarLanding('<div><h1>Curso</h1><p>Quedan solo 3 cupos.</p><a data-tienda="comprar">Comprar</a><span data-tienda="precio"></span></div>');
+  return r.ok && r.landing.inventario.hallazgos.some((h) => /pocos lugares o cupos/.test(h.que));
+})(), "la revisión corre sobre el texto con los bloques separados por espacios");
+check("REV-J", (() => {
+  const r = limpiarLanding(CRUDO);
+  const g = r.ok ? r.landing.inventario.hallazgos : [];
+  const vuelto = leerInventario(JSON.stringify(r.ok ? r.landing.inventario : {})).hallazgos;
+  return g.length > 0 && vuelto.length === g.length && vuelto[0].nivel === g[0].nivel
+    && leerInventario('{"hallazgos":[{"nivel":"traba"},{"que":"x","nivel":"otro"},"x"]}').hallazgos.length === 1;
+})(), "los hallazgos se guardan con la versión y vuelven de la base sin confiar en su forma");
 
 /* ── La ruta, la página pública y el panel ───────────────────────────────── */
 

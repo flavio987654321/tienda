@@ -21,6 +21,8 @@ export const LANDING_VERSIONES = 5;
 /** Más que esto no es una landing de Claude: es que trae algo adentro. */
 export const LANDING_MAX_BYTES = 500_000;
 
+import type { Hallazgo } from "@/lib/landing-revision";
+
 export type InventarioDeLanding = {
   precio: number;
   precioAnterior: number;
@@ -39,6 +41,8 @@ export type InventarioDeLanding = {
   fuentes: string[];
   /** Lo que quedó y no debería: un contador escrito, un "[PRECIO]" sin llenar. Para pedirle a Claude que lo regenere. */
   avisos: string[];
+  /** La revisión de lo que DICE la página (`lib/landing-revision`). */
+  hallazgos: Hallazgo[];
 };
 
 export type QuitadoDeLanding = {
@@ -50,7 +54,7 @@ export type QuitadoDeLanding = {
   contadores: number;
 };
 
-const INVENTARIO_VACIO: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [], avisos: [] };
+const INVENTARIO_VACIO: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [], avisos: [], hallazgos: [] };
 const QUITADO_VACIO: QuitadoDeLanding = { scripts: 0, formularios: 0, marcos: 0, eventos: 0, imagenesIncrustadas: 0, contadores: 0 };
 
 /** Un JSON guardado → el inventario, sin confiar en su forma. */
@@ -63,7 +67,19 @@ export function leerInventario(raw: string | null | undefined): InventarioDeLand
     precio: n(o.precio), precioAnterior: n(o.precioAnterior), comprar: n(o.comprar), nombre: n(o.nombre),
     fotos: lista(o.fotos), reloj: o.reloj === true, opiniones: o.opiniones === true, avisoVentas: o.avisoVentas === true,
     linksVacios: lista(o.linksVacios), imagenesExternas: lista(o.imagenesExternas), fuentes: lista(o.fuentes), avisos: lista(o.avisos),
+    hallazgos: leerHallazgos(o.hallazgos),
   };
+}
+
+/** Los hallazgos guardados, sin confiar en su forma: lo que no tiene los tres campos no entra. */
+function leerHallazgos(v: unknown): Hallazgo[] {
+  if (!Array.isArray(v)) return [];
+  const texto = (x: unknown) => (typeof x === "string" ? x.slice(0, 500) : "");
+  return v
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x))
+    .map((x) => ({ nivel: x.nivel === "traba" ? ("traba" as const) : ("aviso" as const), que: texto(x.que), arreglo: texto(x.arreglo) }))
+    .filter((x) => x.que)
+    .slice(0, 20);
 }
 
 export function leerQuitado(raw: string | null | undefined): QuitadoDeLanding {

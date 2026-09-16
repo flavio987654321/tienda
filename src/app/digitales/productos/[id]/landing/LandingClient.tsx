@@ -9,6 +9,7 @@ import {
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
 import { LANDING_MAX_BYTES } from "@/lib/landing-estado";
 import { instruccionesParaClaude, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
+import { tieneTraba } from "@/lib/landing-revision";
 import ConsejoDeUso from "../../../ConsejoDeUso";
 import { useAvisoSinGuardar } from "../../../useAvisoSinGuardar";
 
@@ -65,6 +66,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const inv = version?.inventario ?? null;
   const fotosFaltan = inv ? inv.fotos.filter((f) => !estado.fotos[f]) : [];
   const linksFaltan = inv ? inv.linksVacios.filter((t) => !enlaces[claveDeLink(t)]) : [];
+  const hallazgos = inv?.hallazgos ?? [];
+  const trabada = tieneTraba(hallazgos);
   const sinGuardar = JSON.stringify(enlaces) !== JSON.stringify(estado.enlaces);
   useAvisoSinGuardar(sinGuardar && !guardando);
 
@@ -262,6 +265,31 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
               )}
             </section>
 
+            {/* ── La revisión: qué DICE la página ──────────────────────── */}
+            {hallazgos.length > 0 && (
+              <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+                <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Lo que le miramos al texto</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                  Claude escribe lo que le pidas, y la página la firmás vos. Esto es lo que nos llamó la atención;
+                  {" "}decidís vos, salvo lo que diga «hay que arreglarlo».
+                </p>
+                <ul className="mt-3 space-y-2.5">
+                  {hallazgos.map((x) => (
+                    <li key={x.que} className={`rounded-2xl p-3 ${x.nivel === "traba" ? "bg-red-50 panel-oscuro:bg-red-500/10" : "bg-amber-50 panel-oscuro:bg-amber-500/10"}`}>
+                      <p className={`flex gap-2 text-[13px] font-bold ${x.nivel === "traba" ? "text-red-800 panel-oscuro:text-red-200" : "text-amber-900 panel-oscuro:text-amber-200"}`}>
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{x.que}{x.nivel === "traba" ? " Hay que arreglarlo." : ""}</span>
+                      </p>
+                      {x.arreglo && <p className="mt-1 pl-5 text-[12.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">{x.arreglo}</p>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[12px] leading-relaxed text-gray-400">
+                  Miramos palabras, no entendemos el texto: puede saltar de más o pasarle algo por alto. La última palabra es tuya.
+                </p>
+              </section>
+            )}
+
             {/* ── 4. Las fotos ─────────────────────────────────────────── */}
             {inv.fotos.length > 0 && (
               <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
@@ -334,6 +362,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                       ? "Quien entra a la dirección de tu producto ve esta página. Apagala y vuelve la nuestra, tal como la tenías."
                       : "Tu dirección va a mostrar esta página en vez de la nuestra. El pago, los cupones y las estadísticas siguen igual."}
                   </p>
+                  {trabada && !estado.activa && (
+                    <p className="mt-1.5 text-[12.5px] font-semibold text-red-700 panel-oscuro:text-red-300">
+                      No se puede prender todavía: mirá lo que está marcado en rojo más arriba.
+                    </p>
+                  )}
                   {!publicado && <p className="mt-1.5 text-[12.5px] text-amber-700 panel-oscuro:text-amber-300">Ojo: el producto todavía no está publicado, así que la dirección no la ve nadie.</p>}
                 </div>
                 <button
@@ -341,8 +374,10 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   role="switch"
                   aria-checked={estado.activa}
                   aria-label="Usar mi propio diseño"
+                  disabled={trabada && !estado.activa}
+                  title={trabada && !estado.activa ? "Primero arreglá lo que está marcado en rojo" : undefined}
                   onClick={() => void pedir({ activa: !estado.activa })}
-                  className={`mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors ${estado.activa ? "bg-orange-600" : "bg-gray-300 panel-oscuro:bg-gray-700"}`}
+                  className={`mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${estado.activa ? "bg-orange-600" : "bg-gray-300 panel-oscuro:bg-gray-700"}`}
                 >
                   <span className={`block h-6 w-6 rounded-full bg-white transition-transform ${estado.activa ? "translate-x-5" : ""}`} />
                 </button>

@@ -4,8 +4,9 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { limpiarLanding } from "@/lib/landing-propia";
+import { tieneTraba } from "@/lib/landing-revision";
 import {
-  leerEstadoDeLanding, LANDING_MAX_BYTES, LANDING_VERSIONES,
+  leerEstadoDeLanding, leerInventario, LANDING_MAX_BYTES, LANDING_VERSIONES,
   MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, type EstadoDeLanding,
 } from "@/lib/landing-estado";
 
@@ -179,6 +180,15 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (typeof b.activa === "boolean") {
     /* Prenderla sin nada subido dejaría la dirección en blanco. */
     if (b.activa && !nuevo.versionId) return NextResponse.json({ error: "Primero subí tu archivo." }, { status: 409 });
+    /* Y lo que traba, traba también acá: la pantalla ya lo dice, pero quien
+       manda el pedido a mano no pasa igual. Hoy es una sola cosa —que no
+       haya botón de compra—, y publicar eso es gastar visitas. */
+    if (b.activa && nuevo.versionId) {
+      const elegida = await prisma.landingDigital.findFirst({ where: { id: nuevo.versionId, productId: producto.id }, select: { inventario: true } });
+      if (elegida && tieneTraba(leerInventario(elegida.inventario).hallazgos)) {
+        return NextResponse.json({ error: "Tu página no tiene ningún botón que lleve al pago. Arreglá eso y volvé a subirla." }, { status: 409 });
+      }
+    }
     nuevo.activa = b.activa;
   }
 
