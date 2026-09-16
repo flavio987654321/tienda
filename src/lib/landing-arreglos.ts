@@ -389,11 +389,19 @@ export function llenarMarcadoresDePrecio(doc: Document): Arreglos {
  */
 export const ERA_FOTO = "foto";
 
-/** `src` que sirve para mostrar algo. Cualquier otra cosa es un marcador. */
+/**
+ * `src` que va a mostrar algo DE VERDAD cuando la página la sirvamos
+ * nosotros: una dirección completa y nada más.
+ *
+ * ⚠️ Una ruta relativa (`fotos/tapa.jpg`, `/img/tapa.jpg`) parece una
+ * dirección pero no lo es: apunta a un archivo del equipo de ella que nunca
+ * subió a ningún lado, así que en nuestra dirección da 404 y se ve una
+ * imagen rota. Tratarla como lugar de foto le da dónde subirla, que es lo
+ * que necesita. Todo lo que llega acá ya pasó por el filtro, así que un
+ * `data:` o un `javascript:` no existen más.
+ */
 function esUnaDireccion(src: string): boolean {
-  const s = src.trim();
-  if (!s) return false;
-  return /^(https?:\/\/|\/|\.\.?\/)/i.test(s) || /\.(png|jpe?g|webp|gif|svg|avif)(\?|#|$)/i.test(s);
+  return /^https?:\/\/\S/i.test(src.trim());
 }
 
 export function rescatarFotos(doc: Document): Arreglos {

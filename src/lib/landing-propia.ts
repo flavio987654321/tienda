@@ -57,7 +57,7 @@ import { parseDocument } from "htmlparser2";
 import { Element, Text, type ChildNode, type Document } from "domhandler";
 import { findAll, findOne, removeElement, textContent, prependChild } from "domutils";
 import render from "dom-serializer";
-import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
+import { LANDING_MAX_BYTES, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
 import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
 import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
@@ -508,9 +508,21 @@ function avisosDelCrudo(doc: Document): string[] {
   return avisos.slice(0, 6);
 }
 
+/**
+ * Qué trae adentro.
+ *
+ * ⚠️ Las fotos y los links van con el MISMO tope que guarda el servidor
+ * (`MAX_FOTOS_DE_LANDING`, `MAX_ENLACES_DE_LANDING`). Sin eso, un archivo con
+ * ochocientos lugares de foto le dibujaba al panel ochocientos botones de
+ * subir —una pantalla inusable— y recién en el número 31 le decía que no
+ * entraban más, después de diez minutos subiendo. Lo que pasa del tope se
+ * avisa arriba y el hueco de más desaparece al dibujar, como cualquier hueco
+ * que no tiene con qué llenarse.
+ */
 function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): InventarioDeLanding {
   const doc = parseDocument(cuerpo);
   const inv: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [...new Set(fuentes)], avisos, arreglos: [], sueltos: [], hallazgos: [] };
+  const deMas = { fotos: 0, links: 0 };
   for (const el of findAll(() => true, doc.children)) {
     const h = hueco(el);
     if (h === "precio") inv.precio++;
@@ -520,7 +532,10 @@ function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): Inven
     else if (h === "reloj") inv.reloj = true;
     else if (h === "opiniones") inv.opiniones = true;
     else if (h === "aviso-ventas") inv.avisoVentas = true;
-    else if (h.startsWith("foto:")) { const n = nombreDeFoto(h); if (n && !inv.fotos.includes(n)) inv.fotos.push(n); }
+    else if (h.startsWith("foto:")) {
+      const n = nombreDeFoto(h);
+      if (n && !inv.fotos.includes(n)) { if (inv.fotos.length < MAX_FOTOS_DE_LANDING) inv.fotos.push(n); else deMas.fotos++; }
+    }
 
     if (el.name === "a" && h !== "comprar") {
       const href = (el.attribs.href ?? "").trim();
@@ -529,11 +544,13 @@ function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): Inven
          "#" para que el panel ofrezca completarlos. */
       if (href === "" || href === "#") {
         const t = textContent(el).replace(/\s+/g, " ").trim();
-        if (t && !inv.linksVacios.includes(t)) inv.linksVacios.push(t);
+        if (t && !inv.linksVacios.includes(t)) { if (inv.linksVacios.length < MAX_ENLACES_DE_LANDING) inv.linksVacios.push(t); else deMas.links++; }
       }
     }
     if (el.name === "img" && /^https?:/i.test(el.attribs.src ?? "")) inv.imagenesExternas.push(el.attribs.src);
   }
+  if (deMas.fotos) avisos.push(`Tu página tiene ${MAX_FOTOS_DE_LANDING + deMas.fotos} lugares de foto y te pedimos los primeros ${MAX_FOTOS_DE_LANDING}: los demás no se van a ver. Si los necesitás, pedile a Claude una página con menos fotos.`);
+  if (deMas.links) avisos.push(`Tu página tiene ${MAX_ENLACES_DE_LANDING + deMas.links} links sueltos y te pedimos los primeros ${MAX_ENLACES_DE_LANDING}. Los demás no se van a poder tocar.`);
   return inv;
 }
 

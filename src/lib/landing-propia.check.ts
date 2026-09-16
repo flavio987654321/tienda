@@ -16,7 +16,7 @@ import {
   LANDING_MAX_BYTES,
 } from "./landing-propia";
 import { revisarLanding, tieneTraba } from "./landing-revision";
-import { leerInventario, leerEstadoDeLanding, acomodarEnlace } from "./landing-estado";
+import { leerInventario, leerEstadoDeLanding, acomodarEnlace, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING } from "./landing-estado";
 import { instruccionesParaClaude, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
 import { EFECTOS_DE_LA_LANDING, ESTILO_DE_LA_CAPSULA } from "./landing-efectos";
 
@@ -535,6 +535,28 @@ check("FOTO-H", /4\. Tus fotos/.test(panel) && /no encontramos ningún lugar don
 check("FOTO-G", (EN_LA_PREVIA.match(/data-tienda-falta="/g) ?? []).length === 6
   && /\[data-tienda-falta\]::after\{content:"Falta: " attr\(data-tienda-falta\)/.test(ESTILO_DE_LA_CAPSULA),
   "en la previa cada lugar vacío se marca con su nombre: si no, la lista dice «foto1, pagina3» y no se sabe cuál es cuál");
+
+/* ⚠️ Una ruta relativa parece una dirección pero no lo es: apunta a un
+   archivo de la computadora de ella que nunca subió a ningún lado, así que en
+   nuestra dirección da 404 y se ve rota. Es un lugar de foto, no una foto. */
+const RELATIVAS = limpiarLanding(`<img src="fotos/tapa.jpg" alt="Tapa"><img src="/img/b.png" alt="Bono"><img src="https://cdn.example.com/ok.png" alt="Ésta anda"><a data-tienda="comprar" href="#">c</a>`);
+check("FOTO-K", RELATIVAS.ok && RELATIVAS.landing.inventario.fotos.join() === "tapa,bono"
+  && RELATIVAS.landing.inventario.imagenesExternas.length === 1,
+  "una imagen con ruta relativa es un lugar de foto —en nuestra dirección daría 404—, y una con dirección completa se deja");
+
+/* ⚠️ El inventario va con el MISMO tope que guarda el servidor. Sin esto, un
+   archivo con ochocientos lugares de foto le dibujaba ochocientos botones de
+   subir y recién en el 31 le decía que no entraban más. */
+const DEMASIADOS = limpiarLanding(
+  Array.from({ length: 60 }, (_, i) => `<div data-afl-img="h${i}">x</div>`).join("")
+  + Array.from({ length: 40 }, (_, i) => `<a href="#">Link ${i}</a>`).join("")
+  + `<a data-tienda="comprar" href="#">c</a>`,
+);
+check("TOPE-A", DEMASIADOS.ok && DEMASIADOS.landing.inventario.fotos.length === MAX_FOTOS_DE_LANDING
+  && DEMASIADOS.landing.inventario.linksVacios.length === MAX_ENLACES_DE_LANDING
+  && DEMASIADOS.landing.inventario.avisos.some((a) => /60 lugares de foto/.test(a))
+  && DEMASIADOS.landing.inventario.avisos.some((a) => /40 links sueltos/.test(a)),
+  "el inventario no pide más de lo que el servidor puede guardar, y avisa cuántos quedaron afuera");
 
 /* ── Las flechas del carrusel ────────────────────────────────────────────── */
 

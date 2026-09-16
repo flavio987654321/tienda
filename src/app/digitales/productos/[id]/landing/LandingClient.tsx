@@ -43,7 +43,8 @@ const MAX_FOTO_MB = 4;
  *
  * La previa es la página de verdad (`/p/<id>?landing=previa`) adentro de un
  * marco: no una imitación. Por eso muestra el precio real y las fotos que ya
- * subió, y marca en rojo los huecos vacíos.
+ * subió, y marca con un borde punteado —y el nombre que pide el paso 4— cada
+ * lugar de foto que todavía está vacío.
  */
 export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, producto }: {
   productoId: string;
@@ -189,6 +190,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
    * de verdad no es una dirección lo dice ahí abajo y no manda nada.
    */
   async function guardarEnlace(texto: string) {
+    /* Y la previa deja de mirar la última foto: esto no es una foto. */
+    setMirando(null);
     const clave = claveDeLink(texto);
     const { url, error } = acomodarEnlace(enlaces[clave] ?? "");
     setLinkMal((m) => ({ ...m, [clave]: error ?? "" }));
@@ -598,7 +601,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   aria-label="Usar mi propio diseño"
                   disabled={trabada && !estado.activa}
                   title={trabada && !estado.activa ? "Primero arreglá lo que está marcado en rojo" : undefined}
-                  onClick={() => void pedir({ activa: !estado.activa })}
+                  onClick={() => { setMirando(null); void pedir({ activa: !estado.activa }); }}
                   className={`mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${estado.activa ? "bg-orange-600" : "bg-gray-300 panel-oscuro:bg-gray-700"}`}
                 >
                   <span className={`block h-6 w-6 rounded-full bg-white transition-transform ${estado.activa ? "translate-x-5" : ""}`} />
@@ -629,7 +632,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                       {v.id === estado.versionId ? (
                         <span className="text-[12px] font-bold text-gray-400">La que estás usando</span>
                       ) : (
-                        <button type="button" onClick={() => void pedir({ versionId: v.id })} className="inline-flex items-center gap-1 text-[12px] font-bold text-orange-600 hover:text-orange-500">
+                        <button type="button" onClick={() => { setMirando(null); void pedir({ versionId: v.id }); }} className="inline-flex items-center gap-1 text-[12px] font-bold text-orange-600 hover:text-orange-500">
                           <RotateCcw className="h-3 w-3" /> Volver a esta
                         </button>
                       )}

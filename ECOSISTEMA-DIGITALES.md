@@ -7419,3 +7419,58 @@ Chequeos FLE-A a FLE-D y HUE-A/HUE-B. Y ARR-F cambió de ejemplo: usaba
 justamente de las que sí.
 
 106 chequeos, tsc, eslint y build ok.
+
+---
+
+## Segunda auditoría: los seis commits de las fotos — 16/09/26
+
+Lo nuevo desde la primera auditoría: reconocer lugares de foto, copiar la
+clase que pide el archivo, rescatar las flechas y volver a la foto subida.
+Todo eso **lee atributos cualquiera de un archivo ajeno**, que es
+exactamente donde hay que mirar dos veces.
+
+### Lo que aguantó
+
+**Falsificar nuestras marcas: no se puede.** Las cinco
+(`data-tienda-era`, `-clase`, `-foto`, `-hueco`, `-flecha`) se sacan del
+archivo ANTES de sanear, así que ninguna llega escrita por ella. Si no, un
+`data-tienda-flecha` puesto a mano convertiría cualquier cosa en un
+control, y un `data-tienda-clase` metería clases donde no van.
+
+**Los valores que sí copiamos están acotados.** La clase de la foto sólo
+pasa si es `[a-z0-9 _-]` y mide menos de 120; el nombre del hueco, menos
+de 41 y del mismo alfabeto. Probado con `a" onerror="`, `</style><script>`,
+`x;background:url(javascript:1)` y rutas con `../`: **ninguno entra**.
+
+**Y lo de la primera auditoría sigue arreglado**: los cuatro cierres raros
+de `<style>` siguen inertes (mirado el ÁRBOL, no el texto), 200 KB de CSS
+sin cortes se limpian en 3 ms, y 1.500 reglas sobre 1.500 elementos en 33.
+El archivo de verdad, 19-39 ms.
+
+**La página pública no se lleva nada de la previa**: cero
+`data-tienda-hueco`, cero bordes punteados, cero errores de JavaScript, y
+las flechas andan igual que en la previa.
+
+### Lo que encontré (dos cosas, ninguna de seguridad)
+
+**1. El inventario no tenía tope.** El servidor guarda hasta 30 fotos y 20
+links (`MAX_FOTOS_DE_LANDING`, `MAX_ENLACES_DE_LANDING`), pero el
+inventario listaba TODOS: un archivo con 800 lugares de foto le dibujaba
+al panel **800 botones de subir**. Y no fallaba al principio sino en el
+número 31, con un 409 que dice "hasta 30 fotos" después de diez minutos
+subiendo. Ahora el inventario corta en el mismo número y lo dice arriba:
+"tu página tiene 800 lugares de foto y te pedimos los primeros 30".
+
+**2. Una ruta relativa no es una dirección.** `esUnaDireccion` daba por
+buena `fotos/tapa.jpg` y `/img/tapa.png` porque terminan en `.jpg`. Pero
+eso apunta a un archivo de la computadora de ella que nunca subió a ningún
+lado: servido desde nuestra dirección es un 404 y una imagen rota. Ahora
+vale sólo `https://…`, y una ruta relativa pasa a ser un lugar donde subir
+la foto — que es lo que hacía falta.
+
+**Y una de detalle**: la previa se quedaba mirando la última foto subida
+aunque después guardaras un link o prendieras la página. Ahora sólo vuelve
+a una foto cuando el guardado ES una foto.
+
+Chequeos FOTO-K y TOPE-A. 106 chequeos, tsc, eslint y build ok. Mirada la
+página pública entera a 1100 con las catorce fotos puestas.
