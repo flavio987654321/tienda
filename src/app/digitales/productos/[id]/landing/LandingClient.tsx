@@ -336,9 +336,9 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             {/* ── La revisión: qué DICE la página ──────────────────────── */}
             {hallazgos.length > 0 && (
               <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
-                <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Lo que le miramos al texto</p>
+                <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Lo que le miramos a tu página</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  Claude escribe lo que le pidas, y la página la firmás vos. Esto es lo que nos llamó la atención;
+                  Miramos lo que dice y lo que se puede ver. Claude escribe lo que le pidas, y la página la firmás vos;
                   {" "}decidís vos, salvo lo que diga «hay que arreglarlo».
                 </p>
                 <ul className="mt-3 space-y-2.5">
@@ -353,7 +353,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   ))}
                 </ul>
                 <p className="mt-3 text-[12px] leading-relaxed text-gray-400">
-                  Miramos palabras, no entendemos el texto: puede saltar de más o pasarle algo por alto. La última palabra es tuya.
+                  Miramos palabras y CSS, no entendemos tu texto: puede saltar de más o pasarle algo por alto. La última palabra es tuya.
                 </p>
               </section>
             )}
@@ -662,7 +662,7 @@ function pasosDeLaSubida(d: Record<string, unknown>, cargadas: Record<string, st
     },
     {
       estado: trabada ? "traba" : inv.hallazgos.length ? "aviso" : "ok",
-      titulo: "Leímos lo que dice la página",
+      titulo: "Revisamos lo que dice y lo que se ve",
       detalle: inv.hallazgos.length ? `${cuenta(inv.hallazgos.length, "cosa", "cosas")} para mirar, acá abajo.` : "Nada que marcarte.",
     },
     trabada

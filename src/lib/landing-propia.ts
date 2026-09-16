@@ -60,6 +60,7 @@ import render from "dom-serializer";
 import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
 import { arreglarLanding, ERA_BOTON } from "@/lib/landing-arreglos";
+import { loQueNoSePuedeVer } from "@/lib/landing-invisible";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -256,9 +257,13 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
      Ver `lib/landing-arreglos`. */
   const arbol = parseDocument(saneado);
   const arreglos = arreglarLanding(arbol);
+  const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
+  /* Y lo genérico: aplicar SU CSS sobre SU html para ver qué queda invisible.
+     Los arreglos conocen dos formas de romperse; esto encuentra las que no
+     conocemos. Ver `lib/landing-invisible`. */
+  const escondidos = loQueNoSePuedeVer(arbol, hoja);
   const cuerpo = render(arbol, { encodeEntities: "utf8", emptyAttrs: true }).trim();
 
-  const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
   const html = (hoja ? `<style>\n${hoja}\n</style>\n` : "") + cuerpo;
   const inventario = inventariar(cuerpo, fuentes, avisosDelCrudo(docCrudo));
   inventario.arreglos = arreglos.hechos;
@@ -267,6 +272,7 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
      `lib/landing-revision`. */
   inventario.hallazgos = revisarLanding(textoVisible(cuerpo), {
     comprar: inventario.comprar, precio: inventario.precio, opiniones: inventario.opiniones, css: hoja,
+    escondidos, comprarEscondidos: escondidos.reduce((n, x) => n + x.botonesDePago, 0),
   });
 
   return { ok: true, landing: { html, bytes: Buffer.byteLength(html, "utf8"), titulo, inventario, quitado } };

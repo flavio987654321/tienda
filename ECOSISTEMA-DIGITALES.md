@@ -6747,3 +6747,80 @@ que se mueve.
 Verificado en Chromium: el click baja de 0 a 9.258 px, y lo marcado con
 `data-tienda-aparece` va de opacidad 0 a 1 al entrar en pantalla (y queda en
 1 si no hay JavaScript).
+
+---
+
+## Que ande en general, no sólo con la landing de la amiga — 16/09/26
+
+Flavio: "¿cómo hacemos para que ande genéricamente? No todos los landing van
+a ser iguales al de mi amiga".
+
+Tenía razón y era el riesgo del día anterior: los arreglos salieron mirando
+DOS archivos. Andan con esos dos. Eso no es lo mismo que andar.
+
+La respuesta tiene tres partes.
+
+### 1. Lo que ya era genérico (y por qué)
+
+Los arreglos nunca miraron los nombres de sus clases. Miran señales que
+están en cualquier HTML: que un botón diga "comprar", que un elemento tenga
+`aria-expanded`, que al lado haya un bloque con texto, que el destino de un
+`#ancla` exista. Cambiarle los nombres a sus clases no cambia nada.
+
+### 2. Lo que faltaba: buscar el problema, no las formas del problema
+
+Una landing se puede romper de mil formas al sacarle el JavaScript, pero
+todas son la misma: **el CSS esconde algo y el script lo mostraba**.
+
+    .algo         { display: none }     ← lo esconde
+    .algo.is-open { display: block }    ← lo mostraba el script
+
+Da igual si eso era una ventana emergente, unas pestañas, un "ver más", un
+carrusel o una barra que aparece al bajar. Y se puede medir sin adivinar:
+aplicar SU CSS sobre SU html —con un motor de selectores de verdad
+(`css-select`, de la misma familia que ya usábamos)— y ver qué queda
+invisible.
+
+`lib/landing-invisible`. Lo que NO cuenta como escondido, que es la mitad
+del trabajo:
+
+- lo que esconde un `@media`: eso es diseño responsivo, se ve en el otro
+  tamaño;
+- lo que se abre al pasar el mouse, al tildar una casilla o con un
+  `<details>`: la persona puede;
+- lo que está escondido y NADIE muestra: es una clase de ayuda, no un bloque
+  perdido;
+- lo que arreglamos nosotros (el acordeón) o mostramos nosotros
+  (`data-tienda-aparece`).
+
+Un aviso que salta de más es peor que ninguno: si el panel le marca cosas
+que están bien, deja de mirarlo.
+
+Y hay un caso que ya no avisa: **traba**. Si el único botón de comprar está
+adentro de un bloque que no se puede ver, esa página no vende. Con otro
+botón a la vista, avisa nomás.
+
+### 3. Cómo lo sabemos: el banco de pruebas
+
+`landing-invisible.check.ts`: once casos escritos de cero, con otros nombres
+de clase — pestañas, ventana emergente, barra que aparece al bajar, "ver
+más", acordeón hecho con div — y los que NO tienen que saltar: responsivo,
+clase de ayuda, mouse encima, casilla tildada, `data-tienda-aparece`, y una
+landing bien hecha que tiene que dar cero.
+
+**El banco encontró un fallo de verdad el primer día.** En la landing de la
+amiga la barra fija NO saltaba, y tenía que saltar: la misma regla decía
+`display:flex` (muestra) y `transform:translateY(110%)` (esconde), y
+contarla como "muestra" la dejaba pasar. Ahora esconder gana. Es la tercera
+rotura de ese archivo, y la encontró la máquina, no nosotros leyendo.
+
+### La cuarta parte, la más barata
+
+Nada de esto hace falta si el archivo viene de nuestras instrucciones. Por
+eso cada cosa que aprendemos acá vuelve al pedido para Claude, y el pedido
+de cambios le explica cómo arreglarlo en su idioma. La revisión es la red;
+las instrucciones son el piso.
+
+106 chequeos (uno nuevo), tsc, eslint y build ok. Sobre los archivos de
+verdad: la de la amiga pasa a 7 avisos (aparece la barra invisible), la
+nuestra sigue en 0.

@@ -56,6 +56,10 @@ export type QueTrajo = {
   opiniones: boolean;
   /** El CSS, para lo que se ve mal en un celular. */
   css: string;
+  /** Bloques que su CSS esconde y que nada puede mostrar (`lib/landing-invisible`). */
+  escondidos?: readonly { texto: string; botonesDePago: number }[];
+  /** Cuántos botones de comprar quedaron adentro de esos bloques. */
+  comprarEscondidos?: number;
 };
 
 const TOPE = 12;
@@ -78,6 +82,9 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
 
   /* ── Lo único que traba ──────────────────────────────────────────────── */
 
+  const escondidos = trajo.escondidos ?? [];
+  const comprarQueSeVen = trajo.comprar - (trajo.comprarEscondidos ?? 0);
+
   if (trajo.comprar === 0) {
     h.push({
       nivel: "traba",
@@ -85,9 +92,31 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       arreglo: 'Pedile a Claude que marque los botones de comprar con data-tienda="comprar". Sin eso, quien quiera comprarte no tiene por dónde.',
       pedido: "Marcá cada botón de comprar así: <a data-tienda=\"comprar\" class=\"tu-clase\">Tu texto</a>. El destino del link lo pone TiendaApps solo; no le pongas href.",
     });
+  } else if (comprarQueSeVen <= 0) {
+    /* Peor que no tenerlo: está, pero adentro de algo que no se ve —una
+       ventana emergente, una pestaña— y lo abría el programa que le sacamos. */
+    h.push({
+      nivel: "traba",
+      que: `${trajo.comprar === 1 ? "El único botón de comprar está" : "Todos los botones de comprar están"} adentro de un bloque que no se puede ver.`,
+      arreglo: "Su CSS lo esconde y lo mostraba el programa que le sacamos (una ventana que se abre, unas pestañas). Así como está, nadie te puede comprar.",
+      pedido: "Sacá el botón de comprar de la ventana emergente o la pestaña donde está: tiene que verse apenas se abre la página, sin tocar nada. Acá no corre ningún JavaScript, así que lo que el CSS esconde no se puede mostrar.",
+    });
   }
 
   /* ── Lo que se avisa ─────────────────────────────────────────────────── */
+
+  /* Lo genérico: no importa qué era —una ventana emergente, unas pestañas,
+     un "ver más"—, si el CSS lo esconde y sólo un script lo mostraba, quien
+     entre no lo va a ver nunca. Ver `lib/landing-invisible`. */
+  const perdidos = escondidos.filter((x) => x.botonesDePago === 0 || comprarQueSeVen > 0);
+  if (perdidos.length) {
+    h.push({
+      nivel: "aviso",
+      que: `Hay ${perdidos.length === 1 ? "un bloque que no se puede ver" : `${perdidos.length} bloques que no se pueden ver`}: «${perdidos[0].texto}».`,
+      arreglo: "Su CSS los esconde y los mostraba el programa que le sacamos: una ventana que se abre, unas pestañas, un «ver más», una barra que aparece al bajar. Quien entre a tu página no los va a ver nunca. Si ese contenido importa, hay que sacarlo de ahí.",
+      pedido: 'Hay contenido que el CSS esconde y que sólo se veía con JavaScript (ventanas emergentes, pestañas, «ver más», barras que aparecen al bajar). Acá no corre ningún programa: mostrá ese contenido directamente, o ponelo en un <details> con <summary>, o marcalo con data-tienda-aparece si querés que aparezca al bajar.',
+    });
+  }
 
   /* Escasez inventada. Un archivo digital no se agota, y un contador que el
      servidor no hace cumplir es mentira. Ver `lib/oferta-salida`. */

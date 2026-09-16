@@ -36,6 +36,7 @@
     "@upstash/redis": "^1.38.0",
     "@vercel/functions": "^3.7.5",
     "better-sqlite3": "^12.9.0",
+    "css-select": "^7.0.0",
     "dom-serializer": "^2.0.0",
     "domhandler": "^5.0.3",
     "domutils": "^3.2.2",
