@@ -175,97 +175,104 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
     );
   }
 
+  /* Ancho completo y dos columnas, igual que el editor de nuestra página:
+     lo que se toca a la izquierda, la previa grande y pegada a la derecha.
+     Abajo de `lg` se apilan y la previa queda al final.
+
+     `grid-cols-1` y los `min-w-0` no son decoración: sin ellos una columna
+     mide lo más ancho que tenga adentro y empuja a la otra afuera de la
+     pantalla. Es el mismo cuidado que ya estaba escrito en el editor. */
   return (
-    <div className="space-y-4">
-      {/* ── 1. El pedido para Claude ──────────────────────────────────────── */}
-      <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
-        <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">1. Pedile la página a Claude</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-          Copiá este texto, pegalo en Claude y abajo escribí cómo la querés: colores, estilo, a quién le
-          hablás. Ya lleva el nombre y el precio de «{nombre}», y las reglas para que la página nos llegue
-          lista para enchufar. Probá las veces que quieras: volver a subirla no te hace perder las fotos.
-        </p>
-        <div className="mt-3">
-          <label htmlFor="pedido" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
-            Cómo la querés <span className="font-normal text-gray-400">(colores, tipografía, estilo, a quién le hablás)</span>
-          </label>
-          <textarea
-            id="pedido" value={indicaciones} onChange={(e) => anotar(e.target.value)} maxLength={INDICACIONES_MAX} rows={3}
-            placeholder="Cálida y apetitosa, en bordó y crema, con una tipografía con serif para los títulos. Le hablo a mujeres de 30 a 55 que cocinan en casa."
-            className={`${CLASE_INPUT} resize-y`}
-          />
-          <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
-            Esto se copia junto con las reglas, así no lo escribís de nuevo cada vez. Queda guardado en este navegador.
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-4">
+        {/* ── 1. El pedido para Claude ──────────────────────────────────────── */}
+        <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+          <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">1. Pedile la página a Claude</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            Copiá este texto, pegalo en Claude y abajo escribí cómo la querés: colores, estilo, a quién le
+            hablás. Ya lleva el nombre y el precio de «{nombre}», y las reglas para que la página nos llegue
+            lista para enchufar. Probá las veces que quieras: volver a subirla no te hace perder las fotos.
           </p>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void copiar(instrucciones, "pedido")}
-            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-4 py-2.5 text-sm font-bold text-white panel-oscuro:text-gray-900 hover:opacity-90 transition-opacity"
-          >
-            {copiado === "pedido" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copiado === "pedido" ? "Copiado" : "Copiar el pedido"}
-          </button>
-          <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-orange-600 hover:text-orange-500">
-            Abrir Claude <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        </div>
-        <details className="mt-3">
-          <summary className="cursor-pointer text-[12.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400">Ver el texto</summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded-2xl bg-gray-50 panel-oscuro:bg-gray-950 p-3 text-[11.5px] leading-relaxed whitespace-pre-wrap text-gray-700 panel-oscuro:text-gray-300">{instrucciones}</pre>
-        </details>
-      </section>
-
-      {/* ── 2. Subir ──────────────────────────────────────────────────────── */}
-      <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
-        <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">2. Subí el archivo que te dio</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-          El .html, tal como lo bajaste. Le sacamos lo que no puede correr en tu página (programas, contadores
-          falsos) y te decimos qué encontró.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors">
-            {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {version ? "Subir otra versión" : "Elegir el archivo"}
-            <input
-              ref={archivo} type="file" accept=".html,text/html" className="hidden" disabled={subiendo}
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) void subirArchivo(f); }}
+          <div className="mt-3">
+            <label htmlFor="pedido" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
+              Cómo la querés <span className="font-normal text-gray-400">(colores, tipografía, estilo, a quién le hablás)</span>
+            </label>
+            <textarea
+              id="pedido" value={indicaciones} onChange={(e) => anotar(e.target.value)} maxLength={INDICACIONES_MAX} rows={3}
+              placeholder="Cálida y apetitosa, en bordó y crema, con una tipografía con serif para los títulos. Le hablo a mujeres de 30 a 55 que cocinan en casa."
+              className={`${CLASE_INPUT} resize-y`}
             />
-          </label>
-          {version && (
-            <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-              Última: {new Date(version.cuando).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · {Math.round(version.bytes / 1000)} KB
-            </span>
-          )}
-        </div>
-        {error && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{error}</p>}
-        {informe && (
-          <ol className="mt-4 space-y-2.5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
-            {informe.pasos.map((paso, i) => (
-              <li
-                key={paso.titulo}
-                aria-hidden={i >= informe.visibles}
-                className={`flex gap-2.5 transition-opacity duration-500 ${i < informe.visibles ? "opacity-100" : "opacity-0"}`}
-              >
-                <span className="mt-0.5 shrink-0">
-                  {paso.estado === "ok"
-                    ? <Check className="h-4 w-4 text-green-600" />
-                    : <AlertTriangle className={`h-4 w-4 ${paso.estado === "traba" ? "text-red-600" : "text-amber-600"}`} />}
-                </span>
-                <span className="min-w-0">
-                  <span className="text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100">{paso.titulo}</span>
-                  <span className="block whitespace-pre-line text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{paso.detalle}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+            <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
+              Esto se copia junto con las reglas, así no lo escribís de nuevo cada vez. Queda guardado en este navegador.
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void copiar(instrucciones, "pedido")}
+              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-4 py-2.5 text-sm font-bold text-white panel-oscuro:text-gray-900 hover:opacity-90 transition-opacity"
+            >
+              {copiado === "pedido" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copiado === "pedido" ? "Copiado" : "Copiar el pedido"}
+            </button>
+            <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-orange-600 hover:text-orange-500">
+              Abrir Claude <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+          <details className="mt-3">
+            <summary className="cursor-pointer text-[12.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400">Ver el texto</summary>
+            <pre className="mt-2 max-h-64 overflow-auto rounded-2xl bg-gray-50 panel-oscuro:bg-gray-950 p-3 text-[11.5px] leading-relaxed whitespace-pre-wrap text-gray-700 panel-oscuro:text-gray-300">{instrucciones}</pre>
+          </details>
+        </section>
 
-      {version && inv && (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_500px] items-start">
-          <div className="space-y-4">
+        {/* ── 2. Subir ──────────────────────────────────────────────────────── */}
+        <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+          <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">2. Subí el archivo que te dio</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            El .html, tal como lo bajaste. Le sacamos lo que no puede correr en tu página (programas, contadores
+            falsos) y te decimos qué encontró.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors">
+              {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {version ? "Subir otra versión" : "Elegir el archivo"}
+              <input
+                ref={archivo} type="file" accept=".html,text/html" className="hidden" disabled={subiendo}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void subirArchivo(f); }}
+              />
+            </label>
+            {version && (
+              <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">
+                Última: {new Date(version.cuando).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · {Math.round(version.bytes / 1000)} KB
+              </span>
+            )}
+          </div>
+          {error && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{error}</p>}
+          {informe && (
+            <ol className="mt-4 space-y-2.5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+              {informe.pasos.map((paso, i) => (
+                <li
+                  key={paso.titulo}
+                  aria-hidden={i >= informe.visibles}
+                  className={`flex gap-2.5 transition-opacity duration-500 ${i < informe.visibles ? "opacity-100" : "opacity-0"}`}
+                >
+                  <span className="mt-0.5 shrink-0">
+                    {paso.estado === "ok"
+                      ? <Check className="h-4 w-4 text-green-600" />
+                      : <AlertTriangle className={`h-4 w-4 ${paso.estado === "traba" ? "text-red-600" : "text-amber-600"}`} />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100">{paso.titulo}</span>
+                    <span className="block whitespace-pre-line text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{paso.detalle}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        {version && inv && (
+          <>
             {/* ── 3. La lista de control ───────────────────────────────── */}
             <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
               <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">3. Cómo quedó</p>
@@ -504,47 +511,59 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
               El diseño lo hacés en Claude y lo cambiás ahí las veces que quieras: acá sólo se cargan las fotos,
               el precio y los links. Mirala en el celular antes de prenderla — ahí se compra.
             </ConsejoDeUso>
-          </div>
+          </>
+        )}
+      </div>
 
-          {/* ── La previa ──────────────────────────────────────────────── */}
-          <div className="lg:sticky lg:top-4">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Así queda</p>
-              <div role="tablist" aria-label="Dónde se ve" className="inline-flex rounded-full border border-gray-200 panel-oscuro:border-gray-700 p-0.5">
-                {([["pc", Monitor, "Computadora"], ["celular", Smartphone, "Celular"]] as const).map(([clave, Icono, texto]) => (
-                  <button
-                    key={clave} type="button" role="tab" aria-selected={pantalla === clave} onClick={() => setPantalla(clave)}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold transition-colors ${pantalla === clave ? "bg-gray-900 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900" : "text-gray-500 hover:text-gray-800 panel-oscuro:hover:text-gray-200"}`}
-                  >
-                    <Icono className="h-3.5 w-3.5" /> {texto}
-                  </button>
-                ))}
-              </div>
+      {/* ── La previa ────────────────────────────────────────────────────── */}
+      <div className="min-w-0">
+        <div className="lg:sticky lg:top-4">
+          {!(version && inv) ? (
+            <div className="grid h-[60vh] place-items-center rounded-3xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 p-6 text-center">
+              <p className="max-w-xs text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                Acá vas a ver tu página apenas subas el archivo, con tu precio y tus fotos puestos.
+              </p>
             </div>
-            {/* La página de verdad adentro de un marco: el precio y las fotos
-                son los que va a ver quien compre. Los huecos sin foto salen
-                marcados. */}
-            <div className={`overflow-hidden rounded-3xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-100 panel-oscuro:bg-gray-800 ${pantalla === "celular" ? "mx-auto w-full max-w-[380px] p-3" : "p-2"}`}>
-              <iframe
-                key={`${pantalla}-${refresco}`}
-                src={`/p/${productoId}?landing=previa`}
-                title="Vista previa de tu diseño"
-                className={`w-full rounded-2xl bg-white ${pantalla === "celular" ? "h-[620px]" : "h-[560px]"}`}
-                /* Deja correr JavaScript —el nuestro: el que hace bajar suave
-                   y aparecer al bajar— pero NO le da nuestro origen: adentro del
-                   marco no hay cookies ni sesión, y no puede sacar la pestaña de
-                   su lugar. Sin esto la previa mentiría: mostraría quieta una
-                   página que se mueve. */
-                sandbox="allow-scripts"
-              />
+          ) : (
+            <>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Así queda</p>
+            <div role="tablist" aria-label="Dónde se ve" className="inline-flex rounded-full border border-gray-200 panel-oscuro:border-gray-700 p-0.5">
+              {([["pc", Monitor, "Computadora"], ["celular", Smartphone, "Celular"]] as const).map(([clave, Icono, texto]) => (
+                <button
+                  key={clave} type="button" role="tab" aria-selected={pantalla === clave} onClick={() => setPantalla(clave)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold transition-colors ${pantalla === clave ? "bg-gray-900 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900" : "text-gray-500 hover:text-gray-800 panel-oscuro:hover:text-gray-200"}`}
+                >
+                  <Icono className="h-3.5 w-3.5" /> {texto}
+                </button>
+              ))}
             </div>
-            <p className="mt-2 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-              Es tu página de verdad, con tu precio y tus fotos. Lo que salga marcado en rojo es una foto que falta.{" "}
-              <a href={`/p/${productoId}?landing=previa`} target="_blank" rel="noopener noreferrer" className="font-bold text-orange-600 hover:text-orange-500">Abrirla en grande</a>.
-            </p>
           </div>
+          {/* La página de verdad adentro de un marco: el precio y las fotos
+              son los que va a ver quien compre. Los huecos sin foto salen
+              marcados. */}
+          <div className={`overflow-hidden rounded-3xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-100 panel-oscuro:bg-gray-800 ${pantalla === "celular" ? "mx-auto w-full max-w-[380px] p-3" : "p-2"}`}>
+            <iframe
+              key={`${pantalla}-${refresco}`}
+              src={`/p/${productoId}?landing=previa`}
+              title="Vista previa de tu diseño"
+              className={`w-full rounded-2xl bg-white ${pantalla === "celular" ? "h-[76vh] min-h-[560px]" : "h-[76vh] min-h-[520px]"}`}
+              /* Deja correr JavaScript —el nuestro: el que hace bajar suave
+                 y aparecer al bajar— pero NO le da nuestro origen: adentro del
+                 marco no hay cookies ni sesión, y no puede sacar la pestaña de
+                 su lugar. Sin esto la previa mentiría: mostraría quieta una
+                 página que se mueve. */
+              sandbox="allow-scripts"
+            />
+          </div>
+          <p className="mt-2 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            Es tu página de verdad, con tu precio y tus fotos. Lo que salga marcado en rojo es una foto que falta.{" "}
+            <a href={`/p/${productoId}?landing=previa`} target="_blank" rel="noopener noreferrer" className="font-bold text-orange-600 hover:text-orange-500">Abrirla en grande</a>.
+          </p>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

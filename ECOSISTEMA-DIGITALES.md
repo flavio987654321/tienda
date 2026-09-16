@@ -6886,3 +6886,37 @@ tocarle nada.
 
 `landing-propia.check.ts` (72 → 75) y `landing-invisible.check.ts` (11 → 12).
 106 chequeos, tsc, eslint y build ok.
+
+---
+
+## La pantalla de la landing, a ancho completo — 16/09/26
+
+Flavio: "la previa tiene mucho espacio en los costados; ¿podemos hacer que
+ocupe todo el ancho, como el editor de la página que generamos nosotros?".
+
+Era el mismo molde que ya teníamos escrito y no estábamos usando. El editor
+de `/productos/<id>/pagina` va a ancho completo (`p-4 sm:p-6 lg:p-8`, sin
+`max-w`) y parte en dos columnas: los controles a la izquierda en 420 px y la
+previa a la derecha, `sticky`, ocupando todo lo que sobra.
+
+La pantalla de la landing hacía lo contrario: `max-w-6xl` para todo, la
+columna de controles elástica y la previa clavada en 500 px. En una pantalla
+de 1500 la previa quedaba chica y sobraba blanco a los dos lados.
+
+Ahora:
+
+- la página va a ancho completo,
+- una sola grilla `lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]` con TODO a
+  la izquierda —el pedido a Claude y el subir también, que antes estaban
+  arriba a lo ancho— y la previa a la derecha,
+- la previa pasa de 560 px de alto fijos a `76vh`, y queda pegada al hacer
+  scroll,
+- abajo de `lg` se apila igual que antes, con la previa al final,
+- y si todavía no subió nada, en vez de una previa vacía hay un recuadro
+  punteado que dice qué va a aparecer ahí.
+
+Los `grid-cols-1` y los `min-w-0` van con el mismo cuidado que ya estaba
+documentado en el editor: sin ellos una columna mide lo más ancho que tenga
+adentro y empuja a la otra afuera de la pantalla.
+
+Mirado a 1500, 1280, 768 y 360. 106 chequeos, tsc, eslint y build ok.

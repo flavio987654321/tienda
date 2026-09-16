@@ -59,10 +59,13 @@ export default async function LandingPage({ params }: Props) {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8">
+    /* Ancho completo, como el editor de nuestra página: la previa de la
+       derecha es lo que más se mira, y con un ancho máximo quedaba chica con
+       la pantalla medio vacía a los costados. */
+    <div className="p-4 sm:p-6 lg:p-8">
       <BotonVolver href="/digitales/productos">Volver a productos</BotonVolver>
 
-      <div className="mb-6">
+      <div className="mb-6 max-w-3xl">
         <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">Tu propio diseño</h1>
         <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
           Si querés una página distinta a la nuestra, pedísela a Claude con el texto de acá abajo y subí el
