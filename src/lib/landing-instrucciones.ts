@@ -12,7 +12,10 @@
  * hecho sin las reglas entra igual (`limpiarLanding` lo tolera), pero el
  * panel va a tener que preguntar más.
  *
- * Es texto puro, sin HTML: se copia con un botón y se pega en el chat.
+ * Es texto puro, sin HTML: se copia con un botón y se pega en el chat. Lo
+ * que la vendedora escribe sobre el DISEÑO (colores, tipografía, tono) va
+ * adentro del mismo texto, al final: así copia y pega una sola vez, y la
+ * novena versión no la obliga a volver a escribir lo mismo.
  * Probado en `landing-propia.check.ts`.
  */
 
@@ -41,7 +44,11 @@ export const HUECOS_EXPLICADOS: readonly { hueco: string; que: string }[] = [
   { hueco: `data-tienda="aviso-ventas"`, que: "un contenedor vacío donde va el aviso de compras reales recientes (opcional)" },
 ];
 
-export function instruccionesParaClaude(p: ProductoParaInstrucciones): string {
+/** Hasta acá llega lo que escribe sobre el diseño: es un pedido, no un brief. */
+export const INDICACIONES_MAX = 1200;
+
+export function instruccionesParaClaude(p: ProductoParaInstrucciones, indicaciones = ""): string {
+  const suyas = indicaciones.replace(/\r\n/g, "\n").trim().slice(0, INDICACIONES_MAX);
   const datos = [
     `- Nombre: ${p.nombre}`,
     p.tipo ? `- Qué es: ${p.tipo}` : null,
@@ -77,6 +84,6 @@ ${HUECOS_EXPLICADOS.slice(5).map((h) => `   - ${h.hueco}: ${h.que}`).join("\n")}
 Cuando termines, decime en dos líneas qué fotos tengo que subir (los nombres de los huecos foto:…).
 
 MIS INDICACIONES DE DISEÑO
-(escribí acá cómo la querés: colores, estilo, referencias, tono)
+${suyas || "(escribí acá cómo la querés: colores, estilo, referencias, tono)"}
 `;
 }

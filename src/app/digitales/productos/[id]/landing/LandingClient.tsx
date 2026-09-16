@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
 import { LANDING_MAX_BYTES } from "@/lib/landing-estado";
+import { instruccionesParaClaude, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
 import ConsejoDeUso from "../../../ConsejoDeUso";
 import { useAvisoSinGuardar } from "../../../useAvisoSinGuardar";
 
@@ -36,14 +37,14 @@ const MAX_FOTO_MB = 5;
  * marco: no una imitación. Por eso muestra el precio real y las fotos que ya
  * subió, y marca en rojo los huecos vacíos.
  */
-export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, instrucciones }: {
+export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, producto }: {
   productoId: string;
   nombre: string;
   publicado: boolean;
   esPago: boolean;
   estado: EstadoDeLanding;
   versiones: VersionEnPantalla[];
-  instrucciones: string;
+  producto: ProductoParaInstrucciones;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   /* Cambia con cada guardado: la previa se recarga sola al subir una versión
      o al cambiar una foto. */
   const [refresco, setRefresco] = useState(0);
+  const [indicaciones, anotar] = usePedidoGuardado(productoId);
+  const instrucciones = instruccionesParaClaude(producto, indicaciones);
 
   const version = versiones.find((v) => v.id === estado.versionId) ?? null;
   const inv = version?.inventario ?? null;
@@ -151,6 +154,19 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
           hablás. Ya lleva el nombre y el precio de «{nombre}», y las reglas para que la página nos llegue
           lista para enchufar. Probá las veces que quieras: volver a subirla no te hace perder las fotos.
         </p>
+        <div className="mt-3">
+          <label htmlFor="pedido" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
+            Cómo la querés <span className="font-normal text-gray-400">(colores, tipografía, estilo, a quién le hablás)</span>
+          </label>
+          <textarea
+            id="pedido" value={indicaciones} onChange={(e) => anotar(e.target.value)} maxLength={INDICACIONES_MAX} rows={3}
+            placeholder="Cálida y apetitosa, en bordó y crema, con una tipografía con serif para los títulos. Le hablo a mujeres de 30 a 55 que cocinan en casa."
+            className={`${CLASE_INPUT} resize-y`}
+          />
+          <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
+            Esto se copia junto con las reglas, así no lo escribís de nuevo cada vez. Queda guardado en este navegador.
+          </p>
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -400,6 +416,30 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
       )}
     </div>
   );
+}
+
+/* ── Lo que quiere del diseño, guardado en el navegador ───────────────────
+   Es el borrador de un pedido a Claude, no parte de la página: no va a la
+   base ni le hace falta una ruta. Se lee con `useSyncExternalStore` y no con
+   un efecto que escribe estado, para que el dibujo del servidor (vacío) y el
+   del navegador no se peleen: acá el servidor no tiene con qué leerlo. */
+const oyentesDelPedido = new Set<() => void>();
+function suscribirPedido(avisar: () => void) {
+  oyentesDelPedido.add(avisar);
+  return () => { oyentesDelPedido.delete(avisar); };
+}
+function leerPedido(clave: string): string {
+  try { return window.localStorage.getItem(clave) ?? ""; } catch { return ""; }
+}
+
+function usePedidoGuardado(productoId: string): [string, (v: string) => void] {
+  const clave = `pv_landing_pedido_${productoId}`;
+  const valor = useSyncExternalStore(suscribirPedido, () => leerPedido(clave), () => "");
+  const anotar = useCallback((v: string) => {
+    try { window.localStorage.setItem(clave, v); } catch { /* sin almacenamiento se escribe igual, pero no sobrevive a recargar */ }
+    oyentesDelPedido.forEach((f) => f());
+  }, [clave]);
+  return [valor, anotar];
 }
 
 function Renglon({ ok, bien, mal }: { ok: boolean; bien: string; mal: string }) {

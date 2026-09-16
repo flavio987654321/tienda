@@ -134,6 +134,9 @@ check("INS-B", /Nada de JavaScript/.test(inst) && /NO pongas contadores/.test(in
   "piden sin scripts, sin contadores, sin opiniones inventadas, acordeón nativo y sin hojas externas");
 check("INS-C", /Panadería en Airfryer/.test(inst) && /\$\s?9\.900/.test(inst) && /antes \$\s?19\.900/.test(inst) && /  31 recetas\.\n  Con tiempos\./.test(inst) && /¡Qué Antojo!/.test(inst),
   "van con los datos reales del producto, para que Claude no invente");
+check("INS-E", instruccionesParaClaude({ nombre: "x", descripcion: null, precio: 1, precioAnterior: null, tipo: null, vendedor: null }, "  En bordó y crema.  ").trimEnd().endsWith("En bordó y crema.")
+  && instruccionesParaClaude({ nombre: "x", descripcion: null, precio: 1, precioAnterior: null, tipo: null, vendedor: null }).includes("(escribí acá cómo la querés"),
+  "lo que escribe sobre el diseño va adentro del mismo texto; sin nada, queda la ayuda");
 check("INS-D", /360 px/.test(inst) && /position: fixed/.test(inst) && /castellano de Argentina/.test(inst) && /MIS INDICACIONES DE DISEÑO/.test(inst),
   "piden celular, sin fijos, en castellano de acá, y dejan el lugar para el pedido de diseño");
 
@@ -180,8 +183,8 @@ check("PAN-A", /accept="\.html,text\/html"/.test(panel) && /file\.size > LANDING
   "el panel sube el .html leyéndolo en el navegador, con el mismo tope que el servidor");
 check("PAN-B", /landing=previa/.test(panel) && /sandbox=""/.test(panel) && /pantalla === "celular"/.test(panel),
   "la previa es la página de verdad, en un marco sin permisos, en computadora y celular");
-check("PAN-C", /No pudimos conectarnos/.test(panel) && /Starter y Pro/.test(panel) && /instruccionesParaClaude\(\{/.test(panelPage),
-  "la pantalla dice los errores, el plan, y arma el pedido para Claude con los datos del producto");
+check("PAN-C", /No pudimos conectarnos/.test(panel) && /Starter y Pro/.test(panel) && /instruccionesParaClaude\(producto, indicaciones\)/.test(panel) && /producto=\{\{/.test(panelPage) && /usePedidoGuardado/.test(panel) && !/useEffect/.test(panel),
+  "la pantalla dice los errores, el plan, y arma el pedido con los datos del producto más lo que ella escribió del diseño (guardado en su navegador)");
 check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina),
   "con la landing prendida, el editor de secciones avisa que lo que se edita ahí no se muestra");
 

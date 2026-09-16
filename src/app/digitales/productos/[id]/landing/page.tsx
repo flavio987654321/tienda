@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { leerEstadoDeLanding, leerInventario, leerQuitado } from "@/lib/landing-estado";
-import { instruccionesParaClaude } from "@/lib/landing-instrucciones";
+
 import BotonVolver from "../../../BotonVolver";
 import LandingClient, { type VersionEnPantalla } from "./LandingClient";
 
@@ -77,14 +77,16 @@ export default async function LandingPage({ params }: Props) {
         esPago={esPago}
         estado={estado}
         versiones={versiones}
-        instrucciones={instruccionesParaClaude({
+        /* Los datos, no el texto ya armado: la pantalla lo rehace con lo que
+           ella escriba sobre el diseño, con la misma función. */
+        producto={{
           nombre: fila.name,
           descripcion: fila.description,
           precio: fila.price,
           precioAnterior: fila.comparePrice,
           tipo: null,
           vendedor: fila.store.name,
-        })}
+        }}
       />
     </div>
   );
