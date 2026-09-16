@@ -307,7 +307,83 @@ export function llenarMarcadoresDePrecio(doc: Document): Arreglos {
   };
 }
 
-/* ── 4. La barra de comprar que aparecía al bajar ───────────────────────── */
+/* ── 4. Los lugares donde va una foto ───────────────────────────────────── */
+
+/**
+ * Dónde van las fotos, en un archivo que no se escribió para nosotros.
+ *
+ * Nuestras instrucciones piden `data-tienda="foto:Portada"`, y con eso el
+ * panel sabe qué pedirle. Pero un archivo hecho en otro lado marca sus fotos
+ * a su manera, y ahí la vendedora se queda mirando un cuadro que dice
+ * "Cargá la URL en imagenes.portada" sin ningún lugar donde cargarla. Medido
+ * sobre un archivo de verdad: **catorce** lugares de foto y ninguno se
+ * reconocía. La portada del ebook, las seis fotos de recetas, las cinco
+ * páginas de muestra, el bono y el pack. Nada.
+ *
+ * Lo que se reconoce no es una plataforma, es la FORMA de marcar una foto, y
+ * son dos:
+ *
+ *   1. **Un atributo que dice "imagen" y trae un nombre corto.**
+ *      `data-afl-img="portada"`, `data-image="hero"`, `data-foto="bonus"`.
+ *      Eso es un hueco con nombre puesto por quien escribió el archivo, y el
+ *      nombre sirve de clave: aguanta que ella baje una versión nueva del
+ *      diseño sin perder la foto que ya subió. Se marca en el saneado
+ *      (`limpiarLanding`), porque ese atributo no sobrevive al filtro.
+ *
+ *   2. **Una imagen cuyo `src` no es una dirección.** `src="URL_DE_TU_LOGO"`,
+ *      `src="{{imagen}}"`, `src=""`. Eso no es una foto, es el lugar donde
+ *      iba una — y hoy se ve rota en la página.
+ *
+ * Lo que NO se toca: una imagen con una dirección de verdad, aunque apunte
+ * afuera. Ésa se ve, y el panel ya avisa aparte que conviene subirla.
+ */
+export const ERA_FOTO = "foto";
+
+/** `src` que sirve para mostrar algo. Cualquier otra cosa es un marcador. */
+function esUnaDireccion(src: string): boolean {
+  const s = src.trim();
+  if (!s) return false;
+  return /^(https?:\/\/|\/|\.\.?\/)/i.test(s) || /\.(png|jpe?g|webp|gif|svg|avif)(\?|#|$)/i.test(s);
+}
+
+export function rescatarFotos(doc: Document): Arreglos {
+  const nombrados: string[] = [];
+  const rotas: string[] = [];
+  let sinNombre = 0;
+
+  for (const el of findAll(() => true, doc.children)) {
+    /* Los que marcó el saneado por el atributo (forma 1). */
+    if (el.attribs[ERA_BOTON] === ERA_FOTO) {
+      delete el.attribs[ERA_BOTON];
+      nombrados.push((el.attribs["data-tienda"] ?? "").replace(/^foto:/i, ""));
+      continue;
+    }
+    /* Y las imágenes con un marcador en vez de una dirección (forma 2). */
+    if (el.name !== "img" || el.attribs["data-tienda"]) continue;
+    if (esUnaDireccion(el.attribs.src ?? "")) continue;
+    const nombre = (el.attribs.alt ?? "").trim().slice(0, 40) || `foto ${++sinNombre}`;
+    el.attribs["data-tienda"] = `foto:${nombre}`;
+    rotas.push(nombre);
+  }
+
+  const total = nombrados.length + rotas.length;
+  if (!total) return { hechos: [], sueltos: [], css: "" };
+  /* El mismo nombre en varios lugares es UNA foto puesta varias veces (la
+     portada suele ir tres veces), y así se cuenta: es lo que va a subir. */
+  const distintas = new Set([...nombrados, ...rotas]).size;
+  return {
+    hechos: [
+      `Encontramos ${total === 1 ? "1 lugar" : `${total} lugares`} donde va una foto` +
+      `${distintas !== total ? ` (${distintas === 1 ? "es una sola foto repetida" : `son ${distintas} fotos, algunas repetidas`})` : ""}: ` +
+      `${rotas.length && nombrados.length ? "el archivo los tenía marcados a su manera y " : ""}` +
+      `abajo te los pedimos de a uno. Los que no cargues no se van a ver — mejor eso que un cuadro vacío.`,
+    ],
+    sueltos: [],
+    css: "",
+  };
+}
+
+/* ── 5. La barra de comprar que aparecía al bajar ───────────────────────── */
 
 /**
  * La barra pegada abajo con el precio y el botón: en celular es EL botón de

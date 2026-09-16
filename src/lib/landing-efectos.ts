@@ -56,11 +56,19 @@ export const MARCA_VISTO = "data-tienda-visto";
  * —la letra, el color, el interlineado— y eso le cambiaría el diseño que
  * aprobó. Un documento suelto, que es donde ella lo miró, arranca con los
  * valores del navegador; acá también.
+ *
+ * Y `[data-tienda-falta]` marca, SÓLO EN LA PREVIA, cada lugar donde va una
+ * foto que todavía no subió, con el nombre que le pide el panel: sin eso la
+ * lista dice "foto1, foto2, pagina3" y no hay forma de saber cuál es cuál.
+ * En la página publicada ese atributo no existe —lo pone `armarLanding` con
+ * `mostrarHuecos`—, así que estas dos reglas no alcanzan a nadie.
  */
 export const ESTILO_DE_LA_CAPSULA = `<style>
 :host{all:initial;display:block;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 :host(:not([data-tienda-efectos])) [${MARCA_APARECE}],
 :host(:not([data-tienda-efectos])) [${MARCA_BARRA}]{opacity:1!important;transform:none!important;visibility:visible!important;pointer-events:auto!important}
+[data-tienda-falta]{position:relative;min-height:48px;outline:2px dashed #f97316;outline-offset:-2px}
+[data-tienda-falta]::after{content:"Falta: " attr(data-tienda-falta);position:absolute;left:0;top:0;z-index:9;background:#f97316;color:#fff;font:600 11px/1.4 system-ui,sans-serif;padding:3px 7px;border-radius:0 0 6px 0;letter-spacing:.01em}
 </style>`;
 
 /**

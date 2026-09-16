@@ -92,7 +92,11 @@ check("SEG-K", limpiarCss(`a{expression(alert(1));color:red}`) === "a{color:red}
 
 const I = L.inventario;
 check("INV-A", I.precio === 1 && I.precioAnterior === 1 && I.comprar === 2 && I.nombre === 1 && I.reloj && I.opiniones && I.avisoVentas, "cuenta cada hueco");
-check("INV-B", I.fotos.join() === "portada-del-ebook,donuts,falta" && nombreDeFoto("foto:Páginas 1") === "paginas-1", "las fotos, por nombre normalizado y en orden");
+/* La cuarta es la imagen incrustada (`data:`) que le sacamos: quedaba como
+   un <img> sin dirección, o sea rota. Ahora es un lugar donde subir la foto
+   de verdad, que es lo que hacía falta. Ver `rescatarFotos`. */
+check("INV-B", I.fotos.join() === "portada-del-ebook,donuts,falta,foto-1" && nombreDeFoto("foto:Páginas 1") === "paginas-1",
+  "las fotos, por nombre normalizado y en orden; y la incrustada que sacamos queda como lugar para subirla");
 check("INV-C", I.linksVacios.join() === "malo,Términos y condiciones,Instagram" && I.imagenesExternas.length === 1 && /shopify/.test(I.imagenesExternas[0]),
   "los links a ninguna parte y las imágenes de afuera, para que el panel pregunte");
 /* Los [PRECIO] ya no se avisan: los llenamos nosotros con el precio de
@@ -455,6 +459,52 @@ check("PAGO-A", enUnDiv.ok && /<a[^>]+data-tienda="comprar"[^>]*href="\/p\/abc\/
 ), "el hueco de comprar marcado en un <div> pasa a ser un link: un href en un div no se puede tocar");
 check("PAGO-B", /hrefComprar: `\/p\/\$\{fila\.id\}\/pagar`/.test(publica) && !/hrefComprar: "\/pagar"/.test(publica),
   "y el link del pago es el mismo que pone la página de secciones: un «/pagar» pelado es 404 en tiendaapps.com/p/<id>");
+
+/* ── Los lugares de foto de un archivo que no es nuestro ─────────────────── */
+
+/* Un archivo hecho en otra plataforma marca sus fotos a su manera y el
+   filtro se lleva ese atributo, así que la vendedora se quedaba mirando un
+   cuadro que decía "cargá la URL acá" sin ningún lugar donde cargarla.
+   Medido sobre uno de verdad: catorce lugares y ninguno se reconocía. */
+const CON_FOTOS = limpiarLanding(`
+<div data-afl-img="portada" data-afl-alt="La portada del ebook"><div class="ph">Cargá la URL en imagenes.portada</div></div>
+<div data-image="hero"></div>
+<figure data-foto="bonus"></figure>
+<img src="URL_DE_TU_LOGO" alt="Mi marca">
+<img src="{{imagen}}">
+<div data-afl-img="portada"></div>
+<img src="https://cdn.example.com/real.png" alt="ésta sí es una foto">
+<div class="imagen-hero" id="foto"><p>esto NO es un hueco: así se llama la clase</p></div>
+<div data-image-src="https://cdn.example.com/x.png">tampoco: eso es una dirección</div>
+<a data-tienda="comprar" href="#">Comprar</a>`);
+if (!CON_FOTOS.ok) throw new Error("no limpió el de las fotos");
+const F = CON_FOTOS.landing.inventario;
+
+check("FOTO-A", F.fotos.join() === "portada,hero,bonus,mi-marca,foto-1",
+  `los lugares de foto se reconocen por la forma de marcarlos, no por la plataforma (salió: ${F.fotos.join()})`);
+check("FOTO-B", !F.fotos.includes("imagen-hero") && !F.fotos.includes("x-png") && F.imagenesExternas.length === 1,
+  "una clase que se llama «imagen», un atributo con una dirección adentro y una foto de verdad NO son huecos");
+check("FOTO-C", F.arreglos.some((a) => /6 lugares donde va una foto/.test(a) && /5 fotos, algunas repetidas/.test(a)),
+  "y se cuenta lo que va a subir: seis lugares, cinco fotos, porque la portada va dos veces");
+
+const CON_UNA = armarLanding(CON_FOTOS.landing.html, {
+  nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/a/pagar",
+  fotos: { portada: "https://cdn.tiendaapps.com/f/p.jpg" }, enlaces: {}, bloques: {},
+});
+check("FOTO-D", (CON_UNA.match(/cdn\.tiendaapps\.com\/f\/p\.jpg/g) ?? []).length === 2 && !/Cargá la URL/.test(CON_UNA),
+  "la foto entra en los dos lugares que se llaman igual, y el cartel de «cargá la URL acá» desaparece");
+check("FOTO-E", /alt="La portada del ebook"/.test(CON_UNA) && !/aria-label="La portada del ebook"/.test(CON_UNA),
+  "con la descripción que el archivo traía al lado, y sin repetirla en el contenedor");
+check("FOTO-F", !/data-image="hero"|data-foto="bonus"|\{\{imagen\}\}|URL_DE_TU_LOGO/.test(CON_UNA),
+  "y los lugares que quedaron sin foto se sacan: mejor nada que un cuadro vacío o una imagen rota");
+
+const EN_LA_PREVIA = armarLanding(CON_FOTOS.landing.html, {
+  nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/a/pagar",
+  fotos: {}, enlaces: {}, bloques: {}, mostrarHuecos: true,
+});
+check("FOTO-G", (EN_LA_PREVIA.match(/data-tienda-falta="/g) ?? []).length === 6
+  && /\[data-tienda-falta\]::after\{content:"Falta: " attr\(data-tienda-falta\)/.test(ESTILO_DE_LA_CAPSULA),
+  "en la previa cada lugar vacío se marca con su nombre: si no, la lista dice «foto1, pagina3» y no se sabe cuál es cuál");
 
 /* ── Los links del pie: lo que ella escribe, acomodado ───────────────────── */
 

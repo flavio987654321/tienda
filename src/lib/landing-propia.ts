@@ -59,7 +59,7 @@ import { findAll, findOne, removeElement, textContent, prependChild } from "domu
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
-import { arreglarLanding, rescatarBarras, llenarMarcadoresDePrecio, ERA_BOTON } from "@/lib/landing-arreglos";
+import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
 import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
 import { MARCA_BARRA } from "@/lib/landing-efectos";
 
@@ -130,6 +130,22 @@ const OPCIONES: sanitizeHtml.IOptions = {
         const limpio = limpiarDeclaraciones(attribs.style);
         if (limpio) attribs.style = limpio; else delete attribs.style;
       }
+      /* Un lugar de foto marcado a la manera de otra plataforma
+         (`data-afl-img="portada"`) se pasa al nuestro ACÁ, que es el único
+         momento en que se ven los atributos originales: dos líneas más abajo
+         el filtro los tira y no hay forma de saber que existieron.
+         Ver `rescatarFotos`. */
+      if (!attribs["data-tienda"]) {
+        const foto = nombreDelHuecoDeFoto(attribs);
+        if (foto) {
+          attribs["data-tienda"] = `foto:${foto}`;
+          attribs[ERA_BOTON] = ERA_FOTO;
+          /* Y la descripción que tenía al lado, para que la foto que pongamos
+             no quede muda: `ponerFoto` la usa de `alt`. */
+          const alt = textoDeAlgunAlt(attribs);
+          if (alt && !attribs["aria-label"]) attribs["aria-label"] = alt;
+        }
+      }
       return { tagName, attribs };
     },
     /* Un botón sin JavaScript no hace nada. El de comprar pasa a ser un link
@@ -172,6 +188,38 @@ const OPCIONES: sanitizeHtml.IOptions = {
     return false;
   },
 };
+
+/* ── Los lugares de foto de otra plataforma ─────────────────────────────── */
+
+/** Un atributo que dice "imagen" en su nombre: `data-afl-img`, `data-foto`. */
+const ATRIBUTO_DE_IMAGEN = /(^|[-_])(img|image|imagen|foto|photo|picture|pic)([-_]|$)/i;
+/** Y que trae un nombre corto de valor, no una dirección ni una descripción. */
+const NOMBRE_CORTO = /^[a-z0-9][a-z0-9 _-]{0,40}$/i;
+
+/**
+ * El nombre del hueco de foto que este elemento declara, o null.
+ *
+ * Se mira el NOMBRE del atributo, no el valor: `class="imagen-hero"` no es un
+ * hueco (la clase se llama así) pero `data-image="hero"` sí. Y el valor tiene
+ * que ser un nombre corto: `data-image-src="https://…"` es una dirección, no
+ * un hueco. Ver `rescatarFotos` en `landing-arreglos`.
+ */
+function nombreDelHuecoDeFoto(attribs: Record<string, string>): string | null {
+  for (const [k, v] of Object.entries(attribs)) {
+    if (!ATRIBUTO_DE_IMAGEN.test(k) || typeof v !== "string") continue;
+    const valor = v.trim();
+    if (valor && NOMBRE_CORTO.test(valor) && !/^(true|false|lazy|eager|auto|sync|async)$/i.test(valor)) return valor;
+  }
+  return null;
+}
+
+/** La descripción que el archivo le había puesto al lado: `data-afl-alt`. */
+function textoDeAlgunAlt(attribs: Record<string, string>): string | null {
+  for (const [k, v] of Object.entries(attribs)) {
+    if (/(^|[-_])alt([-_]|$)/i.test(k) && typeof v === "string" && v.trim()) return v.trim().slice(0, 120);
+  }
+  return null;
+}
 
 /* ── El CSS ─────────────────────────────────────────────────────────────── */
 
@@ -327,6 +375,7 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
      Ver `lib/landing-arreglos`. */
   const arbol = parseDocument(saneado);
   const arreglos = arreglarLanding(arbol);
+  const fotos = rescatarFotos(arbol);
   const precios = llenarMarcadoresDePrecio(arbol);
   const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
   /* Y lo genérico: aplicar SU CSS sobre SU html para ver qué queda invisible.
@@ -349,7 +398,7 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
     avisos.unshift("Tu archivo es muy grande para que lo revisemos entero, así que puede haber quedado algo escondido que no vemos. Mirala completa en la previa antes de prenderla.");
   }
   const inventario = inventariar(cuerpo, fuentes, avisos);
-  inventario.arreglos = [...arreglos.hechos, ...precios.hechos, ...barras.hechos];
+  inventario.arreglos = [...arreglos.hechos, ...fotos.hechos, ...precios.hechos, ...barras.hechos];
   inventario.sueltos = arreglos.sueltos;
   /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
      `lib/landing-revision`. */
@@ -582,7 +631,11 @@ function ponerFoto(el: Element, nombre: string | null, d: DatosParaArmar) {
     removeElement(el);
     return;
   }
-  const alt = el.attribs.alt ?? el.attribs["data-alt"] ?? el.attribs.title ?? "";
+  /* `aria-label` es donde quedó la descripción que el archivo traía al lado
+     del hueco (ver `textoDeAlgunAlt`). Se usa y se saca: si quedara puesta,
+     el lector de pantalla diría dos veces lo mismo. */
+  const alt = el.attribs.alt ?? el.attribs["data-alt"] ?? el.attribs["aria-label"] ?? el.attribs.title ?? "";
+  delete el.attribs["aria-label"];
   if (el.name === "img") {
     el.attribs.src = url;
     delete el.attribs.srcset;

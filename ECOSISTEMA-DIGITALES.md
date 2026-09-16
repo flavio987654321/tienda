@@ -7147,3 +7147,71 @@ no el depósito.
 
 106 chequeos (12 nuevos), tsc, eslint y build ok. El archivo de verdad
 sigue tardando 18-45 ms y se ve igual, mirado a 1280.
+
+---
+
+## Las fotos de una landing que no se escribió para nosotros — 16/09/26
+
+Flavio: "¿cómo cargamos fotos a ese landing que subimos por el HTML?".
+
+La respuesta, hasta hoy, era **no se puede** — y no se veía que no se
+podía, que es lo peor. Nuestras instrucciones piden
+`data-tienda="foto:Portada"` y el panel arma un botón de subir por cada
+hueco. Pero el archivo de la amiga no lo tiene: marca sus fotos a su
+manera (`data-afl-img="portada"`) y las llenaba su script desde una
+CONFIGURACIÓN. Sin el script, y con el atributo tirado por el filtro,
+quedaban **catorce cuadros que dicen "Cargá la URL en imagenes.portada"**
+y ningún lugar donde cargarla. El panel no mostraba ni la sección 4.
+
+### Lo que se reconoce ahora: la forma, no la plataforma
+
+Mismo criterio que en `landing-invisible`. Hay dos formas de marcar un
+lugar de foto y las dos se pueden leer sin saber nada de esa landing:
+
+1. **Un atributo que dice "imagen" y trae un nombre corto.**
+   `data-afl-img="portada"`, `data-image="hero"`, `data-foto="bonus"`.
+   Se mira el NOMBRE del atributo, no el valor: `class="imagen-hero"` no
+   es un hueco (la clase se llama así) y `data-image-src="https://…"`
+   tampoco (eso es una dirección). El nombre del hueco sale del valor, que
+   es lo que aguanta que ella baje una versión nueva del diseño sin perder
+   la foto que ya subió.
+2. **Una imagen cuyo `src` no es una dirección**: `src="URL_DE_TU_LOGO"`,
+   `src="{{imagen}}"`, `src=""`. Eso no es una foto, es el lugar donde iba
+   una. Entra también la imagen incrustada (`data:`) que le sacamos
+   nosotros: antes quedaba como un `<img>` roto, ahora es un lugar donde
+   subir la de verdad.
+
+El reconocimiento del atributo va en el `transformTags` del saneado,
+porque es el único momento en que se ven los atributos originales: dos
+líneas después el filtro los tira y no hay forma de saber que existieron.
+Se convierte en `data-tienda="foto:<nombre>"`, que sí sobrevive, y se deja
+la marca `data-tienda-era="foto"` para que `rescatarFotos` sepa cuáles
+encontró él y cuáles ya venían bien escritos.
+
+Y la descripción que el archivo traía al lado (`data-afl-alt="Portada del
+ebook Panadería en Airfryer") se guarda en `aria-label` y termina siendo
+el `alt` de la foto que ponemos: una imagen muda en una página de venta es
+una imagen que Google no lee.
+
+### En el archivo de verdad
+
+**16 lugares, 14 fotos** (la portada va tres veces y se sube una sola vez:
+el nombre es la clave). La portada del ebook, las seis fotos de recetas,
+las cinco páginas de muestra, el bono y el pack de la oferta. Al cargar
+una, entra en los tres lugares y el cartel de "Cargá la URL" desaparece
+solo, porque `ponerFoto` reemplaza lo que había adentro del hueco.
+
+### Y en la previa, cuál es cuál
+
+La lista del panel dice "portada, foto1, foto2, pagina3, bonus" y así no
+hay forma de saber cuál es cuál. En la previa cada lugar vacío queda con
+un borde punteado naranja y una etiqueta con su nombre: **"Falta: foto1"**
+arriba de la tarjeta que abajo dice "Medialunas de manteca". Son dos
+reglas en `ESTILO_DE_LA_CAPSULA` colgadas de `[data-tienda-falta]`, que es
+un atributo que sólo existe con `mostrarHuecos` — en la página publicada
+no alcanzan a nadie.
+
+Chequeos FOTO-A a FOTO-G. Mirado a 1100 en la landing de verdad: la
+portada y las seis recetas quedan marcadas sin romperle la grilla.
+
+106 chequeos, tsc, eslint y build ok.
