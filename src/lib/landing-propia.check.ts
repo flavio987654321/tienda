@@ -199,9 +199,12 @@ check("ARR-E", (() => {
   return !/<details/.test(a.html) && !/<details/.test(b.html);
 })(), "no se inventan acordeones: ni con dos botones seguidos ni cuando al lado hay un link");
 
+/* El ejemplo era una flecha («Página siguiente»), y desde que las flechas se
+   rescatan (ver FLE-A) ésa ya no es de las que no se pueden arreglar. Ahora
+   es un botón de compartir: no hay nada que enchufarle sin adivinar. */
 check("ARR-F", (() => {
-  const a = limpio('<div><button type="button" aria-label="Página siguiente"><span>›</span></button></div>');
-  return /necesitaba un programa/.test(a.inventario.sueltos.join(" ")) && /Página siguiente/.test(a.inventario.sueltos.join(" "))
+  const a = limpio('<div><button type="button" aria-label="Compartir en redes"><span>↗</span></button></div>');
+  return /necesitaba un programa/.test(a.inventario.sueltos.join(" ")) && /Compartir en redes/.test(a.inventario.sueltos.join(" "))
     && !/data-tienda-era/.test(a.html);
 })(), "el botón que no se puede arreglar se cuenta por su nombre, y la marca interna no queda en la página");
 
@@ -532,6 +535,54 @@ check("FOTO-H", /4\. Tus fotos/.test(panel) && /no encontramos ningún lugar don
 check("FOTO-G", (EN_LA_PREVIA.match(/data-tienda-falta="/g) ?? []).length === 6
   && /\[data-tienda-falta\]::after\{content:"Falta: " attr\(data-tienda-falta\)/.test(ESTILO_DE_LA_CAPSULA),
   "en la previa cada lugar vacío se marca con su nombre: si no, la lista dice «foto1, pagina3» y no se sabe cuál es cuál");
+
+/* ── Las flechas del carrusel ────────────────────────────────────────────── */
+
+/* La tira que se desliza no necesita programa (es `overflow-x` con
+   `scroll-snap` y arrastrando anda sola), pero las flechitas de al lado sí:
+   eran botones y quedaban dos redondeles lindos que no hacen nada. Peor que
+   no tenerlos, porque se tocan. */
+const CARRUSEL = limpiarLanding(`
+<div class="gal">
+  <ul class="track"><li>1</li><li>2</li><li>3</li></ul>
+  <button class="arrow arrow--prev" type="button" aria-label="Página anterior"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+  <button class="arrow" type="button" aria-label="Página siguiente"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+  <button type="button">Ver el temario completo</button>
+</div>
+<a data-tienda="comprar" href="#">Comprar</a>`);
+if (!CARRUSEL.ok) throw new Error("no limpió el del carrusel");
+
+check("FLE-A", /data-tienda-flecha="antes"/.test(CARRUSEL.landing.html) && /data-tienda-flecha="despues"/.test(CARRUSEL.landing.html),
+  "las flechas de pasar fotos se reconocen por lo que dicen de sí mismas, no por dónde están");
+/* ⚠️ En el archivo de verdad la flecha de la derecha NO dice "next" en
+   ninguna clase: lo único que la nombra es el `aria-label`. Por eso se miran
+   el nombre accesible, la clase, el title y el texto, y no una sola cosa. */
+check("FLE-B", /<span[^>]+role="button"[^>]+data-tienda-flecha="antes"[^>]+tabindex="0"/.test(CARRUSEL.landing.html)
+  && CARRUSEL.landing.inventario.arreglos.some((a) => /2 flechas de pasar fotos/.test(a))
+  && CARRUSEL.landing.inventario.sueltos.some((s) => /Ver el temario completo/.test(s)),
+  "quedan tocables y con el tabulador, se cuentan en el recibo, y un botón que no es flecha sigue siendo texto");
+check("FLE-C", /\[data-tienda-flecha\]\{cursor:pointer/.test(CARRUSEL.landing.html)
+  && EFECTOS_DE_LA_LANDING.includes('closest("[data-tienda-flecha]")')
+  && /overflowX==="auto"\|\|s\.overflowX==="scroll"/.test(EFECTOS_DE_LA_LANDING)
+  && /scrollWidth>c\[k\]\.clientWidth\+8/.test(EFECTOS_DE_LA_LANDING)
+  && EFECTOS_DE_LA_LANDING.includes('e.key!=="Enter"&&e.key!==" "'),
+  "y el script las mueve sólo si encuentra algo que DE VERDAD se pueda deslizar, con el mouse y con el teclado");
+
+/* Un botón que apunta para los dos lados a la vez no es una flecha: es un
+   texto que las nombra («anterior o siguiente»). */
+const NO_ES_FLECHA = limpiarLanding(`<button type="button" aria-label="Ir al anterior o al siguiente">x</button><a data-tienda="comprar" href="#">c</a>`);
+check("FLE-D", NO_ES_FLECHA.ok && !/data-tienda-flecha/.test(NO_ES_FLECHA.landing.html),
+  "y lo que apunta para los dos lados a la vez no se toca");
+
+/* ── Volver a la foto que acaba de subir ─────────────────────────────────── */
+
+check("HUE-A", (EN_LA_PREVIA.match(/data-tienda-hueco="/g) ?? []).length === 6
+  && !/data-tienda-hueco/.test(CON_UNA)
+  && /\^#hueco=\(\[a-z0-9-\]\{1,40\}\)\$/.test(EFECTOS_DE_LA_LANDING)
+  && /scrollIntoView\(\{behavior:"auto",block:"center"\}\)/.test(EFECTOS_DE_LA_LANDING),
+  "en la previa cada hueco lleva su nombre y el script vuelve a él: subir catorce fotos no puede ser volver arriba catorce veces");
+check("HUE-B", /setMirando\(clave\);/.test(panel) && /#hueco=\$\{mirando\}/.test(panel) && /setMirando\(null\)/.test(panel),
+  "el panel le dice a qué foto volver, y una versión nueva arranca de arriba");
 
 /* ── Los links del pie: lo que ella escribe, acomodado ───────────────────── */
 

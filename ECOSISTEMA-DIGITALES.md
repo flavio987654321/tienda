@@ -7354,3 +7354,68 @@ queda inclinada adelante del redondel y la grilla de recetas llena sus
 tarjetas.
 
 106 chequeos, tsc, eslint y build ok.
+
+---
+
+## Las flechas del carrusel, y volver a la foto que subiste — 16/09/26
+
+Dos cosas de la misma tarde, las dos del mismo origen: el programa que le
+sacamos.
+
+### "Aprieto las flechas para pasar de imagen y no anda"
+
+La tira de páginas **no** necesitaba programa: es `overflow-x:auto` con
+`scroll-snap-type:x mandatory`, y arrastrando con el dedo o con el mouse
+anda sola (el texto de ella dice "Deslizá para ver"). Las flechitas de al
+lado sí lo necesitaban: eran `<button>` y quedaban **dos redondeles lindos
+que no hacen nada**. Eso es peor que no tenerlos, porque se tocan.
+
+Se reconocen por **lo que dicen de sí mismas**, no por dónde están:
+
+```html
+<button class="afl-arrow afl-arrow--prev" aria-label="Página anterior">
+<button class="afl-arrow"               aria-label="Página siguiente">
+```
+
+⚠️ Ojo con la segunda: **no dice "next" en ninguna clase**. Lo único que la
+nombra es el `aria-label`. Por eso se miran las cuatro cosas —nombre
+accesible, clase, title y texto— y no una sola. Y si apunta para los dos
+lados a la vez ("anterior o siguiente") no es una flecha: es un texto que
+las nombra, y no se toca.
+
+Marcarlas es del servidor; moverlas, del script. **El script no confía en
+la marca**: al tocar una, busca subiendo hasta cinco niveles algo que
+tenga `overflow-x` y que de verdad se pueda deslizar
+(`scrollWidth > clientWidth`). Si no lo encuentra, no hace nada — así una
+flecha marcada de más no mueve cualquier cosa. Y como eran botones, vuelven
+a ser tocables con el teclado (`role="button"`, `tabindex`, Enter y
+espacio) y con la manito.
+
+Probado en Chromium sobre el archivo de verdad: `0 → 332 → 586` tocando ›,
+y de vuelta a `332` tocando ‹. El `scroll-snap` de ella hace el resto.
+
+**Y con esto, `sueltos` quedó vacío en su archivo.** No queda nada sin
+función: los botones de comprar van al pago, las once preguntas abren, la
+barra aparece al bajar y las flechas pasan las fotos.
+
+### La previa vuelve a la foto que acabás de subir
+
+La previa ya se recargaba sola en cada guardado (el `key` del `<iframe>`
+cambia con `refresco`, así que React lo vuelve a montar). Pero volvía
+**arriba de todo**. Con catorce fotos, eso es volver arriba catorce veces y
+bajar a buscar dónde cayó cada una.
+
+No se puede leer el scroll del marco desde afuera —tiene `sandbox` sin
+`allow-same-origin`, y eso es a propósito—, así que la posición va por la
+dirección: al subir una foto, el marco se recarga con `#hueco=<nombre>` y
+el script busca ese hueco adentro de la cápsula y se planta ahí. Los huecos
+llevan su nombre puesto sólo en la previa.
+
+Probado: `#hueco=bonus` cae en 6149 y `#hueco=foto5` en 2046, con el hueco
+en el centro de la pantalla. Sin hash, arriba de todo, como siempre.
+
+Chequeos FLE-A a FLE-D y HUE-A/HUE-B. Y ARR-F cambió de ejemplo: usaba
+"Página siguiente" como botón que no se puede arreglar, y desde hoy ésa es
+justamente de las que sí.
+
+106 chequeos, tsc, eslint y build ok.

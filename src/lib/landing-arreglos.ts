@@ -35,7 +35,7 @@
 
 import { Element, Text, type ChildNode, type Document, type ParentNode } from "domhandler";
 import { findAll, textContent, appendChild, replaceElement, removeElement } from "domutils";
-import { MARCA_BARRA, CSS_DE_LA_BARRA } from "@/lib/landing-efectos";
+import { MARCA_BARRA, CSS_DE_LA_BARRA, MARCA_FLECHA, CSS_DE_LAS_FLECHAS } from "@/lib/landing-efectos";
 
 /** La marca que deja `limpiarLanding` en un `<button>` que pasó a `<span>`. */
 export const ERA_BOTON = "data-tienda-era";
@@ -216,7 +216,39 @@ export function arreglarLanding(doc: Document): Arreglos {
     );
   }
 
-  /* ── 3. Lo que quedó sin función ─────────────────────────────────────── */
+  /* ── 3. Las flechas del carrusel ─────────────────────────────────────── */
+
+  /* La tira de fotos que se desliza NO necesita programa: es `overflow-x` con
+     `scroll-snap`, y arrastrando con el dedo o con el mouse anda sola. Las
+     flechitas de al lado sí lo necesitaban, y sin él quedan dos redondeles
+     lindos que no hacen nada — que es peor que no tenerlos, porque se tocan.
+
+     Se reconocen por lo que DICEN de sí mismas: el nombre accesible que dejó
+     escrito («Página anterior», «Página siguiente») o la clase. No por dónde
+     están: el script mira al tocarlas si hay algo que se pueda deslizar cerca,
+     y si no hay, no hace nada. Marcar de más no rompe nada. */
+  const flechas: Element[] = [];
+  for (const el of todos()) {
+    if (el.attribs[ERA_BOTON] !== "boton") continue;
+    const hacia = haciaDondeApunta(el);
+    if (!hacia) continue;
+    delete el.attribs[ERA_BOTON];
+    el.attribs[MARCA_FLECHA] = hacia;
+    /* Era un botón: que se pueda tocar con el dedo y llegar con el tabulador. */
+    el.attribs.role = "button";
+    el.attribs.tabindex = "0";
+    flechas.push(el);
+  }
+  if (flechas.length) {
+    css += (css ? "\n" : "") + CSS_DE_LAS_FLECHAS;
+    hechos.push(
+      `Volvimos a conectar ${flechas.length === 1 ? "la flecha" : `las ${flechas.length} flechas`} de pasar fotos: ` +
+      `${flechas.length === 1 ? "era un botón" : "eran botones"} y sin el programa no ${flechas.length === 1 ? "hacía" : "hacían"} nada. ` +
+      `La tira también se puede arrastrar con el dedo, como antes.`,
+    );
+  }
+
+  /* ── 4. Lo que quedó sin función ─────────────────────────────────────── */
 
   const mudos: string[] = [];
   for (const el of todos()) {
@@ -234,6 +266,24 @@ export function arreglarLanding(doc: Document): Arreglos {
   }
 
   return { hechos, sueltos, css };
+}
+
+/**
+ * Para qué lado apunta una flecha de carrusel, o null si no es una.
+ *
+ * Se mira lo que el botón dice de sí mismo: el nombre accesible que la
+ * persona que lo escribió le dejó puesto («Página anterior»), la clase
+ * (`afl-arrow--prev`) y el texto. En el archivo de verdad, la de la derecha
+ * no tiene NADA en la clase que diga "next" — sólo el `aria-label`. Por eso
+ * se miran las tres cosas y no una.
+ */
+function haciaDondeApunta(el: Element): "antes" | "despues" | null {
+  const dice = `${el.attribs["aria-label"] ?? ""} ${el.attribs.class ?? ""} ${el.attribs.title ?? ""} ${textContent(el).replace(/\s+/g, " ").trim()}`.toLowerCase();
+  const atras = /anterior|previo|\bprev\b|izquierd|atr[aá]s|\bback\b|‹|←|«|<</.test(dice);
+  const adelante = /siguiente|\bnext\b|derech|adelante|pr[oó]xim|›|→|»|>>/.test(dice);
+  /* Las dos cosas a la vez no es una flecha: es un texto que las nombra. */
+  if (atras === adelante) return null;
+  return atras ? "antes" : "despues";
 }
 
 /** Otro botón de los que quedaron sin programa. */

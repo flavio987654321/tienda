@@ -78,6 +78,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   /* Cambia con cada guardado: la previa se recarga sola al subir una versión
      o al cambiar una foto. */
   const [refresco, setRefresco] = useState(0);
+  /* A qué hueco de foto vuelve la previa al recargarse. Ver `MARCA_HUECO`. */
+  const [mirando, setMirando] = useState<string | null>(null);
   const [indicaciones, anotar] = usePedidoGuardado(productoId);
   const instrucciones = instruccionesParaClaude(producto, indicaciones);
 
@@ -126,6 +128,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
     if (file.size > LANDING_MAX_BYTES) return setError(`El archivo pesa más de ${Math.round(LANDING_MAX_BYTES / 1000)} KB. Las fotos no van adentro del HTML: se suben aparte.`);
     setSubiendo("archivo");
     setInforme(null);
+    /* Diseño nuevo: la previa arranca de arriba, no donde quedó la última foto. */
+    setMirando(null);
     const turno = ++subida.current;
     const html = await file.text().catch(() => "");
     const d = await pedir({ html }, "POST");
@@ -157,6 +161,9 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
       const r = await fetch("/api/upload", { method: "POST", body: form });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.url) { setError(d.error ?? "No pudimos subir la imagen."); return; }
+      /* Y la previa, que se recarga sola, arranca MIRANDO esta foto en vez de
+         arriba de todo: con catorce, volver arriba catorce veces cansa. */
+      setMirando(clave);
       await pedir({ foto: { clave, url: d.url } });
     } catch {
       setError("No pudimos conectarnos. Probá de nuevo.");
@@ -670,7 +677,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
           <div className={`overflow-hidden rounded-3xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-100 panel-oscuro:bg-gray-800 ${pantalla === "celular" ? "mx-auto w-full max-w-[380px] p-3" : "p-2"}`}>
             <iframe
               key={`${pantalla}-${refresco}`}
-              src={`/p/${productoId}?landing=previa`}
+              src={`/p/${productoId}?landing=previa${mirando ? `#hueco=${mirando}` : ""}`}
               title="Vista previa de tu diseño"
               className={`w-full rounded-2xl bg-white ${pantalla === "celular" ? "h-[calc(100vh-11rem)] min-h-[560px]" : "h-[calc(100vh-11rem)] min-h-[520px]"}`}
               /* Deja correr JavaScript —el nuestro: el que hace bajar suave

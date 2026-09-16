@@ -61,7 +61,7 @@ import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding,
 import { revisarLanding } from "@/lib/landing-revision";
 import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
 import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
-import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO } from "@/lib/landing-efectos";
+import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA } from "@/lib/landing-efectos";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -389,7 +389,7 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   /* La marca de "esto era un botón" la ponemos nosotros, y sólo nosotros: si
      viene escrita en el archivo se saca ANTES de sanear, porque después no
      hay forma de distinguir la nuestra de la suya. */
-  for (const marca of [ERA_BOTON, MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO]) {
+  for (const marca of [ERA_BOTON, MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA]) {
     s = s.replace(new RegExp(`\\s${marca}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)|\\s${marca}(?=[\\s>/])`, "gi"), " ");
   }
 
@@ -648,6 +648,10 @@ function textoDeAtras(el: Element): string {
 
 function ponerFoto(el: Element, nombre: string | null, d: DatosParaArmar) {
   const url = nombre ? d.fotos[nombre] : undefined;
+  /* En la previa, el hueco lleva su nombre puesto —esté lleno o vacío— para
+     que al subir una foto la previa se recargue MIRÁNDOLA, en vez de volver
+     arriba de todo. Con catorce fotos, volver arriba catorce veces cansa. */
+  if (d.mostrarHuecos && nombre) el.attribs[MARCA_HUECO] = nombre;
   if (!url) {
     if (d.mostrarHuecos && nombre) {
       el.attribs["data-tienda-falta"] = nombre;

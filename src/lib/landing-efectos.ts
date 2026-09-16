@@ -49,6 +49,21 @@ export const MARCA_BARRA = "data-tienda-barra";
 /** Lo que le ponemos nosotros cuando hay que mostrarlo: es para el CSS. */
 export const MARCA_VISTO = "data-tienda-visto";
 /**
+ * Una flecha de carrusel rescatada: `"antes"` o `"despues"`.
+ *
+ * La tira de fotos que se desliza no necesita programa —es `overflow-x` y
+ * `scroll-snap`, y arrastrando anda sola—, pero las flechitas de al lado sí:
+ * eran botones y sin el script no hacen nada. Se marcan en
+ * `landing-arreglos` y las mueve el script de acá.
+ */
+export const MARCA_FLECHA = "data-tienda-flecha";
+/**
+ * En la previa, el nombre del hueco de foto. Sirve para que al subir una, la
+ * previa se recargue MIRANDO esa foto y no volviendo arriba de todo: con
+ * catorce fotos, volver arriba catorce veces es un castigo.
+ */
+export const MARCA_HUECO = "data-tienda-hueco";
+/**
  * Con qué clase se viste la foto que ponemos en un hueco, cuando el archivo
  * lo dice (`data-afl-class="afl-cover"`). Viaja desde el saneado hasta
  * `ponerFoto`, que es donde se crea la imagen.
@@ -100,6 +115,15 @@ export const CSS_DE_LA_BARRA = `
 `.trim();
 
 /**
+ * El CSS de las flechas rescatadas. Eran `<button>` y ahora son `<span>`:
+ * un botón trae la manito y el foco de fábrica, un span no. Nada más que
+ * eso — el redondel, el borde y el ícono son de su diseño.
+ */
+export const CSS_DE_LAS_FLECHAS = `
+[${MARCA_FLECHA}]{cursor:pointer;-webkit-user-select:none;user-select:none}
+`.trim();
+
+/**
  * El script, tal cual va a la página. Es un texto a propósito: lo escribimos
  * nosotros y se lee entero de una sentada.
  */
@@ -109,7 +133,32 @@ var raiz=caja&&caja.shadowRoot;
 if(!raiz)return;
 caja.setAttribute("data-tienda-efectos","");
 var quieto=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var alHueco=location.hash.match(/^#hueco=([a-z0-9-]{1,40})$/i);
+if(alHueco){var elHueco=raiz.querySelector('[${MARCA_HUECO}="'+alHueco[1]+'"]');if(elHueco)elHueco.scrollIntoView({behavior:"auto",block:"center"});}
+/* La tira que se desliza al lado de una flecha: se busca subiendo, y se
+   pregunta si DE VERDAD se puede deslizar. Así una flecha marcada de más no
+   mueve nada en vez de mover cualquier cosa. */
+function pistaDe(el){
+for(var n=el.parentElement,i=0;n&&i<5;n=n.parentElement,i++){
+var c=n.querySelectorAll("*");
+for(var k=0;k<c.length&&k<400;k++){
+var s=getComputedStyle(c[k]);
+if((s.overflowX==="auto"||s.overflowX==="scroll")&&c[k].scrollWidth>c[k].clientWidth+8)return c[k];
+}}
+return null;
+}
+function moverLaPista(flecha){
+var pista=pistaDe(flecha);
+if(!pista)return false;
+var primero=pista.firstElementChild;
+var paso=primero?primero.getBoundingClientRect().width+14:pista.clientWidth*0.8;
+if(paso<40)paso=pista.clientWidth*0.8;
+pista.scrollBy({left:(flecha.getAttribute("${MARCA_FLECHA}")==="antes"?-1:1)*paso,behavior:quieto?"auto":"smooth"});
+return true;
+}
 raiz.addEventListener("click",function(e){
+var f=e.target&&e.target.closest?e.target.closest("[${MARCA_FLECHA}]"):null;
+if(f){if(moverLaPista(f))e.preventDefault();return;}
 var a=e.target&&e.target.closest?e.target.closest('a[href^="#"]'):null;
 if(!a)return;
 var id=a.getAttribute("href").slice(1);
@@ -118,6 +167,12 @@ var destino=raiz.getElementById(id);
 if(!destino)return;
 e.preventDefault();
 destino.scrollIntoView({behavior:quieto?"auto":"smooth",block:"start"});
+});
+/* Con el teclado también: son botones, aunque ya no sean <button>. */
+raiz.addEventListener("keydown",function(e){
+if(e.key!=="Enter"&&e.key!==" ")return;
+var f=e.target&&e.target.closest?e.target.closest("[${MARCA_FLECHA}]"):null;
+if(f&&moverLaPista(f))e.preventDefault();
 });
 var barras=raiz.querySelectorAll("[${MARCA_BARRA}]");
 if(barras.length){
