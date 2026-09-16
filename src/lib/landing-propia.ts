@@ -60,7 +60,7 @@ import render from "dom-serializer";
 import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
 import { arreglarLanding, rescatarBarras, llenarMarcadoresDePrecio, ERA_BOTON } from "@/lib/landing-arreglos";
-import { loQueNoSePuedeVer, losQueEstanPegados } from "@/lib/landing-invisible";
+import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
 import { MARCA_BARRA } from "@/lib/landing-efectos";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
@@ -186,9 +186,76 @@ export function limpiarCss(css: string): string {
   let s = css.replace(/\/\*[\s\S]*?\*\//g, "");
   s = s.replace(/@import\b[^;]*;?/gi, "");
   s = s.replace(/@charset\b[^;]*;?/gi, "");
-  s = s.replace(/[^{};]*(expression\s*\(|behavior\s*:|-moz-binding\s*:|javascript\s*:|vbscript\s*:)[^;}]*(;|(?=\}))/gi, "");
-  s = s.replace(/[^{};]*url\(\s*["']?\s*(data|http|blob|file|ftp)\s*:[^)]*\)[^;}]*(;|(?=\}))/gi, "");
+  s = sinLoQueHaceDano(s);
+  /* ⚠️ Y NUNCA un "</". Esto se guarda adentro de un <style> NUESTRO, y el
+     navegador cierra esa etiqueta con `</style >` —con un espacio, o un tab,
+     o una barra— igual que con `</style>`. Quien logre cerrarla sale de la
+     hoja, sale del Shadow DOM y escribe HTML suyo en nuestra página, con
+     `onerror` y todo (el CSP deja correr lo que está en línea). En CSS un
+     "</" no significa nada, así que sacarlo no le cuesta el diseño a nadie. */
+  s = s.replace(/<\//g, "");
   return s.trim();
+}
+
+/** Lo que no puede quedar en una declaración, ni en un selector. */
+const HACE_DANO = /expression\s*\(|behavior\s*:|-moz-binding\s*:|javascript\s*:|vbscript\s*:|url\(\s*["']?\s*(data|http|blob|file|ftp)\s*:/i;
+
+/**
+ * Saca las declaraciones con algo de `HACE_DANO` —y la regla entera si lo
+ * tiene el selector—, recorriendo el texto UNA sola vez.
+ *
+ * ⚠️ Esto era un `replace` que empezaba con `[^{};]*`, y ahí estaba el
+ * problema: el motor de expresiones prueba desde cada posición y vuelve
+ * sobre lo mismo, así que el costo crece al cuadrado. Medido: 60 KB de CSS
+ * sin un `;` tardaban 3,4 segundos, y los 500 KB que deja entrar el tope,
+ * CUATRO MINUTOS de un procesador entero. Recorriendo de una vez, los mismos
+ * 500 KB son milisegundos.
+ */
+function sinLoQueHaceDano(css: string): string {
+  let salida = "";
+  let trozo = "";
+  let parentesis = 0;
+  let comilla = "";
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    if (comilla) {
+      trozo += c;
+      if (c === comilla && css[i - 1] !== "\\") comilla = "";
+      continue;
+    }
+    if (c === '"' || c === "'") { comilla = c; trozo += c; continue; }
+    if (c === "(") parentesis++;
+    else if (c === ")") parentesis = Math.max(0, parentesis - 1);
+    /* Un `;` adentro de un `url(…)` o de un texto entre comillas no corta
+       nada: `url(data:image/png;base64,…)` es UNA declaración. */
+    if (parentesis === 0 && (c === ";" || c === "{" || c === "}")) {
+      const malo = HACE_DANO.test(trozo);
+      if (c === "{") {
+        /* El que tiene el problema es el selector: se va la regla entera. */
+        if (malo) { i = finDelBloque(css, i); trozo = ""; continue; }
+        salida += `${trozo}{`;
+      } else if (!malo) {
+        salida += trozo + c;
+      } else if (c === "}") {
+        /* La declaración se va; la llave que cierra la regla se queda. */
+        salida += c;
+      }
+      trozo = "";
+      continue;
+    }
+    trozo += c;
+  }
+  return salida + (HACE_DANO.test(trozo) ? "" : trozo);
+}
+
+/** Dónde cierra el bloque que abre en `i`. */
+function finDelBloque(css: string, i: number): number {
+  let nivel = 0;
+  for (let j = i; j < css.length; j++) {
+    if (css[j] === "{") nivel++;
+    else if (css[j] === "}" && --nivel === 0) return j;
+  }
+  return css.length;
 }
 
 /** Lo mismo, para un `style="…"` en línea. */
@@ -265,6 +332,9 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   /* Y lo genérico: aplicar SU CSS sobre SU html para ver qué queda invisible.
      Los arreglos conocen dos formas de romperse; esto encuentra las que no
      conocemos. Ver `lib/landing-invisible`. */
+  /* Con un archivo enorme esta revisión no se hace (ver `TOPE_DE_REVISION`):
+     antes que dejarla esperando un minuto, se le dice que la mire ella. */
+  const muyGrande = cuantoCuestaRevisar(arbol, hoja) > TOPE_DE_REVISION;
   const escondidos = loQueNoSePuedeVer(arbol, hoja);
   /* Y de esos, la barra de comprar pegada abajo se puede rescatar: se marca y
      nuestro script la muestra al bajar, como hacía la suya. */
@@ -274,7 +344,11 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   const cuerpo = render(arbol, { encodeEntities: "utf8", emptyAttrs: true }).trim();
 
   const html = (hojaFinal ? `<style>\n${hojaFinal}\n</style>\n` : "") + cuerpo;
-  const inventario = inventariar(cuerpo, fuentes, avisosDelCrudo(docCrudo));
+  const avisos = avisosDelCrudo(docCrudo);
+  if (muyGrande) {
+    avisos.unshift("Tu archivo es muy grande para que lo revisemos entero, así que puede haber quedado algo escondido que no vemos. Mirala completa en la previa antes de prenderla.");
+  }
+  const inventario = inventariar(cuerpo, fuentes, avisos);
   inventario.arreglos = [...arreglos.hechos, ...precios.hechos, ...barras.hechos];
   inventario.sueltos = arreglos.sueltos;
   /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
@@ -408,13 +482,34 @@ export type DatosParaArmar = {
 
 const plata = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n).replace(/\u00a0/g, " ");
 
+/** Lo que puede pasar a ser un `<a>` sin perder nada de lo que ten\u00eda adentro. */
+const PUEDE_SER_LINK = ["div", "span", "p", "section", "article", "header", "footer", "li", "strong", "em", "b", "small", "figure", "label"];
+
+/**
+ * Red de seguridad para lo que YA est\u00e1 guardado.
+ *
+ * Lo que se dibuja sali\u00f3 limpio de `limpiarLanding`, pero sali\u00f3 limpio el d\u00eda
+ * que se subi\u00f3: una versi\u00f3n guardada por una limpieza vieja no se vuelve a
+ * mirar nunca. Y el bloque de estilo que va adelante es el lugar delicado \u2014un
+ * `</style >` ah\u00ed adentro cierra la etiqueta y lo que sigue deja de ser CSS
+ * para ser HTML nuestro\u2014. Ese CSS es de ella pero el `<style>` es nuestro, y
+ * un "</" en CSS no significa nada, as\u00ed que sacarlo no le cuesta el dise\u00f1o.
+ */
+function blindarElEstilo(html: string): string {
+  if (!html.startsWith("<style>\n")) return html;
+  const fin = html.indexOf("\n</style>\n");
+  if (fin < 0) return html;
+  const css = html.slice(8, fin);
+  return css.includes("</") ? `<style>\n${css.replace(/<\//g, "")}${html.slice(fin)}` : html;
+}
+
 /**
  * El HTML limpio + los datos del producto → lo que se muestra. Cada hueco
  * se llena; lo que no tiene con qué llenarse se saca, para no mostrar un
  * "[PRECIO]" ni una foto rota.
  */
 export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
-  const doc = parseDocument(htmlLimpio);
+  const doc = parseDocument(blindarElEstilo(htmlLimpio));
   const elementos = findAll(() => true, doc.children);
 
   for (const el of elementos) {
@@ -430,6 +525,14 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
     }
     else if (h === "nombre") ponerTexto(el, d.nombre);
     else if (h === "comprar") {
+      /* Un `href` en un <div> no se puede tocar: el botón se vería igual y no
+         llevaría a ninguna parte, que es la peor forma de romperse. Si marcó
+         el hueco en algo que no es un link, lo pasamos a link. (Un <img> no:
+         ahí el link tendría que ir alrededor, y eso sí es adivinar.) */
+      if (el.name !== "a" && PUEDE_SER_LINK.includes(el.name)) {
+        el.name = "a";
+        delete el.attribs.role;
+      }
       el.attribs.href = d.hrefComprar;
       delete el.attribs.target; delete el.attribs.rel;
     }

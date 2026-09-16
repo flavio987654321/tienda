@@ -91,7 +91,7 @@ raiz.addEventListener("click",function(e){
 var a=e.target&&e.target.closest?e.target.closest('a[href^="#"]'):null;
 if(!a)return;
 var id=a.getAttribute("href").slice(1);
-if(!id)return;
+if(!id){e.preventDefault();return;}
 var destino=raiz.getElementById(id);
 if(!destino)return;
 e.preventDefault();

@@ -410,8 +410,20 @@ check("FREE-M",
   /subscription: \{ select: \{ tier: true \} \}/.test(publica) && /aDondeRedirige\(producto, producto\.store\.owner\.subscription\?\.tier\)/.test(publica),
   "la ruta pública mira el plan de la dueña y le dice al middleware a dónde redirigir");
 check("FREE-N",
-  /if \(destino\.redirigir\) \{\s*return NextResponse\.redirect\(`\$\{destino\.redirigir\}\$\{pathname === "\/" \? "" : pathname\}\$\{request\.nextUrl\.search\}`, 307\)/.test(mid),
+  /const base = new URL\(destino\.redirigir\);/.test(mid)
+  && /aDonde = base\.origin \+ conElDestinoAdelante\(base\.pathname === "\/" \? "" : base\.pathname, pathname\);/.test(mid)
+  && /NextResponse\.redirect\(`\$\{aDonde\}\$\{request\.nextUrl\.search\}`, 307\)/.test(mid),
   "el middleware redirige con 307 y conserva la ruta y la búsqueda (los ?utm= de un anuncio)");
+/* ⚠️ Lo encontró la auditoría de la landing propia: el camino se pegaba
+   siempre, así que `/p/<id>/pagar` —el botón de comprar— terminaba en
+   `/p/<id>/p/<id>/pagar` y era 404 en el subdominio y en el dominio propio. */
+check("FREE-N2",
+  /function conElDestinoAdelante/.test(mid)
+  && /pathname === destino \|\| pathname\.startsWith\(`\$\{destino\}\/`\)/.test(mid)
+  /* Los tres lugares que pegaban el destino —las dos reescrituras del
+     subdominio y el salto del dominio propio— más la definición. */
+  && mid.split("conElDestinoAdelante").length - 1 >= 4,
+  "y el destino no se escribe dos veces: /p/<id>/pagar en el subdominio es /p/<id>/pagar, no /p/<id>/p/<id>/pagar");
 check("FREE-Ñ", !/NextResponse\.redirect\([^)]*308/.test(mid),
   "y nunca con 308: cuando vuelva a Pro tiene que dejar de redirigir, y un 308 el navegador lo recuerda");
 

@@ -90,6 +90,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   useAvisoSinGuardar(sinGuardar && !guardando);
 
   async function pedir(cuerpo: Record<string, unknown>, metodo: "POST" | "PATCH" = "PATCH"): Promise<Record<string, unknown> | null> {
+    /* Uno por vez, porque cada guardado manda el mapa entero de fotos y
+       links y dos encimados se pisan. Pero ESPERA el turno en vez de tirar el
+       pedido: salir de un campo y entrar al siguiente antes de que termine el
+       primero es lo normal, y así el segundo link se perdía en silencio. */
+    for (let i = 0; enVuelo.current && i < 40; i++) await new Promise((seguir) => window.setTimeout(seguir, 100));
     if (enVuelo.current) return null;
     enVuelo.current = true;
     setError(null);

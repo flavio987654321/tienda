@@ -7020,3 +7020,130 @@ mismo título, mismos KB). Si volvió a una vieja, la primera de la lista
 ahora dice "la última que subiste".
 
 106 chequeos, tsc, eslint y build ok. Mirado a 900 y 360.
+
+---
+
+## Auditoría de los 11 commits de la landing propia — 16/09/26
+
+Antes de deployar, como siempre. Once commits, 4.500 líneas, y el pedazo
+más delicado de todo el proyecto: HTML de afuera dibujado en nuestro
+dominio. Siete cosas, dos de ellas graves.
+
+### 1. 🔴 Se podía salir del `<style>` y correr código nuestro (XSS)
+
+Lo peor que encontré, y era real: probado en Chromium, ejecutaba.
+
+El CSS de ella se guarda adentro de un `<style>` **nuestro**. La extracción
+buscaba el cierre con `</style>` exacto, pero el navegador cierra la
+etiqueta igual con `</style >`, `</style\t>`, `</style\n>` o `</style/>`.
+Así que bastaba con escribir esto en el archivo:
+
+```html
+<style>a{}</style ></template><img src=x onerror="..."></style>
+```
+
+El `</style >` cerraba nuestra hoja, el `</template>` salía del Shadow DOM,
+y el `<img onerror>` quedaba suelto en el `<body>` de la página. Y corre:
+el CSP tiene `script-src 'self' 'unsafe-inline'`, que deja pasar lo que
+está en línea. Una vendedora con plan pago ejecutando JavaScript en
+tiendaapps.com, en la página que ve quien va a comprar.
+
+Peor: `armarLanding` vuelve a parsear el HTML guardado, así que el `<img>`
+no quedaba como texto — se convertía en un elemento de verdad y se
+re-serializaba como etiqueta.
+
+**El arreglo.** En CSS un `</` no significa nada, así que se saca: una
+línea en `limpiarCss`. Y una segunda red en `armarLanding`
+(`blindarElEstilo`), porque lo ya guardado NO se vuelve a limpiar al
+dibujarlo y una versión vieja no puede volverse peligrosa hoy. Chequeos
+XSS-A, XSS-B y XSS-C, con los cuatro cierres raros.
+
+### 2. 🔴 Un archivo podía clavar el servidor cuatro minutos
+
+`limpiarCss` empezaba con `[^{};]*`. Ese arranque hace que el motor de
+expresiones pruebe desde cada posición y vuelva sobre lo mismo: el costo
+crece al cuadrado. Medido:
+
+| CSS sin un `;` | tardaba |
+|---|---|
+| 5 KB | 24 ms |
+| 20 KB | 383 ms |
+| 60 KB | 3.464 ms |
+| 500 KB (el tope) | **240.300 ms** |
+
+Cuatro minutos de un procesador entero por una sola subida.
+
+Reescrito recorriendo el texto una sola vez, cortando en `;`/`{`/`}` y
+respetando los paréntesis (un `url(data:…;base64,…)` es UNA declaración) y
+las comillas. Los mismos 500 KB: **30 ms**. Y sobre el archivo de verdad
+el CSS sale **byte por byte idéntico** al de antes — comparado contra la
+versión vieja, las 31 KB de hoja de ella dan igual. Chequeo LENTO-A.
+
+### 3. 🟠 El botón de comprar era 404
+
+`hrefComprar: "/pagar"`. Eso es la raíz del sitio, y `/pagar` no existe:
+la ruta es `/p/<id>/pagar`. En el subdominio andaba de casualidad, porque
+el middleware le pega el prefijo. En `tiendaapps.com/p/<id>` —que es donde
+vive la previa del panel y la dirección de quien todavía no tiene dominio
+propio— era 404. El botón que cobra, muerto.
+
+Ahora pone el mismo link que `PaginaDeVenta`: `/p/<id>/pagar`.
+
+**Y eso destapó un bug viejo, de afuera de estos commits.** El middleware
+pegaba el destino adelante SIEMPRE, así que en el subdominio
+`/p/<id>/pagar` se reescribía a `/p/<id>/p/<id>/pagar` y era 404 — o sea
+que el botón de comprar de la página de secciones **nunca funcionó en un
+subdominio ni en un dominio propio**. No se notó porque todavía no hay
+ningún producto digital publicado. Arreglado con `conElDestinoAdelante`:
+si el camino ya empieza con el destino, no se escribe dos veces. La barra
+del final importa (`/tienda/lu` no se puede comer `/tienda/luna`).
+Verificado con `curl` y Host a mano: `/` 200, `/tienda/<slug>` pasa de 404
+a 200, `/tienda/otra` sigue 404. Chequeos PAGO-B, FREE-N2.
+
+### 4. 🟠 El hueco de comprar en un `<div>` no se podía tocar
+
+`armarLanding` le ponía `href` a lo que tuviera `data-tienda="comprar"`,
+fuera lo que fuera. Un `href` en un `<div>` no hace nada: el botón se veía
+igual y no llevaba a ningún lado. Y la traba no saltaba, porque el
+inventario lo contaba como botón de compra. Ahora, si el hueco está en algo
+que puede ser link, pasa a ser link. Chequeo PAGO-A.
+
+### 5. 🟡 Mirar qué quedó invisible no tenía techo
+
+Preguntar "¿a quién alcanza este selector?" cuesta una pasada por el árbol,
+así que el trabajo es reglas × elementos. 2.000 × 2.000 —207 KB, menos de
+la mitad del tope— tardaban 7,1 segundos. Eso informa, no protege nada:
+pasado `TOPE_DE_REVISION` no se revisa y el panel lo dice ("tu archivo es
+muy grande para que lo revisemos entero"). El mismo caso ahora: 54 ms.
+Chequeo LENTO-B.
+
+### 6. 🟡 Dos guardados encimados y el segundo se perdía
+
+`pedir` tenía un candado que descartaba el segundo pedido en silencio. Salir
+de un campo y entrar al siguiente antes de que termine el primero es lo
+normal, así que un link se perdía sin decir nada. Ahora espera el turno.
+
+### 7. 🟡 Medio giga de tráfico por una página que es siempre igual
+
+La página pública es `force-dynamic`: cada visita se traía hasta 500 KB de
+HTML de la base. Y una fila de `LandingDigital` **no cambia nunca** —subir
+otra vez crea una fila nueva—, así que se puede guardar en la memoria del
+proceso sin fecha de vencimiento. En Supabase lo que se paga es el tráfico,
+no el depósito.
+
+### Lo que se revisó y está bien
+
+- El dueño va adentro del `where` en las dos rutas; un id ajeno no
+  encuentra nada.
+- El marco de la previa: corre JavaScript pero sin `allow-same-origin`, así
+  que adentro no hay ni cookies ni sesión.
+- `armarLanding` mete textos como nodos de texto (se escapan) y las fotos
+  sólo por `https://`.
+- El precio, el nombre y el link del pago salen del producto, nunca del
+  archivo.
+- 6.000 `@media` anidados no rompen el lector de reglas (1,3 s, sin
+  desbordar la pila).
+- La migración es idempotente y borra en cascada.
+
+106 chequeos (12 nuevos), tsc, eslint y build ok. El archivo de verdad
+sigue tardando 18-45 ms y se ve igual, mirado a 1280.

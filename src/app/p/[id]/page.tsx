@@ -233,19 +233,20 @@ async function laLanding(fila: {
   const sub = fila.store.owner.subscription;
   if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) return null;
 
-  const version = await prisma.landingDigital.findFirst({
-    where: { id: estado.versionId, productId: fila.id },
-    select: { html: true, inventario: true },
-  });
+  const version = await laVersion(estado.versionId, fila.id);
   if (!version) return null;
 
   const html = armarLanding(version.html, {
     nombre: fila.name,
     precio: fila.price,
     precioAnterior: fila.comparePrice,
-    /* Relativo a propósito: la dirección puede ser el subdominio o el dominio
-       propio, y el pago vive al lado en las dos. */
-    hrefComprar: "/pagar",
+    /* ⚠️ El MISMO link que pone la página de secciones (`PaginaDeVenta`), y
+       por el mismo motivo: en el dominio de la plataforma
+       —`tiendaapps.com/p/<id>`, que es donde vive la previa del panel y la
+       dirección de quien todavía no tiene dominio propio— un `/pagar` pelado
+       es la raíz del sitio y ahí no hay nada. Era 404: el botón que cobra,
+       muerto. */
+    hrefComprar: `/p/${fila.id}/pagar`,
     fotos: estado.fotos,
     enlaces: estado.enlaces,
     /* Los bloques vivos llegan en el paso siguiente (reloj, opiniones,
@@ -256,5 +257,41 @@ async function laLanding(fila: {
        forma de ver qué falta subir. */
     mostrarHuecos: previa,
   });
-  return { html, fuentes: leerInventario(version.inventario).fuentes };
+  return { html, fuentes: version.fuentes };
+}
+
+/**
+ * La versión guardada, con memoria.
+ *
+ * Una fila de `LandingDigital` no cambia NUNCA: subir otra vez crea una fila
+ * nueva y cambia cuál está elegida. Por eso se puede guardar en la memoria
+ * del proceso sin fecha de vencimiento ni forma de quedar desactualizada.
+ *
+ * Importa porque esta página es `force-dynamic`: sin esto, cada visita a una
+ * landing prendida se trae hasta 500 KB de HTML de la base. Mil visitas son
+ * medio giga de tráfico por una página que es siempre igual — y el tráfico
+ * es lo que se paga en Supabase, no el depósito.
+ */
+const VERSIONES_EN_MEMORIA = 8;
+const guardadas = new Map<string, { html: string; fuentes: string[] }>();
+
+async function laVersion(versionId: string, productId: string) {
+  const guardada = guardadas.get(versionId);
+  if (guardada) return guardada;
+
+  const fila = await prisma.landingDigital.findFirst({
+    where: { id: versionId, productId },
+    select: { html: true, inventario: true },
+  });
+  if (!fila) return null;
+
+  const valor = { html: fila.html, fuentes: leerInventario(fila.inventario).fuentes };
+  /* La más vieja se va: no es un cache que haya que acertar, es no pedir dos
+     veces seguidas lo mismo. */
+  if (guardadas.size >= VERSIONES_EN_MEMORIA) {
+    const primera = guardadas.keys().next().value;
+    if (primera) guardadas.delete(primera);
+  }
+  guardadas.set(versionId, valor);
+  return valor;
 }

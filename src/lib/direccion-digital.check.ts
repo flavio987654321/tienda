@@ -126,7 +126,7 @@ check("DIR-O",
    exactamente lo de antes. */
 check("DIR-P",
   /if \(destino\) \{/.test(mid) &&
-  mid.indexOf("if (destino) {") < mid.indexOf("url.pathname = `/tienda/${slug}${pathname"),
+  mid.indexOf("if (destino) {") < mid.indexOf("conElDestinoAdelante(`/tienda/${slug}`"),
   "si la consulta no contesta, el subdominio sigue yendo a la tienda como antes");
 
 check("DIR-Q",

@@ -57,6 +57,23 @@ export type Escondido = {
 /** Hasta acá se cuenta: más que esto no es una landing rota, es otra cosa. */
 const TOPE = 6;
 
+/**
+ * Cuánto se puede trabajar mirando un archivo: reglas × elementos.
+ *
+ * ⚠️ Preguntar "¿a quién alcanza este selector?" cuesta una pasada por el
+ * árbol, así que el trabajo son las dos cosas multiplicadas. Medido: 2.000
+ * reglas sobre 2.000 elementos —207 KB, menos de la mitad del tope— tardaban
+ * 7 SEGUNDOS, y crecen al cuadrado. Esto informa, no dibuja y no protege
+ * nada: pasado el techo se prefiere no revisar antes que dejar a alguien
+ * esperando un minuto. El panel lo dice (`avisos`).
+ */
+export const TOPE_DE_REVISION = 600_000;
+
+/** El trabajo que costaría revisar esto. Para decidir antes de empezar. */
+export function cuantoCuestaRevisar(doc: Document, css: string): number {
+  return leerReglas(css).length * Math.max(1, selectAll("*", doc.children).length);
+}
+
 /* ── Qué declaración esconde y qué declaración muestra ───────────────────── */
 
 const ESCONDE: readonly RegExp[] = [
@@ -146,6 +163,7 @@ function sinLoQueSeToca(selector: string): string {
  * ver nunca.
  */
 export function loQueNoSePuedeVer(doc: Document, css: string): Escondido[] {
+  if (cuantoCuestaRevisar(doc, css) > TOPE_DE_REVISION) return [];
   const reglas = leerReglas(css);
   const escondidos = new Set<Element>();
   const mostrados = new Set<Element>();
@@ -201,6 +219,7 @@ export function loQueNoSePuedeVer(doc: Document, css: string): Escondido[] {
  */
 export function losQueEstanPegados(doc: Document, css: string): Set<Element> {
   const pegados = new Set<Element>();
+  if (cuantoCuestaRevisar(doc, css) > TOPE_DE_REVISION) return pegados;
   for (const regla of leerReglas(css)) {
     if (!/position\s*:\s*(fixed|sticky)/i.test(regla.cuerpo)) continue;
     for (const sel of selectoresDe(regla.selector)) {

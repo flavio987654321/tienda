@@ -83,6 +83,26 @@ async function runSupabaseAuth(
 }
 
 /**
+ * El camino pedido con el destino adelante — salvo que ya lo tenga puesto.
+ *
+ * ⚠️ El "salvo" no es un detalle. Sin él, `mitienda.tiendaapps.com/p/<id>/pagar`
+ * se reescribía a `/p/<id>/p/<id>/pagar`, que no es ninguna ruta: 404. Y ése
+ * no es un link raro, es EL BOTÓN DE COMPRAR de la página de venta digital
+ * —`PaginaDeVenta` lo escribe así— que tiene que funcionar igual en
+ * `tiendaapps.com/p/<id>`, en el subdominio y en el dominio propio. Salió de
+ * auditar la landing propia, que al principio ponía `/pagar` pelado y tenía
+ * el problema espejo: andaba en el subdominio y era 404 en la plataforma.
+ *
+ * La barra del final importa: sin ella un destino `/tienda/lu` se comería
+ * `/tienda/luna`, que es OTRA tienda.
+ */
+function conElDestinoAdelante(destino: string, pathname: string): string {
+  if (pathname === "/") return destino;
+  if (pathname === destino || pathname.startsWith(`${destino}/`)) return pathname;
+  return `${destino}${pathname}`;
+}
+
+/**
  * A dónde lleva un subdominio: `/tienda/<slug>` o `/p/<id>`.
  *
  * `null` si no se pudo averiguar. Quien llama tiene que seguir de largo con lo
@@ -153,11 +173,11 @@ export async function middleware(request: NextRequest) {
          funcionar porque se cayó una consulta que ella no necesita.** */
       const destino = await donde("sub", slug, request);
       if (destino) {
-        url.pathname = `${destino.destino}${pathname === "/" ? "" : pathname}`;
+        url.pathname = conElDestinoAdelante(destino.destino, pathname);
         return NextResponse.rewrite(url);
       }
 
-      url.pathname = `/tienda/${slug}${pathname === "/" ? "" : pathname}`;
+      url.pathname = conElDestinoAdelante(`/tienda/${slug}`, pathname);
       return NextResponse.rewrite(url);
     }
 
@@ -187,10 +207,21 @@ export async function middleware(request: NextRequest) {
          entero. 307 y no 308: cuando vuelva a Pro tiene que dejar de
          redirigir, y un 308 el navegador lo recuerda para siempre. */
       if (destino.redirigir) {
-        return NextResponse.redirect(`${destino.redirigir}${pathname === "/" ? "" : pathname}${request.nextUrl.search}`, 307);
+        /* `redirigir` puede traer camino propio (`…/p/<id>`) o no traer
+           ninguno (`https://<slug>.tiendaapps.com`): se separa para no
+           escribirlo dos veces, igual que en las reescrituras de arriba. */
+        /* Y con red: acá adentro una excepción es un 500 para TODAS las
+           tiendas, no para ésta. Si el destino no se pudiera leer, se hace lo
+           de siempre. */
+        let aDonde = `${destino.redirigir}${pathname === "/" ? "" : pathname}`;
+        try {
+          const base = new URL(destino.redirigir);
+          aDonde = base.origin + conElDestinoAdelante(base.pathname === "/" ? "" : base.pathname, pathname);
+        } catch { /* se queda con lo de siempre */ }
+        return NextResponse.redirect(`${aDonde}${request.nextUrl.search}`, 307);
       }
       const url = request.nextUrl.clone();
-      url.pathname = `${destino.destino}${pathname === "/" ? "" : pathname}`;
+      url.pathname = conElDestinoAdelante(destino.destino, pathname);
       return NextResponse.rewrite(url);
     }
 

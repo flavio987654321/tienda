@@ -367,8 +367,9 @@ check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\/
 
 check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(publica),
   "la landing se muestra sólo si está prendida y el plan la incluye; si vence, vuelve la página de secciones");
-check("PUB-B", /nombre: fila\.name,\n\s+precio: fila\.price,\n\s+precioAnterior: fila\.comparePrice,/.test(publica) && /hrefComprar: "\/pagar"/.test(publica),
-  "el precio, el nombre y el botón salen del producto: cambiar el precio en Productos cambia la landing");
+/* El link del pago lo mira PAGO-B, que es donde se explica por qué. */
+check("PUB-B", /nombre: fila\.name,\n\s+precio: fila\.price,\n\s+precioAnterior: fila\.comparePrice,/.test(publica),
+  "el precio y el nombre salen del producto: cambiar el precio en Productos cambia la landing");
 check("PUB-C", /apagado=\{!fila\.isActive \|\| previaDeLanding\}/.test(publica) && /\{fila\.isActive && !previaDeLanding && \(\(\) =>/.test(publica),
   "la visita y el píxel siguen afuera de la landing, y la previa de la dueña no cuenta ni mide");
 check("PUB-D", /landing \? <LandingPropia html=\{landing\.html\} fuentes=\{landing\.fuentes\} \/> : <PaginaDeVenta/.test(publica),
@@ -393,6 +394,67 @@ check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(edit
 check("BASE-A", /landingPropia String\?/.test(schema) && /model LandingDigital \{/.test(schema)
   && /ADD COLUMN IF NOT EXISTS "landingPropia" TEXT/.test(migracion) && /CREATE TABLE IF NOT EXISTS "LandingDigital"/.test(migracion),
   "la columna, la tabla de versiones y la migración idempotente");
+
+/* ── Salir del <style>: lo que encontró la auditoría ─────────────────────── */
+
+/* ⚠️ EL AGUJERO GRANDE. El CSS de ella se guarda adentro de un <style>
+   NUESTRO, y el navegador cierra esa etiqueta con `</style >` —con un
+   espacio, un tab, un salto o una barra— igual que con `</style>`. Quien la
+   cierre sale de la hoja, sale del <template> del Shadow DOM y escribe HTML
+   suyo en NUESTRA página; con `unsafe-inline` en el CSP, un `onerror` ahí
+   corre. Probado en Chromium antes de arreglarlo: ejecutaba. */
+const SALIDAS = [
+  `<style>a{}</style >EVIL</style><div>x</div>`,
+  `<style>a{}</style\t>EVIL</style><div>x</div>`,
+  `<style>a{}</style\n>EVIL</style><div>x</div>`,
+  `<style>a{}</style/>EVIL</style><div>x</div>`,
+  `<style>a{content:"</style><img src=x onerror=alert(1)>"}</style><div>x</div>`,
+];
+check("XSS-A", SALIDAS.every((s) => {
+  const x = limpiarLanding(s);
+  return x.ok && !/<\//.test(x.landing.html.slice(0, x.landing.html.indexOf("\n</style>\n")));
+}), "no queda ningún «</» adentro del <style> que ponemos nosotros: por ahí se salía a la página");
+check("XSS-B", limpiarCss(`a{color:red}</style><img src=x onerror=alert(1)>`).indexOf("</") === -1
+  && limpiarCss(`a{content:"</b>"}`).indexOf("</") === -1,
+  "y el «</» se saca en el CSS, que es de donde venía");
+/* La segunda red: lo guardado NO se vuelve a limpiar al dibujarlo, así que
+   una versión guardada por una limpieza vieja tiene que morir acá también. */
+/* Se mira el ÁRBOL, no el texto: adentro del <style> las mismas letras son
+   texto inerte, y lo que importa es que no lleguen a ser una etiqueta. */
+const vieja = armarLanding(`<style>\na{}</style ><img src=x onerror="alert(1)">\n</style>\n<p>hola</p>`, {
+  nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/a/pagar", fotos: {}, enlaces: {}, bloques: {},
+});
+check("XSS-C", primerElemento(vieja, (e) => e.name === "img") === null && /<p>hola<\/p>/.test(vieja),
+  "y lo YA guardado se blinda al dibujarlo: una versión vieja no puede volverse peligrosa hoy");
+
+/* ── Lo que tarda: ningún archivo puede clavar el servidor ───────────────── */
+
+/* ⚠️ `limpiarCss` empezaba con un `[^{};]*` y el costo crecía al cuadrado:
+   500 KB de CSS sin un `;` eran CUATRO MINUTOS de procesador. */
+const CSS_LARGO = `a{color:red}${"z".repeat(60_000)}`;
+const t0 = Date.now();
+limpiarCss(CSS_LARGO);
+check("LENTO-A", Date.now() - t0 < 500, `60 KB de CSS sin cortes se limpian rápido (tardó ${Date.now() - t0} ms; antes, 3.400)`);
+
+/* Y mirar qué quedó invisible cuesta reglas × elementos: con un archivo
+   enorme se prefiere avisar que no se pudo antes que dejarla esperando. */
+const GRANDE = `<style>${Array.from({ length: 2000 }, (_, i) => `.c${i} .d${i} > span{display:none}`).join("")}</style>`
+  + `<a data-tienda="comprar" href="#">Comprar</a>`
+  + Array.from({ length: 2000 }, (_, i) => `<div class="c${i}"><div class="d${i}"><span>hola ${i}</span></div></div>`).join("");
+const t1 = Date.now();
+const gr = limpiarLanding(GRANDE);
+const tardo = Date.now() - t1;
+check("LENTO-B", gr.ok && tardo < 3000 && gr.landing.inventario.avisos.some((a) => /muy grande/i.test(a)),
+  `2.000 reglas sobre 2.000 elementos no cuelgan la subida y se avisa (tardó ${tardo} ms; antes, 7.100)`);
+
+/* ── El botón que cobra ──────────────────────────────────────────────────── */
+
+const enUnDiv = limpiarLanding(`<div data-tienda="comprar">Comprar ahora</div>`);
+check("PAGO-A", enUnDiv.ok && /<a[^>]+data-tienda="comprar"[^>]*href="\/p\/abc\/pagar"/.test(
+  armarLanding(enUnDiv.landing.html, { nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/abc/pagar", fotos: {}, enlaces: {}, bloques: {} }),
+), "el hueco de comprar marcado en un <div> pasa a ser un link: un href en un div no se puede tocar");
+check("PAGO-B", /hrefComprar: `\/p\/\$\{fila\.id\}\/pagar`/.test(publica) && !/hrefComprar: "\/pagar"/.test(publica),
+  "y el link del pago es el mismo que pone la página de secciones: un «/pagar» pelado es 404 en tiendaapps.com/p/<id>");
 
 /* ── Los links del pie: lo que ella escribe, acomodado ───────────────────── */
 
