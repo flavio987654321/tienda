@@ -13,6 +13,7 @@ import { CONSEJO_DE_SALIDA } from "@/lib/plantillas-marketing";
 import CartelDeSalida, { type ParteDelCartel } from "@/components/digitales/CartelDeSalida";
 import ConsejoDeUso from "../../ConsejoDeUso";
 import ProductoElegido from "../ProductoElegido";
+import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
 
 export type ProductoDeSalida = {
   id: string;
@@ -72,6 +73,7 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
   const r = validarOfertaSalida(o);
   const problema = r.ok ? null : r.problema;
   const cambio = JSON.stringify(elegido?.oferta) !== JSON.stringify(r.ok ? r.datos : o);
+  useAvisoSinGuardar(cambio && !guardando);
   const otro = otros.find((p) => p.id === o.productoId) ?? null;
 
   function tocar<K extends keyof OfertaSalida>(k: K, v: OfertaSalida[K]) {

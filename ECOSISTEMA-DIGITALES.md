@@ -6374,3 +6374,28 @@ límite de 50) se dejó. Lo que faltaba:
 `cupones-digitales.check.ts` (+CREAR-H, CREAR-I; RUTA-I actualizado),
 CUP-B de `oferta-salida.check.ts` ahora prueba la reserva. 104 chequeos,
 tsc, eslint y build ok.
+
+---
+
+## Mail a compradores: repaso de inputs y validaciones — 16/09/26
+
+Lo que ya estaba bien y se dejó: asunto 3–90 sin saltos de línea, mensaje
+20–3000, los dos productos (público y botón) tienen que ser principales
+propios, sólo Pro al día, 2 por 24 h contados en la base, el conteo de
+destinatarios es la misma función en la pantalla y en la ruta, confirmación
+con el número antes de mandar, doble clic tapado, la ruta pública de baja
+firmada, el cuerpo escapado en el HTML del mail.
+
+Lo que faltaba, y se hizo:
+
+- **El error no salta mientras se escribe** (`revisar`, como en Cupones):
+  recién al salir del asunto o del mensaje, o al intentar mandar. Antes con
+  dos letras del asunto ya decía "Escribí un asunto".
+- **Contador del asunto** (0 / 90), como ya tenía el mensaje.
+- **Aviso al irse con un mail a medio escribir**: `useAvisoSinGuardar`
+  (nuevo, en `digitales/`), el mismo par `beforeunload` + `useSalida` que
+  tiene el editor de la página, en un hook para las pantallas chicas. Lo
+  usa también la Oferta de salida con cambios sin guardar. Mientras se
+  está mandando no avisa.
+
+104 chequeos, tsc, eslint y build ok.

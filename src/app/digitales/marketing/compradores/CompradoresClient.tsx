@@ -7,6 +7,7 @@ import { Loader2, Lock, Mail, Send, ArrowRight } from "lucide-react";
 import { validarCorreoNuevo, saludo, ASUNTO_MAX, CUERPO_MAX } from "@/lib/correos-compradores";
 import { PLANTILLAS_DE_CORREO, correoDeLaPlantilla, CONSEJO_DE_CORREO } from "@/lib/plantillas-marketing";
 import ConsejoDeUso from "../../ConsejoDeUso";
+import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
 
 export type CorreoEnPantalla = {
   id: string;
@@ -55,11 +56,16 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
   const [progreso, setProgreso] = useState<Resultado | null>(null);
   const [siguiendo, setSiguiendo] = useState<string | null>(null);
   const enVuelo = useRef(false);
+  /* El problema se dice cuando la persona salió de un campo o intentó
+     mandar, no mientras escribe la tercera letra del asunto. */
+  const [revisar, setRevisar] = useState(false);
 
   const destinatarios = productId ? (cuantos.porProducto[productId] ?? 0) : cuantos.todos;
   const borrador = { asunto, cuerpo, productId: productId || null, enlaceProductId: enlaceProductId || null };
   const problema = asunto || cuerpo ? (() => { const r = validarCorreoNuevo(borrador); return r.ok ? null : r.problema; })() : null;
   const enlazado = productos.find((p) => p.id === enlaceProductId) ?? null;
+  /* Un mail a medio escribir se pierde con un clic en el menú: se avisa. */
+  useAvisoSinGuardar(!mandando && (asunto.trim().length > 0 || cuerpo.trim().length > 0));
 
   /* Una plantilla carga asunto y mensaje con el nombre del producto elegido
      (o del primero, si es "a todos"), y sugiere el botón cuando conviene.
@@ -87,6 +93,7 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
   }
 
   async function mandar() {
+    setRevisar(true);
     if (enVuelo.current || problema || destinatarios === 0) return;
     if (!window.confirm(`Se va a mandar a ${personas(destinatarios)}. Después no se puede deshacer. ¿Mandamos?`)) return;
     enVuelo.current = true;
@@ -107,6 +114,7 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
         setProgreso(inicial);
         await seguirHasta(d.id, inicial);
         setAsunto(""); setCuerpo(""); setEnlaceProductId("");
+        setRevisar(false);
         router.refresh();
       }
     } catch (e) {
@@ -189,11 +197,12 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
           </div>
           <div>
             <label htmlFor="asunto" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Asunto</label>
-            <input id="asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} maxLength={ASUNTO_MAX} placeholder="Salió la segunda parte" className={CLASE_INPUT} />
+            <input id="asunto" value={asunto} onChange={(e) => setAsunto(e.target.value)} onBlur={() => setRevisar(true)} maxLength={ASUNTO_MAX} placeholder="Salió la segunda parte" className={CLASE_INPUT} />
+            <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">{asunto.length} / {ASUNTO_MAX}. Corto y concreto: es lo que decide si lo abren.</p>
           </div>
           <div>
             <label htmlFor="cuerpo" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Mensaje</label>
-            <textarea id="cuerpo" value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} maxLength={CUERPO_MAX} rows={7} placeholder="Contales qué hay de nuevo, como se lo contarías a una persona. El «Hola» con su nombre lo ponemos nosotros." className={`${CLASE_INPUT} resize-y`} />
+            <textarea id="cuerpo" value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} onBlur={() => setRevisar(true)} maxLength={CUERPO_MAX} rows={7} placeholder="Contales qué hay de nuevo, como se lo contarías a una persona. El «Hola» con su nombre lo ponemos nosotros." className={`${CLASE_INPUT} resize-y`} />
             <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
               {cuerpo.length} / {CUERPO_MAX}. Sale con tu nombre y las respuestas llegan a tu correo. Cada mail lleva un link para no recibir más; quien lo use no vuelve a aparecer acá.
             </p>
@@ -216,7 +225,7 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
 
           <ConsejoDeUso>{CONSEJO_DE_CORREO}</ConsejoDeUso>
 
-          {problema && <p className="text-sm font-medium text-red-600">{problema}</p>}
+          {revisar && problema && <p role="alert" className="text-sm font-medium text-red-600">{problema}</p>}
           {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
           {progreso && (
             <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300" aria-live="polite">
