@@ -16,6 +16,11 @@
  * Las otras dos son movimiento, y el movimiento vende: sin ellas la página se
  * siente rota aunque esté entera.
  *
+ * La barra es la que más duele: en celular es EL botón de comprar, el que te
+ * sigue por la página. Escondida arriba y visible al bajar es lo que hacen
+ * todas, así que el disparador puede ser uno solo y genérico: una pantalla
+ * de scroll.
+ *
  * Así que ponemos las dos nosotros, con código nuestro: veinte líneas, sin
  * `eval`, sin traer nada de afuera, y que no sale de la cápsula (el Shadow
  * DOM) más que para leer si la persona pidió menos movimiento.
@@ -34,7 +39,14 @@
 
 /** Lo que la autora puede marcar para que aparezca al bajar. */
 export const MARCA_APARECE = "data-tienda-aparece";
-/** Lo que le ponemos nosotros cuando entra en pantalla: es para su CSS. */
+/**
+ * La barra de comprar pegada abajo que rescatamos nosotros: se esconde
+ * arriba de todo y aparece cuando la persona baja una pantalla. La ponemos
+ * en `landing-arreglos`, nunca la autora — por eso se saca del archivo si
+ * viene escrita.
+ */
+export const MARCA_BARRA = "data-tienda-barra";
+/** Lo que le ponemos nosotros cuando hay que mostrarlo: es para el CSS. */
 export const MARCA_VISTO = "data-tienda-visto";
 
 /**
@@ -47,8 +59,23 @@ export const MARCA_VISTO = "data-tienda-visto";
  */
 export const ESTILO_DE_LA_CAPSULA = `<style>
 :host{all:initial;display:block;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-:host(:not([data-tienda-efectos])) [${MARCA_APARECE}]{opacity:1!important;transform:none!important;visibility:visible!important}
+:host(:not([data-tienda-efectos])) [${MARCA_APARECE}],
+:host(:not([data-tienda-efectos])) [${MARCA_BARRA}]{opacity:1!important;transform:none!important;visibility:visible!important;pointer-events:auto!important}
 </style>`;
+
+/**
+ * El CSS de la barra rescatada. Va con la versión (lo agrega
+ * `landing-arreglos` cuando rescata una), no acá, porque sólo hace falta si
+ * hubo algo que rescatar.
+ *
+ * Lo que fuerza es lo mínimo para que se vea: la posición y el tamaño los
+ * puso ella. `display` NO se toca, para no romperle el "esta barra sólo en
+ * celular" que casi siempre traen.
+ */
+export const CSS_DE_LA_BARRA = `
+[${MARCA_BARRA}]{transition:transform .25s ease,opacity .25s ease}
+[${MARCA_BARRA}][${MARCA_VISTO}]{transform:none!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+`.trim();
 
 /**
  * El script, tal cual va a la página. Es un texto a propósito: lo escribimos
@@ -70,6 +97,15 @@ if(!destino)return;
 e.preventDefault();
 destino.scrollIntoView({behavior:quieto?"auto":"smooth",block:"start"});
 });
+var barras=raiz.querySelectorAll("[${MARCA_BARRA}]");
+if(barras.length){
+var mirar=function(){
+var abajo=window.scrollY>window.innerHeight*0.9;
+for(var k=0;k<barras.length;k++){if(abajo)barras[k].setAttribute("${MARCA_VISTO}","");else barras[k].removeAttribute("${MARCA_VISTO}");}
+};
+window.addEventListener("scroll",mirar,{passive:true});
+mirar();
+}
 var marcados=raiz.querySelectorAll("[${MARCA_APARECE}]");
 if(!marcados.length)return;
 if(!("IntersectionObserver" in window)){for(var i=0;i<marcados.length;i++)marcados[i].setAttribute("${MARCA_VISTO}","");return;}

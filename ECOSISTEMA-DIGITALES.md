@@ -6824,3 +6824,65 @@ las instrucciones son el piso.
 106 chequeos (uno nuevo), tsc, eslint y build ok. Sobre los archivos de
 verdad: la de la amiga pasa a 7 avisos (aparece la barra invisible), la
 nuestra sigue en 0.
+
+---
+
+## La barra que aparece al bajar, y los "[PRECIO]" — 16/09/26
+
+Flavio subió la landing de la amiga y después mandó una captura de la
+ORIGINAL: "cuando bajo aparece el precio abajo, ¿lo ves?".
+
+Sí: es la barra pegada al pie con el precio y "LO QUIERO", que en celular es
+EL botón de comprar. Era justo la que la revisión marcaba como invisible —la
+tercera rotura del archivo— y hasta ahora sólo sabíamos avisarla.
+
+### Rescatarla, no avisarla
+
+Se reconoce sin saber nada de esa landing, juntando lo que ya teníamos:
+
+1. el CSS la deja pegada a la pantalla (`position: fixed` o `sticky`), y
+2. está escondida y nada en la página puede mostrarla
+   (`landing-invisible` ya lo calculaba).
+
+Con las dos, se marca con `data-tienda-barra` y el script la muestra al bajar
+una pantalla y la vuelve a esconder al subir — que es lo que hacía la suya y
+lo que hacen todas. Se fuerza lo mínimo (`transform`, `opacity`,
+`visibility`, `pointer-events`): ni la posición ni el tamaño, que son de su
+diseño, y `display` NO se toca para no romperle el "esta barra sólo en
+celular".
+
+Verificado en Chromium a 390 px: arriba de todo la barra queda fuera de
+pantalla, al bajar entra, al volver arriba se va.
+
+### Los "[PRECIO]" que llenaba el script
+
+Una vez visible la barra, se veía lo que antes tapaba: `$[PRECIO ANTERIOR]`
+y `$[PRECIO]` escritos así, en crudo. Estos archivos traen marcadores entre
+corchetes que su script llenaba desde una CONFIGURACIÓN.
+
+Dos de esos los podemos llenar de verdad, porque el dato es nuestro: el
+precio y el tachado salen de Productos y se actualizan solos. El marcador se
+convierte en el hueco `data-tienda="precio"`. Los demás (`[MARCA]`,
+`[NOMBRE DEL EBOOK]`) no se tocan: no sabemos qué van, y ésos se avisan.
+
+En el archivo de verdad: 5 lugares llenados, y de paso desaparece el aviso
+"en ningún lado se ve el precio", porque ahora sí se ve.
+
+**Dos bugs de verdad, encontrados mirando la captura del resultado:**
+
+- El precio salía **"$$ 9.900"**. Al partir un texto en dos, meter algo en la
+  lista de hijos NO actualiza el `prev` y el `next` de cada uno, así que la
+  cuenta de "¿ya hay un $ al lado?" no veía nada. Ahora se cosen los vecinos.
+- Y el caso real es `$<span data-afl-field="precio">[PRECIO]</span>`: el
+  signo es hermano del span de AFUERA. Así que cuando el marcador es todo lo
+  que dice su elemento, el hueco es ese elemento y no uno nuevo adentro.
+
+### De paso
+
+El archivo que subió Flavio no era el mismo que teníamos en el Escritorio
+(67 KB contra 69, 10 preguntas contra 11): la amiga ya había hecho otra
+versión. O sea que el código pasó por dos archivos reales distintos sin
+tocarle nada.
+
+`landing-propia.check.ts` (72 → 75) y `landing-invisible.check.ts` (11 → 12).
+106 chequeos, tsc, eslint y build ok.

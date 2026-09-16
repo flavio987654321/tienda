@@ -95,8 +95,10 @@ check("INV-A", I.precio === 1 && I.precioAnterior === 1 && I.comprar === 2 && I.
 check("INV-B", I.fotos.join() === "portada-del-ebook,donuts,falta" && nombreDeFoto("foto:Páginas 1") === "paginas-1", "las fotos, por nombre normalizado y en orden");
 check("INV-C", I.linksVacios.join() === "malo,Términos y condiciones,Instagram" && I.imagenesExternas.length === 1 && /shopify/.test(I.imagenesExternas[0]),
   "los links a ninguna parte y las imágenes de afuera, para que el panel pregunte");
-check("INV-D", I.avisos.some((a) => /contador escrito/.test(a) && /15:00/.test(a)) && I.avisos.some((a) => /\[PRECIO ANTERIOR\]/.test(a)) && L.titulo === "Mi ebook",
-  "avisa el contador que quedó escrito y los [PRECIO] sin llenar; lee el título");
+/* Los [PRECIO] ya no se avisan: los llenamos nosotros con el precio de
+   verdad (`llenarMarcadoresDePrecio`). Se avisa lo que no sabemos qué va. */
+check("INV-D", I.avisos.some((a) => /contador escrito/.test(a) && /15:00/.test(a)) && !I.avisos.some((a) => /\[PRECIO/.test(a)) && L.titulo === "Mi ebook",
+  "avisa el contador que quedó escrito, ya no los [PRECIO] (ésos se llenan solos); lee el título");
 
 /* ── Armar ───────────────────────────────────────────────────────────────── */
 
@@ -224,6 +226,40 @@ check("ARR-H", (() => {
     && texto.includes("1. ") && texto.includes("Devolveme el archivo")
     && pedidoDeCambios({ hallazgos: [], avisos: [], sueltos: [], fotos: ["portada"] }) === "";
 })(), "los arreglos se guardan y vuelven de la base, y el pedido de cambios se arma numerado (o vacío si no hay nada)");
+
+/* ── Los "[PRECIO]" que llenaba el script ───────────────────────────────── */
+
+check("PRE-A", (() => {
+  /* El caso de verdad, tal como viene: el signo de pesos afuera y el
+     marcador adentro de un span. El hueco tiene que ser ESE span, no uno
+     nuevo adentro, para que el signo de al lado no se escriba dos veces. */
+  const a = limpio(String.raw`<div><p class="p">$<span class="n">[PRECIO]</span></p><a data-tienda="comprar">x</a></div>`);
+  const hueco = primerElemento(a.html, (e) => e.attribs["data-tienda"] === "precio");
+  const armado = armarLanding(a.html, {
+    nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/x", fotos: {}, enlaces: {}, bloques: {},
+  });
+  return hueco?.attribs.class === "n" && a.inventario.precio === 1
+    && /9\.900/.test(armado) && !/\$\s*\$/.test(armado)
+    && /Llenamos 1 lugar del precio/.test(a.inventario.arreglos.join(" "));
+})(), "el «[PRECIO]» que llenaba el script pasa a ser el hueco del precio, sin repetir el signo $");
+
+check("PRE-B", (() => {
+  /* El tachado, y un marcador en el medio de una frase: ahí sí se parte el
+     texto y el hueco va en el medio. */
+  const a = limpio(String.raw`<div><p>Antes [PRECIO ANTERIOR] ahora</p><a data-tienda="comprar">x</a></div>`);
+  const armado = armarLanding(a.html, {
+    nombre: "x", precio: 9900, precioAnterior: 19900, hrefComprar: "/x", fotos: {}, enlaces: {}, bloques: {},
+  });
+  return a.inventario.precioAnterior === 1 && /Antes <span data-tienda="precio-anterior">\$ 19\.900<\/span> ahora/.test(armado);
+})(), "«[PRECIO ANTERIOR]» en el medio de una frase parte el texto y queda el tachado en su lugar");
+
+check("PRE-C", (() => {
+  /* Lo que no sabemos qué va, no se toca: se avisa. */
+  const a = limpio(String.raw`<div><p>Hola [MARCA], llevate [NOMBRE DEL EBOOK] hoy mismo</p><a data-tienda="comprar">x</a></div>`);
+  return a.inventario.precio === 0 && /\[MARCA\]/.test(a.html)
+    && a.inventario.avisos.some((x) => x.includes("[MARCA]"))
+    && a.inventario.arreglos.length === 0;
+})(), "los marcadores que no son de precio no se tocan: no sabemos qué van, así que se avisan");
 
 /* ── Los efectos: el movimiento que reemplaza al script de ella ─────────── */
 

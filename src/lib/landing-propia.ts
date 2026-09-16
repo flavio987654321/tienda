@@ -59,8 +59,9 @@ import { findAll, findOne, removeElement, textContent, prependChild } from "domu
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
-import { arreglarLanding, ERA_BOTON } from "@/lib/landing-arreglos";
-import { loQueNoSePuedeVer } from "@/lib/landing-invisible";
+import { arreglarLanding, rescatarBarras, llenarMarcadoresDePrecio, ERA_BOTON } from "@/lib/landing-arreglos";
+import { loQueNoSePuedeVer, losQueEstanPegados } from "@/lib/landing-invisible";
+import { MARCA_BARRA } from "@/lib/landing-efectos";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -247,7 +248,9 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   /* La marca de "esto era un botón" la ponemos nosotros, y sólo nosotros: si
      viene escrita en el archivo se saca ANTES de sanear, porque después no
      hay forma de distinguir la nuestra de la suya. */
-  s = s.replace(new RegExp(`\\s${ERA_BOTON}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, "gi"), " ");
+  for (const marca of [ERA_BOTON, MARCA_BARRA]) {
+    s = s.replace(new RegExp(`\\s${marca}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)|\\s${marca}(?=[\\s>/])`, "gi"), " ");
+  }
 
   const saneado = sanitizeHtml(s, OPCIONES).trim();
   if (!saneado) return { ok: false, problema: "Después de limpiarlo no quedó nada para mostrar. ¿Es un archivo HTML?" };
@@ -257,22 +260,28 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
      Ver `lib/landing-arreglos`. */
   const arbol = parseDocument(saneado);
   const arreglos = arreglarLanding(arbol);
+  const precios = llenarMarcadoresDePrecio(arbol);
   const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
   /* Y lo genérico: aplicar SU CSS sobre SU html para ver qué queda invisible.
      Los arreglos conocen dos formas de romperse; esto encuentra las que no
      conocemos. Ver `lib/landing-invisible`. */
   const escondidos = loQueNoSePuedeVer(arbol, hoja);
+  /* Y de esos, la barra de comprar pegada abajo se puede rescatar: se marca y
+     nuestro script la muestra al bajar, como hacía la suya. */
+  const barras = rescatarBarras(escondidos, losQueEstanPegados(arbol, hoja));
+  const perdidos = escondidos.filter((x) => x.el.attribs[MARCA_BARRA] === undefined);
+  const hojaFinal = [hoja, barras.css].filter(Boolean).join("\n");
   const cuerpo = render(arbol, { encodeEntities: "utf8", emptyAttrs: true }).trim();
 
-  const html = (hoja ? `<style>\n${hoja}\n</style>\n` : "") + cuerpo;
+  const html = (hojaFinal ? `<style>\n${hojaFinal}\n</style>\n` : "") + cuerpo;
   const inventario = inventariar(cuerpo, fuentes, avisosDelCrudo(docCrudo));
-  inventario.arreglos = arreglos.hechos;
+  inventario.arreglos = [...arreglos.hechos, ...precios.hechos, ...barras.hechos];
   inventario.sueltos = arreglos.sueltos;
   /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
      `lib/landing-revision`. */
   inventario.hallazgos = revisarLanding(textoVisible(cuerpo), {
-    comprar: inventario.comprar, precio: inventario.precio, opiniones: inventario.opiniones, css: hoja,
-    escondidos, comprarEscondidos: escondidos.reduce((n, x) => n + x.botonesDePago, 0),
+    comprar: inventario.comprar, precio: inventario.precio, opiniones: inventario.opiniones, css: hojaFinal,
+    escondidos: perdidos, comprarEscondidos: perdidos.reduce((n, x) => n + x.botonesDePago, 0),
   });
 
   return { ok: true, landing: { html, bytes: Buffer.byteLength(html, "utf8"), titulo, inventario, quitado } };
@@ -325,7 +334,13 @@ function avisosDelCrudo(doc: Document): string[] {
      de arriba de estos archivos suele decir "<script>" en palabras). */
   for (const el of findAll((e) => e.name === "script" || e.name === "style", doc.children)) removeElement(el);
   const marcadores = new Set<string>();
-  for (const m of textContent(doc).matchAll(/\[([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{3,30})\]/g)) marcadores.add(m[0]);
+  /* Los del precio no se avisan: ésos los llenamos nosotros con el precio de
+     verdad (`llenarMarcadoresDePrecio`). Se avisan los que no sabemos qué
+     van: "[MARCA]", "[NOMBRE DEL EBOOK]". */
+  for (const m of textContent(doc).matchAll(/\[([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{3,30})\]/g)) {
+    if (/^\[\s*PRECIO(\s+ANTERIOR)?\s*\]$/i.test(m[0])) continue;
+    marcadores.add(m[0]);
+  }
   for (const m of marcadores) avisos.push(`Quedó un texto sin llenar: «${m}». Usá los huecos data-tienda="precio" y similares para que se llene solo.`);
   return avisos.slice(0, 8);
 }
@@ -420,9 +435,23 @@ function ponerTexto(el: Element, texto: string) {
 /* Si al lado del hueco ya escribió el "$" ("$<span data-tienda=precio>"),
    no se pone dos veces. */
 function precioSinSignoRepetido(el: Element, n: number): string {
-  const anterior = el.prev;
-  const textoPrevio = anterior && anterior.type === "text" ? (anterior as Text).data : "";
-  return /\$\s*$/.test(textoPrevio) ? plata(n).replace(/^\$\s?/, "") : plata(n);
+  return /\$\s*$/.test(textoDeAtras(el)) ? plata(n).replace(/^\$\s?/, "") : plata(n);
+}
+
+/**
+ * El texto que quedó justo antes del hueco. Si el hueco es el primer hijo de
+ * su elemento, el `$` puede estar un escalón más arriba —
+ * `$<span><span data-tienda="precio"></span></span>`— así que se sube
+ * mientras siga siendo el primero.
+ */
+function textoDeAtras(el: Element): string {
+  let nodo: ChildNode | null = el;
+  while (nodo) {
+    if (nodo.prev) return nodo.prev.type === "text" ? (nodo.prev as Text).data : "";
+    const padre: ChildNode | null = (nodo.parent as ChildNode | null) ?? null;
+    nodo = padre && padre.type === "tag" ? padre : null;
+  }
+  return "";
 }
 
 function ponerFoto(el: Element, nombre: string | null, d: DatosParaArmar) {

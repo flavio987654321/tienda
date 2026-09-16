@@ -33,8 +33,9 @@
  * Probado en `landing-propia.check.ts`.
  */
 
-import { Element, type ChildNode, type Document } from "domhandler";
+import { Element, Text, type ChildNode, type Document, type ParentNode } from "domhandler";
 import { findAll, textContent, appendChild, replaceElement, removeElement } from "domutils";
+import { MARCA_BARRA, CSS_DE_LA_BARRA } from "@/lib/landing-efectos";
 
 /** La marca que deja `limpiarLanding` en un `<button>` que pasó a `<span>`. */
 export const ERA_BOTON = "data-tienda-era";
@@ -238,6 +239,123 @@ export function arreglarLanding(doc: Document): Arreglos {
 /** Otro botón de los que quedaron sin programa. */
 function esOtroBoton(el: Element | null): boolean {
   return !!el && (el.attribs[ERA_BOTON] === "boton" || el.attribs["aria-expanded"] !== undefined);
+}
+
+/* ── Los "[PRECIO]" que llenaba el script ───────────────────────────────── */
+
+/**
+ * Estos archivos vienen con marcadores entre corchetes que un script llenaba
+ * desde su CONFIGURACIÓN: `$[PRECIO]`, `Antes $[PRECIO ANTERIOR]`. Sin el
+ * script quedan escritos así, a la vista de quien entra.
+ *
+ * Dos de esos los podemos llenar de verdad, porque el dato es nuestro: el
+ * precio y el precio tachado salen de Productos y se actualizan solos el día
+ * que los cambie. El marcador se reemplaza por el hueco `data solo-tienda`
+ * correspondiente, partiendo el texto donde estaba.
+ *
+ * Los demás (`[MARCA]`, `[NOMBRE DEL EBOOK]`) no se tocan: no sabemos qué
+ * van. Ésos se avisan.
+ */
+const MARCADOR_DE_PRECIO = /\[\s*precio\s*(anterior|viejo|de\s*lista|tachado)?\s*\]/i;
+
+export function llenarMarcadoresDePrecio(doc: Document): Arreglos {
+  let n = 0;
+  for (const nodo of [...findAll(() => true, doc.children)].flatMap((el) => el.children)) {
+    if (nodo.type !== "text") continue;
+    const texto = (nodo as Text).data;
+    const m = texto.match(MARCADOR_DE_PRECIO);
+    if (!m || m.index === undefined) continue;
+    const padre = nodo.parent;
+    if (!padre || !("children" in padre)) continue;
+    /* Si el elemento que lo contiene YA es un hueco, no se anida otro. */
+    if (padre.type === "tag" && (padre as Element).attribs["data-tienda"]) continue;
+
+    const cual = m[1] ? "precio-anterior" : "precio";
+    /* Si el marcador es TODO lo que dice su elemento —el caso normal:
+       `$<span data-afl-field="precio">[PRECIO]</span>`— el hueco es ese
+       elemento, no uno nuevo adentro. Así el `$` que está al lado sigue
+       siendo su vecino y no se escribe dos veces. */
+    if (padre.type === "tag" && padre.children.length === 1 && texto.trim() === m[0]) {
+      (padre as Element).attribs["data-tienda"] = cual;
+      (padre as Element).children = [];
+      n++;
+      continue;
+    }
+    const hueco = new Element("span", { "data-tienda": cual });
+    const antes = texto.slice(0, m.index);
+    const despues = texto.slice(m.index + m[0].length);
+    const piezas: ChildNode[] = [];
+    if (antes) piezas.push(new Text(antes));
+    piezas.push(hueco);
+    if (despues) piezas.push(new Text(despues));
+
+    const hijos = padre.children as ChildNode[];
+    const donde = hijos.indexOf(nodo);
+    hijos.splice(donde, 1, ...piezas);
+    reenlazar(padre, hijos);
+    n++;
+  }
+  if (!n) return { hechos: [], sueltos: [], css: "" };
+  return {
+    hechos: [
+      n === 1
+        ? "Llenamos 1 lugar del precio que había quedado escrito a mano («[PRECIO]»): ahora sale del precio de tu producto y se actualiza solo cuando lo cambies."
+        : `Llenamos ${n} lugares del precio que habían quedado escritos a mano («[PRECIO]»): ahora salen del precio de tu producto y se actualizan solos cuando lo cambies.`,
+    ],
+    sueltos: [],
+    css: "",
+  };
+}
+
+/* ── 4. La barra de comprar que aparecía al bajar ───────────────────────── */
+
+/**
+ * La barra pegada abajo con el precio y el botón: en celular es EL botón de
+ * comprar, el que te sigue por la página. Casi todas arrancan escondidas y
+ * las mostraba el script al pasar la portada, así que sin el script no
+ * aparece nunca — y no se nota, porque la página se ve bien.
+ *
+ * Se rescata sólo cuando se juntan las dos cosas, que es lo que la hace
+ * reconocible sin saber nada de esa landing:
+ *
+ *   1. el CSS la deja pegada a la pantalla (`position: fixed` o `sticky`), y
+ *   2. está escondida y nada en la página puede mostrarla
+ *      (`lib/landing-invisible` ya lo calculó).
+ *
+ * Marcarla alcanza: el script de `landing-efectos` la muestra al bajar una
+ * pantalla y la vuelve a esconder al subir, que es lo que hacía la de ella y
+ * lo que hacen todas. Lo que se fuerza es lo mínimo —ni la posición ni el
+ * tamaño, que son de su diseño— y `display` no se toca, para no romperle el
+ * "esta barra sólo en celular".
+ */
+export function rescatarBarras(escondidos: readonly { el: Element; texto: string }[], pegados: ReadonlySet<Element>): Arreglos {
+  const rescatadas = escondidos.filter((x) => pegados.has(x.el));
+  if (!rescatadas.length) return { hechos: [], sueltos: [], css: "" };
+  for (const x of rescatadas) x.el.attribs[MARCA_BARRA] = "";
+  return {
+    hechos: [
+      `Rescatamos ${rescatadas.length === 1 ? "la barra de comprar pegada" : `${rescatadas.length} barras pegadas`} abajo: ` +
+      `${rescatadas.length === 1 ? "la escondía" : "las escondía"} el CSS y ${rescatadas.length === 1 ? "la mostraba" : "las mostraba"} el programa que le sacamos. ` +
+      `Ahora ${rescatadas.length === 1 ? "aparece sola" : "aparecen solas"} cuando la persona baja, como en tu diseño.`,
+    ],
+    sueltos: [],
+    css: CSS_DE_LA_BARRA,
+  };
+}
+
+/**
+ * Después de partir un texto hay que volver a coser los vecinos: meter algo
+ * en la lista de hijos NO actualiza el `prev` y el `next` de cada uno.
+ *
+ * No es un detalle: `armarLanding` mira el texto de al lado para no escribir
+ * el signo `$` dos veces, y sin esto el precio salía "$$ 9.900".
+ */
+function reenlazar(padre: ParentNode, hijos: ChildNode[]) {
+  for (let i = 0; i < hijos.length; i++) {
+    hijos[i].parent = padre;
+    hijos[i].prev = hijos[i - 1] ?? null;
+    hijos[i].next = hijos[i + 1] ?? null;
+  }
 }
 
 /** El hermano de al lado que es una etiqueta (saltea los espacios en blanco). */

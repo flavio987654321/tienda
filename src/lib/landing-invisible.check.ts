@@ -56,13 +56,28 @@ check("INV-A", (() => {
 })(), "pestañas: las que no están activas no se ven nunca, y se cuentan las dos");
 
 check("INV-B", (() => {
-  /* Una barra que aparecía al bajar. Ojo: la misma regla dice `display:flex`
-     (muestra) y `transform:translateY(110%)` (esconde) — pasó en el archivo
-     de verdad, y contarla como "muestra" la dejaba pasar. */
+  /* La barra pegada abajo NO se avisa: se rescata. Ojo con la regla: dice
+     `display:flex` (muestra) y `transform:translateY(110%)` (esconde) en el
+     mismo renglón —pasó en el archivo de verdad— y contarla como "muestra"
+     la dejaba pasar sin verla. */
   const a = revisar(`<style>.barra{position:fixed;display:flex;transform:translateY(110%)}.barra.se-ve{transform:none}</style>
     <div class="barra"><span>Llevátelo hoy por menos plata</span></div>${COMPRAR}`);
-  return a.escondidos.length === 1 && /Llevátelo hoy/.test(a.escondidos[0].que);
-})(), "la barra que aparecía al bajar: esconder gana aunque la misma regla también muestre");
+  return a.escondidos.length === 0
+    && /data-tienda-barra/.test(a.landing.html)
+    && /\[data-tienda-barra\]\[data-tienda-visto\]/.test(a.landing.html)
+    && /Rescatamos la barra de comprar/.test(a.landing.inventario.arreglos.join(" "));
+})(), "la barra de comprar pegada abajo no se avisa: se marca y nuestro script la muestra al bajar");
+
+check("INV-B2", (() => {
+  /* Pegada pero visible desde el arranque: no hay nada que rescatar. Y
+     escondida pero NO pegada: eso no es una barra, se avisa. */
+  const a = revisar(`<style>.barra{position:fixed;bottom:0;display:flex}</style>
+    <div class="barra"><span>Llevátelo hoy por menos plata</span></div>${COMPRAR}`);
+  const b = revisar(`<style>.caja{opacity:0}.caja.abierta{opacity:1}</style>
+    <div class="caja"><span>Llevátelo hoy por menos plata</span></div>${COMPRAR}`);
+  return !/data-tienda-barra/.test(a.landing.html) && a.landing.inventario.arreglos.length === 0
+    && !/data-tienda-barra/.test(b.landing.html) && b.escondidos.length === 1;
+})(), "se rescata sólo lo que está pegado Y escondido: ni una barra que ya se ve, ni un bloque escondido que no es barra");
 
 check("INV-C", (() => {
   /* "Ver más" con max-height, y una ventana emergente con opacidad. */

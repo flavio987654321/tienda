@@ -43,8 +43,11 @@
 import { selectAll } from "css-select";
 import { Element, type Document } from "domhandler";
 import { textContent } from "domutils";
+import { MARCA_APARECE, MARCA_BARRA } from "@/lib/landing-efectos";
 
 export type Escondido = {
+  /** El elemento, para poder rescatarlo si se puede (`landing-arreglos`). */
+  el: Element;
   /** Lo que dice el bloque, recortado: para que lo reconozca. */
   texto: string;
   /** Cuántos botones de comprar quedaron adentro. Si no queda ninguno afuera, eso ya no es un aviso. */
@@ -182,6 +185,7 @@ export function loQueNoSePuedeVer(doc: Document, css: string): Escondido[] {
 
   return perdidos
     .map((el) => ({
+      el,
       texto: textContent(el).replace(/\s+/g, " ").trim(),
       botonesDePago: alcanzadosEn(el, '[data-tienda="comprar"]').length + (el.attribs["data-tienda"] === "comprar" ? 1 : 0),
     }))
@@ -190,10 +194,26 @@ export function loQueNoSePuedeVer(doc: Document, css: string): Escondido[] {
     .slice(0, TOPE);
 }
 
+/**
+ * Los que el CSS deja pegados a la pantalla. Es lo que hace falta para
+ * reconocer una barra de comprar de las que aparecen al bajar: si además
+ * está escondida para siempre, se puede rescatar. Ver `landing-arreglos`.
+ */
+export function losQueEstanPegados(doc: Document, css: string): Set<Element> {
+  const pegados = new Set<Element>();
+  for (const regla of leerReglas(css)) {
+    if (!/position\s*:\s*(fixed|sticky)/i.test(regla.cuerpo)) continue;
+    for (const sel of selectoresDe(regla.selector)) {
+      for (const el of alcanzados(sel, doc)) pegados.add(el);
+    }
+  }
+  return pegados;
+}
+
 /** Lo que mostramos nosotros: el acordeón que armamos y lo que aparece al bajar. */
 function nuestro(el: Element): boolean {
-  if (el.attribs["data-tienda-aparece"] !== undefined) return true;
-  return algunPadre(el, (p) => p.attribs["data-tienda-acordeon"] !== undefined || p.attribs["data-tienda-aparece"] !== undefined);
+  if (el.attribs[MARCA_APARECE] !== undefined || el.attribs[MARCA_BARRA] !== undefined) return true;
+  return algunPadre(el, (p) => p.attribs["data-tienda-acordeon"] !== undefined || p.attribs[MARCA_APARECE] !== undefined || p.attribs[MARCA_BARRA] !== undefined);
 }
 
 function algunPadre(el: Element, vale: (p: Element) => boolean): boolean {
