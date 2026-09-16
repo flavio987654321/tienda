@@ -159,3 +159,56 @@ export function nombreDeFoto(valor: string): string | null {
 export function claveDeLink(texto: string): string {
   return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
+
+/* ── Los links del pie ──────────────────────────────────────────────────── */
+
+/** Qué tiene que empezar un link para que lo guardemos. */
+const EMPIEZA_BIEN = /^(https?:\/\/|mailto:|tel:)/i;
+const UN_CORREO = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+const UN_TELEFONO = /^\+?[\d\s().-]{7,20}$/;
+/** `dominio.algo`, con o sin `www.`, con o sin lo que venga después. */
+const UN_DOMINIO = /^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+(:\d+)?([/?#].*)?$/i;
+
+/**
+ * Lo que escribió, acomodado.
+ *
+ * Nadie pega `https://`. Escribe `instagram.com/lacocinade`, o pega el correo
+ * de contacto, o el teléfono. Todo eso es lo que quiso decir, así que se
+ * acomoda solo en vez de rebotarlo — y si de verdad no es una dirección, el
+ * error explica qué falta, en castellano y al lado del campo.
+ *
+ * La misma función la usan la pantalla y el servidor: lo que ella ve que
+ * quedó escrito es exactamente lo que se guarda.
+ */
+export function acomodarEnlace(crudo: string): { url: string; error: string | null } {
+  const v = crudo.trim().replace(/\s+/g, " ");
+  if (!v) return { url: "", error: null };
+  if (v.length > 600) return { url: v, error: "Ese link es larguísimo. Revisá que sea sólo la dirección." };
+  if (/^[a-z][a-z0-9+.-]*:/i.test(v) && !EMPIEZA_BIEN.test(v)) {
+    return { url: v, error: "Eso no es una dirección de página. Pegá el link que empieza con https://" };
+  }
+  if (EMPIEZA_BIEN.test(v)) return revisarUrl(v);
+  if (UN_CORREO.test(v)) return { url: `mailto:${v}`, error: null };
+  /* Un @ sin dominio es el usuario de Instagram, no un link: lo más común. */
+  if (/^@[\w.]+$/.test(v)) return { url: v, error: "Ese es tu usuario, no el link. Entrá a tu perfil y pegá la dirección de arriba." };
+  if (UN_TELEFONO.test(v) && /\d{7}/.test(v.replace(/\D/g, ""))) return { url: `tel:${v.replace(/[\s().-]/g, "")}`, error: null };
+  if (UN_DOMINIO.test(v)) return revisarUrl(`https://${v.replace(/^\/+/, "")}`);
+  return { url: v, error: "Eso no parece una dirección. Pegá el link completo, el que te copia el navegador." };
+}
+
+function revisarUrl(v: string): { url: string; error: string | null } {
+  if (/^(mailto|tel):/i.test(v)) {
+    const resto = v.slice(v.indexOf(":") + 1).trim();
+    if (!resto) return { url: v, error: "Falta el correo o el número." };
+    return { url: v.slice(0, v.indexOf(":") + 1).toLowerCase() + resto.replace(/\s/g, ""), error: null };
+  }
+  try {
+    const u = new URL(v);
+    if (!u.hostname.includes(".") || u.hostname.endsWith(".")) {
+      return { url: v, error: "A esa dirección le falta el punto y el final (.com, .com.ar…)." };
+    }
+    return { url: u.toString(), error: null };
+  } catch {
+    return { url: v, error: "Esa dirección está mal escrita. Copiala de la barra del navegador." };
+  }
+}

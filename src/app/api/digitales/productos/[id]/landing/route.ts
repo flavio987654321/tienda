@@ -7,7 +7,7 @@ import { limpiarLanding } from "@/lib/landing-propia";
 import { tieneTraba } from "@/lib/landing-revision";
 import {
   leerEstadoDeLanding, leerInventario, LANDING_MAX_BYTES, LANDING_VERSIONES,
-  MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, type EstadoDeLanding,
+  MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, acomodarEnlace, type EstadoDeLanding,
 } from "@/lib/landing-estado";
 
 export const runtime = "nodejs";
@@ -169,9 +169,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (b.enlace !== undefined) {
     const { clave, url } = comoClaveYUrl(b.enlace);
     if (!clave) return NextResponse.json({ error: "No entendimos qué link es." }, { status: 400 });
-    if (url === null || url === "") delete nuevo.enlaces[clave];
-    else if (/^(https?:\/\/|mailto:|tel:)/i.test(url) && url.length <= 600) nuevo.enlaces[clave] = url;
-    else return NextResponse.json({ error: "Ese link tiene que empezar con https://, mailto: o tel:." }, { status: 400 });
+    /* El mismo acomodo que hace la pantalla: si escribió `instagram.com/ella`
+       se guarda con el `https://` puesto, y si no es una dirección vuelve el
+       mismo error que ya leyó al lado del campo. */
+    const r = acomodarEnlace(url ?? "");
+    if (url === null || r.url === "") delete nuevo.enlaces[clave];
+    else if (!r.error && r.url.length <= 600) nuevo.enlaces[clave] = r.url;
+    else return NextResponse.json({ error: r.error ?? "Ese link no vale." }, { status: 400 });
     if (Object.keys(nuevo.enlaces).length > MAX_ENLACES_DE_LANDING) {
       return NextResponse.json({ error: `Hasta ${MAX_ENLACES_DE_LANDING} links por landing.` }, { status: 409 });
     }

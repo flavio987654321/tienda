@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
-import { leerEstadoDeLanding, leerInventario, leerQuitado } from "@/lib/landing-estado";
+import { leerEstadoDeLanding, leerInventario, leerQuitado, LANDING_VERSIONES } from "@/lib/landing-estado";
 
 import BotonVolver from "../../../BotonVolver";
 import LandingClient, { type VersionEnPantalla } from "./LandingClient";
@@ -36,9 +36,12 @@ export default async function LandingPage({ params }: Props) {
         id: true, name: true, description: true, price: true, comparePrice: true, isActive: true,
         landingPropia: true,
         store: { select: { name: true } },
+        /* Las mismas que guarda el POST, ni una más: la lista no crece sin
+           fin, así que no hay páginas que pasar. Pedir 10 cuando se guardan
+           5 sólo servía para mostrar restos si alguna vez bajamos el número. */
         landingsDigital: {
           orderBy: { createdAt: "desc" },
-          take: 10,
+          take: LANDING_VERSIONES,
           select: { id: true, bytes: true, titulo: true, inventario: true, quitado: true, createdAt: true },
         },
       },

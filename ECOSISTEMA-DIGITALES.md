@@ -6953,3 +6953,70 @@ En el archivo de verdad: de 8 avisos a 2, y la sección "Cómo quedó" pasa de
 media pantalla a cuatro renglones.
 
 106 chequeos, tsc, eslint y build ok. Mirado a 1500.
+
+---
+
+## Los detalles del panel: el botón, los links y el historial — 16/09/26
+
+Tres cosas que salieron de probarlo de verdad.
+
+### El botón de subir no decía que estaba subiendo
+
+Cambiaba el ícono por una rueda girando y nada más: el texto seguía
+diciendo "Elegir el archivo". Un ícono de 16 px que cambia sin que cambie
+el texto no se nota, así que parecía colgado — y en la segunda subida,
+peor todavía, porque ya no hay novedad en la pantalla.
+
+Ahora el botón dice en qué anda: **"Subiendo el archivo…"** mientras viaja,
+**"Revisándolo…"** mientras aparecen los pasos del informe, y recién ahí
+vuelve a "Subir otra versión". Antes se liberaba apenas contestaba el
+servidor, o sea ANTES de terminar de contar lo que hizo.
+
+Y quedaba clickeable: el input está adentro de un `<label>`, y deshabilitar
+el input no apaga la etiqueta. Mientras trabaja se le sacan el clic y el
+hover a mano, y lleva `aria-busy`.
+
+### Los links del pie: lo que ella escribe, acomodado
+
+El campo pedía `https://…` y el servidor rebotaba todo lo demás. Nadie
+escribe el `https://`: escribe `instagram.com/lacocinade`, o pega el correo
+de contacto. Peor: el error salía arriba de todo, en la sección de subir, a
+media pantalla de distancia del campo donde estaba escribiendo.
+
+`acomodarEnlace` (en `landing-estado`, la usan la pantalla y el servidor):
+
+- `instagram.com/ella` → `https://instagram.com/ella`
+- `hola@lacocina.com` → `mailto:hola@lacocina.com`
+- `+54 9 11 2345-6789` → `tel:+5491123456789`
+- `@lacocinade` → error, porque es el usuario y no el link — y lo explica
+- `javascript:`, `data:` y cualquier otro esquema → error
+
+Lo que queda escrito en el campo es exactamente lo que se guarda: no hay
+sorpresa al recargar. El error va **abajo del campo**, en rojo; el visto
+verde y la rueda de guardando, adentro del campo a la derecha. Enter
+guarda (en el celular, tocar afuera para que salga el foco no se le ocurre
+a nadie). Y el ejemplo de fondo depende del link: el de Instagram muestra
+`instagram.com/tu-usuario`, el de Contacto `hola@tutienda.com`.
+
+Chequeos LNK-A a LNK-K. El último importa: todo lo que el acomodo deja
+pasar tiene que sobrevivir a `leerEstadoDeLanding`, que filtra por su
+cuenta — si no, el link se guardaría y desaparecería al recargar.
+
+De paso, la pantalla tenía su propia copia de `claveDeLink`. Ahora importa
+la del servidor: dos cuentas iguales escritas dos veces es un acento de
+distancia de guardar el link en un cajón que nadie lee.
+
+### El historial no se pagina: se borra solo
+
+Pregunta de Flavio: cuando sube el HTML muchas veces, ¿se arma una
+paginación? No, y no hace falta: el POST ya borra todo lo que pase de
+`LANDING_VERSIONES` (5) en la misma transacción, así que la lista nunca
+tiene más de cinco. La pantalla pedía 10 — ahora pide las 5 que se
+guardan — y lo dice: "Guardamos las últimas 5. Cuando subís una nueva, la
+más vieja se borra".
+
+También: dos subidas del mismo archivo se ven idénticas (misma fecha corta,
+mismo título, mismos KB). Si volvió a una vieja, la primera de la lista
+ahora dice "la última que subiste".
+
+106 chequeos, tsc, eslint y build ok. Mirado a 900 y 360.

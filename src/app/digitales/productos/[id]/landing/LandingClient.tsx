@@ -7,7 +7,10 @@ import {
   Loader2, Upload, Copy, Check, Monitor, Smartphone, ExternalLink, AlertTriangle, Image as IconoImagen, Lock, RotateCcw, Wrench,
 } from "lucide-react";
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
-import { LANDING_MAX_BYTES, leerInventario, leerQuitado } from "@/lib/landing-estado";
+/* `claveDeLink` y `acomodarEnlace` son las mismas del servidor, a propósito:
+   si la pantalla calculara la clave por su cuenta, un acento de más guardaría
+   el link en un cajón que nadie lee después. */
+import { LANDING_MAX_BYTES, LANDING_VERSIONES, acomodarEnlace, claveDeLink, leerInventario, leerQuitado } from "@/lib/landing-estado";
 import { instruccionesParaClaude, pedidoDeCambios, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
 import { tieneTraba } from "@/lib/landing-revision";
 import ConsejoDeUso from "../../../ConsejoDeUso";
@@ -49,7 +52,10 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [subiendo, setSubiendo] = useState(false);
+  /* En qué anda el botón de subir. No alcanza con cambiarle el ícono: si el
+     texto no cambia, no se nota que está haciendo algo. Y la segunda subida
+     tiene que avisar igual que la primera. */
+  const [subiendo, setSubiendo] = useState<"archivo" | "revisando" | null>(null);
   const [copiado, setCopiado] = useState<"pedido" | "cambios" | null>(null);
   /* El informe de la última subida: los pasos con lo que encontró cada uno,
      que aparecen de a uno para poder leerlos. Ver `pasosDeLaSubida`. */
@@ -58,6 +64,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const [pantalla, setPantalla] = useState<"pc" | "celular">("pc");
   const [enlaces, setEnlaces] = useState<Record<string, string>>(estado.enlaces);
   const [guardando, setGuardando] = useState<string | null>(null);
+  /* Lo que pasó con cada link, AL LADO del campo: qué está mal, o el visto
+     de que se guardó. El aviso de arriba queda a media pantalla de distancia
+     y ahí no lo lee nadie. */
+  const [linkMal, setLinkMal] = useState<Record<string, string>>({});
+  const [linkOk, setLinkOk] = useState<string | null>(null);
   const enVuelo = useRef(false);
   const archivo = useRef<HTMLInputElement>(null);
   /* Cambia con cada guardado: la previa se recarga sola al subir una versión
@@ -104,24 +115,27 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   async function subirArchivo(file: File) {
     if (!/\.html?$/i.test(file.name) && file.type !== "text/html") return setError("Tiene que ser el archivo .html que te dio Claude.");
     if (file.size > LANDING_MAX_BYTES) return setError(`El archivo pesa más de ${Math.round(LANDING_MAX_BYTES / 1000)} KB. Las fotos no van adentro del HTML: se suben aparte.`);
-    setSubiendo(true);
+    setSubiendo("archivo");
     setInforme(null);
+    const turno = ++subida.current;
     const html = await file.text().catch(() => "");
     const d = await pedir({ html }, "POST");
-    setSubiendo(false);
     if (archivo.current) archivo.current.value = "";
-    if (!d) return;
+    if (!d) { if (subida.current === turno) setSubiendo(null); return; }
     /* El trabajo tarda menos de lo que se tarda en leerlo: los pasos no son
        una barra de progreso (sería teatro), son el informe de lo que pasó,
-       que aparece de a uno para que se pueda seguir. */
+       que aparece de a uno para que se pueda seguir. Mientras aparecen, el
+       botón sigue ocupado: si volviera a estar libre antes de terminar de
+       contar lo que hizo, parecería que no pasó nada. */
     const pasos = pasosDeLaSubida(d, estado.fotos);
-    const turno = ++subida.current;
+    setSubiendo("revisando");
     setInforme({ pasos, visibles: 0 });
     for (let i = 1; i <= pasos.length; i++) {
       await new Promise((seguir) => window.setTimeout(seguir, 260));
       if (subida.current !== turno) return;
       setInforme({ pasos, visibles: i });
     }
+    setSubiendo(null);
   }
 
   async function subirFoto(clave: string, file: File) {
@@ -150,11 +164,27 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
     } catch { setError("No pudimos copiar. Seleccioná el texto a mano."); }
   }
 
+  /**
+   * Guardar el destino de un link, acomodándolo primero.
+   *
+   * Nadie escribe `https://`: escribe `instagram.com/ella`, o pega el correo
+   * de contacto. `acomodarEnlace` lo completa —y lo que queda escrito en el
+   * campo es exactamente lo que se guarda, para que no haya sorpresa—, y si
+   * de verdad no es una dirección lo dice ahí abajo y no manda nada.
+   */
   async function guardarEnlace(texto: string) {
     const clave = claveDeLink(texto);
+    const { url, error } = acomodarEnlace(enlaces[clave] ?? "");
+    setLinkMal((m) => ({ ...m, [clave]: error ?? "" }));
+    if (error) return;
+    setEnlaces((m) => ({ ...m, [clave]: url }));
+    if (url === (estado.enlaces[clave] ?? "")) return;
     setGuardando(clave);
-    await pedir({ enlace: { clave, url: enlaces[clave] ?? "" } });
+    const d = await pedir({ enlace: { clave, url } });
     setGuardando(null);
+    if (!d) return setLinkMal((m) => ({ ...m, [clave]: "No se pudo guardar. Probá de nuevo." }));
+    setLinkOk(clave);
+    window.setTimeout(() => setLinkOk((c) => (c === clave ? null : c)), 2500);
   }
 
   /* ── Sin plan ─────────────────────────────────────────────────────────── */
@@ -239,11 +269,27 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             falsos) y te decimos qué encontró.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors">
+            {/* Un `<label>` con el input adentro: deshabilitar el input no lo
+                apaga a él, así que mientras trabaja le sacamos el clic y el
+                hover a mano. */}
+            <label
+              aria-busy={subiendo !== null}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white transition-colors ${
+                subiendo
+                  ? "pointer-events-none cursor-wait bg-orange-400"
+                  : "cursor-pointer bg-orange-600 hover:bg-orange-500"
+              }`}
+            >
               {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {version ? "Subir otra versión" : "Elegir el archivo"}
+              {subiendo === "archivo"
+                ? "Subiendo el archivo…"
+                : subiendo === "revisando"
+                  ? "Revisándolo…"
+                  : version
+                    ? "Subir otra versión"
+                    : "Elegir el archivo"}
               <input
-                ref={archivo} type="file" accept=".html,text/html" className="hidden" disabled={subiendo}
+                ref={archivo} type="file" accept=".html,text/html" className="hidden" disabled={subiendo !== null}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) void subirArchivo(f); }}
               />
             </label>
@@ -435,21 +481,48 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
               <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
                 <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">5. Los links que quedaron sueltos</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  Pegá a dónde lleva cada uno. Los que dejes vacíos no se van a poder tocar.
+                  Pegá a dónde lleva cada uno. Los que dejes vacíos no se van a poder tocar. No hace falta
+                  escribir el <code className="rounded bg-gray-100 panel-oscuro:bg-gray-800 px-1">https://</code>:
+                  ponelo como te lo copia el navegador y lo acomodamos. También vale un correo o un teléfono.
                 </p>
                 <ul className="mt-3 space-y-2">
                   {inv.linksVacios.map((texto) => {
                     const clave = claveDeLink(texto);
+                    const mal = linkMal[clave];
                     return (
-                      <li key={clave} className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
-                        <span className="truncate text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300">{texto}</span>
-                        <input
-                          value={enlaces[clave] ?? ""}
-                          onChange={(e) => setEnlaces((m) => ({ ...m, [clave]: e.target.value }))}
-                          onBlur={() => { if ((enlaces[clave] ?? "") !== (estado.enlaces[clave] ?? "")) void guardarEnlace(texto); }}
-                          placeholder="https://…"
-                          className={CLASE_INPUT}
-                        />
+                      <li key={clave} className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
+                        <span className="truncate text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300 sm:mt-2.5">{texto}</span>
+                        <div className="min-w-0">
+                          <div className="relative">
+                            <input
+                              value={enlaces[clave] ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setEnlaces((m) => ({ ...m, [clave]: v }));
+                                if (mal) setLinkMal((m) => ({ ...m, [clave]: "" }));
+                              }}
+                              onBlur={() => void guardarEnlace(texto)}
+                              /* Enter guarda: en el celular el teclado tapa el
+                                 campo y tocar afuera para que salga el foco no
+                                 se le ocurre a nadie. */
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
+                              inputMode="url"
+                              autoComplete="off"
+                              spellCheck={false}
+                              aria-label={`A dónde lleva "${texto}"`}
+                              aria-invalid={!!mal}
+                              placeholder={ejemploDeLink(texto)}
+                              className={`${CLASE_INPUT} pr-9 ${mal ? "border-red-300 panel-oscuro:border-red-800 focus:border-red-400 focus:ring-red-100" : ""}`}
+                            />
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                              {guardando === clave ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" /> : null}
+                              {guardando !== clave && linkOk === clave ? <Check className="h-4 w-4 text-green-600" /> : null}
+                            </span>
+                          </div>
+                          {mal ? (
+                            <p role="alert" className="mt-1 text-[12px] font-medium text-red-600">{mal}</p>
+                          ) : null}
+                        </div>
                       </li>
                     );
                   })}
@@ -493,12 +566,21 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             {versiones.length > 1 && (
               <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
                 <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Lo que fuiste subiendo</p>
+                {/* No hay páginas que pasar ni lista que crezca sin fin: al
+                    subir una nueva, la más vieja se borra sola. Se dice acá
+                    para que no busque la de hace dos semanas. */}
+                <p className="mt-1 text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                  Guardamos las últimas {LANDING_VERSIONES}. Cuando subís una nueva, la más vieja se borra.
+                </p>
                 <ul className="mt-3 space-y-2">
-                  {versiones.map((v) => (
+                  {versiones.map((v, i) => (
                     <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 px-3 py-2">
                       <span className="text-[12.5px] text-gray-700 panel-oscuro:text-gray-300">
                         {new Date(v.cuando).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         {v.titulo ? ` · ${v.titulo}` : ""} · {Math.round(v.bytes / 1000)} KB
+                        {/* Dos subidas del mismo archivo se ven idénticas: si
+                            volvió a una vieja, esto le dice cuál era la última. */}
+                        {i === 0 && v.id !== estado.versionId ? " · la última que subiste" : ""}
                       </span>
                       {v.id === estado.versionId ? (
                         <span className="text-[12px] font-bold text-gray-400">La que estás usando</span>
@@ -607,15 +689,28 @@ function Renglon({ ok, bien, mal }: { ok: boolean; bien: string; mal: string }) 
   );
 }
 
+/**
+ * El ejemplo que va de fondo en cada link, según lo que diga el link.
+ *
+ * Un mismo "https://…" en los cinco campos no enseña nada; ver
+ * `instagram.com/tu-usuario` en el de Instagram sí: se entiende de una que
+ * ahí va la dirección del perfil y no el arroba.
+ */
+function ejemploDeLink(texto: string): string {
+  const t = texto.toLowerCase();
+  if (/instagram|insta\b/.test(t)) return "instagram.com/tu-usuario";
+  if (/facebook/.test(t)) return "facebook.com/tu-pagina";
+  if (/tiktok/.test(t)) return "tiktok.com/@tu-usuario";
+  if (/youtube/.test(t)) return "youtube.com/@tu-canal";
+  if (/whatsapp|wpp/.test(t)) return "+54 9 11 2345-6789";
+  if (/contacto|correo|mail|escrib|consulta|soporte|ayuda/.test(t)) return "hola@tutienda.com";
+  return "tutienda.com/la-pagina";
+}
+
 /** "portada-del-ebook" → "Portada del ebook". */
 function enPalabras(clave: string): string {
   const t = clave.replace(/-/g, " ");
   return t.charAt(0).toUpperCase() + t.slice(1);
-}
-
-/** La misma cuenta que hace el servidor: el navegador la necesita para saber qué link ya tiene destino. */
-function claveDeLink(texto: string): string {
-  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
 /** El recibo de lo que se sacó, en castellano. Nada si no se sacó nada. */

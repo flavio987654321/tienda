@@ -16,7 +16,7 @@ import {
   LANDING_MAX_BYTES,
 } from "./landing-propia";
 import { revisarLanding, tieneTraba } from "./landing-revision";
-import { leerInventario } from "./landing-estado";
+import { leerInventario, leerEstadoDeLanding, acomodarEnlace } from "./landing-estado";
 import { instruccionesParaClaude, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
 import { EFECTOS_DE_LA_LANDING, ESTILO_DE_LA_CAPSULA } from "./landing-efectos";
 
@@ -361,8 +361,9 @@ check("RUTA-D", /const crudo = await req\.text\(\)[\s\S]*?crudo\.length > CUERPO
 check("RUTA-E", /skip: LANDING_VERSIONES[\s\S]*?deleteMany/.test(ruta), "se guardan las últimas versiones y las viejas se borran");
 check("RUTA-F", /\.\.\.estado, versionId: creada\.id/.test(ruta) && !/fotos: \{\}/.test(ruta),
   "subir una versión nueva NO borra las fotos ni los links: se guardan por nombre de hueco");
-check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\//.test(ruta) && /\^\(https\?:\\\/\\\/\|mailto:\|tel:\)/.test(ruta),
-  "no se prende sin nada subido; una foto sólo por https y un link sólo http/mailto/tel");
+check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\//.test(ruta)
+  && /const r = acomodarEnlace\(url \?\? ""\);/.test(ruta) && /if \(!r\.error && r\.url\.length <= 600\)/.test(ruta),
+  "no se prende sin nada subido; una foto sólo por https, y el link pasa por el mismo acomodo que la pantalla");
 
 check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(publica),
   "la landing se muestra sólo si está prendida y el plan la incluye; si vence, vuelve la página de secciones");
@@ -392,6 +393,36 @@ check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(edit
 check("BASE-A", /landingPropia String\?/.test(schema) && /model LandingDigital \{/.test(schema)
   && /ADD COLUMN IF NOT EXISTS "landingPropia" TEXT/.test(migracion) && /CREATE TABLE IF NOT EXISTS "LandingDigital"/.test(migracion),
   "la columna, la tabla de versiones y la migración idempotente");
+
+/* ── Los links del pie: lo que ella escribe, acomodado ───────────────────── */
+
+const link = (s: string) => acomodarEnlace(s);
+
+check("LNK-A", link("instagram.com/lacocinade").url === "https://instagram.com/lacocinade" && link("instagram.com/lacocinade").error === null,
+  "un dominio pelado se guarda con https:// puesto: nadie escribe el https://");
+check("LNK-B", link("  www.mitienda.com.ar/terminos  ").url === "https://www.mitienda.com.ar/terminos",
+  "los espacios de más no rompen nada, y el www. anda igual");
+check("LNK-C", link("hola@lacocina.com").url === "mailto:hola@lacocina.com" && link("Hola@Lacocina.com").error === null,
+  "un correo se guarda como mailto:, que es lo que hace que el link abra el correo");
+check("LNK-D", link("+54 9 11 2345-6789").url === "tel:+5491123456789" && link("(011) 4567-8901").url === "tel:01145678901",
+  "un teléfono se guarda como tel:, con los espacios y los guiones sacados");
+check("LNK-E", link("javascript:alert(1)").error !== null && link("data:text/html,<b>x</b>").error !== null && link("vbscript:x").error !== null,
+  "nada que no sea http, https, mailto o tel: eso es un programa, no una dirección");
+check("LNK-F", /usuario/i.test(link("@lacocinade").error ?? ""), "un @usuario no es un link, y el error explica de dónde sacar el de verdad");
+check("LNK-G", link("").url === "" && link("   ").error === null, "vacío es vacío: borra el destino y no es un error");
+check("LNK-H", link("no tengo").error !== null && link("todavia-no").error !== null && link("...").error !== null,
+  "lo que no es una dirección se rebota con un error en castellano, no se guarda a medias");
+check("LNK-I", link("https://mitienda.com.ar/privacidad").url === "https://mitienda.com.ar/privacidad" && link("http://viejo.com.ar/x").error === null,
+  "lo que ya venía bien escrito pasa tal cual");
+check("LNK-J", link("mailto:").error !== null && link("https://sinpunto").error !== null,
+  "un mailto vacío y un dominio sin punto no pasan");
+/* Lo guardado se vuelve a leer con `leerEstadoDeLanding`, que filtra por su
+   cuenta: si el acomodo devolviera algo que ese filtro rechaza, el link se
+   guardaría y desaparecería al recargar. */
+check("LNK-K", ["instagram.com/x", "hola@x.com", "11 2345-6789", "https://x.com.ar"].every((s) => {
+  const u = acomodarEnlace(s).url;
+  return leerEstadoDeLanding(JSON.stringify({ enlaces: { contacto: u } })).enlaces.contacto === u;
+}), "todo lo que el acomodo deja pasar sobrevive a la lectura de la base");
 
 /* ── Las dependencias ────────────────────────────────────────────────────── */
 
