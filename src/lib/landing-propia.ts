@@ -323,12 +323,17 @@ function hueco(el: Element): string {
  */
 function avisosDelCrudo(doc: Document): string[] {
   const avisos: string[] = [];
+  const contadores = new Set<string>();
   const recortar = (t: string) => { const l = t.replace(/\s+/g, " ").trim(); return l.length > 70 ? `${l.slice(0, 67)}…` : l; };
   for (const el of findAll((e) => Object.keys(e.attribs).some((a) => /timer|countdown|cuenta-?regresiva/i.test(a)), doc.children)) {
     const padre = el.parent && el.parent.type === "tag" ? textContent(el.parent).replace(/\s+/g, " ").trim() : "";
     const t = recortar(padre && padre.length <= 120 ? padre : textContent(el));
-    const aviso = `Quedó un contador escrito: «${t}». Sin su script no corre, y sigue siendo mentira: pedile a Claude que lo saque o que deje el hueco data-tienda="reloj".`;
-    if (t && !avisos.includes(aviso)) avisos.push(aviso);
+    /* Dos veces el mismo contador con un emoji de diferencia es un aviso, no
+       dos: se compara por las letras. */
+    const huella = t.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!t || contadores.has(huella)) continue;
+    contadores.add(huella);
+    avisos.push(`Quedó un contador escrito: «${t}». Sin su script no corre, y sigue siendo mentira: pedile a Claude que lo saque o que deje el hueco data-tienda="reloj".`);
   }
   /* Sobre el texto visible: sin scripts, sin estilos y sin comentarios (el
      de arriba de estos archivos suele decir "<script>" en palabras). */
@@ -341,8 +346,17 @@ function avisosDelCrudo(doc: Document): string[] {
     if (/^\[\s*PRECIO(\s+ANTERIOR)?\s*\]$/i.test(m[0])) continue;
     marcadores.add(m[0]);
   }
-  for (const m of marcadores) avisos.push(`Quedó un texto sin llenar: «${m}». Usá los huecos data-tienda="precio" y similares para que se llene solo.`);
-  return avisos.slice(0, 8);
+  /* Todos juntos en un renglón: uno por marcador eran siete avisos que decían
+     lo mismo y estiraban la pantalla sin agregar nada. */
+  if (marcadores.size) {
+    const lista = [...marcadores].slice(0, 6).map((m) => `«${m}»`).join(", ");
+    avisos.push(
+      marcadores.size === 1
+        ? `Quedó un texto sin llenar: ${lista}. Lo llenaba el programa que le sacamos, así que cambialo por lo que va.`
+        : `Quedaron ${marcadores.size} textos sin llenar: ${lista}${marcadores.size > 6 ? " y más" : ""}. Los llenaba el programa que le sacamos, así que cambialos por lo que va.`,
+    );
+  }
+  return avisos.slice(0, 6);
 }
 
 function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): InventarioDeLanding {

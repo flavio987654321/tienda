@@ -181,9 +181,15 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
 
      `grid-cols-1` y los `min-w-0` no son decoración: sin ellos una columna
      mide lo más ancho que tenga adentro y empuja a la otra afuera de la
-     pantalla. Es el mismo cuidado que ya estaba escrito en el editor. */
+     pantalla. Es el mismo cuidado que ya estaba escrito en el editor.
+
+     ⚠️ Y NADA de `items-start`: con eso la columna de la derecha mide lo
+     mismo que la previa, y algo pegado (`sticky`) sólo puede viajar adentro
+     de su propia caja. O sea que se iba para arriba apenas bajabas y dejaba
+     media pantalla vacía. Estirándose hasta el alto de la otra columna, la
+     previa te acompaña hasta abajo de todo. */
   return (
-    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
       <div className="min-w-0 space-y-4">
         {/* ── 1. El pedido para Claude ──────────────────────────────────────── */}
         <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
@@ -547,7 +553,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
               key={`${pantalla}-${refresco}`}
               src={`/p/${productoId}?landing=previa`}
               title="Vista previa de tu diseño"
-              className={`w-full rounded-2xl bg-white ${pantalla === "celular" ? "h-[76vh] min-h-[560px]" : "h-[76vh] min-h-[520px]"}`}
+              className={`w-full rounded-2xl bg-white ${pantalla === "celular" ? "h-[calc(100vh-11rem)] min-h-[560px]" : "h-[calc(100vh-11rem)] min-h-[520px]"}`}
               /* Deja correr JavaScript —el nuestro: el que hace bajar suave
                  y aparecer al bajar— pero NO le da nuestro origen: adentro del
                  marco no hay cookies ni sesión, y no puede sacar la pestaña de

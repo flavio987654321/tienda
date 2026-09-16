@@ -6920,3 +6920,36 @@ documentado en el editor: sin ellos una columna mide lo más ancho que tenga
 adentro y empuja a la otra afuera de la pantalla.
 
 Mirado a 1500, 1280, 768 y 360. 106 chequeos, tsc, eslint y build ok.
+
+---
+
+## El `items-start` que rompía la previa pegada — 16/09/26
+
+El ancho completo salió mal: Flavio mandó la captura y "quedó peor, abajo de
+la previa queda un espacio vacío". Tenía razón y la culpa era de una clase.
+
+**`items-start` en la grilla.** Con eso cada columna mide lo que mide su
+contenido, así que la de la derecha medía exactamente lo que la previa. Y
+algo `sticky` sólo puede viajar adentro de su propia caja: sin lugar para
+viajar, se iba para arriba apenas bajabas y dejaba media pantalla en blanco.
+El editor de nuestra página no lo tiene —las columnas se estiran a la más
+alta— y por eso ahí siempre funcionó.
+
+Sacado. Verificado en Chromium a 1500×900: la previa se clava a 16 px del
+borde y sigue ahí a los 800, 2000 y 3500 px de scroll. Y pasa a
+`calc(100vh - 11rem)`, o sea que ocupa la pantalla.
+
+### Y la columna de la izquierda, más corta
+
+Lo otro que la hacía ver mal era el largo. Dos avisos repetían lo mismo
+siete veces:
+
+- los "[MARCA]", "[NOMBRE DEL EBOOK]"… eran un renglón cada uno, con la
+  misma explicación repetida. Ahora es **uno solo** con la lista adentro.
+- el mismo contador aparecía dos veces porque un texto tenía un emoji y dos
+  puntos de diferencia. Se compara por las letras, sin símbolos.
+
+En el archivo de verdad: de 8 avisos a 2, y la sección "Cómo quedó" pasa de
+media pantalla a cuatro renglones.
+
+106 chequeos, tsc, eslint y build ok. Mirado a 1500.
