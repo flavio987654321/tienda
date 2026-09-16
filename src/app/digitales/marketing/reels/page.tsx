@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { buscarVideos } from "@/lib/videos-pexels";
 import BotonVolver from "../../BotonVolver";
 import ReelsClient from "./ReelsClient";
+import ProductoElegido from "../ProductoElegido";
+import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 
 /**
  * Contenido para reels.
@@ -33,22 +35,22 @@ import ReelsClient from "./ReelsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReelsPage() {
+export default async function ReelsPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
+  const { p } = await searchParams;
 
-  /* El producto principal más nuevo: es de lo que la persona está hablando
-     ahora. `rolDigital` decide, no "tiene archivo" — un producto recién creado
+  /* Los principales de la cuenta, para elegir de cuál buscar material. Sin
+     elección, el más nuevo: es de lo que la persona está hablando ahora.
+     `rolDigital` decide, no "tiene archivo" — un producto recién creado
      todavía no lo tiene y es igual de válido para buscarle material. */
-  const producto = await prisma.product.findFirst({
-    where: {
-      deletedAt: null,
-      rolDigital: "PRINCIPAL",
-      store: { ownerId: user.id },
-    },
+  const productos = await prisma.product.findMany({
+    where: { deletedAt: null, rolDigital: "PRINCIPAL", store: { ownerId: user.id } },
     orderBy: { createdAt: "desc" },
-    select: { name: true },
+    take: MAX_PRODUCTOS_DIGITALES_CREADOS,
+    select: { id: true, name: true },
   });
+  const producto = productos.find((x) => x.id === p) ?? productos[0] ?? null;
 
   /* ⚠️ Se recorta a lo que el banco entiende. Una búsqueda de doce palabras
      trae cualquier cosa; ver el encabezado de `videos-pexels`. Quedan las
@@ -80,7 +82,12 @@ export default async function ReelsPage() {
         </p>
       </div>
 
+      <div className="mb-4">
+        <ProductoElegido productos={productos} elegidoId={producto?.id ?? null} href={(id) => `/digitales/marketing/reels?p=${id}`} />
+      </div>
+
       <ReelsClient
+        key={producto?.id ?? "ninguno"}
         busquedaInicial={busqueda}
         deQueProducto={producto?.name ?? ""}
         videosIniciales={primera.videos}

@@ -6300,3 +6300,46 @@ Dirección de un producto vuelve a Productos. `BotonVolver` ya aceptaba
 
 `oferta-salida.check.ts` (37). 104 chequeos, tsc, eslint y build ok.
 Mirado en 1500 y 360.
+
+---
+
+## Marketing es por producto, y tiene que verse — 16/09/26
+
+Flavio, con un solo producto cargado: "¿cómo selecciono otro producto?
+Estamos haciendo todo como si fuera un producto solo, pero en Pro hay 5".
+
+### Qué había
+
+Casi todo YA era por producto, pero no se veía:
+
+| Pantalla | Cómo se elige el producto |
+|---|---|
+| Enlaces | fichas arriba — **sólo aparecían con 2+ productos** |
+| Cupones | cada cupón dice "todos" o uno (select del formulario) |
+| Mail a compradores | "a quienes compraron X" o a todos |
+| Oferta de salida | fichas arriba — **sólo con 2+** |
+| Píxel | por producto, en Productos → Dirección (`MedicionDelProducto`) |
+| Reels | **tomaba el producto más nuevo y nada más** ❌ |
+
+Con un producto, Enlaces y Oferta de salida no decían de qué producto
+hablaban: parecía "de la cuenta", y al cargar el segundo la persona no iba
+a saber que lo configurado era del primero.
+
+### Qué se hizo
+
+- `marketing/ProductoElegido.tsx`: la fila "Producto" con las fichas, que
+  **se muestra aunque haya uno** (marcado, más "Cuando cargues otro,
+  aparece acá"). La usan Enlaces (estado), Oferta de salida (`?p=`) y
+  ahora **Reels** (`?p=`, con `key` para que la búsqueda arranque del
+  producto elegido).
+- La previa de la oferta de salida tiene **Computadora / Celular**, como
+  la de ellos: en celular es un marco de 360 px con el cartel apoyado
+  abajo, que es como sube de verdad. Mismo componente, cambia el marco.
+- La foto del cartel es la **portada del producto** (`Product.images`), la
+  misma de la página de venta y del pago. El de Hamburguesas no tiene
+  ninguna (ni en `images` ni en la portada de su página, y no es un ebook
+  armado con IA —ese sí se pone la tapa solo—): hay que subirla en
+  Productos, y la pantalla lo dice con el link.
+
+104 chequeos, tsc, eslint y build ok. Mirado en 1500 y 360, en
+computadora y celular.

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ArrowRight, Check, DoorOpen } from "lucide-react";
+import { Loader2, Lock, ArrowRight, Check, DoorOpen, Monitor, Smartphone } from "lucide-react";
 import {
   validarOfertaSalida, textoDeHoras, esPlazoCorto, HORAS_DE_OFERTA, HORAS_MINIMAS_DEL_MAIL, PORCENTAJE_MINIMO, PORCENTAJE_MAXIMO_SALIDA,
   TITULO_MAX, TEXTO_MAX, BOTON_MAX, type OfertaSalida, type HorasDeOferta,
@@ -12,6 +12,7 @@ import { descuentoDe } from "@/lib/cupones-digitales";
 import { CONSEJO_DE_SALIDA } from "@/lib/plantillas-marketing";
 import CartelDeSalida, { type ParteDelCartel } from "@/components/digitales/CartelDeSalida";
 import ConsejoDeUso from "../../ConsejoDeUso";
+import ProductoElegido from "../ProductoElegido";
 
 export type ProductoDeSalida = {
   id: string;
@@ -54,6 +55,9 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
   const refTexto = useRef<HTMLTextAreaElement>(null);
   const refBoton = useRef<HTMLInputElement>(null);
   const [resaltado, setResaltado] = useState<ParteDelCartel | null>(null);
+  /* La previa en computadora (modal en el medio) o en celular (sube desde
+     abajo). Es el mismo cartel: cambia el marco y dónde se apoya. */
+  const [pantalla, setPantalla] = useState<"pc" | "celular">("pc");
   function irA(parte: ParteDelCartel) {
     const el = (parte === "titulo" ? refTitulo : parte === "texto" ? refTexto : refBoton).current;
     if (!el) return;
@@ -125,26 +129,12 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
 
   return (
     <div className="space-y-4">
-      {/* ── Qué producto ──────────────────────────────────────────────────── */}
-      {productos.length > 1 && (
-        <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto">
-          <div className="flex gap-2 w-max sm:w-auto sm:flex-wrap">
-            {productos.map((p) => (
-              <Link
-                key={p.id}
-                href={`/digitales/marketing/salida?p=${p.id}`}
-                className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors ${
-                  p.id === elegido.id
-                    ? "bg-gray-900 panel-oscuro:bg-gray-100 text-white panel-oscuro:text-gray-900"
-                    : "border border-gray-200 panel-oscuro:border-gray-700 text-gray-600 panel-oscuro:text-gray-400 hover:border-gray-400"
-                }`}
-              >
-                {p.name}{p.oferta.activa ? " · prendida" : ""}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ── Qué producto: la oferta es de UNO. ─────────────────────────── */}
+      <ProductoElegido
+        productos={productos.map((p) => ({ id: p.id, name: p.name, nota: p.oferta.activa ? "prendida" : undefined }))}
+        elegidoId={elegido.id}
+        href={(id) => `/digitales/marketing/salida?p=${id}`}
+      />
 
       {!esPago && (
         <div className="rounded-3xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 p-5">
@@ -264,22 +254,51 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
 
         {/* ── Cómo se ve ────────────────────────────────────────────────── */}
         <div className="lg:sticky lg:top-4">
-          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-400">
-            <DoorOpen className="h-3.5 w-3.5" /> Así lo ve quien se va
-          </p>
-          {/* Tal cual el checkout: el fondo oscurecido y el cartel encima, con
-              los colores y la letra de la página de este producto. Tocar una
-              parte lleva al campo. */}
-          <div
-            style={estilo.vars as React.CSSProperties}
-            className={`${estilo.fuentes} flex items-center justify-center rounded-3xl bg-[color:var(--pv-fondo)] p-3 antialiased text-[color:var(--pv-tinta)] sm:p-5`}
-          >
-            <div className="flex w-full items-center justify-center rounded-2xl bg-black/55 p-3 sm:p-4">
-              <CartelDeSalida c={cartel} tarjeta={estilo.tarjeta} botonRedondo={estilo.boton} onCerrar={() => {}} alTocar={esPago ? irA : undefined} />
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-400">
+              <DoorOpen className="h-3.5 w-3.5" /> Así lo ve quien se va
+            </p>
+            <div role="tablist" aria-label="Dónde se ve" className="inline-flex rounded-full border border-gray-200 panel-oscuro:border-gray-700 p-0.5">
+              {([["pc", Monitor, "Computadora"], ["celular", Smartphone, "Celular"]] as const).map(([clave, Icono, texto]) => (
+                <button
+                  key={clave} type="button" role="tab" aria-selected={pantalla === clave} onClick={() => setPantalla(clave)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold transition-colors ${pantalla === clave ? "bg-gray-900 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900" : "text-gray-500 hover:text-gray-800 panel-oscuro:hover:text-gray-200"}`}
+                >
+                  <Icono className="h-3.5 w-3.5" /> {texto}
+                </button>
+              ))}
             </div>
           </div>
+          {/* Tal cual el checkout: el fondo oscurecido y el cartel encima, con
+              los colores y la letra de la página de este producto. En
+              computadora, en el medio; en celular, apoyado abajo dentro de un
+              marco de 360 px. Tocar una parte lleva al campo. */}
+          {pantalla === "pc" ? (
+            <div
+              style={estilo.vars as React.CSSProperties}
+              className={`${estilo.fuentes} flex items-center justify-center rounded-3xl bg-[color:var(--pv-fondo)] p-3 antialiased text-[color:var(--pv-tinta)] sm:p-5`}
+            >
+              <div className="flex w-full items-center justify-center rounded-2xl bg-black/55 p-3 sm:p-4">
+                <CartelDeSalida c={cartel} tarjeta={estilo.tarjeta} botonRedondo={estilo.boton} onCerrar={() => {}} alTocar={esPago ? irA : undefined} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center rounded-3xl bg-gray-100 panel-oscuro:bg-gray-800 p-3 sm:p-5">
+              <div
+                style={estilo.vars as React.CSSProperties}
+                className={`${estilo.fuentes} w-full max-w-[360px] overflow-hidden rounded-[2rem] border-[6px] border-gray-900 bg-[color:var(--pv-fondo)] antialiased text-[color:var(--pv-tinta)] shadow-xl`}
+              >
+                <div className="flex min-h-[560px] flex-col justify-end bg-black/55 px-2 pb-2 pt-16">
+                  <CartelDeSalida c={cartel} tarjeta={estilo.tarjeta} botonRedondo={estilo.boton} onCerrar={() => {}} alTocar={esPago ? irA : undefined} />
+                </div>
+              </div>
+            </div>
+          )}
           <p className="mt-2 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-            En la computadora aparece así, en el medio del pago, con el fondo oscurecido. En el celular sube desde abajo. Tocá el título, el texto o el botón para editarlos.
+            {pantalla === "pc"
+              ? "En la computadora aparece en el medio del pago, con el fondo oscurecido, cuando el mouse se va para arriba a cerrar la pestaña."
+              : "En el celular sube desde abajo cuando la persona aprieta atrás. Si es más alto que la pantalla, se desplaza."}
+            {" "}Tocá el título, el texto o el botón para editarlos.
           </p>
           {cartel.imagen === null && (
             <p className="mt-1.5 text-[12px] leading-relaxed text-amber-700 panel-oscuro:text-amber-300">

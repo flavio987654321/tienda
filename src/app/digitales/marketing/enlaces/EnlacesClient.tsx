@@ -8,6 +8,7 @@ import { PARAMETROS_PARA_META } from "@/lib/utm-digital";
 import BotonCopiar from "../../ventas/BotonCopiar";
 import { CONSEJO_DE_ENLACES } from "@/lib/plantillas-marketing";
 import ConsejoDeUso from "../../ConsejoDeUso";
+import ProductoElegido from "../ProductoElegido";
 
 /**
  * La lista de canales con su link. Sin dirección: es una pantalla de copiar
@@ -43,29 +44,9 @@ export default function EnlacesClient({ productos, dominioPlataforma, appUrl }: 
   return (
     <div className="space-y-4">
       {/* ── El producto ─────────────────────────────────────────────────────
-          Sólo con más de uno. Cada producto tiene su dirección, así que el
-          link cambia entero, no sólo la etiqueta. */}
-      {productos.length > 1 && (
-        <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto">
-          <div className="flex gap-2 w-max sm:w-auto sm:flex-wrap">
-            {productos.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setElegido(p.id)}
-                aria-pressed={p.id === elegido}
-                className={`shrink-0 max-w-[200px] truncate rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors ${
-                  p.id === elegido
-                    ? "bg-gray-900 panel-oscuro:bg-gray-100 text-white panel-oscuro:text-gray-900"
-                    : "bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-800 text-gray-600 panel-oscuro:text-gray-400 hover:border-orange-300"
-                }`}
-              >
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+          Cada producto tiene su dirección, así que el link cambia entero, no
+          sólo la etiqueta. Se muestra aunque haya uno: ver `ProductoElegido`. */}
+      <ProductoElegido productos={productos} elegidoId={elegido} onElegir={setElegido} />
 
       {/* ── Sin publicar: se avisa arriba de todo ─────────────────────────── */}
       {!producto.isActive && (
