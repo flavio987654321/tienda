@@ -6399,3 +6399,89 @@ Lo que faltaba, y se hizo:
   está mandando no avisa.
 
 104 chequeos, tsc, eslint y build ok.
+
+---
+
+## La landing propia: "tu diseño, nuestro enchufe" — 16/09/26
+
+### De dónde sale
+
+Una amiga de Flavio, en Shopify, no quiso el diseño del tema: le pidió a
+Claude una landing en HTML y la pegó en Shopify. Flavio trajo el archivo
+(`landing-que-antojo.html`, 84 KB, 15 secciones). Lo que trae:
+
+- Un diseño muy bueno y texto escrito con los datos reales del ebook.
+- Un bloque `CONFIGURACIÓN` adentro de un `<script>` donde ELLA tiene que
+  pegar a mano: el precio ("9.900"), el precio tachado, la URL del
+  checkout y las URLs de 13 fotos subidas a Shopify. Sin eso la landing
+  es un círculo vacío que dice "Cargá la URL en imagenes.portada".
+- Un contador de 15 minutos con `reiniciarContador: true`.
+- Links del pie en `href="#"`.
+
+O sea: Claude escribe la fachada y el enchufe (fotos, precio, botón) lo
+hace ella en código. Ahí es donde se traba todo el mundo.
+
+### La decisión
+
+**Se acepta su HTML tal cual —el diseño es suyo— y el enchufe lo ponemos
+nosotros.** No se vuelcan sus textos en nuestras secciones (le devolvería
+justo lo que no quería). Y no se hace un editor de textos sobre su HTML:
+el diseño se itera en Claude hasta que le guste; lo que tiene que ser
+gratis es **volver a subir** (las fotos ya cargadas se reconectan por
+nombre de hueco).
+
+Reemplaza sólo la página de venta. El pago (`/pagar`), los cupones, la
+oferta de salida, el píxel, las visitas, los enlaces con campaña y el
+mail de carrito siguen exactamente igual: están afuera de lo que se
+reemplaza (`<VisitaDigital>` y `<StoreTrackingScripts>` rodean el cuerpo).
+
+Verificado antes de empezar:
+- **Cookies**: la sesión es de Supabase, sin `domain`, o sea sólo del
+  host del panel; las páginas de producto viven en subdominio o dominio
+  propio. Igual no importa: no corre NADA de JavaScript ajeno.
+- **Shadow DOM declarativo** (`<template shadowrootmode="open">`): su CSS
+  no toca lo nuestro ni al revés. Probado en Chromium con las dos
+  landings. Un `@font-face` adentro del shadow no registra la fuente, así
+  que los `<link>` de Google Fonts se sacan y van arriba, en la página.
+- **Que Claude cumple las reglas**: se escribieron las instrucciones y se
+  generó una landing con ellas; entró limpia al primer intento con todo
+  conectado (precio, 2 botones, 4 fotos, reloj, opiniones, aviso).
+
+### Lo hecho en este paso (`lib/landing-propia`, `lib/landing-instrucciones`)
+
+- `limpiarLanding(html)`: saca scripts, eventos, `javascript:`, iframes,
+  formularios, `@import`, `expression/behavior`, `data:`; convierte
+  `<button data-tienda="comprar">` en link y cualquier otro botón en texto
+  (no se pierde la pregunta del acordeón); sólo checkbox/radio; `<use>`
+  sólo a `#símbolo`; hojas externas sólo fonts.googleapis.com. Devuelve el
+  **inventario** (cuántos precio/comprar, qué fotos, qué bloques vivos,
+  links vacíos, imágenes externas) y el **recibo** de lo quitado. Y
+  **avisos** para lo que quedó escrito y no podemos arreglar: el contador
+  ("«Precio promocional reservado por 15:00»: sin su script no corre y
+  sigue siendo mentira") y los `[PRECIO]` sin llenar. Tope 500 KB.
+- `armarLanding(html, datos)`: llena `precio` (sin repetir el `$` si ya
+  estaba al lado), `precio-anterior` (o lo saca), `nombre`, `comprar`
+  (href al pago), `foto:x` (`<img>` adentro del contenedor, conservando
+  su caja y su clase; sin foto se saca, o se marca en la previa), los
+  bloques vivos (HTML nuestro adentro, o se saca el hueco), y los links
+  vacíos por su texto (`claveDeLink`).
+- `instruccionesParaClaude(producto)`: el texto que se copia con un
+  botón, con los datos reales del producto, las 10 reglas y el lugar para
+  el pedido de diseño. Pide sin scripts, sin contadores, sin opiniones
+  inventadas, acordeón nativo, fotos por nombre, 360 px, castellano de acá.
+- `landing-propia.check.ts` (28). `htmlparser2/domhandler/domutils/
+  dom-serializer` pasan a dependencias declaradas (ya venían con
+  sanitize-html).
+
+### Lo que sigue
+
+1. Base: `LandingDigital` (versiones por producto) + `Product.landingPropia`
+   JSON (activa, versión, fotos por nombre, links).
+2. Rutas: subir/limpiar, activar, versiones, fotos, links.
+3. La página pública: si hay landing activa, `armarLanding` adentro del
+   shadow, con nuestros bloques; el resto de la página igual.
+4. El panel: Productos → Página → interruptor "Mi propio diseño", botón de
+   instrucciones, subir, lista de control, fotos que faltan, previa
+   PC/celular, versiones.
+5. Después: precio de bienvenida con reloj real (reusa la oferta de
+   salida) y opiniones verificadas por mail (reusa `PublicReview`).
