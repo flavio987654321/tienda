@@ -38,6 +38,12 @@ export type Hallazgo = {
   que: string;
   /** Qué hacer. Vacío cuando no hay nada que hacer más que saberlo. */
   arreglo: string;
+  /**
+   * Lo mismo, pero escrito PARA Claude: entra en el mensaje que la
+   * vendedora copia y le pega para que regenere el archivo. Vacío cuando
+   * no hay nada que pedirle (una garantía, por ejemplo, la decide ella).
+   */
+  pedido: string;
 };
 
 /** Lo que mira la revisión, además del texto. */
@@ -77,6 +83,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "traba",
       que: "No hay ningún botón que lleve al pago.",
       arreglo: 'Pedile a Claude que marque los botones de comprar con data-tienda="comprar". Sin eso, quien quiera comprarte no tiene por dónde.',
+      pedido: "Marcá cada botón de comprar así: <a data-tienda=\"comprar\" class=\"tu-clase\">Tu texto</a>. El destino del link lo pone TiendaApps solo; no le pongas href.",
     });
   }
 
@@ -89,6 +96,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: `Dice que quedan pocos lugares o cupos ${loQueDice(/\b(quedan|últim[oa]s)\b[^.]{0,40}/i)}.`,
       arreglo: "Un archivo digital no se agota, así que eso no se puede sostener si alguien pregunta. Si querés apurar la compra, usá la oferta de salida: el plazo es de verdad y el servidor lo hace cumplir.",
+      pedido: "Sacá las frases de escasez (\"quedan pocos cupos\", \"últimas unidades\", \"stock limitado\"): es un producto digital y no se agota.",
     });
   }
   if (hay(/\b\d{1,2}:\d{2}\b/) || hay(/termina en \d|se acaba en \d|cuenta regresiva|reservad[oa] por/i)) {
@@ -96,6 +104,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: "Quedó escrito un reloj o una cuenta regresiva.",
       arreglo: 'Sin su programa no corre, así que se queda clavado. El reloj de verdad lo ponemos nosotros: pedile a Claude que deje el hueco data-tienda="reloj".',
+      pedido: "Sacá el contador o reloj escrito. Si querés uno, dejá en su lugar un contenedor vacío <div data-tienda=\"reloj\"></div>: TiendaApps pone ahí un reloj de verdad.",
     });
   }
 
@@ -106,6 +115,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: "Parece traer opiniones o testimonios escritos adentro de la página.",
       arreglo: 'Si te los dijeron de verdad, podés dejarlos (el que responde por ellos sos vos). Si los inventó Claude, sacalos: son publicidad engañosa. Lo mejor es el hueco data-tienda="opiniones": ahí ponemos las de gente que te compró, con el sello de compra verificada.',
+      pedido: "Sacá los testimonios, nombres de clientes y estrellas que estén escritos en el archivo, y dejá en su lugar un contenedor vacío <div data-tienda=\"opiniones\"></div>.",
     });
   }
 
@@ -115,6 +125,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: `Dice una cantidad de gente o de ventas ${loQueDice(/[+]?\s?\d{2,}(\.\d{3})*\s*(personas|clientes|alumnos|compradores|ventas|descargas|familias)\b/i)}.`,
       arreglo: "Si es cierto, dejalo. Si es un número de ejemplo que puso Claude, cambialo: es de las primeras cosas que alguien te va a preguntar.",
+      pedido: "Sacá las cantidades de alumnos, ventas o descargas: no las puedo comprobar.",
     });
   }
 
@@ -125,12 +136,14 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: `Hay un precio escrito adentro del texto ${loQueDice(/\$\s?\d{1,3}(\.\d{3})+|\$\s?\d{4,}/)}.`,
       arreglo: 'El día que cambies el precio en Productos, ese número va a quedar viejo. Pedile a Claude que use data-tienda="precio", que lo llenamos nosotros.',
+      pedido: "Sacá los precios escritos a mano y usá <span data-tienda=\"precio\"></span> para el precio y <span data-tienda=\"precio-anterior\"></span> para el tachado. No escribas el signo $ afuera del hueco.",
     });
   } else if (trajo.precio === 0) {
     h.push({
       nivel: "aviso",
       que: "En ningún lado se ve el precio.",
       arreglo: 'Pedile a Claude que ponga data-tienda="precio" cerca del botón de comprar. Una página sin precio hace que la persona se vaya a preguntar en vez de comprar.',
+      pedido: "Mostrá el precio con <span data-tienda=\"precio\"></span> cerca de cada botón de comprar, al principio y al final.",
     });
   }
 
@@ -141,6 +154,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: `Nombra a ${otra[0]} ${loQueDice(/\b(shopify|hotmart|tiendanube|woocommerce|gumroad|kajabi|mercado ?shops|wix)\b/i)}.`,
       arreglo: "Suele venir de una versión anterior de la página. Cambialo: acá el pago es nuestro, con Mercado Pago.",
+      pedido: "Sacá toda mención a otras plataformas de venta o de pago: el cobro lo hace TiendaApps con Mercado Pago.",
     });
   }
 
@@ -151,6 +165,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: `Promete una garantía con plazo ${loQueDice(/garant[íi]a[^.]{0,60}/i)}.`,
       arreglo: "Está bien tenerla, pero la cumplís vos: si alguien la pide, le devolvés la plata por donde pagó. Por ley, además, un digital tiene 10 días de arrepentimiento.",
+      pedido: "",
     });
   }
   if (hay(/\benv[íi]o gratis|te lo enviamos por correo postal|recib[íi]lo en tu casa/i)) {
@@ -158,6 +173,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: "Habla de envíos.",
       arreglo: "Lo tuyo es digital: llega por mail al instante. Sacá esa parte para no confundir.",
+      pedido: "Sacá todo lo que hable de envíos, correo o recibir algo en casa: el producto es digital y llega por mail al instante.",
     });
   }
 
@@ -167,6 +183,7 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
       nivel: "aviso",
       que: "Tiene algo pegado a la pantalla (una barra fija).",
       arreglo: "En celulares chicos suele tapar el botón de comprar. Miralo en la previa en celular antes de prenderla.",
+      pedido: "Sacá el position: fixed (las barras o botones pegados a la pantalla): tapan el contenido en celulares chicos.",
     });
   }
 

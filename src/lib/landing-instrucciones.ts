@@ -76,7 +76,7 @@ ${HUECOS_EXPLICADOS.slice(0, 4).map((h) => `   - ${h.hueco}: ${h.que}`).join("\n
 6. Bloques vivos (opcionales, pero recomendados): dejá un contenedor VACÍO donde quieras que aparezcan, y TiendaApps pone adentro lo real:
 ${HUECOS_EXPLICADOS.slice(5).map((h) => `   - ${h.hueco}: ${h.que}`).join("\n")}
    No escribas opiniones, testimonios, nombres de clientes ni cantidades de ventas inventadas. Ninguna. Si querés una sección de opiniones, es el hueco vacío.
-7. Links del pie (términos, privacidad, reembolsos, Instagram, contacto): dejalos con href="#" y el texto claro; yo los completo desde el panel.
+7. Links del pie (términos, privacidad, reembolsos, Instagram, contacto): dejalos con href="#" y el texto claro; yo los completo desde el panel. NO uses links internos a otra parte de la misma página (href="#seccion"): adentro de TiendaApps no saltan a ningún lado. Si lo que querés es llevar al pago, es un botón data-tienda="comprar".
 8. Fuentes: podés usar Google Fonts con un <link rel="stylesheet" href="https://fonts.googleapis.com/…">. No cargues ninguna otra hoja de estilos externa ni uses @import.
 9. Todo el CSS va en un <style> dentro del mismo archivo, con los selectores dentro de una clase raíz (por ejemplo .landing …) para que no choque con nada. Que se vea bien en un celular de 360 px de ancho y en una computadora. No uses position: fixed.
 10. Escribí en el castellano de Argentina (vos, tenés, querés), como lo escribiría una persona, sin mayúsculas gritadas ni signos de exclamación en cadena. Podés escribir todo el texto de venta: titular, para quién es, qué incluye, beneficios, cómo funciona, garantía, preguntas frecuentes, cierre. Con los datos de mi producto de arriba; lo que no sepas, dejalo en genérico y marcalo con un comentario <!-- EDITAR --> para que lo cambie yo.
@@ -87,3 +87,52 @@ MIS INDICACIONES DE DISEÑO
 ${suyas || "(escribí acá cómo la querés: colores, estilo, referencias, tono)"}
 `;
 }
+
+/* ── El pedido de cambios ───────────────────────────────────────────────── */
+
+/**
+ * El segundo mensaje: lo que la vendedora le pega a Claude cuando el panel
+ * le marcó cosas.
+ *
+ * Es la respuesta a "¿y si Claude escribe algo que no va?". No lo arreglamos
+ * nosotros —reescribirle el texto sería meternos en lo que dice su negocio, y
+ * hacerlo con una IA nuestra costaría plata en cada subida y daría un
+ * resultado distinto cada vez—. Lo arregla quien lo escribió: le devolvemos
+ * el problema a Claude, en su idioma, con el hueco exacto que tiene que usar.
+ *
+ * Sólo entra lo que tiene arreglo pedible: una garantía de 5 días, por
+ * ejemplo, es decisión de ella y no aparece acá.
+ */
+export function pedidoDeCambios(inv: InventarioParaPedido): string {
+  const puntos: string[] = [];
+  for (const h of inv.hallazgos) if (h.pedido && !puntos.includes(h.pedido)) puntos.push(h.pedido);
+  if (inv.avisos.some((a) => a.includes("sin llenar"))) {
+    puntos.push("Sacá los textos entre corchetes que quedaron sin llenar (tipo [PRECIO], [NOMBRE]) y usá los huecos data-tienda en su lugar.");
+  }
+  if (inv.fotos.length === 0) {
+    puntos.push('No dejaste ningún lugar para mis fotos: poné entre 3 y 10 contenedores vacíos con data-tienda="foto:nombre" (foto:portada, foto:pagina-1…), con su tamaño dado por CSS.');
+  }
+  for (const x of inv.sueltos) {
+    if (x.includes("necesitaban un programa") || x.includes("necesitaba un programa")) {
+      puntos.push("Sacá los botones que necesitan JavaScript para hacer algo (flechas de carrusel, pestañas, menús): acá no corre ningún programa. Si el contenido importa, mostralo todo junto o usá <details> y <summary>.");
+    }
+    if (x.includes("misma página")) {
+      puntos.push('Cambiá los links internos (href="#seccion") por un botón data-tienda="comprar", o sacalos: adentro de TiendaApps no saltan a ningún lado.');
+    }
+  }
+  if (!puntos.length) return "";
+
+  return `Subí la página a TiendaApps y me marcó estas cosas. Cambiámelas SIN cambiar el diseño, los colores ni la tipografía:
+
+${puntos.map((t, i) => `${i + 1}. ${t}`).join("\n")}
+
+Devolveme el archivo .html completo de nuevo, con todo lo demás igual.`;
+}
+
+/** Lo que el pedido de cambios necesita del inventario de la versión subida. */
+export type InventarioParaPedido = {
+  hallazgos: readonly { pedido: string }[];
+  avisos: readonly string[];
+  sueltos: readonly string[];
+  fotos: readonly string[];
+};

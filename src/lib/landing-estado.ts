@@ -41,6 +41,10 @@ export type InventarioDeLanding = {
   fuentes: string[];
   /** Lo que quedó y no debería: un contador escrito, un "[PRECIO]" sin llenar. Para pedirle a Claude que lo regenere. */
   avisos: string[];
+  /** Lo que acomodamos solos al subir (`lib/landing-arreglos`): botones conectados, acordeón rescatado. */
+  arreglos: string[];
+  /** Lo que quedó sin función y no se puede arreglar sin adivinar. */
+  sueltos: string[];
   /** La revisión de lo que DICE la página (`lib/landing-revision`). */
   hallazgos: Hallazgo[];
 };
@@ -54,7 +58,7 @@ export type QuitadoDeLanding = {
   contadores: number;
 };
 
-const INVENTARIO_VACIO: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [], avisos: [], hallazgos: [] };
+const INVENTARIO_VACIO: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [], avisos: [], arreglos: [], sueltos: [], hallazgos: [] };
 const QUITADO_VACIO: QuitadoDeLanding = { scripts: 0, formularios: 0, marcos: 0, eventos: 0, imagenesIncrustadas: 0, contadores: 0 };
 
 /** Un JSON guardado → el inventario, sin confiar en su forma. */
@@ -66,7 +70,7 @@ export function leerInventario(raw: string | null | undefined): InventarioDeLand
   return {
     precio: n(o.precio), precioAnterior: n(o.precioAnterior), comprar: n(o.comprar), nombre: n(o.nombre),
     fotos: lista(o.fotos), reloj: o.reloj === true, opiniones: o.opiniones === true, avisoVentas: o.avisoVentas === true,
-    linksVacios: lista(o.linksVacios), imagenesExternas: lista(o.imagenesExternas), fuentes: lista(o.fuentes), avisos: lista(o.avisos),
+    linksVacios: lista(o.linksVacios), imagenesExternas: lista(o.imagenesExternas), fuentes: lista(o.fuentes), avisos: lista(o.avisos), arreglos: lista(o.arreglos), sueltos: lista(o.sueltos),
     hallazgos: leerHallazgos(o.hallazgos),
   };
 }
@@ -77,7 +81,7 @@ function leerHallazgos(v: unknown): Hallazgo[] {
   const texto = (x: unknown) => (typeof x === "string" ? x.slice(0, 500) : "");
   return v
     .filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x))
-    .map((x) => ({ nivel: x.nivel === "traba" ? ("traba" as const) : ("aviso" as const), que: texto(x.que), arreglo: texto(x.arreglo) }))
+    .map((x) => ({ nivel: x.nivel === "traba" ? ("traba" as const) : ("aviso" as const), que: texto(x.que), arreglo: texto(x.arreglo), pedido: texto(x.pedido) }))
     .filter((x) => x.que)
     .slice(0, 20);
 }

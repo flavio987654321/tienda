@@ -4,11 +4,11 @@ import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Loader2, Upload, Copy, Check, Monitor, Smartphone, ExternalLink, AlertTriangle, Image as IconoImagen, Lock, RotateCcw,
+  Loader2, Upload, Copy, Check, Monitor, Smartphone, ExternalLink, AlertTriangle, Image as IconoImagen, Lock, RotateCcw, Wrench,
 } from "lucide-react";
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
-import { LANDING_MAX_BYTES } from "@/lib/landing-estado";
-import { instruccionesParaClaude, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
+import { LANDING_MAX_BYTES, leerInventario, leerQuitado } from "@/lib/landing-estado";
+import { instruccionesParaClaude, pedidoDeCambios, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
 import { tieneTraba } from "@/lib/landing-revision";
 import ConsejoDeUso from "../../../ConsejoDeUso";
 import { useAvisoSinGuardar } from "../../../useAvisoSinGuardar";
@@ -50,7 +50,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
-  const [copiado, setCopiado] = useState(false);
+  const [copiado, setCopiado] = useState<"pedido" | "cambios" | null>(null);
+  /* El informe de la última subida: los pasos con lo que encontró cada uno,
+     que aparecen de a uno para poder leerlos. Ver `pasosDeLaSubida`. */
+  const [informe, setInforme] = useState<{ pasos: Paso[]; visibles: number } | null>(null);
+  const subida = useRef(0);
   const [pantalla, setPantalla] = useState<"pc" | "celular">("pc");
   const [enlaces, setEnlaces] = useState<Record<string, string>>(estado.enlaces);
   const [guardando, setGuardando] = useState<string | null>(null);
@@ -68,11 +72,14 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const linksFaltan = inv ? inv.linksVacios.filter((t) => !enlaces[claveDeLink(t)]) : [];
   const hallazgos = inv?.hallazgos ?? [];
   const trabada = tieneTraba(hallazgos);
+  /* Lo que hay que pedirle a Claude, ya escrito para él. Vacío si no hay
+     nada que pedir. Ver `pedidoDeCambios`. */
+  const cambios = inv ? pedidoDeCambios(inv) : "";
   const sinGuardar = JSON.stringify(enlaces) !== JSON.stringify(estado.enlaces);
   useAvisoSinGuardar(sinGuardar && !guardando);
 
-  async function pedir(cuerpo: Record<string, unknown>, metodo: "POST" | "PATCH" = "PATCH"): Promise<boolean> {
-    if (enVuelo.current) return false;
+  async function pedir(cuerpo: Record<string, unknown>, metodo: "POST" | "PATCH" = "PATCH"): Promise<Record<string, unknown> | null> {
+    if (enVuelo.current) return null;
     enVuelo.current = true;
     setError(null);
     try {
@@ -81,14 +88,14 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(cuerpo),
       });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setError(d.error ?? "No se pudo guardar. Probá de nuevo."); return false; }
+      const d = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!r.ok) { setError(typeof d.error === "string" ? d.error : "No se pudo guardar. Probá de nuevo."); return null; }
       setRefresco((n) => n + 1);
       router.refresh();
-      return true;
+      return d;
     } catch {
       setError("No pudimos conectarnos. Probá de nuevo.");
-      return false;
+      return null;
     } finally {
       enVuelo.current = false;
     }
@@ -98,10 +105,23 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
     if (!/\.html?$/i.test(file.name) && file.type !== "text/html") return setError("Tiene que ser el archivo .html que te dio Claude.");
     if (file.size > LANDING_MAX_BYTES) return setError(`El archivo pesa más de ${Math.round(LANDING_MAX_BYTES / 1000)} KB. Las fotos no van adentro del HTML: se suben aparte.`);
     setSubiendo(true);
+    setInforme(null);
     const html = await file.text().catch(() => "");
-    await pedir({ html }, "POST");
+    const d = await pedir({ html }, "POST");
     setSubiendo(false);
     if (archivo.current) archivo.current.value = "";
+    if (!d) return;
+    /* El trabajo tarda menos de lo que se tarda en leerlo: los pasos no son
+       una barra de progreso (sería teatro), son el informe de lo que pasó,
+       que aparece de a uno para que se pueda seguir. */
+    const pasos = pasosDeLaSubida(d, estado.fotos);
+    const turno = ++subida.current;
+    setInforme({ pasos, visibles: 0 });
+    for (let i = 1; i <= pasos.length; i++) {
+      await new Promise((seguir) => window.setTimeout(seguir, 260));
+      if (subida.current !== turno) return;
+      setInforme({ pasos, visibles: i });
+    }
   }
 
   async function subirFoto(clave: string, file: File) {
@@ -120,6 +140,14 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
     } finally {
       setGuardando(null);
     }
+  }
+
+  async function copiar(texto: string, cual: "pedido" | "cambios") {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(cual);
+      window.setTimeout(() => setCopiado(null), 2000);
+    } catch { setError("No pudimos copiar. Seleccioná el texto a mano."); }
   }
 
   async function guardarEnlace(texto: string) {
@@ -173,17 +201,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(instrucciones);
-                setCopiado(true);
-                window.setTimeout(() => setCopiado(false), 2000);
-              } catch { setError("No pudimos copiar. Seleccioná el texto a mano."); }
-            }}
+            onClick={() => void copiar(instrucciones, "pedido")}
             className="inline-flex items-center gap-2 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-4 py-2.5 text-sm font-bold text-white panel-oscuro:text-gray-900 hover:opacity-90 transition-opacity"
           >
-            {copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copiado ? "Copiado" : "Copiar el pedido"}
+            {copiado === "pedido" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copiado === "pedido" ? "Copiado" : "Copiar el pedido"}
           </button>
           <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-orange-600 hover:text-orange-500">
             Abrir Claude <ExternalLink className="h-3.5 w-3.5" />
@@ -218,6 +240,27 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
           )}
         </div>
         {error && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{error}</p>}
+        {informe && (
+          <ol className="mt-4 space-y-2.5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+            {informe.pasos.map((paso, i) => (
+              <li
+                key={paso.titulo}
+                aria-hidden={i >= informe.visibles}
+                className={`flex gap-2.5 transition-opacity duration-500 ${i < informe.visibles ? "opacity-100" : "opacity-0"}`}
+              >
+                <span className="mt-0.5 shrink-0">
+                  {paso.estado === "ok"
+                    ? <Check className="h-4 w-4 text-green-600" />
+                    : <AlertTriangle className={`h-4 w-4 ${paso.estado === "traba" ? "text-red-600" : "text-amber-600"}`} />}
+                </span>
+                <span className="min-w-0">
+                  <span className="text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100">{paso.titulo}</span>
+                  <span className="block whitespace-pre-line text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{paso.detalle}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       {version && inv && (
@@ -265,6 +308,31 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
               )}
             </section>
 
+            {/* ── Lo que acomodamos solos ──────────────────────────────── */}
+            {(inv.arreglos.length > 0 || inv.sueltos.length > 0) && (
+              <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+                  <Wrench className="h-4 w-4 text-green-600" /> Lo que acomodamos solos
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                  Al sacarle los programas quedan cosas que se ven bien y no funcionan. Esto lo arreglamos al subir,
+                  sin tocarte el diseño.
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {inv.arreglos.map((t) => (
+                    <li key={t} className="flex gap-2 rounded-2xl bg-green-50 panel-oscuro:bg-green-500/10 p-3 text-[12.5px] leading-relaxed text-green-900 panel-oscuro:text-green-200">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" /> <span>{t}</span>
+                    </li>
+                  ))}
+                  {inv.sueltos.map((t) => (
+                    <li key={t} className="flex gap-2 text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                      <span aria-hidden="true">•</span> <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {/* ── La revisión: qué DICE la página ──────────────────────── */}
             {hallazgos.length > 0 && (
               <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
@@ -287,6 +355,30 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                 <p className="mt-3 text-[12px] leading-relaxed text-gray-400">
                   Miramos palabras, no entendemos el texto: puede saltar de más o pasarle algo por alto. La última palabra es tuya.
                 </p>
+              </section>
+            )}
+
+            {/* ── Devolvérselo a Claude ────────────────────────────────── */}
+            {cambios && (
+              <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+                <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">¿Querés que lo arregle Claude?</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                  Armamos el mensaje con todo lo que te marcamos, escrito para él y con el hueco exacto que tiene
+                  que usar. Copialo, pegalo en la misma conversación donde te hizo la página y subí el archivo
+                  nuevo acá arriba: tus fotos y tus links no se pierden.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void copiar(cambios, "cambios")}
+                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-4 py-2.5 text-sm font-bold text-white panel-oscuro:text-gray-900 hover:opacity-90 transition-opacity"
+                >
+                  {copiado === "cambios" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copiado === "cambios" ? "Copiado" : "Copiar los cambios"}
+                </button>
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-[12.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400">Ver el texto</summary>
+                  <pre className="mt-2 max-h-64 overflow-auto rounded-2xl bg-gray-50 panel-oscuro:bg-gray-950 p-3 text-[11.5px] leading-relaxed whitespace-pre-wrap text-gray-700 panel-oscuro:text-gray-300">{cambios}</pre>
+                </details>
               </section>
             )}
 
@@ -506,4 +598,77 @@ function quitadoEnPalabras(q: QuitadoDeLanding): string[] {
   if (q.marcos) t.push(`Le sacamos ${q.marcos === 1 ? "un video o página incrustada" : `${q.marcos} videos o páginas incrustadas`}.`);
   if (q.imagenesIncrustadas) t.push(`Le sacamos ${q.imagenesIncrustadas === 1 ? "una imagen pegada adentro del archivo" : `${q.imagenesIncrustadas} imágenes pegadas adentro del archivo`}: las fotos se suben acá.`);
   return t;
+}
+
+/* ── El informe de la subida ──────────────────────────────────────────────
+   Lo que pasó con el archivo, en pasos, sobre lo que contestó el servidor.
+   No hay adivinanza: cada paso muestra un número que ya vino calculado. */
+
+type Paso = { titulo: string; detalle: string; estado: "ok" | "aviso" | "traba" };
+
+function pasosDeLaSubida(d: Record<string, unknown>, cargadas: Record<string, string>): Paso[] {
+  /* Lo que contesta el servidor se vuelve a leer con los mismos validadores
+     que usa la base: en el navegador nada es de fiar por venir de una
+     respuesta. */
+  const inv = leerInventario(JSON.stringify(d.inventario ?? {}));
+  const q = leerQuitado(JSON.stringify(d.quitado ?? {}));
+  const bytes = typeof d.bytes === "number" ? d.bytes : 0;
+  const titulo = typeof d.titulo === "string" ? d.titulo : "";
+  const cuenta = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+  const sacado = [
+    q.scripts && cuenta(q.scripts, "programa", "programas"),
+    q.eventos && cuenta(q.eventos, "acción de botón", "acciones de botón"),
+    q.contadores && cuenta(q.contadores, "contador", "contadores"),
+    q.formularios && cuenta(q.formularios, "formulario", "formularios"),
+    q.marcos && cuenta(q.marcos, "video o página incrustada", "videos o páginas incrustadas"),
+    q.imagenesIncrustadas && cuenta(q.imagenesIncrustadas, "imagen pegada adentro", "imágenes pegadas adentro"),
+  ].filter(Boolean).join(", ");
+
+  const enchufes = [
+    inv.precio > 0 && "el precio",
+    inv.comprar > 0 && cuenta(inv.comprar, "botón de compra", "botones de compra"),
+    inv.nombre > 0 && "el nombre",
+    inv.fotos.length > 0 && cuenta(inv.fotos.length, "lugar para foto", "lugares para fotos"),
+  ].filter(Boolean).join(", ");
+
+  const faltan = inv.fotos.filter((x) => !cargadas[x]).length;
+  const trabada = tieneTraba(inv.hallazgos);
+
+  return [
+    {
+      estado: "ok",
+      titulo: "Leímos tu archivo",
+      detalle: `${Math.round(bytes / 1000)} KB${titulo ? ` · «${titulo}»` : ""}`,
+    },
+    {
+      estado: "ok",
+      titulo: "Le sacamos lo que no puede correr acá",
+      detalle: sacado || "No traía nada para sacar.",
+    },
+    {
+      estado: inv.comprar > 0 ? (inv.precio > 0 ? "ok" : "aviso") : "traba",
+      titulo: "Buscamos los enchufes",
+      detalle: enchufes ? `Encontramos ${enchufes}.` : "No encontramos ninguno: hay que pedírselos a Claude.",
+    },
+    {
+      estado: "ok",
+      titulo: "Acomodamos lo que quedó suelto",
+      detalle: inv.arreglos.length ? `${cuenta(inv.arreglos.length, "cosa acomodada", "cosas acomodadas")}, acá abajo.` : "No hizo falta: entró derecho.",
+    },
+    {
+      estado: trabada ? "traba" : inv.hallazgos.length ? "aviso" : "ok",
+      titulo: "Leímos lo que dice la página",
+      detalle: inv.hallazgos.length ? `${cuenta(inv.hallazgos.length, "cosa", "cosas")} para mirar, acá abajo.` : "Nada que marcarte.",
+    },
+    trabada
+      ? { estado: "traba", titulo: "Todavía no se puede prender", detalle: "Mirá lo que está en rojo, arreglalo y volvé a subirla." }
+      : {
+        estado: faltan ? "aviso" : "ok",
+        titulo: "Lista para mirar",
+        detalle: faltan
+          ? `Te ${faltan === 1 ? "falta 1 foto" : `faltan ${faltan} fotos`}. Cargalas acá abajo y mirala en la previa.`
+          : "Mirala en la previa de al lado y prendela cuando te guste.",
+      },
+  ];
 }

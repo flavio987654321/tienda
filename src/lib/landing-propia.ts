@@ -28,6 +28,10 @@
    Lo que queda es HTML + CSS, y se muestra adentro de un Shadow DOM: su CSS
    no toca lo nuestro (la barra, el checkout) y lo nuestro no toca lo suyo.
 
+   Sacar el JavaScript deja cosas que se VEN bien y no funcionan —un botón de
+   comprar que no lleva a ningún lado, una pregunta que no abre—. Eso no se
+   avisa: se arregla, acá mismo, antes de guardar. Ver `landing-arreglos`.
+
    ── Los huecos ─────────────────────────────────────────────────────────────
 
      data-tienda="precio"           → "$ 9.900", el del producto
@@ -55,6 +59,7 @@ import { findAll, findOne, removeElement, textContent, prependChild } from "domu
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
+import { arreglarLanding, ERA_BOTON } from "@/lib/landing-arreglos";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -88,7 +93,7 @@ const OPCIONES: sanitizeHtml.IOptions = {
     ...ETIQUETAS_SVG,
   ],
   allowedAttributes: {
-    "*": ["class", "id", "title", "lang", "dir", "role", "style", "aria-*", "data-tienda", "hidden", "tabindex"],
+    "*": ["class", "id", "title", "lang", "dir", "role", "style", "aria-*", "data-tienda", "data-tienda-era", "hidden", "tabindex"],
     a: ["href", "target", "rel", "download"],
     img: ["src", "srcset", "sizes", "alt", "width", "height", "loading", "decoding"],
     source: ["srcset", "sizes", "type", "media"],
@@ -126,12 +131,18 @@ const OPCIONES: sanitizeHtml.IOptions = {
       return { tagName, attribs };
     },
     /* Un botón sin JavaScript no hace nada. El de comprar pasa a ser un link
-       (el pago es una dirección); los demás quedan como texto, para no
-       perder la pregunta de un acordeón hecho con botones. */
+       (el pago es una dirección); los demás quedan marcados como lo que
+       fueron, y `landing-arreglos` decide qué hacer con cada uno: el que
+       dice "comprar" se conecta al pago, el que abría una pregunta se
+       convierte en acordeón de verdad, y el resto queda como texto. */
     button: (tag, attribs): sanitizeHtml.Tag => {
       const a: sanitizeHtml.Attributes = { class: attribs.class ?? "" };
       if (attribs["data-tienda"] === "comprar") return { tagName: "a", attribs: { ...a, "data-tienda": "comprar", href: "#" } };
-      return { tagName: "span", attribs: { ...a, role: "text" } };
+      if (attribs["aria-expanded"] !== undefined) a["aria-expanded"] = attribs["aria-expanded"];
+      /* Un botón sin texto (una flecha, una cruz) se reconoce por acá: es lo
+         único que el panel puede nombrar cuando avisa que quedó sin función. */
+      if (attribs["aria-label"]) a["aria-label"] = attribs["aria-label"];
+      return { tagName: "span", attribs: { ...a, role: "text", [ERA_BOTON]: "boton" } };
     },
     /* Un checkbox o un radio sirven para los "tocá lo que te pasa" con CSS.
        Cualquier otro input es un formulario, y no hay formularios. */
@@ -232,12 +243,26 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   s = s.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (_m, c: string) => { css.push(limpiarCss(c)); return ""; });
   s = s.replace(/<head\b[\s\S]*?<\/head>/i, "").replace(/<\/?(html|body)\b[^>]*>/gi, "");
 
-  const cuerpo = sanitizeHtml(s, OPCIONES).trim();
-  if (!cuerpo) return { ok: false, problema: "Después de limpiarlo no quedó nada para mostrar. ¿Es un archivo HTML?" };
+  /* La marca de "esto era un botón" la ponemos nosotros, y sólo nosotros: si
+     viene escrita en el archivo se saca ANTES de sanear, porque después no
+     hay forma de distinguir la nuestra de la suya. */
+  s = s.replace(new RegExp(`\\s${ERA_BOTON}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)`, "gi"), " ");
 
-  const hoja = css.filter(Boolean).join("\n");
+  const saneado = sanitizeHtml(s, OPCIONES).trim();
+  if (!saneado) return { ok: false, problema: "Después de limpiarlo no quedó nada para mostrar. ¿Es un archivo HTML?" };
+
+  /* Lo que quedó suelto al sacar el JavaScript se enchufa acá: los botones
+     de comprar que no llevaban a ningún lado, el acordeón de preguntas.
+     Ver `lib/landing-arreglos`. */
+  const arbol = parseDocument(saneado);
+  const arreglos = arreglarLanding(arbol);
+  const cuerpo = render(arbol, { encodeEntities: "utf8", emptyAttrs: true }).trim();
+
+  const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
   const html = (hoja ? `<style>\n${hoja}\n</style>\n` : "") + cuerpo;
   const inventario = inventariar(cuerpo, fuentes, avisosDelCrudo(docCrudo));
+  inventario.arreglos = arreglos.hechos;
+  inventario.sueltos = arreglos.sueltos;
   /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
      `lib/landing-revision`. */
   inventario.hallazgos = revisarLanding(textoVisible(cuerpo), {
@@ -301,7 +326,7 @@ function avisosDelCrudo(doc: Document): string[] {
 
 function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): InventarioDeLanding {
   const doc = parseDocument(cuerpo);
-  const inv: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [...new Set(fuentes)], avisos, hallazgos: [] };
+  const inv: InventarioDeLanding = { precio: 0, precioAnterior: 0, comprar: 0, nombre: 0, fotos: [], reloj: false, opiniones: false, avisoVentas: false, linksVacios: [], imagenesExternas: [], fuentes: [...new Set(fuentes)], avisos, arreglos: [], sueltos: [], hallazgos: [] };
   for (const el of findAll(() => true, doc.children)) {
     const h = hueco(el);
     if (h === "precio") inv.precio++;
@@ -315,7 +340,11 @@ function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): Inven
 
     if (el.name === "a" && h !== "comprar") {
       const href = (el.attribs.href ?? "").trim();
-      if (href === "" || href === "#") {
+      /* Un `#loquesea` tampoco lleva a ningún lado: adentro de la cápsula
+         (Shadow DOM) el salto por ancla no funciona — el navegador le pone
+         el `#` a la dirección y la página no se mueve. Así que se ofrece
+         completarlo como cualquier link vacío. */
+      if (href === "" || href.startsWith("#")) {
         const t = textContent(el).replace(/\s+/g, " ").trim();
         if (t && !inv.linksVacios.includes(t)) inv.linksVacios.push(t);
       }
@@ -426,7 +455,7 @@ function ponerBloque(el: Element, html: string | undefined) {
 
 function enlazar(el: Element, enlaces: Record<string, string>) {
   const href = (el.attribs.href ?? "").trim();
-  if (href !== "" && href !== "#") return;
+  if (href !== "" && !href.startsWith("#")) return;
   const url = enlaces[claveDeLink(textContent(el))];
   if (url && /^(https?:|mailto:|tel:)/i.test(url)) {
     el.attribs.href = url;

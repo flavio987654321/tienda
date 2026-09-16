@@ -17,7 +17,7 @@ import {
 } from "./landing-propia";
 import { revisarLanding, tieneTraba } from "./landing-revision";
 import { leerInventario } from "./landing-estado";
-import { instruccionesParaClaude, HUECOS_EXPLICADOS } from "./landing-instrucciones";
+import { instruccionesParaClaude, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -141,6 +141,88 @@ check("INS-E", instruccionesParaClaude({ nombre: "x", descripcion: null, precio:
   "lo que escribe sobre el diseño va adentro del mismo texto; sin nada, queda la ayuda");
 check("INS-D", /360 px/.test(inst) && /position: fixed/.test(inst) && /castellano de Argentina/.test(inst) && /MIS INDICACIONES DE DISEÑO/.test(inst),
   "piden celular, sin fijos, en castellano de acá, y dejan el lugar para el pedido de diseño");
+
+/* ── Los arreglos: lo que se acomoda solo al subir ───────────────────────── */
+
+const limpio = (h: string) => {
+  const x = limpiarLanding(h);
+  if (!x.ok) throw new Error(x.problema);
+  return x.landing;
+};
+const FAQ = '<div class="faq__item"><button class="faq__q" type="button" aria-expanded="false">¿Cómo lo recibo?</button><div class="faq__a"><p>Por mail, al instante.</p></div></div>';
+
+check("ARR-A", (() => {
+  /* El caso peor: una página que se ve bien y no cobra. */
+  const a = limpio('<div><button class="cta">Comprar ahora</button><span data-tienda="precio"></span></div>');
+  const el = primerElemento(a.html, (e) => e.attribs["data-tienda"] === "comprar");
+  return el?.name === "a" && el.attribs.class === "cta" && a.inventario.comprar === 1 && !tieneTraba(a.inventario.hallazgos)
+    && /Conectamos 1 botón/.test(a.inventario.arreglos[0] ?? "");
+})(), "un botón suelto que dice «Comprar ahora» se conecta al pago: sin eso se vería bien y no cobraría");
+
+check("ARR-B", (() => {
+  /* Adentro de la cápsula el salto por ancla no funciona: probado en el
+     navegador. Los que son de compra van al pago; el resto, a completar. */
+  const a = limpio('<div><a class="b" href="#oferta">QUIERO EL EBOOK</a><a href="#temario">Ver el temario</a><span data-tienda="precio"></span></div>');
+  const comprar = primerElemento(a.html, (e) => e.attribs["data-tienda"] === "comprar");
+  return a.inventario.comprar === 1 && comprar?.attribs.class === "b"
+    && a.inventario.linksVacios.includes("Ver el temario") && !a.inventario.linksVacios.includes("QUIERO EL EBOOK");
+})(), "un link a #seccion que dice comprar va al pago; el que no, queda para completar en el panel");
+
+check("ARR-C", (() => {
+  const a = limpio('<div><span data-tienda="comprar"></span><p>¿Cuándo me conviene comprar?</p>' + FAQ + "</div>");
+  const b = limpio('<div><a data-tienda="comprar">x</a><button class="btn">Quiero saber más</button></div>');
+  return a.inventario.comprar === 1 && b.inventario.comprar === 1;
+})(), "una pregunta con la palabra comprar y un «quiero saber más» NO se conectan al pago");
+
+check("ARR-D", (() => {
+  const a = limpio('<section>' + FAQ + '</section>');
+  const det = primerElemento(a.html, (e) => e.name === "details");
+  const sum = primerElemento(a.html, (e) => e.name === "summary");
+  return det?.attribs["data-tienda-acordeon"] === "" && sum?.attribs.class === "faq__q"
+    && /Cómo lo recibo/.test(a.html) && /Por mail, al instante/.test(a.html)
+    && /data-tienda-acordeon\]\[open\]/.test(a.html)
+    && /Rescatamos 1 pregunta/.test(a.inventario.arreglos.join(" "));
+})(), "una pregunta que abría con un programa pasa a <details> con su clase, y el CSS que la deja ver");
+
+check("ARR-E", (() => {
+  /* Dos botones seguidos son pestañas, y ahí estaríamos adivinando. */
+  const a = limpio('<div class="tabs"><button aria-expanded="true">Uno</button><button aria-expanded="false">Dos</button><div>Contenido</div></div>');
+  /* Y un botón seguido de un link tampoco: no es una respuesta. */
+  const b = limpio('<div><button class="x" type="button">¿Pregunta?</button><a href="https://a.com">un link</a></div>');
+  return !/<details/.test(a.html) && !/<details/.test(b.html);
+})(), "no se inventan acordeones: ni con dos botones seguidos ni cuando al lado hay un link");
+
+check("ARR-F", (() => {
+  const a = limpio('<div><button type="button" aria-label="Página siguiente"><span>›</span></button></div>');
+  return /necesitaba un programa/.test(a.inventario.sueltos.join(" ")) && /Página siguiente/.test(a.inventario.sueltos.join(" "))
+    && !/data-tienda-era/.test(a.html);
+})(), "el botón que no se puede arreglar se cuenta por su nombre, y la marca interna no queda en la página");
+
+check("ARR-I", (() => {
+  /* La marca de "esto era un botón" la ponemos nosotros: si la trae el
+     archivo, no vale. Si no, cualquiera escribiría un div y saldría de
+     acordeón. */
+  const a = limpio(String.raw`<div><div data-tienda-era="boton">Comprar ahora</div><div><p>Respuesta.</p></div><a data-tienda="comprar">Comprar</a></div>`);
+  return a.inventario.comprar === 1 && !/<details/.test(a.html) && !/data-tienda-era/.test(a.html);
+})(), "la marca interna que venga escrita en el archivo se ignora");
+
+check("ARR-G", (() => {
+  const a = limpio('<div><button class="cta">Lo quiero</button></div>');
+  const armado = armarLanding(a.html, {
+    nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/p/1/pagar", fotos: {}, enlaces: {}, bloques: {},
+  });
+  return /href="\/p\/1\/pagar"/.test(armado);
+})(), "el botón adoptado termina con la dirección de pago de verdad, como cualquier otro");
+
+check("ARR-H", (() => {
+  const a = limpio(CRUDO);
+  const vuelto = leerInventario(JSON.stringify(a.inventario));
+  const texto = pedidoDeCambios(a.inventario);
+  return vuelto.arreglos.length === a.inventario.arreglos.length && vuelto.sueltos.length === a.inventario.sueltos.length
+    && leerInventario('{"arreglos":["x",2],"sueltos":"no"}').arreglos.length === 1
+    && texto.includes("1. ") && texto.includes("Devolveme el archivo")
+    && pedidoDeCambios({ hallazgos: [], avisos: [], sueltos: [], fotos: ["portada"] }) === "";
+})(), "los arreglos se guardan y vuelven de la base, y el pedido de cambios se arma numerado (o vacío si no hay nada)");
 
 /* ── La revisión: qué DICE la página ─────────────────────────────────────── */
 

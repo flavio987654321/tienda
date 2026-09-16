@@ -6593,3 +6593,86 @@ Contra los archivos reales: la landing de la amiga da 7 hallazgos (1 traba
 + 6 avisos, todos ciertos); la generada con nuestras instrucciones, 0.
 
 `landing-propia.check.ts` (47 → 58). 105 chequeos, tsc, eslint y build ok.
+
+---
+
+## Los arreglos: lo que se acomoda solo al subir — 16/09/26
+
+Flavio: "¿qué pasa si se crea con botones? ¿se puede enganchar? ¿no es mejor
+acomodarlo mientras se sube? ¿para eso necesitaríamos una IA?".
+
+Antes de contestar, dos mediciones sobre la landing de verdad de la amiga:
+
+- **Seis botones de comprar muertos.** Todos eran links a `#oferta` ("bajá
+  hasta la oferta"). Adentro del Shadow DOM el salto por ancla NO funciona:
+  probado en Chromium, el navegador le pone `#oferta` a la dirección y la
+  página no se mueve. Los seis.
+- **Once preguntas frecuentes con cero respuestas visibles.** El acordeón era
+  un `<button>` que abría un script; sin el script, el CSS
+  (`visibility:hidden`) las deja escondidas para siempre. Una sección entera
+  perdida, y la página se ve perfecta.
+
+Una página que se ve bien y no cobra es lo peor que puede pasar. Avisar no
+alcanzaba: hay que arreglarlo.
+
+### `lib/landing-arreglos`
+
+Corre sobre el árbol ya limpio, antes de guardar, y devuelve el recibo en
+castellano:
+
+1. **Botones de compra huérfanos → conectados al pago.** Un `<button>` o un
+   link a ninguna parte cuyo texto diga comprar (lista corta y a propósito:
+   antes dejar uno sin conectar que mandar al pago a quien tocó "ver el
+   temario"; las preguntas, con `?`, nunca entran).
+2. **Acordeón rescatado → `<details>` de verdad.** Con la clase original, así
+   sigue viéndose como ella lo diseñó, más el CSS mínimo para que la
+   respuesta se vea al abrir. Hacen falta dos señales para tocarlo: que algo
+   diga que abría (`aria-expanded`, una pregunta, una clase que lo nombre) y
+   que al lado haya un bloque de contenido. Dos botones seguidos son
+   pestañas y no se tocan.
+3. **Lo que no se puede arreglar sin adivinar se cuenta**, no se rompe más:
+   las flechas del carrusel quedan como texto y se nombran por su
+   `aria-label`.
+
+Nada de esto toca el diseño ni reescribe el texto.
+
+**¿Hacía falta una IA?** No, y sería peor: tardaría segundos, costaría plata
+en cada subida, daría un resultado distinto cada vez y podría reescribirle el
+diseño sin avisar. Esto es mecánico, instantáneo, igual siempre y explicable
+en una línea ("conectamos estos 6 porque decían COMPRAR").
+
+### El informe por pasos
+
+Lo que pidió: ver cómo se va tildando. Con una honestidad: el trabajo tarda
+50 ms, así que una barra de progreso sería teatro. Lo que aparece —de a un
+paso, para poder leerlo— es el INFORME, con números que ya vinieron
+calculados: leímos el archivo · le sacamos lo que no puede correr · buscamos
+los enchufes · acomodamos lo que quedó suelto · leímos lo que dice · lista
+para mirar (o "todavía no se puede prender").
+
+### Devolvérselo a Claude
+
+`pedidoDeCambios`: el segundo mensaje, armado con todo lo marcado pero
+escrito PARA Claude, con el hueco exacto que tiene que usar. Ahí sí hay una
+IA arreglando el texto — la de ella, antes de bajar el archivo, no una
+nuestra reescribiéndole el negocio. Cada hallazgo de `landing-revision` tiene
+ahora un `pedido` (vacío cuando no hay nada que pedir: una garantía de 5 días
+la decide ella).
+
+Sobre la landing de la amiga salen 8 puntos numerados, y termina con
+"devolveme el archivo .html completo de nuevo".
+
+### De paso
+
+- Los links internos (`#seccion`) ahora se cuentan como links vacíos: no
+  llevan a ningún lado, y el panel deja completarlos.
+- La regla 7 del pedido a Claude ya avisa que no use links internos.
+- La marca interna `data-tienda-era` se saca del archivo ANTES de sanear:
+  si la ponemos nosotros, nadie más puede ponerla.
+
+Resultado en los dos archivos: la de la amiga, 6 botones conectados y 11
+respuestas visibles (11 de 11, verificado en el navegador); la nuestra, 0
+arreglos porque entra derecha.
+
+`landing-propia.check.ts` (58 → 67). 105 chequeos, tsc, eslint y build ok.
+Mirado a 360, 768 y 1280.
