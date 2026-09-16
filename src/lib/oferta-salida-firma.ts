@@ -1,9 +1,16 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { HorasDeOferta } from "@/lib/oferta-salida";
+import { HORAS_MAXIMAS } from "@/lib/oferta-salida";
 
 /**
  * El plazo de la oferta de salida, firmado. Sólo servidor: usa `crypto`.
- * Lo puro (las reglas, el texto del plazo) está en `oferta-salida`.
+ * Lo puro (las reglas, el texto del plazo, la cuenta regresiva) está en
+ * `oferta-salida`.
+ *
+ * El token lleva la hora en que VENCE, no la de vista. Así el checkout firma
+ * "ahora + 15 minutos" y el mail de carrito "ahora + 24 horas" con el mismo
+ * token, y quien lo revisa no tiene que saber qué plazo tenía la oferta
+ * cuando se mostró: mira la hora, y listo. Si la dueña acorta el plazo
+ * después, lo que ya se prometió se cumple igual.
  */
 
 function firma(productId: string, ts: number): string {
@@ -12,26 +19,25 @@ function firma(productId: string, ts: number): string {
   return createHmac("sha256", secreto).update(`oferta-salida:${productId}:${ts}`).digest("base64url").slice(0, 24);
 }
 
-/** `<milisegundos>.<firma>`: cuándo se mostró la oferta, y la prueba de que lo dijimos nosotros. */
-export function firmarOferta(productId: string, vistaEn: number): string {
-  const ts = Math.floor(vistaEn);
+/** `<milisegundos>.<firma>`: hasta cuándo vale, y la prueba de que lo dijimos nosotros. */
+export function firmarOferta(productId: string, venceEn: number): string {
+  const ts = Math.floor(venceEn);
   return `${ts}.${firma(productId, ts)}`;
 }
 
 /**
- * Lo que dice un token para ESTE producto: cuándo se vio y hasta cuándo
- * vale. Null si está tocado, es de otro producto, o ya venció. La hora de
- * "vista" no puede ser futura: un token con la hora adelantada alargaría el
- * plazo.
+ * Hasta cuándo vale un token para ESTE producto. Null si está tocado, es de
+ * otro producto, ya venció, o promete más que el plazo más largo que existe
+ * (una firma nuestra nunca dice eso; si aparece, algo anda mal y no se
+ * cobra con ella).
  */
-export function leerTokenDeOferta(token: unknown, productId: string, horas: HorasDeOferta, ahora = Date.now()): { vistaEn: Date; venceEn: Date } | null {
+export function leerTokenDeOferta(token: unknown, productId: string, ahora = Date.now()): { venceEn: Date } | null {
   if (typeof token !== "string" || token.length > 80) return null;
   const [tsCrudo, f] = token.split(".");
   if (!/^\d{10,16}$/.test(tsCrudo ?? "") || !/^[A-Za-z0-9_-]{24}$/.test(f ?? "")) return null;
-  const ts = Number(tsCrudo);
-  const a = Buffer.from(f), b = Buffer.from(firma(productId, ts));
+  const venceEn = Number(tsCrudo);
+  const a = Buffer.from(f), b = Buffer.from(firma(productId, venceEn));
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  const venceEn = ts + horas * 60 * 60_000;
-  if (ts > ahora + 5 * 60_000 || venceEn < ahora) return null;
-  return { vistaEn: new Date(ts), venceEn: new Date(venceEn) };
+  if (venceEn < ahora || venceEn > ahora + HORAS_MAXIMAS * 3_600_000 + 5 * 60_000) return null;
+  return { venceEn: new Date(venceEn) };
 }

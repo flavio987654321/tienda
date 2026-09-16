@@ -16,7 +16,8 @@ import { readFileSync } from "node:fs";
 process.env.NEXTAUTH_SECRET ??= "clave-de-prueba-para-los-chequeos-0123456789";
 
 import {
-  validarOfertaSalida, leerOfertaSalida, codigoDeLaOferta, esCodigoDeOferta, vistaEnDelToken, venceEnTexto,
+  validarOfertaSalida, leerOfertaSalida, codigoDeLaOferta, esCodigoDeOferta, venceEnDelToken, venceEnTexto,
+  cuentaRegresiva, mostrarReloj, textoDeHoras, esPlazoCorto, HORAS_DE_OFERTA, HORAS_MINIMAS_DEL_MAIL,
   OFERTA_DE_FABRICA, PORCENTAJE_MAXIMO_SALIDA, TEXTO_MAX,
 } from "./oferta-salida";
 import { firmarOferta, leerTokenDeOferta } from "./oferta-salida-firma";
@@ -40,7 +41,11 @@ check("VAL-A", ok.ok && ok.datos.activa && ok.datos.porcentaje === 25 && ok.dato
 check("VAL-B", !validarOfertaSalida({ tipo: "DESCUENTO", porcentaje: 4, horas: 24, titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok
   && !validarOfertaSalida({ tipo: "DESCUENTO", porcentaje: PORCENTAJE_MAXIMO_SALIDA + 1, horas: 24, titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok,
   `el descuento va de 5 a ${PORCENTAJE_MAXIMO_SALIDA}: más es otro precio, no una oferta`);
-check("VAL-C", !validarOfertaSalida({ tipo: "DESCUENTO", porcentaje: 20, horas: 5, titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok, "sólo 6, 24 o 48 horas");
+check("VAL-C", !validarOfertaSalida({ tipo: "DESCUENTO", porcentaje: 20, horas: 5, titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok
+  && validarOfertaSalida({ tipo: "DESCUENTO", porcentaje: 20, horas: "0.25", titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok,
+  "sólo los plazos de la lista; los 15 minutos llegan como \"0.25\" desde el select");
+check("VAL-C2", textoDeHoras(0.25) === "15 minutos" && textoDeHoras(1) === "1 hora" && textoDeHoras(24) === "24 horas" && esPlazoCorto(1) && !esPlazoCorto(6) && HORAS_DE_OFERTA[0] === 0.25 && HORAS_MINIMAS_DEL_MAIL === 24,
+  "los plazos se dicen en castellano; 15 minutos y 1 hora son los cortos");
 check("VAL-D", !validarOfertaSalida({ tipo: "PRODUCTO", horas: 24, titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok
   && validarOfertaSalida({ tipo: "PRODUCTO", productoId: OTRO, horas: 24, titulo: "Hola", texto: "x".repeat(20), boton: "Sí" }).ok,
   "con producto más barato hace falta el producto");
@@ -59,13 +64,19 @@ check("CUP-B", validarCuponNuevo({ codigo: codigoDeLaOferta(ID), tipo: "PORCENTA
 /* ── El plazo firmado ────────────────────────────────────────────────────── */
 
 const ahora = 1_800_000_000_000;
-const token = firmarOferta(ID, ahora);
-check("TOK-A", leerTokenDeOferta(token, ID, 24, ahora + 60_000) !== null && vistaEnDelToken(token) === ahora, "el token dice cuándo se vio y vale dentro del plazo");
-check("TOK-B", leerTokenDeOferta(token, ID, 24, ahora + 24 * 3_600_000 + 1) === null && leerTokenDeOferta(token, ID, 6, ahora + 7 * 3_600_000) === null, "pasado el plazo, no vale: el reloj es de verdad");
-check("TOK-C", leerTokenDeOferta(token, OTRO, 24, ahora) === null, "el token de un producto no vale para otro");
-check("TOK-D", leerTokenDeOferta(`${ahora + 3_600_000}.${token.split(".")[1]}`, ID, 24, ahora) === null && leerTokenDeOferta(firmarOferta(ID, ahora + 3_600_000), ID, 24, ahora) === null,
-  "no se puede adelantar la hora de vista para alargar el plazo: ni cambiándola, ni firmándola en el futuro");
-check("TOK-E", leerTokenDeOferta(token.slice(0, -1) + "x", ID, 24, ahora) === null && leerTokenDeOferta(null, ID, 24) === null && leerTokenDeOferta("a.b", ID, 24) === null, "firma tocada o basura, no vale");
+const vence = ahora + 24 * 3_600_000;
+const token = firmarOferta(ID, vence);
+check("TOK-A", leerTokenDeOferta(token, ID, ahora + 60_000)?.venceEn.getTime() === vence && venceEnDelToken(token) === vence, "el token dice hasta cuándo vale, y vale hasta entonces");
+check("TOK-B", leerTokenDeOferta(token, ID, vence + 1) === null && leerTokenDeOferta(firmarOferta(ID, ahora + 15 * 60_000), ID, ahora + 15 * 60_000 + 1) === null,
+  "pasado el plazo, no vale: el reloj es de verdad, también el de 15 minutos");
+check("TOK-C", leerTokenDeOferta(token, OTRO, ahora) === null, "el token de un producto no vale para otro");
+check("TOK-D", leerTokenDeOferta(`${vence + 3_600_000}.${token.split(".")[1]}`, ID, ahora) === null && leerTokenDeOferta(firmarOferta(ID, ahora + 49 * 3_600_000), ID, ahora) === null
+  && leerTokenDeOferta(firmarOferta(ID, ahora + 48 * 3_600_000), ID, ahora) !== null,
+  "no se puede correr la hora para alargar el plazo: ni cambiándola, ni con una firma que prometa más de 48 horas");
+check("TOK-E", leerTokenDeOferta(token.slice(0, -1) + "x", ID, ahora) === null && leerTokenDeOferta(null, ID) === null && leerTokenDeOferta("a.b", ID) === null, "firma tocada o basura, no vale");
+check("TOK-G", cuentaRegresiva(ahora + 14 * 60_000 + 59_000, ahora) === "14:59" && cuentaRegresiva(ahora + 3_600_000, ahora) === "1:00:00" && cuentaRegresiva(ahora, ahora) === null
+  && mostrarReloj(ahora + 3_600_000, ahora) && !mostrarReloj(ahora + 3_600_001, ahora),
+  "la cuenta regresiva: mm:ss, h:mm:ss, y nada cuando ya pasó; se muestra con una hora o menos por delante");
 check("TOK-F", venceEnTexto(new Date("2026-09-15T21:23:00Z"), new Date("2026-09-15T12:00:00Z")) === "hasta hoy a las 18:23"
   && venceEnTexto(new Date("2026-09-16T21:23:00Z"), new Date("2026-09-15T12:00:00Z")) === "hasta mañana a las 18:23"
   && venceEnTexto(new Date("2026-09-18T12:00:00Z"), new Date("2026-09-15T12:00:00Z")) === "hasta el 18/09 a las 09:00",
@@ -91,9 +102,9 @@ const schema = leer("prisma/schema.prisma");
 const migracion = leer("prisma/migrations/20260915230000_oferta_de_salida/migration.sql");
 
 check("LIB-A", !/node:crypto/.test(lib) && /node:crypto/.test(leer("src/lib/oferta-salida-firma.ts")), "lo que importa el navegador no trae crypto: la firma vive aparte");
-check("RUTA-A", /esCodigoDeOferta\(cupon\.codigo\)[\s\S]*?leerTokenDeOferta\(cuerpo\.oferta, producto\.id, oferta\.horas\)[\s\S]*?motivo = "Esa oferta ya venció\."/.test(comprar),
+check("RUTA-A", /esCodigoDeOferta\(cupon\.codigo\)[\s\S]*?leerTokenDeOferta\(cuerpo\.oferta, producto\.id\)[\s\S]*?motivo = "Esa oferta ya venció\."/.test(comprar),
   "la compra: el cupón SALIDA-… no vale sin el plazo firmado y vivo");
-check("RUTA-B", /esCodigoDeOferta\(cupon\.codigo\)[\s\S]*?leerTokenDeOferta\(cuerpo\?\.oferta, producto\.id, oferta\.horas\)[\s\S]*?"Esa oferta ya venció\."/.test(publica),
+check("RUTA-B", /esCodigoDeOferta\(cupon\.codigo\)[\s\S]*?leerTokenDeOferta\(cuerpo\?\.oferta, producto\.id\)[\s\S]*?"Esa oferta ya venció\."/.test(publica),
   "la ruta pública del cupón: la misma regla");
 check("RUTA-C", /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)/.test(guardar) && /store: \{ ownerId: user\.id \}/.test(guardar) && /rolDigital: "PRINCIPAL", storeId: producto\.storeId/.test(guardar),
   "guardar: Starter y Pro al día, producto propio, y el más barato también propio");
@@ -101,17 +112,20 @@ check("RUTA-D", /\$transaction[\s\S]*?ofertaSalida: JSON\.stringify\(oferta\)[\s
   "el cupón se crea o actualiza en la misma transacción que guarda la oferta, prendido o apagado con ella");
 check("PAG-A", /if \(!seLePuedeVender \|\| !guardada\.activa\) return null;/.test(pagina) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(pagina),
   "el checkout arma la oferta sólo si se puede vender, está prendida y el plan la incluye");
-check("PAG-B", /leerTokenDeOferta\(tokenPedido, fila\.id, guardada\.horas\) \? \(tokenPedido as string\) : firmarOferta\(fila\.id, Date\.now\(\)\)/.test(pagina),
+check("PAG-B", /leerTokenDeOferta\(tokenPedido, fila\.id\) \? \(tokenPedido as string\) : firmarOferta\(fila\.id, Date\.now\(\) \+ guardada\.horas \* 3_600_000\)/.test(pagina),
   "el plazo lo firma el servidor, y si el link ya traía uno vivo (el del mail) se respeta ése");
 check("PAG-C", /if \(!cupon \|\| !cupon\.activo \|\| cupon\.tipo !== "PORCENTAJE"\) return null;/.test(pagina) && /isActive: true/.test(pagina.slice(pagina.indexOf("async function armarOferta"))),
   "sin el cupón vivo, o con el otro producto sin publicar, no se promete nada");
 check("CHK-A", /e\.clientY <= 0\) mostrar\(\)/.test(checkout) && /addEventListener\("popstate", alVolver\)/.test(checkout) && /localStorage\.getItem\(claveVista\)\) return/.test(checkout),
   "aparece al sacar el mouse o al apretar atrás, una sola vez por persona");
-check("CHK-B", /vistaEn \+ oferta\.horas \* 3_600_000 > Date\.now\(\)\) token = guardado/.test(checkout) && /oferta: tokenDeOferta \?\? undefined/.test(checkout),
+check("CHK-B", /venceGuardado > Date\.now\(\)\) token = guardado/.test(checkout) && /oferta: tokenDeOferta \?\? undefined/.test(checkout),
   "recargar no reinicia el plazo (se guarda el primer token) y el token viaja al pagar");
 check("CHK-C", /verificarCupon\(oferta\.codigo, tokenDeOferta\)/.test(checkout) && /import CartelDeSalida from "@\/components\/digitales\/CartelDeSalida"/.test(checkout) && /import CartelDeSalida, \{ type ParteDelCartel \} from "@\/components\/digitales\/CartelDeSalida"/.test(editor) && /alTocar=\{esPago \? irA : undefined\}/.test(editor),
   "aceptar aplica el cupón por la ruta pública con el token; el cartel del checkout y el de la vista previa son el mismo componente");
-check("CHK-D", !/cupos|reservad|quedan \d|00:\d\d|setInterval/i.test(cartel) && /Vale \{c\.vence\}/.test(cartel), "el cartel no tiene cupos ni cuenta regresiva: dice hasta cuándo, y es cierto");
+check("CHK-D", !/cupos|reservad/i.test(cartel) && /cuentaRegresiva\(c\.venceEn, ahora\)/.test(cartel) && /vencida \? \(\s*<button type="button" disabled/.test(cartel) && /useSyncExternalStore/.test(cartel) && !/useEffect/.test(cartel),
+  "el cartel no tiene cupos; el reloj cuenta la hora firmada, y al llegar a cero el botón se apaga");
+check("MAIL-C", /Math\.max\(o\.horas, HORAS_MINIMAS_DEL_MAIL\)/.test(leer("src/lib/oferta-salida-db.ts")) && /firmarOferta\(principal\.id, venceEn\)/.test(leer("src/lib/oferta-salida-db.ts")),
+  "en el mail el plazo es de al menos un día, y el token firma esa misma hora");
 check("EDIT-A", /validarOfertaSalida\(o\)/.test(editor) && /key=\{elegido\?\.id/.test(editorPage) && /variablesDePagina\(pagina\)/.test(editorPage),
   "el editor valida con la misma función que la ruta, arranca de cero por producto y la vista previa lleva el estilo de SU página");
 check("MAIL-A", /ofertaParaElMail\(principal, enlace, now\)/.test(cron) && /oferta,\n\s+\}\)/.test(cron) && /oferta \? `/.test(resend.slice(resend.indexOf("sendCarritoAbandonadoDigitalEmail"))),

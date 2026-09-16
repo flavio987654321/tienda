@@ -374,7 +374,7 @@ export async function POST(req: NextRequest) {
        código. Misma regla que en `/api/digitales/cupon`. */
     if (cupon && !motivo && esCodigoDeOferta(cupon.codigo)) {
       const oferta = leerOfertaSalida(producto.ofertaSalida);
-      const plazo = oferta.activa && oferta.tipo === "DESCUENTO" ? leerTokenDeOferta(cuerpo.oferta, producto.id, oferta.horas) : null;
+      const plazo = oferta.activa && oferta.tipo === "DESCUENTO" ? leerTokenDeOferta(cuerpo.oferta, producto.id) : null;
       if (!plazo) motivo = "Esa oferta ya venció.";
     }
     if (!cupon || motivo) {

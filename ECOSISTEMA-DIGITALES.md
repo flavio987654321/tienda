@@ -6249,3 +6249,54 @@ separó `crypto` de lo que importa el navegador (`correos-compradores-firma`,
 
 🔲 Cuántas veces se mostró y cuántas compraron después (Estadísticas).
 🔲 En el celular, además de "atrás": al pasar N segundos sin tocar nada.
+
+---
+
+## La oferta de salida: la previa, el reloj y el "volver" — 16/09/26
+
+Flavio miró la pantalla y preguntó cuatro cosas.
+
+### La previa era chica y todo estaba angosto
+
+- La previa ya muestra el cartel al tamaño real del checkout (`max-w-md`,
+  448 px), con el fondo oscurecido como en el pago, nada cortado (nombre y
+  texto enteros) y tocar una parte lleva al campo. Aviso cuando el
+  producto no tiene portada (`dda5774a`).
+- La pantalla pasó de `max-w-4xl` a `max-w-6xl`, y la columna de la previa
+  a 500/540 px. El resto del panel sigue en 2xl/3xl a propósito (ancho de
+  lectura); si se quiere más ancho es una decisión aparte.
+
+### "Todos tienen un contador de 15 minutos, ¿por qué nosotros no?"
+
+Porque el de ellos vuelve a 15:00 con F5 y nadie lo hace cumplir. El
+nuestro **sí se puede tener, porque es de verdad**: el servidor firma la
+hora en que vence y la ruta que cobra la mira. Así que ahora:
+
+- Plazos: **15 minutos, 1 hora**, 6, 24 y 48 horas (`HORAS_DE_OFERTA`,
+  guardado en horas: 0.25 y 1).
+- Con una hora o menos por delante el cartel muestra el reloj contando
+  (`cuentaRegresiva`, "Te queda 14:59"); con más, "vale hasta mañana a las
+  18:23". Al llegar a cero dice "La oferta venció" y el botón se apaga.
+  Recargar no lo reinicia (el checkout guarda el primer token).
+- El reloj es un `useSyncExternalStore` compartido que late sólo mientras
+  algún cartel corto lo escucha; en el servidor la hora es 0 y no hay
+  choque de hidratación.
+- **El token ahora lleva la hora en que VENCE, no la de vista**
+  (`oferta-salida-firma`). Así el checkout firma "ahora + 15 min" y el mail
+  de carrito "ahora + 24 h" con el mismo formato, y quien cobra sólo mira
+  la hora. Tope: una firma que prometa más de 48 h no vale. Los tokens
+  viejos (hora de vista, en el pasado) quedan vencidos: el checkout firma
+  uno nuevo, nadie se queda sin oferta.
+- **En el mail el plazo es de al menos 24 horas** (`HORAS_MINIMAS_DEL_MAIL`):
+  un cartel de 15 minutos tiene sentido con la persona adelante, no en una
+  casilla que se abre a la noche. La pantalla lo dice.
+
+### El "volver" de Marketing iba al inicio
+
+Las cinco pantallas de adentro de Marketing (Enlaces, Cupones, Mail a
+compradores, Oferta de salida, Reels) ahora vuelven a Marketing; la de
+Dirección de un producto vuelve a Productos. `BotonVolver` ya aceptaba
+`href`; sólo no se estaba usando.
+
+`oferta-salida.check.ts` (37). 104 chequeos, tsc, eslint y build ok.
+Mirado en 1500 y 360.

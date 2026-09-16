@@ -58,7 +58,7 @@ export default async function DireccionPage({ params }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
-      <BotonVolver />
+      <BotonVolver href="/digitales/productos">Volver a productos</BotonVolver>
 
       <div className="mb-6">
         <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">

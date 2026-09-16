@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
      18:23" del cartel. Ver `lib/oferta-salida`. */
   if (esCodigoDeOferta(cupon.codigo)) {
     const oferta = leerOfertaSalida(producto.ofertaSalida);
-    const plazo = oferta.activa && oferta.tipo === "DESCUENTO" ? leerTokenDeOferta(cuerpo?.oferta, producto.id, oferta.horas) : null;
+    const plazo = oferta.activa && oferta.tipo === "DESCUENTO" ? leerTokenDeOferta(cuerpo?.oferta, producto.id) : null;
     if (!plazo) return NextResponse.json({ error: "Esa oferta ya venció." }, { status: 400 });
   }
 

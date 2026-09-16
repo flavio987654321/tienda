@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { origenAnotado } from "@/lib/visitas-digitales";
 import { descuentoDe, normalizarCodigo, type TipoDeCupon } from "@/lib/cupones-digitales";
-import { vistaEnDelToken, venceEnTexto, type HorasDeOferta } from "@/lib/oferta-salida";
+import { venceEnDelToken } from "@/lib/oferta-salida";
 import CartelDeSalida from "@/components/digitales/CartelDeSalida";
 import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } from "lucide-react";
 
@@ -33,7 +33,7 @@ import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } fro
  * token con la hora en que se mostró (ver `lib/oferta-salida`).
  */
 export type OfertaEnElCheckout = {
-  titulo: string; texto: string; boton: string; horas: HorasDeOferta; token: string;
+  titulo: string; texto: string; boton: string; token: string;
 } & (
   | { tipo: "DESCUENTO"; codigo: string; porcentaje: number; nombre: string; imagen: string | null }
   | { tipo: "PRODUCTO"; producto: { nombre: string; precio: number; descripcion: string | null; imagen: string | null; href: string } }
@@ -95,7 +95,7 @@ export default function CheckoutClient(p: Props) {
      `tokenDeOferta` es la hora en que ESTA persona la vio, firmada. Se
      guarda en el navegador la primera vez: recargar no reinicia el plazo. Al
      pagar viaja con el cupón para que el servidor lo haga cumplir. */
-  const [cartel, setCartel] = useState<{ vence: string } | null>(null);
+  const [cartel, setCartel] = useState<{ venceEn: number } | null>(null);
   const [tokenDeOferta, setTokenDeOferta] = useState<string | null>(null);
   const [ofertaError, setOfertaError] = useState("");
   const ofertaMostrada = useRef(false);
@@ -172,18 +172,18 @@ export default function CheckoutClient(p: Props) {
       if (ofertaMostrada.current || enVuelo.current) return;
       ofertaMostrada.current = true;
       /* El token más viejo que siga vivo: el guardado si lo hay, si no el de
-         esta carga. Así recargar no reinicia el plazo. */
+         esta carga. Así recargar no reinicia el plazo, y el reloj sigue de
+         donde iba. */
       let token = oferta.token;
       try {
         const guardado = window.localStorage.getItem(claveToken);
-        const vistaEn = guardado ? vistaEnDelToken(guardado) : null;
-        if (guardado && vistaEn && vistaEn + oferta.horas * 3_600_000 > Date.now()) token = guardado;
+        const venceGuardado = guardado ? venceEnDelToken(guardado) : null;
+        if (guardado && venceGuardado && venceGuardado > Date.now()) token = guardado;
         window.localStorage.setItem(claveToken, token);
         window.localStorage.setItem(claveVista, "1");
       } catch { /* ídem */ }
-      const vistaEn = vistaEnDelToken(token) ?? Date.now();
       setTokenDeOferta(token);
-      setCartel({ vence: venceEnTexto(new Date(vistaEn + oferta.horas * 3_600_000)) });
+      setCartel({ venceEn: venceEnDelToken(token) ?? Date.now() });
     };
 
     const alSalir = (e: MouseEvent) => { if (e.clientY <= 0) mostrar(); };
@@ -538,7 +538,7 @@ export default function CheckoutClient(p: Props) {
         <div role="dialog" aria-modal="true" aria-label={oferta.titulo} className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/55 p-4 sm:items-center">
           <CartelDeSalida
             c={{
-              titulo: oferta.titulo, texto: oferta.texto, boton: oferta.boton, vence: cartel.vence,
+              titulo: oferta.titulo, texto: oferta.texto, boton: oferta.boton, venceEn: cartel.venceEn,
               imagen: oferta.tipo === "DESCUENTO" ? oferta.imagen : oferta.producto.imagen,
               oferta: oferta.tipo === "DESCUENTO"
                 ? { tipo: "DESCUENTO", nombre: oferta.nombre, antes: cuenta.sinCupon, despues: cuenta.sinCupon - descuentoDe({ tipo: "PORCENTAJE", valor: oferta.porcentaje }, cuenta.sinCupon), porcentaje: oferta.porcentaje }

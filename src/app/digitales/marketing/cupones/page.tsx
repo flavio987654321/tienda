@@ -71,7 +71,7 @@ export default async function CuponesPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
-      <BotonVolver />
+      <BotonVolver href="/digitales/marketing">Volver a Marketing</BotonVolver>
 
       <div className="mb-6">
         <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">Cupones de descuento</h1>

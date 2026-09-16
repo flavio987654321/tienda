@@ -1,4 +1,8 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
 import { Clock, X } from "lucide-react";
+import { cuentaRegresiva, mostrarReloj, venceEnTexto } from "@/lib/oferta-salida";
 
 /**
  * El cartel de la oferta de salida. Uno solo para dos lugares: el checkout
@@ -10,8 +14,15 @@ import { Clock, X } from "lucide-react";
  * checkout: no tiene colores propios. En el panel, la vista previa las pone
  * con `variablesDePagina` del producto elegido.
  *
- * Lo que dice es lo que es: el plazo viene calculado del servidor y se
- * cumple. Sin "quedan pocos", sin reloj que cuenta hacia atrás.
+ * ── El reloj ────────────────────────────────────────────────────────────────
+ *
+ * Con menos de una hora por delante el cartel cuenta hacia atrás; con más,
+ * dice "vale hasta mañana a las 18:23". Las dos cosas son ciertas: la hora
+ * en que vence viene firmada por el servidor y la ruta que cobra la hace
+ * cumplir. Recargar no lo reinicia (el checkout guarda el primer token), y
+ * cuando llega a cero el botón se apaga: no se ofrece lo que ya no aplica.
+ * Es lo que diferencia este reloj del de la competencia, que vuelve a
+ * 15:00 con F5.
  *
  * ── Nada se corta ───────────────────────────────────────────────────────────
  *
@@ -32,8 +43,8 @@ export type ContenidoDelCartel = {
   titulo: string;
   texto: string;
   boton: string;
-  /** "hasta mañana a las 18:23". */
-  vence: string;
+  /** Hasta cuándo vale, en milisegundos: la hora firmada. */
+  venceEn: number;
   imagen: string | null;
   /** Qué se ofrece. */
   oferta:
@@ -43,6 +54,35 @@ export type ContenidoDelCartel = {
 
 const plata = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+
+/* ── "Ahora" ────────────────────────────────────────────────────────────────
+   Un reloj compartido que late cada segundo mientras algún cartel con menos
+   de una hora por delante lo escucha; los carteles largos leen la hora una
+   vez y no se vuelven a dibujar. Es un `useSyncExternalStore` y no un
+   `setInterval` con estado: en el servidor la hora es 0 (no hay reloj que
+   leer) y la hidratación no choca con un segundo que ya pasó. */
+let ahoraCache = 0;
+const oyentes = new Set<() => void>();
+let latido: number | null = null;
+function suscribir(avisar: () => void) {
+  oyentes.add(avisar);
+  ahoraCache = Date.now();
+  if (latido === null) latido = window.setInterval(() => { ahoraCache = Date.now(); oyentes.forEach((f) => f()); }, 1000);
+  return () => {
+    oyentes.delete(avisar);
+    if (oyentes.size === 0 && latido !== null) { window.clearInterval(latido); latido = null; }
+  };
+}
+const sinSuscribir = () => () => {};
+function leerAhora(): number {
+  if (ahoraCache === 0) ahoraCache = Date.now();
+  return ahoraCache;
+}
+const enElServidor = () => 0;
+
+function useAhora(venceEn: number): number {
+  return useSyncExternalStore(mostrarReloj(venceEn, leerAhora()) ? suscribir : sinSuscribir, leerAhora, enElServidor);
+}
 
 export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, onCerrar, yendo = false, error = "", href, alTocar }: {
   c: ContenidoDelCartel;
@@ -58,6 +98,11 @@ export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, on
   /** Sólo en la vista previa del panel: qué parte se tocó. */
   alTocar?: (parte: ParteDelCartel) => void;
 }) {
+  const ahora = useAhora(c.venceEn);
+  /* Con hora 0 (el servidor) no hay reloj ni vencida: se dice la hora y listo. */
+  const reloj = ahora > 0 && mostrarReloj(c.venceEn, ahora) ? cuentaRegresiva(c.venceEn, ahora) : null;
+  const vencida = ahora > 0 && c.venceEn <= ahora;
+
   const claseBoton = `flex w-full items-center justify-center gap-2 bg-[color:var(--pv-acento)] px-5 py-3.5 text-[15px] font-extrabold text-[color:var(--pv-sobre)] transition hover:opacity-90 disabled:opacity-60 ${botonRedondo}`;
   /* En la previa, cada parte editable se marca al pasar el mouse. */
   const editable = alTocar ? "cursor-pointer rounded-md outline-offset-4 hover:outline hover:outline-2 hover:outline-dashed hover:outline-[color:var(--pv-acento)]" : "";
@@ -96,16 +141,30 @@ export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, on
         </div>
       </div>
 
-      {/* El plazo: es cierto, lo hace cumplir el servidor. */}
-      <p className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[color:var(--pv-tenue)]">
-        <Clock className="h-3.5 w-3.5" /> Vale {c.vence}.
-      </p>
+      {/* El plazo: es cierto, lo hace cumplir el servidor. Reloj con menos de
+          una hora; la hora, con más. */}
+      {vencida ? (
+        <p className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[color:var(--pv-tenue)]">
+          <Clock className="h-3.5 w-3.5" /> La oferta venció.
+        </p>
+      ) : reloj ? (
+        <p className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-[color:var(--pv-tenue)]">
+          <Clock className="h-3.5 w-3.5" /> Te queda
+          <span className="rounded-md bg-[color:var(--pv-fuerte)] px-2 py-0.5 font-mono text-[14px] font-extrabold tabular-nums text-[color:var(--pv-tinta)]" aria-live="off">{reloj}</span>
+        </p>
+      ) : (
+        <p className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-[color:var(--pv-tenue)]">
+          <Clock className="h-3.5 w-3.5" /> Vale {venceEnTexto(new Date(c.venceEn), new Date(ahora > 0 ? ahora : c.venceEn))}.
+        </p>
+      )}
 
       {error && <p role="alert" className="mt-3 bg-[color:var(--pv-fuerte)] px-3 py-2 text-[12.5px] font-medium text-[color:var(--pv-tinta)]">{error}</p>}
 
       <div className="mt-4 space-y-2">
         {alTocar ? (
           <button type="button" onClick={() => alTocar("boton")} title="Tocá para editar" className={`${claseBoton} ${editable}`}>{c.boton}</button>
+        ) : vencida ? (
+          <button type="button" disabled className={claseBoton}>{c.boton}</button>
         ) : href ? (
           <a href={href} className={claseBoton}>{c.boton}</a>
         ) : (
@@ -113,7 +172,7 @@ export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, on
         )}
         {onCerrar && (
           <button type="button" onClick={onCerrar} className="w-full py-2 text-[13px] font-semibold text-[color:var(--pv-tenue)] hover:text-[color:var(--pv-tinta)]">
-            No, gracias
+            {vencida ? "Cerrar" : "No, gracias"}
           </button>
         )}
       </div>

@@ -52,8 +52,8 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
   const estilo = buscarEstilo(pagina.estilo);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8">
-      <BotonVolver />
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8">
+      <BotonVolver href="/digitales/marketing">Volver a Marketing</BotonVolver>
 
       <div className="mb-6">
         <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">Oferta de salida</h1>

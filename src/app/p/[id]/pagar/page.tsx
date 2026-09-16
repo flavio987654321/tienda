@@ -211,8 +211,10 @@ async function armarOferta(fila: FilaDelPago, seLePuedeVender: boolean, tokenPed
   const sub = fila.store.owner.subscription;
   if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) return null;
 
-  const token = leerTokenDeOferta(tokenPedido, fila.id, guardada.horas) ? (tokenPedido as string) : firmarOferta(fila.id, Date.now());
-  const comun = { titulo: guardada.titulo, texto: guardada.texto, boton: guardada.boton, horas: guardada.horas, token };
+  /* El plazo lo firma el servidor, desde ahora. Si el link ya traía uno
+     vivo (el del mail), se respeta ése: es lo que se le prometió. */
+  const token = leerTokenDeOferta(tokenPedido, fila.id) ? (tokenPedido as string) : firmarOferta(fila.id, Date.now() + guardada.horas * 3_600_000);
+  const comun = { titulo: guardada.titulo, texto: guardada.texto, boton: guardada.boton, token };
 
   if (guardada.tipo === "DESCUENTO") {
     /* El cupón tiene que existir y estar prendido: si la dueña lo borró de

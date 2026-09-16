@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, ArrowRight, Check, DoorOpen } from "lucide-react";
 import {
-  validarOfertaSalida, venceEnTexto, HORAS_DE_OFERTA, PORCENTAJE_MINIMO, PORCENTAJE_MAXIMO_SALIDA,
+  validarOfertaSalida, textoDeHoras, esPlazoCorto, HORAS_DE_OFERTA, HORAS_MINIMAS_DEL_MAIL, PORCENTAJE_MINIMO, PORCENTAJE_MAXIMO_SALIDA,
   TITULO_MAX, TEXTO_MAX, BOTON_MAX, type OfertaSalida, type HorasDeOferta,
 } from "@/lib/oferta-salida";
 import { descuentoDe } from "@/lib/cupones-digitales";
@@ -108,15 +108,15 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
   }
 
   /* La vista previa con los números del producto elegido: el precio de
-     verdad, el descuento de verdad, y un plazo contado desde ahora. */
+     verdad, el descuento de verdad, y un plazo contado desde que se abrió
+     la pantalla (con los cortos, el reloj corre de verdad acá también). */
   const antes = elegido.price;
   const despues = antes - descuentoDe({ tipo: "PORCENTAJE", valor: o.porcentaje }, antes);
-  const vence = venceEnTexto(new Date(abiertaEn + o.horas * 3_600_000), new Date(abiertaEn));
   const cartel = {
     titulo: o.titulo || "Antes de que te vayas…",
     texto: o.texto || "Acá va tu texto.",
     boton: o.boton || "Sí, lo quiero",
-    vence,
+    venceEn: abiertaEn + o.horas * 3_600_000,
     imagen: o.tipo === "PRODUCTO" ? (otro?.imagen ?? null) : elegido.imagen,
     oferta: o.tipo === "DESCUENTO"
       ? { tipo: "DESCUENTO" as const, nombre: elegido.name, antes, despues, porcentaje: o.porcentaje }
@@ -162,7 +162,7 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_470px] items-start">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_500px] xl:grid-cols-[minmax(0,1fr)_540px] items-start">
         {/* ── El formulario ─────────────────────────────────────────────── */}
         <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm space-y-4">
           <label className="flex items-center justify-between gap-3">
@@ -216,9 +216,13 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
             <div>
               <label htmlFor="horas" className={CLASE_LABEL}>Cuánto vale</label>
               <select id="horas" value={o.horas} disabled={!esPago} onChange={(e) => tocar("horas", Number(e.target.value) as HorasDeOferta)} className={CLASE_INPUT}>
-                {HORAS_DE_OFERTA.map((h) => <option key={h} value={h}>{h} horas</option>)}
+                {HORAS_DE_OFERTA.map((h) => <option key={h} value={h}>{textoDeHoras(h)}</option>)}
               </select>
-              <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">Desde que la persona lo ve. Es de verdad: pasado el plazo, el descuento no aplica.</p>
+              <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
+                Desde que la persona lo ve. Es de verdad: pasado el plazo, el descuento no aplica aunque recargue o vuelva mañana.
+                {esPlazoCorto(o.horas) ? " Con este plazo el cartel muestra el reloj contando." : " Con menos de una hora por delante, el cartel pasa a mostrar el reloj."}
+                {" "}En el mail de carrito abandonado vale al menos {HORAS_MINIMAS_DEL_MAIL} horas.
+              </p>
             </div>
           </div>
 
