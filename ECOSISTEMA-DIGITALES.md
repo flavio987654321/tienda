@@ -7247,3 +7247,45 @@ es el del tema del panel, que ya está contemplado: por eso existe
 `TemaDelPanel`. No es un error.
 
 106 chequeos, tsc, eslint y build ok.
+
+---
+
+## El paso 4 desaparecía, y por eso no se entendía cómo cargar fotos — 16/09/26
+
+Flavio, con el panel abierto: "sigo sin entender cómo cargo las imágenes".
+Y tenía razón en no entender: **la sección no estaba**.
+
+El paso 4 se dibujaba con `{inv.fotos.length > 0 && (…)}`. Sin lugares de
+foto reconocidos, la sección entera desaparecía — y una sección que no
+está no explica nada. Quien abre esa pantalla no tiene forma de saber si
+las fotos se cargan en otro lado, si todavía no llegaron, o si su archivo
+no las marca. La respuesta hay que darla ahí, no esconderla.
+
+Ahora se muestra siempre. Sin lugares de foto dice que no encontramos
+ninguno y las dos razones posibles, en ese orden:
+
+1. **Lo subió antes de que supiéramos leerlos.** Ésta era la de él, y es
+   la que no se podía adivinar desde afuera: el inventario se calcula al
+   subir y queda guardado con esa versión. Las tres versiones que tenía
+   guardadas decían `fotos: 0` porque las leyó el código viejo. Y no se
+   puede recalcular: el archivo crudo no se guarda nunca (a propósito), y
+   el atributo `data-afl-img` ya no está en lo guardado. La única salida
+   es volver a subir el mismo .html, que son diez segundos.
+2. **El archivo no los marca.** Ahí va el pedido a Claude, con el ejemplo
+   `data-tienda="foto:Portada"` escrito.
+
+Y el pie de la previa decía "lo que salga marcado en rojo es una foto que
+falta", que ya no era cierto: es naranja punteado y tiene un cartelito
+«Falta: …». Ahora lo dice bien y aclara que ESE nombre es el que pide el
+paso 4, que es lo que conecta las dos mitades de la pantalla.
+
+### Y una foto de 4,5 MB rebotaba sin explicación
+
+De paso: el panel dejaba pasar hasta 5 MB y `/api/upload` corta en 4
+(porque el techo de una función en producción es 4,5). Una foto de celular
+de 4,5 MB pasaba nuestro control y la rebotaba el servidor con un error
+que no dice nada. Ahora es 4 acá también —el mismo número que usa
+`ElegirFoto`, que es de donde salió esto— y el mensaje dice qué hacer.
+
+Chequeo FOTO-H. 106 chequeos, tsc, eslint y build ok. Los dos estados de
+la sección mirados a 620.

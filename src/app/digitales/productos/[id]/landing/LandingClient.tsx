@@ -27,7 +27,11 @@ export type VersionEnPantalla = {
 };
 
 const CLASE_INPUT = "w-full px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all disabled:opacity-50";
-const MAX_FOTO_MB = 5;
+/* ⚠️ 4 y no 5: `/api/upload` corta en 4 MB porque el techo de una función en
+   producción es 4,5. Con 5 acá, una foto de 4,5 pasaba nuestro control y la
+   rebotaba el servidor con un error que no explica nada. Es el mismo número
+   que usa `ElegirFoto`, que es de donde salió esto. */
+const MAX_FOTO_MB = 4;
 
 /**
  * Subir la landing propia, cargarle las fotos y prenderla.
@@ -145,7 +149,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
 
   async function subirFoto(clave: string, file: File) {
     if (!file.type.startsWith("image/")) return setError("Eso no es una imagen.");
-    if (file.size > MAX_FOTO_MB * 1024 * 1024) return setError(`La imagen no puede pesar más de ${MAX_FOTO_MB} MB.`);
+    if (file.size > MAX_FOTO_MB * 1024 * 1024) return setError(`La imagen no puede pesar más de ${MAX_FOTO_MB} MB. Exportala más chica y probá de nuevo.`);
     setGuardando(clave);
     try {
       const form = new FormData();
@@ -447,12 +451,40 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             )}
 
             {/* ── 4. Las fotos ─────────────────────────────────────────── */}
-            {inv.fotos.length > 0 && (
-              <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
-                <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">4. Tus fotos</p>
+            {/* ⚠️ Esta sección se muestra SIEMPRE, también sin ningún lugar de
+                foto. Antes desaparecía entera y era lo peor que podía pasar:
+                quien abría la pantalla no tenía forma de saber si las fotos se
+                cargaban en otro lado, si todavía no estaban, o si su archivo
+                no tenía. La respuesta hay que darla acá, no esconderla. */}
+            <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+              <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">4. Tus fotos</p>
+              {inv.fotos.length === 0 ? (
+                <div className="mt-1 space-y-2 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                  <p className="font-semibold text-gray-700 panel-oscuro:text-gray-300">
+                    En este archivo no encontramos ningún lugar donde vaya una foto.
+                  </p>
+                  <p>
+                    Las fotos no van adentro del .html: cada lugar tiene que estar marcado, y vos las subís acá. Si tu
+                    diseño tiene fotos y no aparecen abajo, puede ser una de dos:
+                  </p>
+                  <ul className="list-disc space-y-1 pl-4">
+                    <li>
+                      <b>Lo subiste antes de que supiéramos leerlos.</b> Lo que ves acá se calcula al subir el archivo y
+                      queda guardado con esa versión. Volvé a subir el mismo .html en el paso 2 y aparecen.
+                    </li>
+                    <li>
+                      <b>El archivo no los marca.</b> Copiá el texto del paso 1, pegáselo a Claude y pedile que marque
+                      cada foto así: <code className="rounded bg-gray-100 panel-oscuro:bg-gray-800 px-1">{`data-tienda="foto:Portada"`}</code>.
+                    </li>
+                  </ul>
+                </div>
+              ) : (
                 <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  Una por cada lugar que dejó Claude. Quedan guardadas: si mañana subís otra versión del diseño, se ponen solas.
+                  Una por cada lugar donde va una foto. El nombre es el que ves en la previa, en el cartelito
+                  «Falta: …». Quedan guardadas: si mañana subís otra versión del diseño, se ponen solas.
                 </p>
+              )}
+              {inv.fotos.length > 0 && (
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {inv.fotos.map((clave) => (
                     <li key={clave} className="flex items-center gap-3 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-2">
@@ -478,8 +510,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                     </li>
                   ))}
                 </ul>
-              </section>
-            )}
+              )}
+            </section>
 
             {/* ── 5. Los links del pie ─────────────────────────────────── */}
             {inv.linksVacios.length > 0 && (
@@ -650,7 +682,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             />
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-            Es tu página de verdad, con tu precio y tus fotos. Lo que salga marcado en rojo es una foto que falta.{" "}
+            Es tu página de verdad, con tu precio y tus fotos. Lo que salga con el borde naranja punteado y un
+            cartelito <b>«Falta: …»</b> es un lugar de foto vacío: ese nombre es el que te pide el paso 4.{" "}
             <a href={`/p/${productoId}?landing=previa`} target="_blank" rel="noopener noreferrer" className="font-bold text-orange-600 hover:text-orange-500">Abrirla en grande</a>.
           </p>
             </>

@@ -502,6 +502,15 @@ const EN_LA_PREVIA = armarLanding(CON_FOTOS.landing.html, {
   nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/a/pagar",
   fotos: {}, enlaces: {}, bloques: {}, mostrarHuecos: true,
 });
+/* La sección de fotos se muestra SIEMPRE, también sin ningún lugar de foto:
+   desaparecida entera, quien abría la pantalla no tenía forma de saber si las
+   fotos se cargaban en otro lado o si su archivo no las marcaba. Y el tope es
+   el mismo que acepta /api/upload (4 MB): con 5 acá, una foto de 4,5 pasaba
+   nuestro control y la rebotaba el servidor sin explicar nada. */
+check("FOTO-H", /4\. Tus fotos/.test(panel) && /no encontramos ningún lugar donde vaya una foto/.test(panel)
+  && /Volvé a subir el mismo \.html/.test(panel) && !/\{inv\.fotos\.length > 0 && \(\n\s+<section/.test(panel)
+  && /const MAX_FOTO_MB = 4;/.test(panel),
+  "el paso de las fotos se ve aunque no haya ninguna, y dice por qué; y el tope es el que acepta el servidor");
 check("FOTO-G", (EN_LA_PREVIA.match(/data-tienda-falta="/g) ?? []).length === 6
   && /\[data-tienda-falta\]::after\{content:"Falta: " attr\(data-tienda-falta\)/.test(ESTILO_DE_LA_CAPSULA),
   "en la previa cada lugar vacío se marca con su nombre: si no, la lista dice «foto1, pagina3» y no se sabe cuál es cuál");
