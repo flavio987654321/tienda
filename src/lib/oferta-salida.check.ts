@@ -137,5 +137,19 @@ check("LIST-A", /esCodigoDeOferta\(c\.codigo\)/.test(cupones) && /de la oferta d
 check("HUB-A", /href: "\/digitales\/marketing\/salida"/.test(marketing) && /"Oferta de salida a quien se va sin pagar", on: pago/.test(planes), "la tarjeta en Marketing y la fila en los planes");
 check("BASE-A", /ofertaSalida  String\?/.test(schema) && /ADD COLUMN IF NOT EXISTS "ofertaSalida" TEXT/.test(migracion), "la columna y la migración idempotente");
 
+/* ── La fila de "¿de qué producto?" ──────────────────────────────────────── */
+
+/* ⚠️ `ProductoElegido` es de cliente y lo dibujan pantallas de las DOS clases:
+   Salida y Enlaces desde el cliente, Reels desde el servidor. Una función no
+   cruza esa frontera —React no la puede mandar por el cable— y la pantalla
+   entera se caía con "Functions cannot be passed directly to Client
+   Components". Por eso el link se arma con un texto, no con una función. */
+const ficha = leer("src/app/digitales/marketing/ProductoElegido.tsx");
+const reels = leer("src/app/digitales/marketing/reels/page.tsx");
+check("FICHA-A", /ruta\?: string;/.test(ficha) && !/href\?: \(/.test(ficha) && /href=\{`\$\{ruta\}\?p=\$\{p\.id\}`\}/.test(ficha),
+  "la ficha de producto arma el link con un texto, no con una función: una función no cruza del servidor al cliente");
+check("FICHA-B", /ruta="\/digitales\/marketing\/reels"/.test(reels) && !/=\{\(id\) =>/.test(reels),
+  "y Reels, que es una pantalla del servidor, no le pasa ninguna función");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);

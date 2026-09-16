@@ -135,7 +135,7 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
       <ProductoElegido
         productos={productos.map((p) => ({ id: p.id, name: p.name, nota: p.oferta.activa ? "prendida" : undefined }))}
         elegidoId={elegido.id}
-        href={(id) => `/digitales/marketing/salida?p=${id}`}
+        ruta="/digitales/marketing/salida"
       />
 
       {!esPago && (

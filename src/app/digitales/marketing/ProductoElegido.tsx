@@ -18,13 +18,20 @@ import { Package } from "lucide-react";
  *
  * La elección viaja por la URL (`?p=`) cuando la pantalla la resuelve el
  * servidor, o por `onElegir` cuando es estado de la pantalla.
+ *
+ * ⚠️ `ruta` es un TEXTO y no una función que arme el link. Esto es un
+ * componente de cliente y lo dibujan pantallas del servidor (Reels): una
+ * función no cruza esa frontera —React no la puede mandar por el cable— y la
+ * pantalla entera se cae con "Functions cannot be passed directly to Client
+ * Components". Era exactamente lo que pasaba en Reels.
  */
 export type FichaDeProducto = { id: string; name: string; nota?: string };
 
-export default function ProductoElegido({ productos, elegidoId, href, onElegir }: {
+export default function ProductoElegido({ productos, elegidoId, ruta, onElegir }: {
   productos: FichaDeProducto[];
   elegidoId: string | null;
-  href?: (id: string) => string;
+  /** La pantalla donde vive la elección; se le agrega `?p=<id>`. */
+  ruta?: string;
   onElegir?: (id: string) => void;
 }) {
   if (productos.length === 0) return null;
@@ -43,8 +50,8 @@ export default function ProductoElegido({ productos, elegidoId, href, onElegir }
         {productos.map((p) => {
           const activa = p.id === elegidoId;
           const texto = p.nota ? `${p.name} · ${p.nota}` : p.name;
-          return href ? (
-            <Link key={p.id} href={href(p.id)} aria-current={activa ? "page" : undefined} title={texto} className={clase(activa)}>{texto}</Link>
+          return ruta ? (
+            <Link key={p.id} href={`${ruta}?p=${p.id}`} aria-current={activa ? "page" : undefined} title={texto} className={clase(activa)}>{texto}</Link>
           ) : (
             <button key={p.id} type="button" onClick={() => onElegir?.(p.id)} aria-pressed={activa} title={texto} className={clase(activa)}>{texto}</button>
           );

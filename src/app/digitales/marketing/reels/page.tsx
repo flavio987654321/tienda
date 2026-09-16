@@ -83,7 +83,7 @@ export default async function ReelsPage({ searchParams }: { searchParams: Promis
       </div>
 
       <div className="mb-4">
-        <ProductoElegido productos={productos} elegidoId={producto?.id ?? null} href={(id) => `/digitales/marketing/reels?p=${id}`} />
+        <ProductoElegido productos={productos} elegidoId={producto?.id ?? null} ruta="/digitales/marketing/reels" />
       </div>
 
       <ReelsClient

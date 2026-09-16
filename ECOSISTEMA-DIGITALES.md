@@ -7215,3 +7215,35 @@ Chequeos FOTO-A a FOTO-G. Mirado a 1100 en la landing de verdad: la
 portada y las seis recetas quedan marcadas sin romperle la grilla.
 
 106 chequeos, tsc, eslint y build ok.
+
+---
+
+## Reels no dibujaba: una función que no cruza — 16/09/26
+
+Flavio mandó la captura: `/digitales/marketing/reels` mostrando "No
+pudimos dibujar esta pantalla". No era de la landing — venía de
+`6e86d21b`, la fila de "¿de qué producto?" en Marketing.
+
+`ProductoElegido` es un componente de CLIENTE y lo dibujan pantallas de
+las dos clases: Salida y Enlaces son de cliente, **Reels es del
+servidor**. Recibía el link armado como función:
+
+```tsx
+<ProductoElegido … href={(id) => `/digitales/marketing/reels?p=${id}`} />
+```
+
+Una función no cruza del servidor al cliente: React manda las props por el
+cable y una función no se puede escribir en un cable. Desde el cliente
+(Salida) andaba; desde el servidor (Reels) tiraba "Functions cannot be
+passed directly to Client Components" y se caía la pantalla entera.
+
+Ahora se le pasa la ruta como texto y el link lo arma él:
+`ruta="/digitales/marketing/reels"` → `` href={`${ruta}?p=${p.id}`} ``.
+Las tres pantallas usan la misma forma, así que no hay una que sólo ande
+de un lado. Chequeos FICHA-A y FICHA-B.
+
+El otro aviso de la consola —el del `<script>` adentro de un componente—
+es el del tema del panel, que ya está contemplado: por eso existe
+`TemaDelPanel`. No es un error.
+
+106 chequeos, tsc, eslint y build ok.
