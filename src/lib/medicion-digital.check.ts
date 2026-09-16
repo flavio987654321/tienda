@@ -90,8 +90,8 @@ check("PAG-A", /<StoreTrackingScripts/.test(pagina) && /medicionDelProducto\(fil
 check("PAG-A2", /medicionDelProducto\(fila\.medicion, fila\.store\.storeConfig\)/.test(pagar) && /medicionDelProducto\(fila\.medicion, fila\.store\.storeConfig\)/.test(gracias)
   && /medicion: true/.test(pagar) && /medicion: true/.test(gracias),
   "el checkout y gracias miden con la misma del producto: los tres pasos van al mismo píxel");
-check("PAG-B", /fila\.isActive && \(\(\) => \{[^]*?<StoreTrackingScripts/.test(pagina) && /viewContent=\{\{ contentId: fila\.id, value: fila\.price, currency: MONEDA_DIGITAL \}\}/.test(pagina),
-  "sólo en la página publicada, con ViewContent del producto");
+check("PAG-B", /fila\.isActive && !previaDeLanding && \(\(\) => \{[^]*?<StoreTrackingScripts/.test(pagina) && /viewContent=\{\{ contentId: fila\.id, value: fila\.price, currency: MONEDA_DIGITAL \}\}/.test(pagina),
+  "sólo en la página publicada (y no en la previa de la landing propia), con ViewContent del producto");
 const bloqueDePrevia = pagina.slice(pagina.indexOf("if (previa) {"), pagina.indexOf("<VisitaDigital"));
 check("PAG-C", bloqueDePrevia.length > 0 && !bloqueDePrevia.includes("<StoreTrackingScripts"),
   "la previa del editor no mide: es la dueña mirándose");

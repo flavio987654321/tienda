@@ -137,6 +137,58 @@ check("INS-C", /Panadería en Airfryer/.test(inst) && /\$\s?9\.900/.test(inst) &
 check("INS-D", /360 px/.test(inst) && /position: fixed/.test(inst) && /castellano de Argentina/.test(inst) && /MIS INDICACIONES DE DISEÑO/.test(inst),
   "piden celular, sin fijos, en castellano de acá, y dejan el lugar para el pedido de diseño");
 
+/* ── La ruta, la página pública y el panel ───────────────────────────────── */
+
+const leer = (ruta: string) => readFileSync(ruta, "utf8").replace(/\r\n/g, "\n");
+const ruta = leer("src/app/api/digitales/productos/[id]/landing/route.ts");
+const publica = leer("src/app/p/[id]/page.tsx");
+const componente = leer("src/components/digitales/LandingPropia.tsx");
+const panel = leer("src/app/digitales/productos/[id]/landing/LandingClient.tsx");
+const panelPage = leer("src/app/digitales/productos/[id]/landing/page.tsx");
+const editorPagina = leer("src/app/digitales/productos/[id]/pagina/page.tsx");
+const schema = leer("prisma/schema.prisma");
+const migracion = leer("prisma/migrations/20260916020000_landing_propia/migration.sql");
+
+check("RUTA-A", /const r = limpiarLanding\(html\);/.test(ruta) && /html: L\.html,/.test(ruta) && !/data: \{[^}]*html: html\b/.test(ruta),
+  "lo que se guarda es lo LIMPIO: el archivo crudo no llega nunca a la base");
+check("RUTA-B", /rolDigital: "PRINCIPAL", store: \{ ownerId: userId \}/.test(ruta) && ruta.split("elProducto(user.id, id)").length === 3,
+  "el dueño va adentro del where, en las dos rutas: un id ajeno no encuentra nada");
+check("RUTA-C", /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)/.test(ruta) && /checkRateLimit\([^)]*clave[^)]*userId[^)]*, 60,/.test(ruta),
+  "Starter y Pro al día, y con tope de intentos por hora");
+check("RUTA-D", /const crudo = await req\.text\(\)[\s\S]*?crudo\.length > CUERPO_MAX/.test(ruta),
+  "el cuerpo se mide como texto antes de parsearlo: un archivo enorme no se convierte en objeto");
+check("RUTA-E", /skip: LANDING_VERSIONES[\s\S]*?deleteMany/.test(ruta), "se guardan las últimas versiones y las viejas se borran");
+check("RUTA-F", /\.\.\.estado, versionId: creada\.id/.test(ruta) && !/fotos: \{\}/.test(ruta),
+  "subir una versión nueva NO borra las fotos ni los links: se guardan por nombre de hueco");
+check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\//.test(ruta) && /\^\(https\?:\\\/\\\/\|mailto:\|tel:\)/.test(ruta),
+  "no se prende sin nada subido; una foto sólo por https y un link sólo http/mailto/tel");
+
+check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(publica),
+  "la landing se muestra sólo si está prendida y el plan la incluye; si vence, vuelve la página de secciones");
+check("PUB-B", /nombre: fila\.name,\n\s+precio: fila\.price,\n\s+precioAnterior: fila\.comparePrice,/.test(publica) && /hrefComprar: "\/pagar"/.test(publica),
+  "el precio, el nombre y el botón salen del producto: cambiar el precio en Productos cambia la landing");
+check("PUB-C", /apagado=\{!fila\.isActive \|\| previaDeLanding\}/.test(publica) && /\{fila\.isActive && !previaDeLanding && \(\(\) =>/.test(publica),
+  "la visita y el píxel siguen afuera de la landing, y la previa de la dueña no cuenta ni mide");
+check("PUB-D", /landing \? <LandingPropia html=\{landing\.html\} fuentes=\{landing\.fuentes\} \/> : <PaginaDeVenta/.test(publica),
+  "reemplaza SÓLO el cuerpo de la página: lo de alrededor no se entera");
+check("PUB-E", /const previaDeLanding = quiereLaPrevia && \(await getCurrentUser\(\)\)\?\.id === fila\.store\.ownerId;/.test(publica),
+  "la previa con la landing apagada la ve sólo su dueña");
+check("PUB-F", /shadowrootmode="open"/.test(componente) && /dangerouslySetInnerHTML/.test(componente) && /rel="stylesheet" href=\{f\}/.test(componente),
+  "se dibuja adentro de un Shadow DOM declarativo, con las fuentes afuera");
+
+check("PAN-A", /accept="\.html,text\/html"/.test(panel) && /file\.size > LANDING_MAX_BYTES/.test(panel) && /await file\.text\(\)/.test(panel),
+  "el panel sube el .html leyéndolo en el navegador, con el mismo tope que el servidor");
+check("PAN-B", /landing=previa/.test(panel) && /sandbox=""/.test(panel) && /pantalla === "celular"/.test(panel),
+  "la previa es la página de verdad, en un marco sin permisos, en computadora y celular");
+check("PAN-C", /No pudimos conectarnos/.test(panel) && /Starter y Pro/.test(panel) && /instruccionesParaClaude\(\{/.test(panelPage),
+  "la pantalla dice los errores, el plan, y arma el pedido para Claude con los datos del producto");
+check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina),
+  "con la landing prendida, el editor de secciones avisa que lo que se edita ahí no se muestra");
+
+check("BASE-A", /landingPropia String\?/.test(schema) && /model LandingDigital \{/.test(schema)
+  && /ADD COLUMN IF NOT EXISTS "landingPropia" TEXT/.test(migracion) && /CREATE TABLE IF NOT EXISTS "LandingDigital"/.test(migracion),
+  "la columna, la tabla de versiones y la migración idempotente");
+
 /* ── Las dependencias ────────────────────────────────────────────────────── */
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { dependencies: Record<string, string> };

@@ -53,44 +53,14 @@ import { parseDocument } from "htmlparser2";
 import { Element, Text, type ChildNode, type Document } from "domhandler";
 import { findAll, findOne, removeElement, textContent, prependChild } from "domutils";
 import render from "dom-serializer";
+import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
-/** Más que esto no es una landing de Claude: es que trae algo adentro. */
-export const LANDING_MAX_BYTES = 500_000;
-/** Versiones que se guardan por producto: "volver a la anterior" es un botón. */
-export const LANDING_VERSIONES = 5;
+export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
+
 /** De dónde se pueden traer hojas de estilo: sólo las fuentes de Google. */
 export const HOSTS_DE_FUENTES = ["fonts.googleapis.com"];
 
 export type NombreDeHueco = "precio" | "precio-anterior" | "comprar" | "reloj" | "opiniones" | "aviso-ventas" | "nombre";
-
-export type InventarioDeLanding = {
-  precio: number;
-  precioAnterior: number;
-  comprar: number;
-  nombre: number;
-  /** Nombres de `foto:…`, únicos, en el orden en que aparecen. */
-  fotos: string[];
-  reloj: boolean;
-  opiniones: boolean;
-  avisoVentas: boolean;
-  /** Links a ninguna parte (`href="#"` o vacío), por su texto. */
-  linksVacios: string[];
-  /** Imágenes que apuntan afuera (Shopify, Drive…): si las borran allá, acá desaparecen. */
-  imagenesExternas: string[];
-  /** Hojas de estilo de fuentes que se cargan aparte, arriba de la página. */
-  fuentes: string[];
-  /** Lo que quedó y no debería: un contador escrito, un "[PRECIO]" sin llenar. Para pedirle a Claude que lo regenere. */
-  avisos: string[];
-};
-
-export type QuitadoDeLanding = {
-  scripts: number;
-  formularios: number;
-  marcos: number;
-  eventos: number;
-  imagenesIncrustadas: number;
-  contadores: number;
-};
 
 export type LandingLimpia = {
   /** Listo para guardar: sin scripts, con el CSS filtrado adelante. */
@@ -326,13 +296,6 @@ function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): Inven
   return inv;
 }
 
-/** "foto:Portada del ebook" → "portada-del-ebook". Es la clave con la que se sube. */
-export function nombreDeFoto(valor: string): string | null {
-  const crudo = valor.replace(/^foto:/i, "");
-  const n = crudo.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-  return n || null;
-}
-
 /* ── Armar: la landing con los datos de verdad ──────────────────────────── */
 
 export type DatosParaArmar = {
@@ -352,11 +315,6 @@ export type DatosParaArmar = {
 };
 
 const plata = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n).replace(/\u00a0/g, " ");
-
-/** "Términos y condiciones" → "terminos-y-condiciones". */
-export function claveDeLink(texto: string): string {
-  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-}
 
 /**
  * El HTML limpio + los datos del producto → lo que se muestra. Cada hueco

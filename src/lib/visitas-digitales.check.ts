@@ -36,8 +36,8 @@ const pagina = leer("src/app/p/[id]/page.tsx");
 const pagar = leer("src/app/p/[id]/pagar/page.tsx");
 const lib = leer("src/lib/visitas-digitales.ts");
 
-check("PING-A", /<VisitaDigital paso="pagina" productoId=\{fila\.id\} apagado=\{!fila\.isActive\} \/>/.test(pagina),
-  "la página pública cuenta la entrada, apagada en borrador");
+check("PING-A", /<VisitaDigital paso="pagina" productoId=\{fila\.id\} apagado=\{!fila\.isActive \|\| previaDeLanding\} \/>/.test(pagina),
+  "la página pública cuenta la entrada, apagada en borrador y en la previa de la landing propia");
 check("PING-B", !/<PaginaEnVivo[^>]*>[\s\S]{0,200}<VisitaDigital/.test(pagina) && !/<VisitaDigital[\s\S]{0,400}<PaginaEnVivo/.test(pagina),
   "la previa del editor NO cuenta: es la dueña mirándose");
 check("PING-C", /<VisitaDigital paso="pagar" productoId=\{fila\.id\} apagado=\{!seLePuedeVender\} \/>/.test(pagar),

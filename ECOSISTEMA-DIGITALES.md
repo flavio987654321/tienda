@@ -6485,3 +6485,68 @@ Verificado antes de empezar:
    PC/celular, versiones.
 5. Después: precio de bienvenida con reloj real (reusa la oferta de
    salida) y opiniones verificadas por mail (reusa `PublicReview`).
+
+---
+
+## La landing propia, paso 2: base, ruta, página y panel — 16/09/26
+
+### La base
+
+- `LandingDigital`: una fila por versión subida (HTML limpio, bytes, título,
+  inventario y quitado). Se guardan las últimas 5 por producto.
+- `Product.landingPropia` (JSON, `lib/landing-estado`): lo que NO cambia
+  entre versiones — si está prendida, qué versión se muestra, **las fotos
+  por nombre de hueco y los links del pie**. Eso es lo que hace barato el
+  ida y vuelta con Claude: subir la versión 9 no obliga a volver a cargar
+  trece fotos, que es exactamente lo que sí obliga Shopify.
+- Migración `20260916020000_landing_propia`, idempotente, comparada contra
+  la base (el diff da sólo la columna, la tabla y la deriva vieja de
+  CupoIA/EbookIA).
+
+### La ruta `/api/digitales/productos/[id]/landing`
+
+- `POST` sube el .html: **lo que se guarda es lo limpio**, el crudo no llega
+  nunca a la base. El cuerpo se mide como texto antes de parsearlo. La
+  versión nueva queda elegida pero NO prendida: primero se mira la previa.
+- `PATCH` cambia lo demás: prender/apagar, elegir versión, la foto de un
+  hueco, el destino de un link. Una cosa por pedido, así dos pestañas no se
+  pisan el mapa entero.
+- Dueño adentro del `where`, Starter/Pro al día, 60 por hora. No se prende
+  sin nada subido. Foto sólo `https://`; link sólo http/mailto/tel.
+
+### La página pública
+
+Si está prendida y el plan la incluye, `/p/[id]` dibuja la landing en vez
+de `<PaginaDeVenta>`, **adentro de un Shadow DOM declarativo**
+(`<template shadowrootmode="open">`, sin JavaScript: se arma al parsear).
+Las fuentes de Google van afuera de la sombra, que es donde se registran.
+
+Lo de alrededor no cambia una línea: `<VisitaDigital>` y
+`<StoreTrackingScripts>` siguen envolviendo la página, así que visitas,
+embudo, campañas y píxel andan igual. El precio, el nombre y el botón salen
+del producto, no del archivo: cambiar el precio en Productos cambia la
+landing. Si el plan vence, vuelve sola la página de secciones y no se
+pierde nada.
+
+`?landing=previa` muestra la landing a su dueña aunque esté apagada, con
+los huecos de foto marcados; esa previa no cuenta visita ni dispara píxel.
+
+### El panel (Productos → Página → "Tu propio diseño")
+
+Seis pasos en una pantalla: copiar el pedido para Claude (con los datos del
+producto adentro), subir el archivo, **la lista de control** (qué encontró,
+qué le sacamos en castellano —"le sacamos 2 programas que traía adentro"—,
+qué falta), las fotos con su botón de subir, los links sueltos, y el
+interruptor para prenderla. Más el historial de versiones con "volver a
+esta". La previa es la página de verdad en un `<iframe sandbox="">`, en
+computadora y celular.
+
+El editor de secciones avisa arriba cuando la landing está prendida: lo que
+se edite ahí no se ve (y se guarda igual, para cuando la apague).
+
+`landing-propia.check.ts` (28 → 47). 105 chequeos, tsc, eslint y build ok.
+Mirado en 1500 y 360.
+
+🔲 Los bloques vivos: reloj real, opiniones verificadas y aviso de ventas
+   (los huecos ya se leen; hoy se sacan si no hay con qué llenarlos).
+🔲 Auditoría antes de deployar: es HTML ajeno, es lo más delicado hasta ahora.

@@ -9,6 +9,10 @@ import VisitaDigital from "./VisitaDigital";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
+import { leerEstadoDeLanding, leerInventario } from "@/lib/landing-estado";
+import { armarLanding } from "@/lib/landing-propia";
+import LandingPropia from "@/components/digitales/LandingPropia";
+import { isSubscriptionActive } from "@/lib/subscription";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,8 +51,16 @@ async function loQueSeMuestra(id: string) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, description: true, price: true, comparePrice: true,
-      images: true, isActive: true, paginaVenta: true, medicion: true,
-      store: { select: { ownerId: true, name: true, whatsappNumber: true, storeConfig: true } },
+      images: true, isActive: true, paginaVenta: true, medicion: true, landingPropia: true,
+      store: {
+        select: {
+          ownerId: true, name: true, whatsappNumber: true, storeConfig: true,
+          /* Para la landing propia: es de los planes pagos, como la oferta de
+             salida. Si el plan vence, la dirección vuelve sola a la página de
+             secciones y no se pierde nada de lo subido. */
+          owner: { select: { subscription: { select: { tier: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true } } } },
+        },
+      },
       hijos: {
         where: { deletedAt: null, rolDigital: "BONO", isActive: true },
         orderBy: { createdAt: "asc" },
@@ -139,6 +151,19 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
   const fila = await loQueSeMuestra(id);
   if (!fila) notFound();
 
+  /* ── ¿Su propio diseño? ────────────────────────────────────────────────
+     Si subió una landing y la prendió, la dirección la muestra a ella en vez
+     de la página de secciones. Lo de alrededor no cambia: la visita se
+     cuenta igual, el píxel dispara igual y el botón de comprar lleva al
+     MISMO pago. Ver `lib/landing-propia`. */
+  /* `?landing=previa`: la dueña mirando su landing antes de prenderla, desde
+     el panel. Sólo ella, y con los huecos de foto marcados para que se vea
+     cuáles faltan. No cuenta visita ni dispara píxel (el bloque de abajo mira
+     `previa`). */
+  const quiereLaPrevia = (await searchParams).landing === "previa";
+  const previaDeLanding = quiereLaPrevia && (await getCurrentUser())?.id === fila.store.ownerId;
+  const landing = await laLanding(fila, previaDeLanding);
+
   const datos = {
     pagina: normalizarContenido(fila.paginaVenta),
     producto: paraPagina(fila),
@@ -170,11 +195,11 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
       {/* La visita se cuenta acá y no en la previa: la previa es la dueña
           mirándose. Un borrador tampoco cuenta —lo ve sólo ella—, y el servidor
           lo descarta igual; `apagado` sólo ahorra el ping. */}
-      <VisitaDigital paso="pagina" productoId={fila.id} apagado={!fila.isActive} />
+      <VisitaDigital paso="pagina" productoId={fila.id} apagado={!fila.isActive || previaDeLanding} />
       {/* El píxel de Meta, GA y Clarity de ESTE producto, o el de la cuenta:
           PageView y ViewContent. Sólo en la página publicada: un borrador lo
           ve ella sola y medirlo es medirse. Ver `lib/medicion-digital`. */}
-      {fila.isActive && (() => {
+      {fila.isActive && !previaDeLanding && (() => {
         const m = medicionDelProducto(fila.medicion, fila.store.storeConfig);
         return (
           <StoreTrackingScripts
@@ -185,7 +210,51 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
           />
         );
       })()}
-      <PaginaDeVenta {...datos} />
+      {landing ? <LandingPropia html={landing.html} fuentes={landing.fuentes} /> : <PaginaDeVenta {...datos} />}
     </div>
   );
+}
+
+/**
+ * La landing propia lista para dibujar, o null si no corresponde: no la
+ * prendió, no subió nada, la versión elegida ya no está, o el plan venció.
+ *
+ * El precio, el nombre y el botón salen de acá —del producto— y no de lo que
+ * el archivo tenga escrito: si mañana cambia el precio en Productos, la
+ * landing cambia sola. Es la diferencia con pegar el mismo HTML en Shopify,
+ * donde el número vive a mano adentro de un `<script>`.
+ */
+async function laLanding(fila: {
+  id: string; name: string; price: number; comparePrice: number | null; landingPropia: string | null;
+  store: { owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
+}, previa = false): Promise<{ html: string; fuentes: string[] } | null> {
+  const estado = leerEstadoDeLanding(fila.landingPropia);
+  if ((!estado.activa && !previa) || !estado.versionId) return null;
+  const sub = fila.store.owner.subscription;
+  if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) return null;
+
+  const version = await prisma.landingDigital.findFirst({
+    where: { id: estado.versionId, productId: fila.id },
+    select: { html: true, inventario: true },
+  });
+  if (!version) return null;
+
+  const html = armarLanding(version.html, {
+    nombre: fila.name,
+    precio: fila.price,
+    precioAnterior: fila.comparePrice,
+    /* Relativo a propósito: la dirección puede ser el subdominio o el dominio
+       propio, y el pago vive al lado en las dos. */
+    hrefComprar: "/pagar",
+    fotos: estado.fotos,
+    enlaces: estado.enlaces,
+    /* Los bloques vivos llegan en el paso siguiente (reloj, opiniones,
+       aviso de ventas). Hasta entonces sus huecos se sacan, que es lo que
+       hace `armarLanding` sin HTML: mejor nada que un cuadro vacío. */
+    bloques: {},
+    /* En la previa, un hueco sin foto se marca en vez de desaparecer: es la
+       forma de ver qué falta subir. */
+    mostrarHuecos: previa,
+  });
+  return { html, fuentes: leerInventario(version.inventario).fuentes };
 }

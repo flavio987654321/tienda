@@ -679,6 +679,11 @@ model Product {
   /// checkout sin pagar, como JSON. Null = apagada. La forma la declara
   /// `lib/oferta-salida`; el cupón que crea vive en `CuponDigital`.
   ofertaSalida  String?
+  /// La landing propia (el HTML que diseñó con Claude): si está prendida,
+  /// qué versión se muestra, las fotos por nombre de hueco y los links del
+  /// pie. JSON; la forma la declara `lib/landing-estado`. Las versiones del
+  /// HTML viven en `LandingDigital`.
+  landingPropia String?
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.
@@ -702,6 +707,7 @@ model Product {
   campaniasDigital DigitalVisitaCampania[]
   cuponesDigital  CuponDigital[]
   correosDigital  CorreoDigital[]
+  landingsDigital LandingDigital[]
 
   @@index([deletedAt])
   // Todo lo que se le pide a esta tabla arranca por la tienda: el catálogo que
@@ -1278,6 +1284,27 @@ model CorreoDigital {
 
 /// Quien pidió no recibir más mails de ESTA cuenta. Por (cuenta, correo) y
 /// no por campaña: la baja es de la relación, no del mail que la provocó.
+/// Una versión subida de la landing propia de un producto digital: el HTML
+/// ya limpio (`limpiarLanding`), lo que trae adentro y lo que se le sacó. Se
+/// guardan las últimas `LANDING_VERSIONES` por producto; la que se muestra la
+/// dice `Product.landingPropia.versionId`. Ver `lib/landing-propia`.
+model LandingDigital {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Limpio: sin scripts, con el CSS filtrado adelante. Hasta 500 KB.
+  html       String
+  bytes      Int
+  titulo     String?
+  /// JSON `InventarioDeLanding`: huecos, fotos, links vacíos, avisos.
+  inventario String
+  /// JSON `QuitadoDeLanding`: cuántos scripts, eventos, etc. se fueron.
+  quitado    String
+  createdAt  DateTime @default(now())
+
+  @@index([productId, createdAt])
+}
+
 model BajaCorreoDigital {
   id        String   @id @default(cuid())
   storeId   String
