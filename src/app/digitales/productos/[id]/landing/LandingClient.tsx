@@ -530,8 +530,12 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                 src={`/p/${productoId}?landing=previa`}
                 title="Vista previa de tu diseño"
                 className={`w-full rounded-2xl bg-white ${pantalla === "celular" ? "h-[620px]" : "h-[560px]"}`}
-                /* Sin permisos: la previa mira, no hace. */
-                sandbox=""
+                /* Deja correr JavaScript —el nuestro: el que hace bajar suave
+                   y aparecer al bajar— pero NO le da nuestro origen: adentro del
+                   marco no hay cookies ni sesión, y no puede sacar la pestaña de
+                   su lugar. Sin esto la previa mentiría: mostraría quieta una
+                   página que se mueve. */
+                sandbox="allow-scripts"
               />
             </div>
             <p className="mt-2 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">

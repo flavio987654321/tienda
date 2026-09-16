@@ -93,7 +93,7 @@ const OPCIONES: sanitizeHtml.IOptions = {
     ...ETIQUETAS_SVG,
   ],
   allowedAttributes: {
-    "*": ["class", "id", "title", "lang", "dir", "role", "style", "aria-*", "data-tienda", "data-tienda-era", "hidden", "tabindex"],
+    "*": ["class", "id", "title", "lang", "dir", "role", "style", "aria-*", "data-tienda", "data-tienda-era", "data-tienda-aparece", "hidden", "tabindex"],
     a: ["href", "target", "rel", "download"],
     img: ["src", "srcset", "sizes", "alt", "width", "height", "loading", "decoding"],
     source: ["srcset", "sizes", "type", "media"],
@@ -340,11 +340,10 @@ function inventariar(cuerpo: string, fuentes: string[], avisos: string[]): Inven
 
     if (el.name === "a" && h !== "comprar") {
       const href = (el.attribs.href ?? "").trim();
-      /* Un `#loquesea` tampoco lleva a ningún lado: adentro de la cápsula
-         (Shadow DOM) el salto por ancla no funciona — el navegador le pone
-         el `#` a la dirección y la página no se mueve. Así que se ofrece
-         completarlo como cualquier link vacío. */
-      if (href === "" || href.startsWith("#")) {
+      /* Los `#seccion` que apuntan a algo que existe ya no llegan acá:
+         `arreglarLanding` los deja vivos, y los que no, los normaliza a
+         "#" para que el panel ofrezca completarlos. */
+      if (href === "" || href === "#") {
         const t = textContent(el).replace(/\s+/g, " ").trim();
         if (t && !inv.linksVacios.includes(t)) inv.linksVacios.push(t);
       }
@@ -455,7 +454,7 @@ function ponerBloque(el: Element, html: string | undefined) {
 
 function enlazar(el: Element, enlaces: Record<string, string>) {
   const href = (el.attribs.href ?? "").trim();
-  if (href !== "" && !href.startsWith("#")) return;
+  if (href !== "" && href !== "#") return;
   const url = enlaces[claveDeLink(textContent(el))];
   if (url && /^(https?:|mailto:|tel:)/i.test(url)) {
     el.attribs.href = url;

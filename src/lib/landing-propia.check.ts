@@ -18,6 +18,7 @@ import {
 import { revisarLanding, tieneTraba } from "./landing-revision";
 import { leerInventario } from "./landing-estado";
 import { instruccionesParaClaude, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
+import { EFECTOS_DE_LA_LANDING, ESTILO_DE_LA_CAPSULA } from "./landing-efectos";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -224,6 +225,42 @@ check("ARR-H", (() => {
     && pedidoDeCambios({ hallazgos: [], avisos: [], sueltos: [], fotos: ["portada"] }) === "";
 })(), "los arreglos se guardan y vuelven de la base, y el pedido de cambios se arma numerado (o vacío si no hay nada)");
 
+/* ── Los efectos: el movimiento que reemplaza al script de ella ─────────── */
+
+check("EFE-A", (() => {
+  /* Un link a una sección que existe se deja vivo (el script lo hace bajar);
+     el que apunta a la nada se normaliza para poder completarlo, y el que
+     está ADENTRO de su propio destino no tiene a dónde bajar: ése cobra. */
+  const a = limpio(String.raw`<div><a class="x" href="#oferta">Ver la oferta</a><a href="#nada">Perdido</a>
+    <section id="oferta"><a href="#oferta">QUIERO EL EBOOK</a></section><span data-tienda="precio"></span></div>`);
+  const vivo = primerElemento(a.html, (e) => e.attribs.class === "x");
+  return vivo?.attribs.href === "#oferta" && a.inventario.comprar === 1
+    && a.inventario.linksVacios.includes("Perdido")
+    && /baja a otra parte de tu página/.test(a.inventario.arreglos.join(" "));
+})(), "el link que baja a una sección se deja vivo; el que apunta a la nada se completa, y el que está adentro de su destino cobra");
+
+check("EFE-B", EFECTOS_DE_LA_LANDING.includes("scrollIntoView") && EFECTOS_DE_LA_LANDING.includes("prefers-reduced-motion")
+  && !/\beval\b|new Function|innerHTML|document\.write|fetch\(|XMLHttpRequest/.test(EFECTOS_DE_LA_LANDING)
+  && EFECTOS_DE_LA_LANDING.includes("shadowRoot"),
+  "el script nuestro baja suave, respeta a quien pidió menos movimiento, y no ejecuta ni trae nada de afuera");
+
+check("EFE-C", ESTILO_DE_LA_CAPSULA.includes(":host{all:initial")
+  && ESTILO_DE_LA_CAPSULA.includes(":host(:not([data-tienda-efectos]))")
+  && /opacity:1!important/.test(ESTILO_DE_LA_CAPSULA),
+  "la cápsula no hereda la letra de la página, y sin nuestro script lo que «aparece» se ve igual: nunca un botón invisible");
+
+check("EFE-D", (() => {
+  /* La marca de la autora entra; la que ponemos nosotros al ver el
+     elemento, no: si la escribe ella, arrancaría mostrado. */
+  const a = limpio(String.raw`<div data-tienda-aparece data-tienda-visto="" class="c"><a data-tienda="comprar">x</a></div>`);
+  return /data-tienda-aparece/.test(a.html) && !/data-tienda-visto/.test(a.html);
+})(), "data-tienda-aparece sobrevive a la limpieza y data-tienda-visto no, porque ése lo ponemos nosotros");
+
+check("EFE-E", inst.includes("data-tienda-aparece")
+  && inst.includes("[data-tienda-visto]")
+  && /Los links internos a otra sección .* funcionan/.test(inst),
+  "las instrucciones le enseñan a Claude las dos únicas formas de animar que andan acá");
+
 /* ── La revisión: qué DICE la página ─────────────────────────────────────── */
 
 const nada = { comprar: 1, precio: 1, opiniones: false, css: "" };
@@ -306,8 +343,11 @@ check("PUB-F", /shadowrootmode="open"/.test(componente) && /dangerouslySetInnerH
 
 check("PAN-A", /accept="\.html,text\/html"/.test(panel) && /file\.size > LANDING_MAX_BYTES/.test(panel) && /await file\.text\(\)/.test(panel),
   "el panel sube el .html leyéndolo en el navegador, con el mismo tope que el servidor");
-check("PAN-B", /landing=previa/.test(panel) && /sandbox=""/.test(panel) && /pantalla === "celular"/.test(panel),
-  "la previa es la página de verdad, en un marco sin permisos, en computadora y celular");
+/* El marco deja correr JavaScript —el nuestro, el de los efectos— pero sin
+   `allow-same-origin`: adentro no hay cookies ni sesión. Si se le diera el
+   origen, un archivo ajeno estaría corriendo con nuestra sesión. */
+check("PAN-B", /landing=previa/.test(panel) && /sandbox="allow-scripts"/.test(panel) && !/allow-same-origin/.test(panel) && /pantalla === "celular"/.test(panel),
+  "la previa es la página de verdad, en un marco que puede moverse pero no tiene nuestro origen, en computadora y celular");
 check("PAN-C", /No pudimos conectarnos/.test(panel) && /Starter y Pro/.test(panel) && /instruccionesParaClaude\(producto, indicaciones\)/.test(panel) && /producto=\{\{/.test(panelPage) && /usePedidoGuardado/.test(panel) && !/useEffect/.test(panel),
   "la pantalla dice los errores, el plan, y arma el pedido con los datos del producto más lo que ella escribió del diseño (guardado en su navegador)");
 check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina),

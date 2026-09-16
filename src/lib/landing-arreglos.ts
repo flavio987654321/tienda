@@ -69,10 +69,28 @@ function pareceCta(texto: string): boolean {
 /** Lo que puede ser la respuesta de una pregunta: un bloque con contenido. */
 const BLOQUES = ["div", "p", "section", "article", "ul", "ol", "dl", "aside", "figure", "blockquote"];
 
-/** `href` que no lleva a ninguna parte una vez adentro de la cápsula. */
-function noVaANingunLado(href: string): boolean {
-  const h = href.trim();
-  return h === "" || h === "#" || h.startsWith("#");
+/**
+ * Un link a otra parte de la misma página está VIVO si su destino existe y
+ * no se lo tragó a él mismo.
+ *
+ * Lo segundo importa más de lo que parece: en estos archivos los botones de
+ * comprar suelen apuntar a la sección de la oferta, y el que ya está ADENTRO
+ * de esa sección no tiene a dónde bajar. Ése es el que cobra, y por eso es el
+ * que se conecta al pago.
+ *
+ * (Que el salto funcione no es gratis: adentro de la cápsula el navegador no
+ * lo hace solo. Lo hace el script de `landing-efectos`.)
+ */
+function anclaViva(el: Element, porId: Map<string, Element>): boolean {
+  const h = (el.attribs.href ?? "").trim();
+  if (!h.startsWith("#") || h.length < 2) return false;
+  const destino = porId.get(h.slice(1));
+  return !!destino && destino !== el && !contieneA(destino, el);
+}
+
+function contieneA(padre: Element, hijo: Element): boolean {
+  for (let n = hijo.parent; n; n = n.parent) if (n === padre) return true;
+  return false;
 }
 
 /* ── El CSS del acordeón rescatado ──────────────────────────────────────── */
@@ -111,11 +129,15 @@ export function arreglarLanding(doc: Document): Arreglos {
 
   /* ── 1. Los botones de comprar que no llevaban al pago ───────────────── */
 
+  const porId = new Map<string, Element>();
+  for (const el of todos()) if (el.attribs.id && !porId.has(el.attribs.id)) porId.set(el.attribs.id, el);
+  const vivas = todos().filter((el) => el.name === "a" && anclaViva(el, porId));
+
   const conectados: string[] = [];
   for (const el of todos()) {
     if (el.attribs["data-tienda"]) continue;
     const esExBoton = el.attribs[ERA_BOTON] === "boton";
-    const esLinkMuerto = el.name === "a" && noVaANingunLado(el.attribs.href ?? "");
+    const esLinkMuerto = el.name === "a" && !vivas.includes(el);
     if (!esExBoton && !esLinkMuerto) continue;
     const t = textoDe(el);
     if (!pareceCta(t)) continue;
@@ -133,6 +155,22 @@ export function arreglarLanding(doc: Document): Arreglos {
     hechos.push(
       `Conectamos ${conectados.length} ${conectados.length === 1 ? "botón que no llevaba" : "botones que no llevaban"} a ningún lado: ${conComillas(conectados)}. ` +
       `Ahora ${conectados.length === 1 ? "va" : "van"} a tu página de pago.`,
+    );
+  }
+
+  /* Los que apuntaban a una sección que no existe quedan como link vacío:
+     así el panel le ofrece completarlos en vez de dejarlos mudos. */
+  for (const el of todos()) {
+    if (el.name !== "a" || el.attribs["data-tienda"]) continue;
+    const h = (el.attribs.href ?? "").trim();
+    if (h.startsWith("#") && h.length > 1 && !vivas.includes(el)) el.attribs.href = "#";
+  }
+
+  /* Y los que sí bajan a una sección ahora bajan de verdad. */
+  if (vivas.length) {
+    hechos.push(
+      `${vivas.length} ${vivas.length === 1 ? "link baja" : "links bajan"} a otra parte de tu página: ${conComillas(vivas.map(textoDe).filter(Boolean))}. ` +
+      `Adentro de tu página ese salto no anda solo, así que lo hacemos nosotros — y baja suave.`,
     );
   }
 
@@ -191,14 +229,6 @@ export function arreglarLanding(doc: Document): Arreglos {
     sueltos.push(
       `${mudos.length} ${mudos.length === 1 ? "botón necesitaba" : "botones necesitaban"} un programa para hacer algo (${conComillas(mudos)}): ` +
       `${mudos.length === 1 ? "quedó" : "quedaron"} como texto. Si no ${mudos.length === 1 ? "hace" : "hacen"} falta, pedile a Claude que ${mudos.length === 1 ? "lo saque" : "los saque"}.`,
-    );
-  }
-
-  const anclas = todos().filter((el) => el.name === "a" && !el.attribs["data-tienda"] && (el.attribs.href ?? "").startsWith("#") && (el.attribs.href ?? "").length > 1);
-  if (anclas.length) {
-    sueltos.push(
-      `${anclas.length} ${anclas.length === 1 ? "link salta" : "links saltan"} a otra parte de la misma página (${conComillas(anclas.map(textoDe).filter(Boolean))}): ` +
-      `eso no funciona dentro de tu página. Poné a dónde ${anclas.length === 1 ? "va" : "van"} más abajo, o pedile a Claude que ${anclas.length === 1 ? "lo cambie" : "los cambie"} por un botón de comprar.`,
     );
   }
 

@@ -76,9 +76,13 @@ ${HUECOS_EXPLICADOS.slice(0, 4).map((h) => `   - ${h.hueco}: ${h.que}`).join("\n
 6. Bloques vivos (opcionales, pero recomendados): dejá un contenedor VACÍO donde quieras que aparezcan, y TiendaApps pone adentro lo real:
 ${HUECOS_EXPLICADOS.slice(5).map((h) => `   - ${h.hueco}: ${h.que}`).join("\n")}
    No escribas opiniones, testimonios, nombres de clientes ni cantidades de ventas inventadas. Ninguna. Si querés una sección de opiniones, es el hueco vacío.
-7. Links del pie (términos, privacidad, reembolsos, Instagram, contacto): dejalos con href="#" y el texto claro; yo los completo desde el panel. NO uses links internos a otra parte de la misma página (href="#seccion"): adentro de TiendaApps no saltan a ningún lado. Si lo que querés es llevar al pago, es un botón data-tienda="comprar".
+7. Links del pie (términos, privacidad, reembolsos, Instagram, contacto): dejalos con href="#" y el texto claro; yo los completo desde el panel. Los links internos a otra sección (href="#seccion") SÍ funcionan y bajan suave, así que podés usarlos; sólo acordate de que el botón que cobra es data-tienda="comprar", no un link a la sección de la oferta.
 8. Fuentes: podés usar Google Fonts con un <link rel="stylesheet" href="https://fonts.googleapis.com/…">. No cargues ninguna otra hoja de estilos externa ni uses @import.
-9. Todo el CSS va en un <style> dentro del mismo archivo, con los selectores dentro de una clase raíz (por ejemplo .landing …) para que no choque con nada. Que se vea bien en un celular de 360 px de ancho y en una computadora. No uses position: fixed.
+9. Todo el CSS va en un <style> dentro del mismo archivo, con los selectores dentro de una clase raíz (por ejemplo .landing …) para que no choque con nada. Que se vea bien en un celular de 360 px de ancho y en una computadora. No uses position: fixed (una barra pegada tapa el botón de comprar en celulares chicos).
+9.b Animaciones: las que son sólo CSS (transition, animation, :hover) andan todas. Para las que aparecen al bajar, TiendaApps te da esto: poné data-tienda-aparece en el elemento y escribí el estado escondido en [data-tienda-aparece] y el visible en [data-tienda-visto], que lo ponemos nosotros cuando entra en pantalla. Ejemplo:
+   [data-tienda-aparece]{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+   [data-tienda-visto]{opacity:1;transform:none}
+   No uses ninguna otra forma de animar al hacer scroll: sin JavaScript no corre, y lo que se esconda sin esto se queda escondido para siempre.
 10. Escribí en el castellano de Argentina (vos, tenés, querés), como lo escribiría una persona, sin mayúsculas gritadas ni signos de exclamación en cadena. Podés escribir todo el texto de venta: titular, para quién es, qué incluye, beneficios, cómo funciona, garantía, preguntas frecuentes, cierre. Con los datos de mi producto de arriba; lo que no sepas, dejalo en genérico y marcalo con un comentario <!-- EDITAR --> para que lo cambie yo.
 
 Cuando termines, decime en dos líneas qué fotos tengo que subir (los nombres de los huecos foto:…).
@@ -115,9 +119,6 @@ export function pedidoDeCambios(inv: InventarioParaPedido): string {
   for (const x of inv.sueltos) {
     if (x.includes("necesitaban un programa") || x.includes("necesitaba un programa")) {
       puntos.push("Sacá los botones que necesitan JavaScript para hacer algo (flechas de carrusel, pestañas, menús): acá no corre ningún programa. Si el contenido importa, mostralo todo junto o usá <details> y <summary>.");
-    }
-    if (x.includes("misma página")) {
-      puntos.push('Cambiá los links internos (href="#seccion") por un botón data-tienda="comprar", o sacalos: adentro de TiendaApps no saltan a ningún lado.');
     }
   }
   if (!puntos.length) return "";

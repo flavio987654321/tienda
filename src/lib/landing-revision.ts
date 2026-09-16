@@ -182,8 +182,8 @@ export function revisarLanding(texto: string, trajo: QueTrajo): Hallazgo[] {
     h.push({
       nivel: "aviso",
       que: "Tiene algo pegado a la pantalla (una barra fija).",
-      arreglo: "En celulares chicos suele tapar el botón de comprar. Miralo en la previa en celular antes de prenderla.",
-      pedido: "Sacá el position: fixed (las barras o botones pegados a la pantalla): tapan el contenido en celulares chicos.",
+      arreglo: "Dos cosas: en celulares chicos suele tapar el botón de comprar, y si esa barra aparecía sola al bajar, eso lo hacía el programa que le sacamos — hoy no aparece nunca. Miralo en la previa en celular. Si la querés, pedile a Claude que la marque con data-tienda-aparece.",
+      pedido: "Sacá el position: fixed (las barras o botones pegados a la pantalla): tapan el contenido en celulares chicos. Y si esa barra aparecía al bajar con un script, no va a aparecer nunca: dejala siempre visible o marcala con data-tienda-aparece y animala con [data-tienda-aparece] / [data-tienda-visto].",
     });
   }
 

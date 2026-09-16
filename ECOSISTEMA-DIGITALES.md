@@ -6676,3 +6676,74 @@ arreglos porque entra derecha.
 
 `landing-propia.check.ts` (58 → 67). 105 chequeos, tsc, eslint y build ok.
 Mirado a 360, 768 y 1280.
+
+---
+
+## Los efectos: el movimiento que reemplaza al script de ella — 16/09/26
+
+Flavio: "¿y los efectos y todo eso quién los pone? Por ejemplo, aprieto el
+botón y me baja hasta abajo solo, con efecto. ¿Y con el tema del tamaño?".
+
+Los escribe Claude, en JavaScript, y nosotros se lo sacábamos entero. En el
+archivo de verdad su programa hacía exactamente tres cosas: **bajar suave**
+al apretar un botón, **mostrar la barra fija** de comprar al pasar la
+portada, y **abrir las preguntas**. La tercera ya estaba resuelta; las otras
+dos estaban rotas y no se veía:
+
+- Los seis botones apuntaban a `#oferta`. Adentro de la cápsula el salto por
+  ancla no funciona (probado), así que ninguno hacía nada.
+- La barra fija arranca con `transform:translateY(110%)` y sólo aparecía
+  cuando el script le agregaba una clase. O sea: **en celular no se ve
+  nunca**, y es el botón de comprar que te sigue por la página.
+
+### `lib/landing-efectos`
+
+Veinte líneas nuestras, en vez de las suyas. Sin `eval`, sin `innerHTML`, sin
+traer nada de afuera, y no sale de la cápsula. Hace dos cosas:
+
+1. **Bajar suave.** Un click en un `<a href="#seccion">` busca el destino
+   adentro de la sombra y hace `scrollIntoView`. Respeta a quien pidió menos
+   movimiento en su sistema.
+2. **Aparecer al bajar.** La autora marca el elemento con
+   `data-tienda-aparece` y escribe el estado escondido; cuando entra en
+   pantalla le ponemos `data-tienda-visto` y ella lo anima con CSS. Está en
+   las instrucciones para Claude, con el ejemplo.
+
+**La página no depende de esto.** Se dibuja en el servidor y se ve entera sin
+JavaScript. Y al revés también: sin el script, lo que "aparece" arranca
+VISIBLE (`:host(:not([data-tienda-efectos]))` lo fuerza). Nunca un botón de
+comprar invisible — que es exactamente lo que le pasa hoy a la barra de ella.
+
+Con eso, `landing-arreglos` ya no mata las anclas: mira si el destino existe.
+
+- Destino que existe → se deja viva y baja suave (5 en su archivo).
+- Destino que no existe → queda como link vacío y el panel ofrece
+  completarlo.
+- El botón que está ADENTRO de su propio destino → no tiene a dónde bajar:
+  **ése es el que cobra** (1 en su archivo, "QUIERO ACCEDER AHORA").
+
+Queda igual que su diseño original: los de arriba bajan a la oferta, el de la
+oferta paga.
+
+### El tamaño
+
+La cápsula hereda de la página lo que se hereda: la letra, el cuerpo, el
+color, el interlineado. Eso le cambiaría el diseño que aprobó mirándolo como
+un archivo suelto. Ahora la cápsula arranca con `:host{all:initial}`, o sea
+con los valores del navegador, igual que cuando lo miró en Claude.
+
+Medido en su archivo: **idéntico** — misma altura (15.546 px), misma letra,
+mismo color. Es un seguro para los archivos que no se ponen la letra a sí
+mismos, no un cambio visible.
+
+### La previa del panel
+
+Pasa de `sandbox=""` a `sandbox="allow-scripts"`: deja correr el script de
+los efectos, pero **sin `allow-same-origin`**, así adentro del marco no hay
+cookies ni sesión. Sin esto la previa mentiría: mostraría quieta una página
+que se mueve.
+
+`landing-propia.check.ts` (67 → 72). 105 chequeos, tsc, eslint y build ok.
+Verificado en Chromium: el click baja de 0 a 9.258 px, y lo marcado con
+`data-tienda-aparece` va de opacidad 0 a 1 al entrar en pantalla (y queda en
+1 si no hay JavaScript).
