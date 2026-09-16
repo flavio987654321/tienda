@@ -31,6 +31,8 @@ export type TipoDeCupon = (typeof TIPOS_DE_CUPON)[number];
 
 /** Letras, números y guiones, en mayúscula. Corto: se escribe en un celular. */
 export const CODIGO_RE = /^[A-Z0-9-]{3,20}$/;
+/** Reservado para el cupón que crea la oferta de salida. Mismo valor que `codigoDeLaOferta`. */
+export const PREFIJO_DE_LA_OFERTA = "SALIDA-";
 export const LARGO_CODIGO = 20;
 /** Hasta este porcentaje. El 100 % no es un descuento, es un regalo, y se hace de otra forma. */
 export const PORCENTAJE_MAXIMO = 90;
@@ -67,6 +69,10 @@ export function validarCuponNuevo(body: unknown): { ok: true; datos: Omit<CuponD
   const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
   const codigo = normalizarCodigo(b.codigo);
   if (!CODIGO_RE.test(codigo)) return { ok: false, problema: "El código lleva entre 3 y 20 letras, números o guiones. Ejemplo: PROMO20" };
+  /* `SALIDA-…` es el de la oferta de salida (`codigoDeLaOferta`): lo crea
+     esa pantalla y sólo vale con el plazo firmado. Uno escrito a mano con
+     ese prefijo no se podría usar nunca, y se mostraría como "de la oferta". */
+  if (codigo.startsWith(PREFIJO_DE_LA_OFERTA)) return { ok: false, problema: "Los códigos que empiezan con SALIDA- son de la oferta de salida. Elegí otro." };
 
   const tipo = b.tipo === "PESOS" ? "PESOS" : b.tipo === "PORCENTAJE" ? "PORCENTAJE" : null;
   if (!tipo) return { ok: false, problema: "Elegí si el descuento es un porcentaje o un monto en pesos" };
@@ -95,6 +101,23 @@ export function validarCuponNuevo(body: unknown): { ok: true; datos: Omit<CuponD
   }
 
   return { ok: true, datos: { codigo, tipo, valor, productId, venceAt, topeUsos } };
+}
+
+/**
+ * Antes de crear un cupón en pesos: a qué productos no les va a aplicar
+ * porque dejaría la compra por debajo de `MINIMO_A_COBRAR`. No es un error
+ * (la regla la aplica `porQueNoAplica` al pagar): es para avisarlo antes de
+ * que la persona lo reparta y nadie pueda usarlo.
+ */
+export function aQuienesNoLesAlcanza(
+  cupon: { tipo: TipoDeCupon; valor: number; productId: string | null },
+  productos: { id: string; name: string; price: number }[],
+): string[] {
+  if (cupon.tipo !== "PESOS" || !(cupon.valor > 0)) return [];
+  return productos
+    .filter((p) => !cupon.productId || p.id === cupon.productId)
+    .filter((p) => p.price - cupon.valor < MINIMO_A_COBRAR)
+    .map((p) => p.name);
 }
 
 /**

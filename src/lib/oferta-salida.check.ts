@@ -21,7 +21,7 @@ import {
   OFERTA_DE_FABRICA, PORCENTAJE_MAXIMO_SALIDA, TEXTO_MAX,
 } from "./oferta-salida";
 import { firmarOferta, leerTokenDeOferta } from "./oferta-salida-firma";
-import { validarCuponNuevo } from "./cupones-digitales";
+import { validarCuponNuevo, CODIGO_RE } from "./cupones-digitales";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -59,7 +59,8 @@ check("VAL-G", validarOfertaSalida({ activa: "true", tipo: "DESCUENTO", porcenta
 /* ── El cupón ────────────────────────────────────────────────────────────── */
 
 check("CUP-A", codigoDeLaOferta(ID) === "SALIDA-00000001" && esCodigoDeOferta(codigoDeLaOferta(ID)) && !esCodigoDeOferta("PROMO20"), "el código es fijo por producto y se reconoce");
-check("CUP-B", validarCuponNuevo({ codigo: codigoDeLaOferta(ID), tipo: "PORCENTAJE", valor: 20 }).ok, "el código de la oferta es un código de cupón válido");
+check("CUP-B", CODIGO_RE.test(codigoDeLaOferta(ID)) && !validarCuponNuevo({ codigo: codigoDeLaOferta(ID), tipo: "PORCENTAJE", valor: 20 }).ok && /SALIDA-/.test((validarCuponNuevo({ codigo: "SALIDA-MIO", tipo: "PESOS", valor: 100 }) as { problema: string }).problema),
+  "el código de la oferta tiene forma de cupón, y a mano no se puede crear uno con ese prefijo");
 
 /* ── El plazo firmado ────────────────────────────────────────────────────── */
 

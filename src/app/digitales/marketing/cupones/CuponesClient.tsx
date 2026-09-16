@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, Plus, Ticket, Trash2, Power } from "lucide-react";
-import { validarCuponNuevo, normalizarCodigo, textoDelDescuento, PORCENTAJE_MAXIMO, type TipoDeCupon } from "@/lib/cupones-digitales";
+import { validarCuponNuevo, normalizarCodigo, textoDelDescuento, aQuienesNoLesAlcanza, PORCENTAJE_MAXIMO, MINIMO_A_COBRAR, type TipoDeCupon } from "@/lib/cupones-digitales";
 import { IDEAS_DE_CUPON, cuponDeLaIdea, CONSEJO_DE_CUPON } from "@/lib/plantillas-marketing";
 import ConsejoDeUso from "../../ConsejoDeUso";
 import { esCodigoDeOferta } from "@/lib/oferta-salida";
@@ -40,7 +40,7 @@ const CLASE_INPUT = "w-full px-4 py-3 rounded-2xl border border-gray-200 panel-o
  */
 export default function CuponesClient({ cupones, productos, tope, hoy }: {
   cupones: CuponEnPantalla[];
-  productos: { id: string; name: string }[];
+  productos: { id: string; name: string; price: number }[];
   tope: number;
   /** El día de hoy en Argentina, "YYYY-MM-DD": para calcular el vencimiento de las ideas. */
   hoy: string;
@@ -56,6 +56,9 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [tocando, setTocando] = useState<string | null>(null);
+  /* El problema se dice cuando la persona salió de un campo o intentó crear,
+     no mientras escribe la segunda letra del código. */
+  const [revisar, setRevisar] = useState(false);
   const enVuelo = useRef(false);
 
   const borrador = { codigo, tipo, valor, productId: productId || undefined, venceAt, topeUsos };
@@ -72,8 +75,11 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
     setAbierto(true);
   }
   const problema = codigo || valor ? (() => { const r = validarCuponNuevo(borrador); return r.ok ? null : r.problema; })() : null;
+  /* En pesos: a qué productos no les alcanza. Se avisa, no se frena. */
+  const noLesAlcanza = aQuienesNoLesAlcanza({ tipo, valor: Number.parseInt(valor || "0", 10), productId: productId || null }, productos);
 
   async function crear() {
+    setRevisar(true);
     if (enVuelo.current || problema) return;
     enVuelo.current = true;
     setGuardando(true);
@@ -89,6 +95,7 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
         setError(d.error ?? "No se pudo guardar. Probá de nuevo.");
       } else {
         setCodigo(""); setValor(""); setProductId(""); setVenceAt(""); setTopeUsos("");
+        setRevisar(false);
         setAbierto(false);
         router.refresh();
       }
@@ -162,7 +169,7 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
           <div className="space-y-4">
             <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Nuevo cupón</p>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2" onBlur={() => setRevisar(true)}>
               <div>
                 <label htmlFor="codigo" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Código</label>
                 <input id="codigo" value={codigo} onChange={(e) => setCodigo(normalizarCodigo(e.target.value))} maxLength={20} placeholder="PROMO20" className={`${CLASE_INPUT} uppercase`} />
@@ -191,7 +198,7 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label htmlFor="vence" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Vence <span className="font-normal text-gray-400">(opcional)</span></label>
-                  <input id="vence" type="date" value={venceAt} onChange={(e) => setVenceAt(e.target.value)} className={CLASE_INPUT} />
+                  <input id="vence" type="date" min={hoy} value={venceAt} onChange={(e) => setVenceAt(e.target.value)} className={CLASE_INPUT} />
                 </div>
                 <div>
                   <label htmlFor="tope" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Usos <span className="font-normal text-gray-400">(opcional)</span></label>
@@ -202,8 +209,14 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
 
             <ConsejoDeUso>{CONSEJO_DE_CUPON}</ConsejoDeUso>
 
-            {problema && <p className="text-sm font-medium text-red-600">{problema}</p>}
-            {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+            {revisar && problema && <p role="alert" className="text-sm font-medium text-red-600">{problema}</p>}
+            {!problema && noLesAlcanza.length > 0 && (
+              <p className="text-[12.5px] font-medium leading-relaxed text-amber-700 panel-oscuro:text-amber-300">
+                A {noLesAlcanza.length === 1 ? <>«{noLesAlcanza[0]}»</> : <>{noLesAlcanza.length} de tus productos</>} no le va a aplicar:
+                dejaría la compra por debajo de los $ {MINIMO_A_COBRAR} que se pueden cobrar. Bajá el monto o pasalo a porcentaje.
+              </p>
+            )}
+            {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 
             <div className="flex items-center gap-3">
               <button

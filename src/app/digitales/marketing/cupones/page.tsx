@@ -35,7 +35,7 @@ export default async function CuponesPage() {
           where: { storeId: store.id, rolDigital: "PRINCIPAL", deletedAt: null },
           orderBy: { createdAt: "asc" },
           take: MAX_PRODUCTOS_DIGITALES_CREADOS,
-          select: { id: true, name: true },
+          select: { id: true, name: true, price: true },
         }),
         prisma.cuponDigital.findMany({
           where: { storeId: store.id },

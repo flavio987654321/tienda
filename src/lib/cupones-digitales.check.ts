@@ -12,7 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import {
-  normalizarCodigo, validarCuponNuevo, porQueNoAplica, descuentoDe, textoDelDescuento, estadoDelCupon,
+  normalizarCodigo, validarCuponNuevo, porQueNoAplica, descuentoDe, textoDelDescuento, estadoDelCupon, aQuienesNoLesAlcanza,
   MINIMO_A_COBRAR, PORCENTAJE_MAXIMO, type CuponDigitalPuro,
 } from "./cupones-digitales";
 
@@ -46,6 +46,12 @@ check("CREAR-F", !validarCuponNuevo({ codigo: "X10", tipo: "REGALO", valor: 100 
   "un tipo inventado se rechaza; un id de producto raro se ignora (la ruta lo vuelve a mirar)");
 check("CREAR-G", (validarCuponNuevo({ codigo: "X10", tipo: "PESOS", valor: 100, venceAt: "", topeUsos: "" }) as { ok: true; datos: { venceAt: null; topeUsos: null } }).datos.venceAt === null,
   "vencimiento y tope vacíos son \"sin\"");
+check("CREAR-H", !validarCuponNuevo({ codigo: "salida-abc", tipo: "PESOS", valor: 100 }).ok && validarCuponNuevo({ codigo: "SALIDAS10", tipo: "PESOS", valor: 100 }).ok,
+  "SALIDA- está reservado para el cupón de la oferta de salida; sin el guion es un código cualquiera");
+const lista = [{ id: "a", name: "Guía", price: 3000 }, { id: "b", name: "Curso", price: 15000 }];
+check("CREAR-I", aQuienesNoLesAlcanza({ tipo: "PESOS", valor: 2950, productId: null }, lista).join() === "Guía" && aQuienesNoLesAlcanza({ tipo: "PESOS", valor: 2900, productId: null }, lista).length === 0
+  && aQuienesNoLesAlcanza({ tipo: "PESOS", valor: 2950, productId: "b" }, lista).length === 0 && aQuienesNoLesAlcanza({ tipo: "PORCENTAJE", valor: 90, productId: null }, lista).length === 0,
+  "antes de crear un cupón en pesos se avisa a qué productos no les alcanza, mirando sólo los que abarca");
 
 /* ── Cuánto y cuándo ─────────────────────────────────────────────────────── */
 
@@ -102,8 +108,8 @@ check("RUTA-F", /checkRateLimit\(`digital-cupon:\$\{ip\}`, INTENTOS_POR_HORA/.te
 check("RUTA-G", /isActive: true, store: \{ owner: \{ role: "DIGITAL" \} \}/.test(publica), "sólo para productos digitales publicados");
 check("RUTA-H", /validarCuponNuevo\(await req\.json/.test(crear) && /storeId: store\.id \}/.test(crear) && /MAX_CUPONES_POR_CUENTA/.test(crear) && /P2002/.test(crear),
   "crear: valida, el producto tiene que ser propio, con tope por cuenta y el código repetido se dice");
-check("RUTA-I", /updateMany\(\{\n\s+where: \{ id, store: \{ ownerId: user\.id \} \}/.test(unoRuta) && /deleteMany\(\{ where: \{ id, store: \{ ownerId: user\.id \} \} \}\)/.test(unoRuta),
-  "apagar y borrar llevan el dueño en el where");
+check("RUTA-I", /updateMany\(\{\n\s+where: \{ id, store: \{ ownerId: user\.id \} \}/.test(unoRuta) && /deleteMany\(\{ where: \{ id, store: \{ ownerId: user\.id \}, NOT: \{ codigo: \{ startsWith: PREFIJO_DE_LA_OFERTA \} \} \} \}\)/.test(unoRuta),
+  "apagar y borrar llevan el dueño en el where, y borrar no toca el cupón de la oferta de salida");
 check("PANT-A", /cupon: cupon\?\.codigo,/.test(checkout) && !/descuento:/.test(checkout.split("body: JSON.stringify({")[1]?.split("})")[0] ?? ""),
   "el checkout manda el código, nunca el monto");
 check("PANT-B", /descuentoDe\(cupon, sinCupon\)/.test(checkout) && /fetch\("\/api\/digitales\/cupon"/.test(checkout), "el checkout muestra el precio con la misma función que cobra, y verifica contra la ruta pública");

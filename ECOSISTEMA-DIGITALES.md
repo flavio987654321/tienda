@@ -6343,3 +6343,34 @@ a saber que lo configurado era del primero.
 
 104 chequeos, tsc, eslint y build ok. Mirado en 1500 y 360, en
 computadora y celular.
+
+---
+
+## Cupones: repaso de inputs y validaciones — 16/09/26
+
+Flavio preguntó si los inputs y las validaciones de Cupones estaban bien.
+Lo que ya estaba bien (código normalizado, 3–20 letras/números/guiones,
+% hasta 90, pesos hasta 5.000.000, fecha al final del día argentino y no
+pasada, tope entero, doble clic, duplicado por P2002, dueño en el where,
+límite de 50) se dejó. Lo que faltaba:
+
+- **`SALIDA-…` reservado**: a mano se podía crear un cupón con ese
+  prefijo, que después se mostraba como "de la oferta de salida", sin
+  botón de borrar y sin poder usarse (pide el token). `validarCuponNuevo`
+  lo rechaza con un mensaje; `SALIDAS10` sigue valiendo.
+- **Borrar no toca el de la oferta**: la pantalla ya no mostraba el botón,
+  ahora la ruta DELETE tampoco lo permite (`NOT startsWith`).
+- **Aviso del monto en pesos**: `aQuienesNoLesAlcanza` dice, antes de
+  crear, a qué productos el cupón no les va a aplicar porque deja la
+  compra por debajo de los $ 100. Se avisa en ámbar, no se frena: la regla
+  la aplica `porQueNoAplica` al pagar.
+- **El error no salta mientras se escribe**: recién al salir de un campo o
+  al intentar crear (`revisar`). Antes con dos letras del código ya decía
+  "lleva entre 3 y 20".
+- **La fecha no deja elegir días pasados** (`min={hoy}`). El formato
+  mm/dd/yyyy que se ve es el idioma del navegador (Chrome en inglés), no
+  algo nuestro: en un Chrome en castellano sale dd/mm/aaaa.
+
+`cupones-digitales.check.ts` (+CREAR-H, CREAR-I; RUTA-I actualizado),
+CUP-B de `oferta-salida.check.ts` ahora prueba la reserva. 104 chequeos,
+tsc, eslint y build ok.
