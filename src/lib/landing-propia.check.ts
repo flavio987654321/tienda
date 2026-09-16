@@ -120,9 +120,9 @@ check("ARM-B", /\$<span data-tienda="precio">9\.900<\/span>/.test(armada) && /<s
   "si el archivo ya escribió el $ al lado, no se repite; si no, va con el signo");
 check("ARM-C", armada.split(`href="/pagar?utm=x"`).length === 3 && !/checkout\.ajeno|target="_blank" rel="noopener noreferrer">Comprar/.test(armada),
   "los dos botones de comprar van al pago nuestro, sin target ni destino ajeno");
-check("ARM-D", /<div data-tienda="foto:Portada del ebook" class="cover"><img src="https:\/\/cdn\.tiendaapps\.com\/f\/portada\.jpg" alt="" loading="lazy" decoding="async"><\/div>/.test(armada),
+check("ARM-D", /<div data-tienda="foto:Portada del ebook" class="cover"><img src="https:\/\/cdn\.tiendaapps\.com\/f\/portada\.jpg" alt="" loading="lazy" decoding="async" data-tienda-foto=""><\/div>/.test(armada),
   "un contenedor de foto recibe la <img> adentro y conserva su caja y su clase");
-check("ARM-E", /<img data-tienda="foto:donuts" alt="Donuts" src="https:\/\/cdn\.tiendaapps\.com\/f\/donuts\.jpg" loading="lazy" decoding="async">/.test(armada) && !/foto:falta/.test(armada),
+check("ARM-E", /<img data-tienda="foto:donuts" alt="Donuts" src="https:\/\/cdn\.tiendaapps\.com\/f\/donuts\.jpg" data-tienda-foto="" loading="lazy" decoding="async">/.test(armada) && !/foto:falta/.test(armada),
   "una <img> de foto recibe el src; la foto que no se subió desaparece");
 check("ARM-F", /<div data-tienda="reloj"><p class="reloj">14:59<\/p><\/div>/.test(armada) && !/data-tienda="opiniones"|data-tienda="aviso-ventas"/.test(armada),
   "un bloque vivo con HTML se pone adentro; sin HTML, el hueco se saca");
@@ -497,6 +497,24 @@ check("FOTO-E", /alt="La portada del ebook"/.test(CON_UNA) && !/aria-label="La p
   "con la descripción que el archivo traía al lado, y sin repetirla en el contenedor");
 check("FOTO-F", !/data-image="hero"|data-foto="bonus"|\{\{imagen\}\}|URL_DE_TU_LOGO/.test(CON_UNA),
   "y los lugares que quedaron sin foto se sacan: mejor nada que un cuadro vacío o una imagen rota");
+
+/* ⚠️ Con qué FORMA entra la foto. El archivo lo dice al lado del hueco
+   (`data-afl-class="afl-cover"`): es la clase que lleva la imagen, y en el
+   archivo de verdad es la que le da el tamaño de libro, la inclinación y el
+   `position:relative` que la pone ADELANTE del redondel de fondo. Sin
+   copiarla, la foto entraba sin tamaño y aparecía ATRÁS del adorno — que es
+   exactamente lo que se vio al subir la primera. */
+const CON_FORMA = limpiarLanding(`<div data-afl-img="tapa" data-afl-class="afl-cover afl-cover--lg"><div class="ph">x</div></div><a data-tienda="comprar" href="#">Comprar</a>`);
+const ARMADA_CON_FORMA = CON_FORMA.ok ? armarLanding(CON_FORMA.landing.html, {
+  nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/a/pagar",
+  fotos: { tapa: "https://cdn.tiendaapps.com/t.jpg" }, enlaces: {}, bloques: {},
+}) : "";
+check("FOTO-I", /<img[^>]+class="afl-cover afl-cover--lg"/.test(ARMADA_CON_FORMA) && !/data-tienda-clase/.test(ARMADA_CON_FORMA),
+  "la foto entra con la clase que el archivo pide para ella: si no, queda sin tamaño y atrás del adorno del diseño");
+check("FOTO-J", /<img[^>]+data-tienda-foto=""/.test(ARMADA_CON_FORMA)
+  && /img\[data-tienda-foto\]\{display:block;max-width:100%;height:auto;object-fit:cover\}/.test(ESTILO_DE_LA_CAPSULA)
+  && ESTILO_DE_LA_CAPSULA.indexOf("data-tienda-foto") < ESTILO_DE_LA_CAPSULA.indexOf("data-tienda-falta"),
+  "y hay un piso para las fotos que ponemos, primero en la hoja: lo que diga su diseño después le gana");
 
 const EN_LA_PREVIA = armarLanding(CON_FOTOS.landing.html, {
   nombre: "x", precio: 1, precioAnterior: null, hrefComprar: "/p/a/pagar",

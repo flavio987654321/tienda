@@ -61,7 +61,7 @@ import { LANDING_MAX_BYTES, nombreDeFoto, claveDeLink, type InventarioDeLanding,
 import { revisarLanding } from "@/lib/landing-revision";
 import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
 import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
-import { MARCA_BARRA } from "@/lib/landing-efectos";
+import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO } from "@/lib/landing-efectos";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -95,7 +95,7 @@ const OPCIONES: sanitizeHtml.IOptions = {
     ...ETIQUETAS_SVG,
   ],
   allowedAttributes: {
-    "*": ["class", "id", "title", "lang", "dir", "role", "style", "aria-*", "data-tienda", "data-tienda-era", "data-tienda-aparece", "hidden", "tabindex"],
+    "*": ["class", "id", "title", "lang", "dir", "role", "style", "aria-*", "data-tienda", "data-tienda-era", "data-tienda-aparece", CLASE_DE_LA_FOTO, "hidden", "tabindex"],
     a: ["href", "target", "rel", "download"],
     img: ["src", "srcset", "sizes", "alt", "width", "height", "loading", "decoding"],
     source: ["srcset", "sizes", "type", "media"],
@@ -144,6 +144,12 @@ const OPCIONES: sanitizeHtml.IOptions = {
              no quede muda: `ponerFoto` la usa de `alt`. */
           const alt = textoDeAlgunAlt(attribs);
           if (alt && !attribs["aria-label"]) attribs["aria-label"] = alt;
+          /* Y con qué FORMA va: `data-afl-class="afl-cover"` es el archivo
+             diciendo qué clase lleva la foto que va ahí. Sin eso, la foto
+             entra sin tamaño ni posición y se le va atrás del adorno que el
+             diseño le había puesto alrededor. Ver `ponerFoto`. */
+          const clase = nombreDeClaseDeLaFoto(attribs);
+          if (clase) attribs[CLASE_DE_LA_FOTO] = clase;
         }
       }
       return { tagName, attribs };
@@ -209,6 +215,26 @@ function nombreDelHuecoDeFoto(attribs: Record<string, string>): string | null {
     if (!ATRIBUTO_DE_IMAGEN.test(k) || typeof v !== "string") continue;
     const valor = v.trim();
     if (valor && NOMBRE_CORTO.test(valor) && !/^(true|false|lazy|eager|auto|sync|async)$/i.test(valor)) return valor;
+  }
+  return null;
+}
+
+/**
+ * La clase que el archivo dice que lleva la foto: `data-afl-class="afl-cover"`.
+ *
+ * No es lo mismo que la clase del contenedor (`class`), y por eso se exige
+ * que el nombre TERMINE en "class"/"clase" con algo adelante: el contenedor
+ * es la caja donde va la foto y esto es cómo se viste la foto. En el archivo
+ * de verdad, `afl-cover` es lo que le da a la portada el tamaño de libro, la
+ * sombra, la inclinación y —lo que importa— el `position:relative` que la
+ * pone ADELANTE del redondel de fondo. Sin eso, la foto aparece atrás.
+ */
+function nombreDeClaseDeLaFoto(attribs: Record<string, string>): string | null {
+  for (const [k, v] of Object.entries(attribs)) {
+    if (k.toLowerCase() === "class") continue;
+    if (!/[-_](class|clase|classname)$/i.test(k) || typeof v !== "string") continue;
+    const clase = v.trim().replace(/\s+/g, " ");
+    if (clase && /^[a-z0-9 _-]{1,120}$/i.test(clase)) return clase;
   }
   return null;
 }
@@ -363,7 +389,7 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   /* La marca de "esto era un botón" la ponemos nosotros, y sólo nosotros: si
      viene escrita en el archivo se saca ANTES de sanear, porque después no
      hay forma de distinguir la nuestra de la suya. */
-  for (const marca of [ERA_BOTON, MARCA_BARRA]) {
+  for (const marca of [ERA_BOTON, MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO]) {
     s = s.replace(new RegExp(`\\s${marca}\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)|\\s${marca}(?=[\\s>/])`, "gi"), " ");
   }
 
@@ -636,16 +662,24 @@ function ponerFoto(el: Element, nombre: string | null, d: DatosParaArmar) {
      el lector de pantalla diría dos veces lo mismo. */
   const alt = el.attribs.alt ?? el.attribs["data-alt"] ?? el.attribs["aria-label"] ?? el.attribs.title ?? "";
   delete el.attribs["aria-label"];
+  /* Con qué clase se viste la foto, si el archivo lo dijo. Ver
+     `nombreDeClaseDeLaFoto`: es lo que la pone adelante del adorno y con el
+     tamaño que el diseño le había reservado. */
+  const clase = el.attribs[CLASE_DE_LA_FOTO];
+  delete el.attribs[CLASE_DE_LA_FOTO];
   if (el.name === "img") {
     el.attribs.src = url;
     delete el.attribs.srcset;
+    if (clase) el.attribs.class = [el.attribs.class, clase].filter(Boolean).join(" ");
+    el.attribs[MARCA_FOTO] = "";
     el.attribs.loading = el.attribs.loading ?? "lazy";
     el.attribs.decoding = "async";
     return;
   }
   /* Un contenedor (div, figure): la foto va adentro y su caja queda, así
      el CSS que le puso sigue valiendo. */
-  const img = new Element("img", { src: url, alt, loading: "lazy", decoding: "async" });
+  const img = new Element("img", { src: url, alt, loading: "lazy", decoding: "async", [MARCA_FOTO]: "" });
+  if (clase) img.attribs.class = clase;
   el.children = [];
   prependChild(el, img);
 }

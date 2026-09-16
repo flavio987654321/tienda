@@ -7289,3 +7289,68 @@ que no dice nada. Ahora es 4 acá también —el mismo número que usa
 
 Chequeo FOTO-H. 106 chequeos, tsc, eslint y build ok. Los dos estados de
 la sección mirados a 620.
+
+---
+
+## La foto se iba atrás del adorno: la forma también estaba escrita — 16/09/26
+
+Flavio subió la portada y quedó **atrás del redondel**, sin tamaño, en vez
+de adentro. Y preguntó lo correcto: "¿tendría que haber un editor de foto
+en cada uno, o adaptarse al contenedor?".
+
+Adaptarse. Y no hace falta adivinar el contenedor, porque **el archivo
+dice con qué forma va cada foto** y no lo estábamos leyendo:
+
+```html
+<div data-afl-img="portada"
+     data-afl-class="afl-cover"
+     data-afl-alt="Portada del ebook Panadería en Airfryer">
+```
+
+`data-afl-class` es la clase que su script le ponía a la imagen que creaba.
+Y en el CSS de ella:
+
+```css
+.afl-cover{position:relative;width:min(230px,62vw);aspect-ratio:1/1.414;
+  border-radius:3px 10px 10px 3px;box-shadow:…;transform:rotate(-3deg)}
+.afl-stage::before{position:absolute;border-radius:50%;background:beige}
+```
+
+Ahí está todo: el tamaño de libro, la inclinación, la sombra — y el
+`position:relative`, que es lo que la pone ADELANTE del redondel, que es un
+`::before` absoluto. Nuestra `<img>` entraba pelada: sin clase, sin
+`position`, sin tamaño. Resultado exacto: atrás del adorno y a lo ancho.
+
+Ahora esa clase viaja del saneado a `ponerFoto` en `data-tienda-clase` (el
+atributo original no sobrevive al filtro, igual que el del alt) y termina
+en la imagen. Es la misma idea que ya usábamos para el alt: **lo que el
+archivo dice de su propio hueco, se respeta.**
+
+### Las que no dicen nada
+
+De los dieciséis lugares, sólo cuatro traen clase (las tres portadas y el
+bono). Los otros no la necesitan: su diseño los peina por herencia
+—`.afl-shot img{width:100%;aspect-ratio:4/5;object-fit:cover}`— y una
+`<img>` pelada adentro queda perfecta. Verificado: la grilla de recetas
+entra sola, con el nombre encima.
+
+Para un archivo que no diga NADA de sus imágenes hay un piso nuestro:
+`img[data-tienda-foto]{display:block;max-width:100%;height:auto;
+object-fit:cover}`. Va **primero** en la hoja, antes que su CSS, así que
+cualquier cosa que ella diga después le gana. Es lo mínimo para que una
+foto no se salga de su caja, no una opinión sobre su diseño.
+
+### Por qué no un editor de foto
+
+Porque el recorte ya está decidido por el diseño: la caja tiene forma
+(1/1.414 la tapa, 4/5 las recetas, 1/1 la oferta) y `object-fit:cover`
+recorta al centro. Un editor por hueco serían catorce editores para elegir
+lo que el diseño ya eligió. Si algún día hace falta mover el encuadre
+—"que se vea la parte de arriba"— eso es UN control (`object-position`), no
+un editor.
+
+Chequeos FOTO-I y FOTO-J. Mirado a 1100 con una foto de prueba: la tapa
+queda inclinada adelante del redondel y la grilla de recetas llena sus
+tarjetas.
+
+106 chequeos, tsc, eslint y build ok.

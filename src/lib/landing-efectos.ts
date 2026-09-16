@@ -48,6 +48,14 @@ export const MARCA_APARECE = "data-tienda-aparece";
 export const MARCA_BARRA = "data-tienda-barra";
 /** Lo que le ponemos nosotros cuando hay que mostrarlo: es para el CSS. */
 export const MARCA_VISTO = "data-tienda-visto";
+/**
+ * Con qué clase se viste la foto que ponemos en un hueco, cuando el archivo
+ * lo dice (`data-afl-class="afl-cover"`). Viaja desde el saneado hasta
+ * `ponerFoto`, que es donde se crea la imagen.
+ */
+export const CLASE_DE_LA_FOTO = "data-tienda-clase";
+/** Y la marca de "esta imagen la pusimos nosotros", para el CSS de abajo. */
+export const MARCA_FOTO = "data-tienda-foto";
 
 /**
  * El CSS nuestro, adentro de la cápsula y antes que el suyo.
@@ -56,6 +64,11 @@ export const MARCA_VISTO = "data-tienda-visto";
  * —la letra, el color, el interlineado— y eso le cambiaría el diseño que
  * aprobó. Un documento suelto, que es donde ella lo miró, arranca con los
  * valores del navegador; acá también.
+ *
+ * La regla de `img[data-tienda-foto]` es el piso de las fotos que ponemos
+ * nosotros, y va PRIMERA a propósito: lo que diga el diseño de ella después
+ * le gana, porque su CSS viene abajo. Es lo mínimo para que una foto no se
+ * salga de su caja en un archivo que no dice nada sobre sus imágenes.
  *
  * Y `[data-tienda-falta]` marca, SÓLO EN LA PREVIA, cada lugar donde va una
  * foto que todavía no subió, con el nombre que le pide el panel: sin eso la
@@ -67,6 +80,7 @@ export const ESTILO_DE_LA_CAPSULA = `<style>
 :host{all:initial;display:block;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 :host(:not([data-tienda-efectos])) [${MARCA_APARECE}],
 :host(:not([data-tienda-efectos])) [${MARCA_BARRA}]{opacity:1!important;transform:none!important;visibility:visible!important;pointer-events:auto!important}
+img[${"data-tienda-foto"}]{display:block;max-width:100%;height:auto;object-fit:cover}
 [data-tienda-falta]{position:relative;min-height:48px;outline:2px dashed #f97316;outline-offset:-2px}
 [data-tienda-falta]::after{content:"Falta: " attr(data-tienda-falta);position:absolute;left:0;top:0;z-index:9;background:#f97316;color:#fff;font:600 11px/1.4 system-ui,sans-serif;padding:3px 7px;border-radius:0 0 6px 0;letter-spacing:.01em}
 </style>`;
