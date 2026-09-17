@@ -7474,3 +7474,53 @@ a una foto cuando el guardado ES una foto.
 
 Chequeos FOTO-K y TOPE-A. 106 chequeos, tsc, eslint y build ok. Mirada la
 página pública entera a 1100 con las catorce fotos puestas.
+
+---
+
+## Deployado: los 18 commits de la landing propia — 16/09/26
+
+`823a3cd6..15e59e1b` a main. Dos auditorías antes, y el smoke test después.
+
+### Lo que había que mirar, y por qué
+
+De los 29 archivos, **uno solo toca a las tiendas que ya venden**:
+`middleware.ts`. Todo lo demás es de digitales, y ahí hay **una sola
+cuenta** en producción.
+
+⚠️ Y algo que conviene tener claro: **`NEXT_PUBLIC_DIGITALES_ENABLED` no
+protege esto.** Sólo apaga el registro (la home de login y la API que crea
+cuentas). El panel `/digitales/*` y la página pública `/p/<id>` no están
+detrás de ninguna llave. Lo que protege hoy es que hay una sola cuenta
+DIGITAL y ningún producto publicado.
+
+### El smoke test, contra producción
+
+| Dirección | Antes | Ahora |
+|---|---|---|
+| `www.tiendaapps.com/` | 200 | 200 |
+| `girly-store.tiendaapps.com/` | 200 | 200 |
+| `amaranta.tiendaapps.com/` | 200 | 200 |
+| `girly-store.tiendaapps.com/tienda/girly-store` | **404** | **200** |
+| `girly-store.tiendaapps.com/tienda/amaranta` | 404 | 404 |
+| `www.tiendaapps.com/tienda/girly-store` | 200 | 200 |
+
+El cuarto renglón es el que importa dos veces: prueba que el arreglo del
+doble prefijo llegó **y** sirve de marca de que el build nuevo está vivo.
+El quinto prueba que el `/` del final hace su trabajo: una tienda sigue sin
+poder servir otra.
+
+El producto digital da 404 en todas sus puertas, y está bien: es borrador,
+y un borrador sólo lo ve su dueña (`p/[id]/page.tsx:73`). Por eso la
+landing no la puede ver nadie todavía.
+
+### Lo que queda por probar, y no se podía antes
+
+- 🔲 Una compra de verdad a través de la landing: publicar el producto,
+  prenderla y comprar. Es lo único que el deploy habilita y que ninguna
+  prueba local alcanza.
+- 🔲 El panel de la landing con sesión: la previa, subir las catorce fotos,
+  las flechas. Desde afuera sólo se puede ver que la ruta no tira 500.
+
+La migración `20260916020000_landing_propia` corrió en el build (es
+idempotente y la tabla ya existía: veníamos escribiendo en la base de
+producción desde local).
