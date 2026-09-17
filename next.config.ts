@@ -105,7 +105,32 @@ const storePublicHeaders = paymentHeaders.map((h) => {
  * arranca de la política base, o sea SIN `unsafe-eval`. Cuando el checkout traiga
  * el SDK de Mercado Pago va a hacer falta, y ese es el momento de aflojarlo — no
  * antes de que exista lo que lo necesita. */
-const cspPaginaDigital = csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
+/* ── Las tipografías de la landing ───────────────────────────────────────────
+ *
+ * Esta es la ÚNICA política que deja entrar Google Fonts, y hace falta porque
+ * acá la hoja de estilos no la escribimos nosotros: la escribe Claude cuando la
+ * vendedora le pide su página.
+ *
+ * Las tres piezas ya estaban de acuerdo menos ésta, y por eso no funcionaba:
+ * `landing-instrucciones.ts` le dice textualmente "podés usar Google Fonts con
+ * un <link rel=stylesheet>", el saneador se guarda esos links
+ * (`HOSTS_DE_FUENTES`, que no acepta ningún otro host) y los vuelve a poner en
+ * la página… y el navegador los rechazaba con "violates the following Content
+ * Security Policy directive: style-src". La página salía con la letra de
+ * respaldo y en la consola quedaban dos errores rojos por carga.
+ *
+ * Van los dos hosts porque son dos pedidos encadenados: `fonts.googleapis.com`
+ * sirve el CSS (`style-src`) y ese CSS pide los archivos `.woff2` a
+ * `fonts.gstatic.com` (`font-src`). Con uno solo se arregla la mitad y la letra
+ * sigue sin aparecer.
+ *
+ * ⚠️ Se afloja SÓLO acá y no en la política base: el resto del sitio tiene sus
+ * tipografías servidas desde nuestro dominio y no necesita pedirle nada a
+ * Google. */
+const cspPaginaDigital = csp
+  .replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+  .replace("style-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com")
+  .replace("font-src 'self' data:", "font-src 'self' data: https://fonts.gstatic.com");
 const paginaDigitalHeaders = securityHeaders.map((h) => {
   if (h.key === "Content-Security-Policy") return { key: h.key, value: cspPaginaDigital };
   if (h.key === "X-Frame-Options") return { key: h.key, value: "SAMEORIGIN" };
@@ -158,6 +183,23 @@ const nextConfig: NextConfig = {
       { source: "/sw.js", headers: [
         { key: "Service-Worker-Allowed", value: "/" },
         { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+      ]},
+      /* ── Nuestras propias tipografías, para un documento de origen opaco ─────
+       *
+       * El navegador pide TODA tipografía en modo CORS, aun siendo del mismo
+       * sitio. Desde una página normal eso no se nota, porque el origen coincide
+       * y no hace falta ningún permiso. Pero la previa de la landing corre en un
+       * `iframe` sandboxed sin `allow-same-origin` (a propósito: adentro va el
+       * HTML que subió la vendedora), y desde ahí el origen del pedido es
+       * literalmente `null`. Sin este permiso el navegador rechaza nuestros
+       * `.woff2` con "blocked by CORS policy" y la previa se dibuja con la letra
+       * de respaldo, más dos errores rojos por carga en la consola de ella.
+       *
+       * `*` es lo normal para tipografías —es lo que sirve cualquier CDN— y acá
+       * no abre nada: son archivos estáticos públicos, sin cookies y sin nada
+       * que decidir según quién los pida. */
+      { source: "/_next/static/media/:archivo*", headers: [
+        { key: "Access-Control-Allow-Origin", value: "*" },
       ]},
       // Regla base: todo excepto las rutas que tienen su propio set de headers más permisivo
       // (si no se excluyen, el browser recibe dos CSP headers y aplica la intersección — unsafe-eval se pierde)

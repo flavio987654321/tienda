@@ -1265,6 +1265,37 @@ check("CSP-C", !/frame-ancestors \*/.test(config),
 check("CSP-D", config.includes("|p\\\\/|precios"),
   "y está excluida de la regla base, o las dos cabeceras se pisan");
 
+/* ── Las tipografías de la landing que diseñó Claude ──────────────────────────
+ *
+ * Tres piezas tienen que estar de acuerdo para que la letra que ella eligió
+ * aparezca, y durante un tiempo estuvieron de acuerdo dos: `landing-
+ * instrucciones` le dice a Claude que puede usar Google Fonts, el saneador se
+ * guarda esos `<link>` (`HOSTS_DE_FUENTES`) y los vuelve a poner… y la CSP los
+ * rechazaba. La página salía con la letra de respaldo y la consola con dos
+ * errores rojos por carga. Nada fallaba de forma visible: simplemente la
+ * tipografía no era la que ella pidió.
+ *
+ * Son dos hosts porque son dos pedidos encadenados —el CSS y después los
+ * archivos—, y con uno solo la letra sigue sin aparecer. */
+check("CSP-F", /cspPaginaDigital[\s\S]{0,900}style-src[^"]*fonts\.googleapis\.com/.test(config),
+  "la página de venta puede traer la hoja de estilos de Google Fonts");
+check("CSP-G", /cspPaginaDigital[\s\S]{0,900}font-src[^"]*fonts\.gstatic\.com/.test(config),
+  "y los archivos de esa tipografía, que es el segundo pedido");
+
+/* Se afloja SÓLO ahí. El resto del sitio sirve sus tipografías desde nuestro
+   dominio y no tiene por qué poder pedirle nada a Google. */
+const cspBase = config.slice(0, config.indexOf("const securityHeaders"));
+check("CSP-H", !/fonts\.(googleapis|gstatic)\.com/.test(cspBase),
+  "y la política base del resto del sitio no las deja entrar");
+
+/* ⚠️ Y nuestras PROPIAS tipografías necesitan permiso de CORS, por raro que
+   suene. El navegador pide toda tipografía en modo CORS aunque sea del mismo
+   sitio; desde una página normal eso no se nota porque el origen coincide, pero
+   la previa corre en un iframe sandboxed y desde ahí el origen es `null`. Sin
+   esto la previa se dibuja con la letra de respaldo. */
+check("CSP-I", /_next\/static\/media[\s\S]{0,200}Access-Control-Allow-Origin/.test(config),
+  "y nuestras tipografías se dejan pedir desde un documento de origen opaco");
+
 /* ── La oferta con fecha termina de verdad, 03/09/26 ──────────────────────── */
 
 /* ⚠️ El reloj ya era honesto: fecha guardada, una sola para todo el mundo, y al

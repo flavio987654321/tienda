@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient, sePuedeGuardarEnElNavegador } from "@/lib/supabase/client";
 import { panelDeRol } from "@/lib/panel-de-rol";
 
 type AuthUser = {
@@ -30,8 +30,25 @@ type AuthState = {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  /* `null` cuando el navegador no nos deja guardar nada — el caso real es la
+     previa de la landing, un iframe sandboxed sin `allow-same-origin`. Armar el
+     cliente ahí TIRA adentro del constructor, y como esto se monta en el layout
+     raíz, ese error se llevaba puesta la página entera: la previa mostraba
+     "Se nos rompió algo". El porqué completo está en `sePuedeGuardarEnElNavegador`.
+
+     Sin cliente no hay sesión posible, así que el estado correcto es "no hay
+     nadie" — no "todavía no sé", que dejaría a los menús esperando para siempre. */
+  const supabase = useMemo(
+    () => (sePuedeGuardarEnElNavegador() ? createSupabaseBrowserClient() : null),
+    []
+  );
   const [user, setUser] = useState<AuthUser | null>(null);
+  /* Arranca en "loading" SIEMPRE, incluso sabiendo ya que no va a haber sesión.
+     El estado inicial se calcula también en el servidor, donde la respuesta es
+     otra —no hay `window`—, así que ponerle "unauthenticated" acá haría que el
+     HTML del servidor y el del navegador no coincidan. El paso a
+     "unauthenticated" lo da el efecto de más abajo, que corre sólo en el
+     navegador. */
   const [status, setStatus] = useState<AuthState["status"]>("loading");
   const signingOut = useRef(false);
 
@@ -48,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function refresh() {
+    if (!supabase) return;
     const { data } = await supabase.auth.getSession();
     await loadUser(!!data.session);
   }
@@ -70,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signOut(callbackUrl = "/") {
     signingOut.current = true;
     setStatus("loading");
-    try { await supabase.auth.signOut({ scope: "local" }); } catch {}
+    try { await supabase?.auth.signOut({ scope: "local" }); } catch {}
     window.location.href = callbackUrl;
   }
 
@@ -78,11 +96,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signOutTodosLosDispositivos(callbackUrl = "/") {
     signingOut.current = true;
     setStatus("loading");
-    try { await supabase.auth.signOut({ scope: "global" }); } catch {}
+    try { await supabase?.auth.signOut({ scope: "global" }); } catch {}
     window.location.href = callbackUrl;
   }
 
   useEffect(() => {
+    /* Sin cliente no hay nada que escuchar ni a quién preguntarle. Se contesta
+       "no hay nadie" y se termina acá: es un documento donde la sesión no puede
+       existir, no uno donde todavía no la averiguamos. */
+    if (!supabase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- no se puede decidir en el render inicial sin desincronizar SSR/cliente: en el servidor no hay `window`, así que la respuesta de allá siempre sería "no se puede guardar" y la del navegador casi siempre "sí". Poner el valor en el estado inicial haría que los dos HTML no coincidan; por eso el salto a "unauthenticated" va acá, que corre sólo en el navegador. Es un único cambio de estado y no encadena nada: abajo no hay ningún otro efecto que dependa de éste.
+      setStatus("unauthenticated");
+      return;
+    }
+
     // Initial load: one getSession call
     supabase.auth.getSession().then(({ data }) => loadUser(!!data.session));
 

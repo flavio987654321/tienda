@@ -7616,3 +7616,77 @@ por su cuenta—.
 digital, la de tienda y sin sesión.
 
 🔲 **Sin deployar**: queda commiteado local, a pedido.
+
+---
+
+## La previa rota: "Se nos rompió algo" — 16/09/26
+
+Los tres errores de la consola de la previa, y los tres eran nuestros.
+
+### 1. La previa no se rompía: se rompía la SESIÓN adentro de la previa
+
+`AuthProvider` vive en el layout raíz, así que se monta también en `/p/<id>` —
+una página pública que no necesita sesión para nada. Ahí arma un cliente de
+Supabase, y ese constructor llama a `_initRealtimeClient`, que arma un socket de
+`phoenix`, cuyo constructor hace `global && global.sessionStorage` **a pelo**,
+sin try/catch.
+
+En la previa ese documento está en un origen opaco (el iframe va con
+`sandbox="allow-scripts"` y sin `allow-same-origin`, a propósito: adentro corre
+el archivo de la vendedora). Leer `sessionStorage` ahí no devuelve vacío: tira
+`SecurityError`. Y como salía del `useMemo` durante el render, se lo llevaba
+puesto el `global-error`.
+
+⚠️ **Sólo pasa en el build de producción.** En `npm run dev` la misma previa
+carga bien, así que esto no se encuentra programando. Reproducido con
+`npm start` y un iframe sandboxed, y verificado igual después.
+
+Ahora `AuthProvider` pregunta antes (`sePuedeGuardarEnElNavegador`) y sabe
+seguir sin cliente: sin dónde guardar la sesión no puede haber sesión, así que
+contesta "no hay nadie" — que es la verdad, y no un parche.
+
+**El arreglo fácil era el peligroso.** Agregarle `allow-same-origin` al iframe
+hace que ande al toque, y convierte el HTML que subió ella en código con acceso
+a nuestro origen y a las cookies de sesión de quien esté mirando. Por eso el
+caso **IFR-B** de `sesion-en-iframe.check.ts` falla si alguien lo agrega.
+
+### 2. La tipografía que ella eligió nunca se cargaba
+
+Tres piezas tenían que estar de acuerdo y estaban de acuerdo dos:
+`landing-instrucciones` le dice textualmente a Claude que puede usar Google
+Fonts, el saneador se guarda esos `<link>` (`HOSTS_DE_FUENTES`, que no acepta
+ningún otro host) y los vuelve a poner… y la CSP los rechazaba.
+
+Van los dos hosts, porque son dos pedidos encadenados: `fonts.googleapis.com`
+sirve el CSS (`style-src`) y ese CSS pide los `.woff2` a `fonts.gstatic.com`
+(`font-src`). Con uno solo se arregla la mitad y la letra sigue sin aparecer.
+
+Se afloja **sólo** en `cspPaginaDigital`. Verificado con curl que `/precios`
+sigue sin poder, y que la pantalla de pago (`/p/<id>/pagar`) conserva la
+política base con `frame-ancestors none`.
+
+### 3. Y nuestras propias tipografías, bloqueadas por CORS
+
+El navegador pide toda tipografía en modo CORS aunque sea del mismo sitio. Desde
+una página normal no se nota porque el origen coincide; desde la previa el
+origen es literalmente `null`, y nuestros `.woff2` salían con "blocked by CORS
+policy". `Access-Control-Allow-Origin: *` en `/_next/static/media/`, que es lo
+que sirve cualquier CDN: son archivos públicos, sin cookies y sin nada que
+decidir según quién los pida.
+
+### Lo que NO se tocó, y por qué
+
+Buscando esto apareció otro del mismo tipo: `StoreShell` y `PWAManager` se
+cuidan con `if (!("serviceWorker" in navigator)) return`, y ese guard **no
+sirve** — `in` no tira, pero LEER la propiedad sí. Es la misma trampa.
+
+No se arregló porque hoy no se puede llegar: hay un solo iframe con sandbox en
+toda la aplicación (la previa) y sólo carga `/p/<id>`, que no monta ninguno de
+los dos. Queda anotado acá.
+
+🔲 `"serviceWorker" in navigator` no protege de nada en un origen opaco, en
+  `StoreShell` y `PWAManager`. Latente, no alcanzable hoy.
+
+Chequeos IFR-A..F y CSP-F..I. 108 chequeos, tsc, eslint y build ok.
+
+🔲 **Sin deployar**: commiteado local.
