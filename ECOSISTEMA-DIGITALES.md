@@ -7745,3 +7745,62 @@ build ok. Mirado a 360/768/1280.
 🔲 Pendiente de charla: cómo se ve la relación entre las dos páginas (la de
   secciones y la propia). Hoy es una tira fina arriba del editor y se siente
   floja.
+
+---
+
+## La landing se veía negra — 17/09/26
+
+### Adentro de la cápsula no hay `body` ni `:root`
+
+Su diseño se dibuja adentro de un Shadow DOM, y un Shadow DOM **no tiene
+`<html>` ni `<body>`**: su raíz es el `:host`. Así que toda regla escrita para
+la página entera no le aplicaba a nada — y ahí es donde Claude pone casi todo lo
+importante de un diseño:
+
+```css
+:root { --crema:#FDF8F0; --bordo:#8B1E3F; }
+body  { background:var(--crema); color:#3B2A22; font-family:Georgia; }
+```
+
+Las dos líneas se guardaban tal cual y no pintaban nada. El fondo no aparecía,
+las variables quedaban sin definir —así que cada `var(--bordo)` de abajo caía en
+vacío— y la letra y el color base eran los del navegador.
+
+**Por qué NEGRO:** sin fondo propio la cápsula es transparente, y atrás está el
+`<body>` de nuestro sitio, que arranca en tema oscuro por defecto
+(`.dark body{background:#0f172a}`).
+
+### No lo rompimos nosotros
+
+Pasaba desde el primer día. No se veía porque **la previa se caía antes de
+llegar a dibujar** (lo de ayer), y en la página pública no lo vio nadie porque el
+producto nunca se publicó. El diseño anterior zafaba de casualidad: tenía el
+fondo puesto en un `<div>` y no en el `body`.
+
+### El arreglo
+
+`capsularSelector` convierte `html`, `body` y `:root` en `:host`, que es lo que
+son ahí adentro. Va **en el mismo recorrido que ya limpia el CSS**, en el punto
+donde se sabe que lo que se mira es un selector: buscar "body" por todo el texto
+pisaría un `font-family:"Body Grotesque"` o un `content:"body"`. Probado que no
+toca `.body`, `#body`, `[data-body]`, `somebody` ni `body-grande`.
+
+Y la cápsula arranca con `background:#fff;min-height:100vh` como red de
+seguridad, para el diseño que nunca declaró fondo y para el espacio de abajo
+cuando la página es más corta que la pantalla. Su regla entra después y le gana
+(CAP-H lo vigila: si un día se diera vuelta el orden, cada landing con fondo
+propio pasaría a blanca sin que nada fallara).
+
+⚠️ **Lo ya subido no se arregla solo.** El CSS se limpia AL SUBIR, así que las
+versiones guardadas conservan sus `body{}` muertos. El fondo blanco sí les llega
+—eso se aplica al dibujar—, pero para recuperar los colores hay que volver a
+subir el `.html`.
+
+### Lo que queda sin resolver
+
+🔲 `body.oscuro{…}`: la clase viajaba en la etiqueta `<body>`, que se saca al
+  limpiar, así que no hay dónde ponerla. Queda sin efecto, igual que antes.
+  Se arreglaría pasando las clases del `<body>` al `<div>` de la cápsula.
+
+Chequeos CAP-A..H. 108 chequeos, tsc, eslint y build ok. Comparado antes/después
+a 360/768/1280 dibujando la cápsula sobre el fondo oscuro del sitio.

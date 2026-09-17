@@ -91,8 +91,25 @@ export const MARCA_FOTO = "data-tienda-foto";
  * En la página publicada ese atributo no existe —lo pone `armarLanding` con
  * `mostrarHuecos`—, así que estas dos reglas no alcanzan a nadie.
  */
+/* ⚠️ El `background:#fff` y el `min-height:100vh` del `:host` son la red de
+ * seguridad del color, y van comentados ACÁ AFUERA porque adentro del texto de
+ * abajo una comilla invertida parte el template literal.
+ *
+ * `all:initial` deja la cápsula TRANSPARENTE, y atrás está el `<body>` de
+ * nuestro sitio — que arranca en tema oscuro por defecto (`next-themes`), o sea
+ * `#0f172a`. Una landing sin fondo propio se veía azul casi negro.
+ *
+ * Su fondo ya llega bien desde que `capsularSelector` convierte su
+ * `body{background:…}` en `:host{background:…}`, y esa regla entra DESPUÉS de
+ * ésta, así que le gana. Esto es para las dos veces que igual no alcanza: un
+ * diseño que nunca declaró fondo, y el espacio de abajo cuando la página es más
+ * corta que la pantalla. En las dos, blanco es lo que haría un navegador con una
+ * página suelta.
+ *
+ * `min-height:100vh` es lo mismo para el alto: sin él, una landing corta deja
+ * ver el fondo del sitio debajo. Su diseño puede pisarlo igual. */
 export const ESTILO_DE_LA_CAPSULA = `<style>
-:host{all:initial;display:block;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+:host{all:initial;display:block;background:#fff;min-height:100vh;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 :host(:not([data-tienda-efectos])) [${MARCA_APARECE}],
 :host(:not([data-tienda-efectos])) [${MARCA_BARRA}]{opacity:1!important;transform:none!important;visibility:visible!important;pointer-events:auto!important}
 img[${"data-tienda-foto"}]{display:block;max-width:100%;height:auto;object-fit:cover}

@@ -307,7 +307,11 @@ function sinLoQueHaceDano(css: string): string {
       if (c === "{") {
         /* El que tiene el problema es el selector: se va la regla entera. */
         if (malo) { i = finDelBloque(css, i); trozo = ""; continue; }
-        salida += `${trozo}{`;
+        /* Acá, y no en otra pasada: éste es el único punto del recorrido donde
+           se sabe que `trozo` es un SELECTOR y no una declaración. Buscar
+           "body" por todo el texto pisaría un `font-family:"Body Grotesque"`
+           o un `content:"body"`. */
+        salida += `${capsularSelector(trozo)}{`;
       } else if (!malo) {
         salida += trozo + c;
       } else if (c === "}") {
@@ -320,6 +324,61 @@ function sinLoQueHaceDano(css: string): string {
     trozo += c;
   }
   return salida + (HACE_DANO.test(trozo) ? "" : trozo);
+}
+
+/**
+ * `html`, `body` y `:root` pasan a ser `:host`, que es lo que son acá adentro.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ADENTRO DE LA CÁPSULA NO HAY `body` NI `:root`
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Su diseño se dibuja adentro de un Shadow DOM (ver `LandingPropia`), y un
+ * Shadow DOM no tiene `<html>` ni `<body>`: su raíz es el `:host`. Así que
+ * TODA regla escrita para la página entera no le aplicaba a nada.
+ *
+ * Y eso es donde Claude pone casi todo lo importante de un diseño:
+ *
+ *     :root { --crema:#FDF8F0; --bordo:#8B1E3F; }
+ *     body  { background:var(--crema); color:#3B2A22; font-family:Georgia; }
+ *
+ * Las dos líneas se guardaban tal cual y no pintaban nada. El fondo no
+ * aparecía, las variables quedaban sin definir —así que cada `var(--bordo)`
+ * de abajo caía en vacío— y la letra y el color base eran los del navegador.
+ *
+ * ── Por qué se veía NEGRO ──────────────────────────────────────────────────
+ *
+ * Sin fondo propio, la cápsula es transparente, y atrás está el `<body>` de
+ * nuestro sitio. El sitio arranca en tema oscuro por defecto (`next-themes`),
+ * o sea `.dark body{background:#0f172a}`. Su página se veía azul casi negro.
+ *
+ * No es algo que hayamos roto: pasaba desde el primer día. No se veía porque
+ * antes la previa se caía antes de llegar a dibujar, y en la página pública
+ * no lo vio nadie porque el producto nunca se publicó. El diseño anterior
+ * zafaba de casualidad —tenía el fondo puesto en un `<div>` y no en el
+ * `body`—, que es lo que hace que esto aparezca recién ahora.
+ *
+ * ── Lo que NO arregla ──────────────────────────────────────────────────────
+ *
+ * Un `body.oscuro{…}`: la clase viajaba en la etiqueta `<body>`, que se saca
+ * al limpiar, así que no hay dónde ponerla. Queda como estaba —sin efecto—,
+ * que es lo mismo que antes y no peor.
+ */
+function capsularSelector(selector: string): string {
+  /* Los `@media`, `@supports` y `@keyframes` no llevan selectores: su
+     encabezado se deja intacto. Un `@supports (x:body)` no es un selector. */
+  if (selector.trimStart().startsWith("@")) return selector;
+  /* Sólo al principio de cada parte o después de un combinador, para no tocar
+     `.body`, `#body`, `[data-body]` ni `body-grande`. */
+  const capsulado = selector.replace(/(^|[\s,>+~(])(?:html|body|:root)(?![-\w])/gi, "$1:host");
+  if (capsulado === selector) return selector;
+  /* `html,body{margin:0}` queda como `:host,:host{…}`, que es válido pero
+     feo y engorda el archivo. Se juntan las partes repetidas — salvo que haya
+     paréntesis, porque ahí una coma puede ser de adentro de un `:is(a,b)` y
+     cortar por coma partiría el selector al medio. */
+  if (capsulado.includes("(")) return capsulado;
+  const partes = [...new Set(capsulado.split(",").map((p) => p.trim()).filter(Boolean))];
+  return partes.join(",");
 }
 
 /** Dónde cierra el bloque que abre en `i`. */

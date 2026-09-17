@@ -636,6 +636,56 @@ check("LNK-K", ["instagram.com/x", "hola@x.com", "11 2345-6789", "https://x.com.
   return leerEstadoDeLanding(JSON.stringify({ enlaces: { contacto: u } })).enlaces.contacto === u;
 }), "todo lo que el acomodo deja pasar sobrevive a la lectura de la base");
 
+/* ── El diseño de la página entera, adentro de la cápsula ────────────────── */
+
+/* ⚠️ Un Shadow DOM no tiene `<html>` ni `<body>`: su raíz es el `:host`. Así que
+   TODA regla escrita para la página entera no le aplicaba a nada — y ahí es
+   donde Claude pone casi todo lo importante de un diseño. El síntoma con el que
+   apareció: la landing se veía NEGRA, porque sin fondo propio la cápsula queda
+   transparente y atrás está el `<body>` de nuestro sitio, que arranca en tema
+   oscuro (`.dark body{background:#0f172a}`). */
+const conCapsula = (css: string) => limpiarCss(css);
+
+check("CAP-A", conCapsula(":root{--crema:#FDF8F0}") === ":host{--crema:#FDF8F0}",
+  "las variables del diseño pasan a :host, o cada var() de abajo cae en vacío");
+check("CAP-B", conCapsula("body{background:#FDF8F0}") === ":host{background:#FDF8F0}",
+  "y el fondo de la página también: sin esto se veía el azul oscuro de nuestro sitio");
+/* `html,body{margin:0}` daría `:host,:host`, que es válido pero engorda. */
+check("CAP-C", conCapsula("html,body{margin:0}") === ":host{margin:0}",
+  "html y body juntos no dejan el selector repetido");
+check("CAP-D", conCapsula("body .hero{padding:40px}") === ":host .hero{padding:40px}",
+  "y como parte de un selector más largo, también");
+check("CAP-E", conCapsula("@media (max-width:600px){body{font-size:14px}}") === "@media (max-width:600px){:host{font-size:14px}}",
+  "adentro de un @media igual, y el encabezado del @media no se toca");
+
+/* Lo que NO se puede tocar: buscar "body" por todo el texto pisaría el nombre
+   de una tipografía o un `content`. Por eso se hace en el único punto del
+   recorrido donde se sabe que lo que se está mirando es un selector. */
+check("CAP-F", [
+  [".body{a:1}", ".body{a:1}"],
+  ["#body{a:1}", "#body{a:1}"],
+  ["[data-body]{a:1}", "[data-body]{a:1}"],
+  ["somebody{a:1}", "somebody{a:1}"],
+  ["body-grande{a:1}", "body-grande{a:1}"],
+  [`p{font-family:"Body Grotesque"}`, `p{font-family:"Body Grotesque"}`],
+  [`p::after{content:"body"}`, `p::after{content:"body"}`],
+  [`a[href="body"]{a:1}`, `a[href="body"]{a:1}`],
+].every(([entra, sale]) => conCapsula(entra) === sale),
+  "y no se toca una clase, un id, un atributo, un nombre de tipografía ni un content");
+
+/* La red de seguridad, para el diseño que nunca declaró fondo y para el espacio
+   de abajo cuando la página es más corta que la pantalla. Va ANTES que su CSS,
+   así que su propio fondo le gana. */
+check("CAP-G", /:host\{all:initial;[^}]*background:#fff;[^}]*min-height:100vh/.test(ESTILO_DE_LA_CAPSULA),
+  "la cápsula arranca con fondo blanco y cubriendo la pantalla");
+/* Y le gana la de ella, porque su CSS entra después: `LandingPropia` dibuja
+   `ESTILO_DE_LA_CAPSULA + html`, en ese orden. Si un día se diera vuelta, cada
+   landing con fondo propio pasaría a blanca sin que nada fallara. */
+const conFondoPropio = limpiarLanding(`<style>body{background:#111}</style><p>x</p>`);
+check("CAP-H", conFondoPropio.ok && conFondoPropio.landing.html.includes(":host{background:#111}") &&
+  ESTILO_DE_LA_CAPSULA.indexOf("background:#fff") < (ESTILO_DE_LA_CAPSULA + conFondoPropio.landing.html).indexOf("background:#111"),
+  "y un diseño con fondo propio lo conserva: su regla entra después y le gana");
+
 /* ── La salida, y el guardado que se ve ──────────────────────────────────── */
 
 /* `ruta` y `panel` ya están leídos más arriba, con el resto de los archivos. */
