@@ -7804,3 +7804,54 @@ subir el `.html`.
 
 Chequeos CAP-A..H. 108 chequeos, tsc, eslint y build ok. Comparado antes/después
 a 360/768/1280 dibujando la cápsula sobre el fondo oscuro del sitio.
+
+---
+
+## Seguía negra: el Shadow DOM no sobrevivía a la hidratación — 17/09/26
+
+Lo de `body`/`:root` era real y hacía falta, pero **no era lo que dejaba la
+pantalla en negro**. Abajo había otra cosa, y sólo se ve en producción.
+
+### El template desaparece antes de que React lo busque
+
+Un `<template shadowrootmode>` lo consume el PARSER: al leerlo, el navegador
+arma la sombra y **saca el template del DOM**. Para cuando React hidrata, ese
+elemento ya no existe.
+
+Escrito como hijo de React, la hidratación lo buscaba, no lo encontraba y tiraba
+el **error #418** —"el HTML del servidor no coincide con el del cliente"—. React
+entonces hace lo que corresponde ante un desajuste: descarta el HTML del
+servidor y vuelve a dibujar el árbol entero en el cliente. Y ahí está el
+problema: **un `<template>` creado por JavaScript ya no se convierte en sombra**
+—eso sólo pasa al parsear—. Quedaba un template inerte, invisible, y la landing
+entera no se dibujaba. Lo que se veía era el `<body>` del sitio.
+
+### Cómo se encontró
+
+Con una ruta temporal (`/p/zz-prueba`) que dibuja una landing fija, un build de
+producción y un navegador de verdad, preguntándole al DOM tres cosas:
+
+| | antes | después |
+|---|---|---|
+| `hayCaja` | true | true |
+| `haySombra` | **false** | **true** |
+| `quedoTemplate` | **true** (inerte) | false |
+
+Probado en los dos encuadres: directo y adentro del iframe sandboxed. La ruta
+se borró al terminar.
+
+⚠️ **En desarrollo no se ve.** React se recupera distinto de un desajuste de
+hidratación, así que en `npm run dev` la previa se dibujaba bien. Es la segunda
+vez en dos días que un defecto de esta pantalla sólo existe en producción.
+
+### El arreglo
+
+El `<template>` se escribe con `dangerouslySetInnerHTML` **del div**, no como
+hijo de React. Con eso React trata el contenido como opaco: no lo compara al
+hidratar ni lo vuelve a escribir, y la sombra que armó el parser queda intacta.
+
+Chequeos SOM-A y SOM-B, de texto: el defecto no se ve ni en el árbol ni en el
+HTML que sale del servidor —son idénticos en las dos versiones—, se ve recién en
+el navegador. Lo único que se puede vigilar es cómo está escrito.
+
+108 chequeos, tsc, eslint y build ok. Mirado a 360/768/1280 adentro del iframe.

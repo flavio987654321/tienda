@@ -686,6 +686,32 @@ check("CAP-H", conFondoPropio.ok && conFondoPropio.landing.html.includes(":host{
   ESTILO_DE_LA_CAPSULA.indexOf("background:#fff") < (ESTILO_DE_LA_CAPSULA + conFondoPropio.landing.html).indexOf("background:#111"),
   "y un diseño con fondo propio lo conserva: su regla entra después y le gana");
 
+/* ── La sombra tiene que sobrevivir a la hidratación ─────────────────────── */
+
+/* ⚠️ Un `<template shadowrootmode>` lo consume el PARSER: al leerlo, el
+   navegador arma la sombra y saca el template del DOM. Para cuando React
+   hidrata, ese elemento ya no existe.
+
+   Escrito como hijo de React, la hidratación no lo encontraba y tiraba el error
+   #418. React entonces descarta el HTML del servidor y vuelve a dibujar todo en
+   el cliente — y un `<template>` creado por JavaScript **ya no se convierte en
+   sombra**. Quedaba inerte y la landing no se dibujaba: lo que se veía era el
+   `<body>` del sitio, azul casi negro.
+
+   Con `dangerouslySetInnerHTML` en el div, React trata el contenido como opaco:
+   no lo compara ni lo reescribe, y la sombra del parser queda intacta.
+
+   Es de texto porque el defecto no se ve en el árbol ni en el HTML que sale del
+   servidor —los dos son idénticos en las dos versiones—: se ve recién en el
+   navegador, y sólo en un build de producción. */
+const capsula = leer("src/components/digitales/LandingPropia.tsx");
+
+check("SOM-A", /dangerouslySetInnerHTML[\s\S]{0,200}<template shadowrootmode="open">/.test(capsula),
+  "el template se escribe con innerHTML del div, no como hijo de React");
+check("SOM-B", !/<template\s*\r?\n?\s*\/\/ @ts-expect-error|<template$|<template\s+shadowrootmode=\{/m.test(capsula) &&
+  !/^\s*<template\b/m.test(capsula),
+  "y no volvió a quedar un <template> como elemento de React, que rompe la hidratación");
+
 /* ── La salida, y el guardado que se ve ──────────────────────────────────── */
 
 /* `ruta` y `panel` ya están leídos más arriba, con el resto de los archivos. */
