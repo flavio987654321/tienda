@@ -48,7 +48,13 @@ async function elProducto(userId: string, id: string) {
   });
 }
 
-async function puertaDeEntrada(userId: string, clave: string) {
+/**
+ * El tope de intentos, sin mirar el plan.
+ *
+ * Va aparte de `puertaDeEntrada` porque hay una acción que NO puede pedir plan
+ * al día: borrar. Ver el comentario del DELETE.
+ */
+async function topeDeIntentos(userId: string, clave: string) {
   try {
     if (!(await checkRateLimit(`${clave}:${userId}`, 60, 60 * 60_000))) {
       return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un momento." }, { status: 429 });
@@ -56,6 +62,12 @@ async function puertaDeEntrada(userId: string, clave: string) {
   } catch {
     console.error(`[rate-limit] Redis no disponible en /api/digitales/productos/[id]/landing`);
   }
+  return null;
+}
+
+async function puertaDeEntrada(userId: string, clave: string) {
+  const pasado = await topeDeIntentos(userId, clave);
+  if (pasado) return pasado;
   const sub = await getUserSubscription(userId);
   if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) {
     return NextResponse.json({ error: "Publicar tu propio diseño es de los planes Starter y Pro." }, { status: 403 });
@@ -166,16 +178,37 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
   }
 
-  if (b.enlace !== undefined) {
-    const { clave, url } = comoClaveYUrl(b.enlace);
-    if (!clave) return NextResponse.json({ error: "No entendimos qué link es." }, { status: 400 });
-    /* El mismo acomodo que hace la pantalla: si escribió `instagram.com/ella`
-       se guarda con el `https://` puesto, y si no es una dirección vuelve el
-       mismo error que ya leyó al lado del campo. */
-    const r = acomodarEnlace(url ?? "");
-    if (url === null || r.url === "") delete nuevo.enlaces[clave];
-    else if (!r.error && r.url.length <= 600) nuevo.enlaces[clave] = r.url;
-    else return NextResponse.json({ error: r.error ?? "Ese link no vale." }, { status: 400 });
+  /* Los links vienen TODOS JUNTOS, y no de a uno como las fotos.
+   *
+   * Son dos gestos distintos y por eso se guardan distinto. Subir una foto es
+   * una acción con final propio —elegiste el archivo, se subió, listo—, así que
+   * guardarla sola en ese momento es lo natural. Escribir cuatro links es UN
+   * trabajo: se completan los que se sepan y recién ahí se aprieta Guardar. Ver
+   * el botón del paso 5 en `LandingClient`.
+   *
+   * Antes esto recibía `enlace` en singular y la pantalla guardaba al salir de
+   * cada campo. Andaba, pero no se notaba: nadie sabía si lo que escribió había
+   * quedado, y la pantalla tenía que esperar turno entre campo y campo para que
+   * dos guardados encimados no se pisaran el mapa entero. */
+  if (b.enlaces !== undefined) {
+    if (typeof b.enlaces !== "object" || b.enlaces === null || Array.isArray(b.enlaces)) {
+      return NextResponse.json({ error: "No entendimos los links." }, { status: 400 });
+    }
+    const entradas = Object.entries(b.enlaces as Record<string, unknown>);
+    if (entradas.length > MAX_ENLACES_DE_LANDING) {
+      return NextResponse.json({ error: `Hasta ${MAX_ENLACES_DE_LANDING} links por landing.` }, { status: 409 });
+    }
+    for (const [clave, valor] of entradas) {
+      if (!/^[a-z0-9-]{1,40}$/.test(clave)) return NextResponse.json({ error: "No entendimos qué link es." }, { status: 400 });
+      const url = typeof valor === "string" ? valor.trim() : null;
+      /* El mismo acomodo que hace la pantalla: si escribió `instagram.com/ella`
+         se guarda con el `https://` puesto, y si no es una dirección vuelve el
+         mismo error que ya leyó al lado del campo. */
+      const r = acomodarEnlace(url ?? "");
+      if (url === null || r.url === "") delete nuevo.enlaces[clave];
+      else if (!r.error && r.url.length <= 600) nuevo.enlaces[clave] = r.url;
+      else return NextResponse.json({ error: r.error ?? "Ese link no vale." }, { status: 400 });
+    }
     if (Object.keys(nuevo.enlaces).length > MAX_ENLACES_DE_LANDING) {
       return NextResponse.json({ error: `Hasta ${MAX_ENLACES_DE_LANDING} links por landing.` }, { status: 409 });
     }
@@ -198,6 +231,63 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   await prisma.product.update({ where: { id: producto.id }, data: { landingPropia: JSON.stringify(nuevo) } });
   return NextResponse.json({ ok: true, estado: nuevo });
+}
+
+/**
+ * DELETE: sacar la landing propia entera y volver a la página nuestra.
+ *
+ * ── Por qué hacía falta ─────────────────────────────────────────────────────
+ *
+ * Porque se podía apagar pero no deshacer. El interruptor devuelve la página de
+ * secciones, sí, pero el archivo, las cinco versiones, las catorce fotos y los
+ * links quedaban guardados para siempre, y la pantalla seguía mostrando todo
+ * como si el diseño propio siguiera siendo el plan. Quien probó, no le gustó y
+ * quiso volver atrás no tenía por dónde.
+ *
+ * ── Qué se borra y qué no ───────────────────────────────────────────────────
+ *
+ * Se borra TODO lo de la landing: las versiones del HTML y el estado entero
+ * —prendida, versión elegida, fotos y links—. Después de esto el producto queda
+ * exactamente como antes de subir nada.
+ *
+ * **La página de secciones no se toca.** Vive en otra columna (`paginaVenta`) y
+ * quedó intacta todo este tiempo, justamente para que apagar la landing la
+ * devuelva tal como la dejó. Borrar una no puede llevarse puesta la otra.
+ *
+ * ⚠️ Las FOTOS que subió siguen en el depósito. No se borran a propósito: son
+ * archivos suyos, subidos por `/api/upload`, y nada garantiza que no las esté
+ * usando en otro lado —la página de secciones, un bono—. Borrar un archivo
+ * porque dejó de estar referenciado acá es exactamente cómo se le rompe una
+ * imagen en otra pantalla.
+ *
+ * No hace falta apagarla primero: sin versión elegida, `laLanding` devuelve
+ * null y la dirección vuelve sola a la nuestra. Ver `p/[id]/page.tsx`.
+ */
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "DIGITAL") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  /* ⚠️ `topeDeIntentos` y NO `puertaDeEntrada`: esto es lo único que no pide el
+     plan al día. Con el plan vencido la landing ya no se muestra —la dirección
+     vuelve sola a la nuestra— y lo único que le queda por hacer es limpiar.
+     Cobrarle un plan para poder borrar sus propias cosas sería tenerla de
+     rehén. Subir y prender sí siguen siendo de los planes pagos. */
+  const parado = await topeDeIntentos(user.id, "landing-borrar");
+  if (parado) return parado;
+
+  const { id } = await ctx.params;
+  const producto = await elProducto(user.id, id);
+  if (!producto) return NextResponse.json({ error: "Ese producto no existe." }, { status: 404 });
+
+  /* Las dos escrituras en una transacción: si se borraran las versiones y
+     fallara el update, el estado quedaría apuntando con `versionId` a una fila
+     que ya no existe — y esa página no se dibuja ni se puede arreglar desde la
+     pantalla, porque la lista de versiones estaría vacía. */
+  await prisma.$transaction([
+    prisma.landingDigital.deleteMany({ where: { productId: producto.id } }),
+    prisma.product.update({ where: { id: producto.id }, data: { landingPropia: null } }),
+  ]);
+
+  return NextResponse.json({ ok: true });
 }
 
 /** `{ clave, url }`, o clave nula si no vino con forma. `url: null` borra. */

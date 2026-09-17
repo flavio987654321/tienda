@@ -359,8 +359,8 @@ const migracion = leer("prisma/migrations/20260916020000_landing_propia/migratio
 
 check("RUTA-A", /const r = limpiarLanding\(html\);/.test(ruta) && /html: L\.html,/.test(ruta) && !/data: \{[^}]*html: html\b/.test(ruta),
   "lo que se guarda es lo LIMPIO: el archivo crudo no llega nunca a la base");
-check("RUTA-B", /rolDigital: "PRINCIPAL", store: \{ ownerId: userId \}/.test(ruta) && ruta.split("elProducto(user.id, id)").length === 3,
-  "el dueño va adentro del where, en las dos rutas: un id ajeno no encuentra nada");
+check("RUTA-B", /rolDigital: "PRINCIPAL", store: \{ ownerId: userId \}/.test(ruta) && ruta.split("elProducto(user.id, id)").length === 4,
+  "el dueño va adentro del where, en las tres rutas: un id ajeno no encuentra nada");
 check("RUTA-C", /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)/.test(ruta) && /checkRateLimit\([^)]*clave[^)]*userId[^)]*, 60,/.test(ruta),
   "Starter y Pro al día, y con tope de intentos por hora");
 check("RUTA-D", /const crudo = await req\.text\(\)[\s\S]*?crudo\.length > CUERPO_MAX/.test(ruta),
@@ -635,6 +635,46 @@ check("LNK-K", ["instagram.com/x", "hola@x.com", "11 2345-6789", "https://x.com.
   const u = acomodarEnlace(s).url;
   return leerEstadoDeLanding(JSON.stringify({ enlaces: { contacto: u } })).enlaces.contacto === u;
 }), "todo lo que el acomodo deja pasar sobrevive a la lectura de la base");
+
+/* ── La salida, y el guardado que se ve ──────────────────────────────────── */
+
+/* `ruta` y `panel` ya están leídos más arriba, con el resto de los archivos. */
+
+/* Se podía apagar pero no deshacer: el archivo, las versiones, las fotos y los
+   links quedaban guardados para siempre y la pantalla seguía mostrando todo
+   como si el diseño propio siguiera siendo el plan. */
+check("SAL-A", /export async function DELETE/.test(ruta),
+  "la landing se puede borrar, no sólo apagar");
+check("SAL-B", /landingDigital\.deleteMany[\s\S]{0,300}landingPropia: null/.test(ruta),
+  "y se van las dos cosas juntas: las versiones y el estado");
+/* Si se borraran las versiones y fallara el update, el estado quedaría
+   apuntando a una fila que ya no existe — y esa página no se dibuja ni se
+   puede arreglar desde la pantalla, porque la lista estaría vacía. */
+check("SAL-C", /\$transaction\(\[\s*\r?\n?\s*prisma\.landingDigital\.deleteMany/.test(ruta),
+  "en una transacción, o el estado queda apuntando a una versión borrada");
+
+/* ⚠️ EL caso importante de este bloque. Con el plan vencido la landing ya no se
+   muestra, así que lo único que le queda por hacer es limpiar. Pedirle plan al
+   día para borrar sus propias cosas sería tenerla de rehén. Subir y prender sí
+   siguen siendo de los planes pagos, y por eso se mira que el DELETE use el
+   tope de intentos y NO la puerta que mira el plan. */
+const elDelete = ruta.slice(ruta.indexOf("export async function DELETE"));
+check("SAL-D", /topeDeIntentos\(user\.id, "landing-borrar"\)/.test(elDelete) && !/await puertaDeEntrada/.test(elDelete),
+  "y borrar no pide plan al día: con el plan vencido igual puede limpiar");
+
+/* El guardado de los links es con botón. Antes guardaba al salir de cada campo:
+   andaba, pero no se veía, y la pregunta "¿esto se guardó?" no tenía respuesta
+   en ningún lado de la pantalla. Las fotos siguen guardándose solas, que es lo
+   correcto para ellas: elegir el archivo ya es una acción con final propio. */
+check("SAL-E", /Guardar los links/.test(panel) && /guardarLosLinks/.test(panel),
+  "los links se guardan con un botón, no al salir del campo");
+check("SAL-F", !/onBlur=\{\(\) => void guardar/.test(panel),
+  "y no quedó además el guardado automático, que volvería a dejarlo invisible");
+/* Todos en un pedido: de a uno, cada guardado tenía que esperar su turno
+   —cada uno manda el mapa entero— y pasar rápido de campo en campo hacía
+   esperar 100 ms por vez. */
+check("SAL-G", /pedir\(\{ enlaces: acomodados \}\)/.test(panel) && /b\.enlaces !== undefined/.test(ruta),
+  "y van los cuatro en un solo pedido, no uno por campo");
 
 /* ── Las dependencias ────────────────────────────────────────────────────── */
 

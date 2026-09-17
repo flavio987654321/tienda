@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Loader2, Upload, Copy, Check, Monitor, Smartphone, ExternalLink, AlertTriangle, Image as IconoImagen, Lock, RotateCcw, Wrench,
+  Loader2, Upload, Copy, Check, Monitor, Smartphone, ExternalLink, AlertTriangle, Image as IconoImagen, Lock, RotateCcw, Wrench, Trash2,
 } from "lucide-react";
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
 /* `claveDeLink` y `acomodarEnlace` son las mismas del servidor, a propósito:
@@ -73,7 +73,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
      de que se guardó. El aviso de arriba queda a media pantalla de distancia
      y ahí no lo lee nadie. */
   const [linkMal, setLinkMal] = useState<Record<string, string>>({});
-  const [linkOk, setLinkOk] = useState<string | null>(null);
+  /* Uno para los cuatro, porque ahora se guardan juntos. Ver `guardarLosLinks`. */
+  const [guardandoLinks, setGuardandoLinks] = useState(false);
+  const [linksOk, setLinksOk] = useState(false);
+  const [borrando, setBorrando] = useState(false);
+  const [vaABorrar, setVaABorrar] = useState(false);
   const enVuelo = useRef(false);
   const archivo = useRef<HTMLInputElement>(null);
   /* Cambia con cada guardado: la previa se recarga sola al subir una versión
@@ -93,8 +97,16 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   /* Lo que hay que pedirle a Claude, ya escrito para él. Vacío si no hay
      nada que pedir. Ver `pedidoDeCambios`. */
   const cambios = inv ? pedidoDeCambios(inv) : "";
-  const sinGuardar = JSON.stringify(enlaces) !== JSON.stringify(estado.enlaces);
-  useAvisoSinGuardar(sinGuardar && !guardando);
+  /* ⚠️ Se comparan sólo los que tienen algo escrito, y ordenados.
+     El servidor no guarda los vacíos: los borra del mapa. Así que después de
+     guardar un campo que ella dejó en blanco, acá quedaba la clave con `""` y
+     allá no quedaba nada — y la pantalla se declaraba "sin guardar" para
+     siempre, con el aviso de salida saltando cada vez. El orden importa por lo
+     mismo: dos mapas iguales escritos en distinto orden no dan el mismo texto. */
+  const soloLosLlenos = (m: Record<string, string>) =>
+    JSON.stringify(Object.entries(m).filter(([, v]) => v.trim() !== "").sort());
+  const sinGuardar = soloLosLlenos(enlaces) !== soloLosLlenos(estado.enlaces);
+  useAvisoSinGuardar(sinGuardar && !guardandoLinks);
 
   async function pedir(cuerpo: Record<string, unknown>, metodo: "POST" | "PATCH" = "PATCH"): Promise<Record<string, unknown> | null> {
     /* Uno por vez, porque cada guardado manda el mapa entero de fotos y
@@ -182,28 +194,80 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   }
 
   /**
-   * Guardar el destino de un link, acomodándolo primero.
+   * Guardar TODOS los links del paso 5, de una, cuando ella lo pide.
+   *
+   * ── Por qué con botón y no al salir de cada campo ───────────────────────
+   *
+   * Porque completar cuatro links es UN trabajo, no cuatro. Antes esto
+   * guardaba al perder el foco de cada campo: andaba, pero no se veía.
+   * Quedaba un visto chiquito al costado que aparecía y se iba, y la pregunta
+   * "¿esto se guardó?" no tenía respuesta en ningún lado de la pantalla.
+   *
+   * Es distinto de las fotos, que sí se guardan solas: elegir un archivo ya es
+   * una acción con final propio —lo elegiste, subió, listo—, y ponerle un
+   * Guardar aparte sería pedir dos gestos para una sola cosa.
+   *
+   * ── Y por qué van todos juntos en un pedido ─────────────────────────────
+   *
+   * Guardar de a uno obligaba a que cada guardado esperara su turno, porque
+   * cada uno manda el mapa entero y dos encimados se pisan. Pasar de campo en
+   * campo rápido hacía esperar 100 ms por vez. En un solo pedido eso no existe.
    *
    * Nadie escribe `https://`: escribe `instagram.com/ella`, o pega el correo
    * de contacto. `acomodarEnlace` lo completa —y lo que queda escrito en el
-   * campo es exactamente lo que se guarda, para que no haya sorpresa—, y si
-   * de verdad no es una dirección lo dice ahí abajo y no manda nada.
+   * campo es exactamente lo que se guarda, para que no haya sorpresa—. Si uno
+   * no es una dirección, se marca ESE y no se manda nada: guardar tres de
+   * cuatro y no decir cuál faltó es peor que no guardar.
    */
-  async function guardarEnlace(texto: string) {
+  async function guardarLosLinks() {
     /* Y la previa deja de mirar la última foto: esto no es una foto. */
     setMirando(null);
-    const clave = claveDeLink(texto);
-    const { url, error } = acomodarEnlace(enlaces[clave] ?? "");
-    setLinkMal((m) => ({ ...m, [clave]: error ?? "" }));
-    if (error) return;
-    setEnlaces((m) => ({ ...m, [clave]: url }));
-    if (url === (estado.enlaces[clave] ?? "")) return;
-    setGuardando(clave);
-    const d = await pedir({ enlace: { clave, url } });
-    setGuardando(null);
-    if (!d) return setLinkMal((m) => ({ ...m, [clave]: "No se pudo guardar. Probá de nuevo." }));
-    setLinkOk(clave);
-    window.setTimeout(() => setLinkOk((c) => (c === clave ? null : c)), 2500);
+    const problemas: Record<string, string> = {};
+    const acomodados: Record<string, string> = {};
+    for (const texto of inv?.linksVacios ?? []) {
+      const clave = claveDeLink(texto);
+      const { url, error } = acomodarEnlace(enlaces[clave] ?? "");
+      problemas[clave] = error ?? "";
+      acomodados[clave] = error ? (enlaces[clave] ?? "") : url;
+    }
+    setLinkMal(problemas);
+    setEnlaces((m) => ({ ...m, ...acomodados }));
+    if (Object.values(problemas).some(Boolean)) return;
+
+    setGuardandoLinks(true);
+    const d = await pedir({ enlaces: acomodados });
+    setGuardandoLinks(false);
+    if (!d) return;
+    setLinksOk(true);
+    window.setTimeout(() => setLinksOk(false), 3000);
+  }
+
+  /**
+   * Borrar la landing entera y volver a la página nuestra.
+   *
+   * Se pregunta antes porque no se puede deshacer: se van las cinco versiones
+   * del archivo y el estado entero. Lo que NO se va —y por eso lo dice el
+   * cartel— es la página de secciones, que quedó guardada todo este tiempo.
+   */
+  async function borrarTodo() {
+    setBorrando(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/digitales/productos/${productoId}/landing`, { method: "DELETE" });
+      if (!r.ok) {
+        const d = (await r.json().catch(() => ({}))) as { error?: string };
+        setError(d.error ?? "No se pudo borrar. Probá de nuevo.");
+        return;
+      }
+      /* A la página de secciones, que es lo que la dirección va a mostrar de
+         ahora en más. Quedarse acá mostraría la pantalla vacía de "subí tu
+         archivo", que es justo lo que ella acaba de decir que no quiere. */
+      router.push(`/digitales/productos/${productoId}/pagina`);
+    } catch {
+      setError("No pudimos conectarnos. Probá de nuevo.");
+    } finally {
+      setBorrando(false);
+    }
   }
 
   /* ── Sin plan ─────────────────────────────────────────────────────────── */
@@ -548,11 +612,11 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                                 setEnlaces((m) => ({ ...m, [clave]: v }));
                                 if (mal) setLinkMal((m) => ({ ...m, [clave]: "" }));
                               }}
-                              onBlur={() => void guardarEnlace(texto)}
-                              /* Enter guarda: en el celular el teclado tapa el
-                                 campo y tocar afuera para que salga el foco no
-                                 se le ocurre a nadie. */
-                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
+                              /* Enter guarda todo, igual que el botón: en el
+                                 celular el teclado tapa la mitad de la pantalla
+                                 y bajar hasta el botón es un viaje. */
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); void guardarLosLinks(); } }}
+                              disabled={guardandoLinks}
                               inputMode="url"
                               autoComplete="off"
                               spellCheck={false}
@@ -561,10 +625,6 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                               placeholder={ejemploDeLink(texto)}
                               className={`${CLASE_INPUT} pr-9 ${mal ? "border-red-300 panel-oscuro:border-red-800 focus:border-red-400 focus:ring-red-100" : ""}`}
                             />
-                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                              {guardando === clave ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" /> : null}
-                              {guardando !== clave && linkOk === clave ? <Check className="h-4 w-4 text-green-600" /> : null}
-                            </span>
                           </div>
                           {mal ? (
                             <p role="alert" className="mt-1 text-[12px] font-medium text-red-600">{mal}</p>
@@ -574,6 +634,28 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                     );
                   })}
                 </ul>
+
+                {/* El botón vive acá abajo y no arriba: es el final del paso.
+                    Apagado mientras no haya nada distinto que guardar, así el
+                    propio botón contesta "¿me quedó algo sin guardar?" sin que
+                    haya que acordarse. */}
+                <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+                  {linksOk && !sinGuardar ? (
+                    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-green-700 panel-oscuro:text-green-400">
+                      <Check className="h-4 w-4" /> Guardado
+                    </span>
+                  ) : sinGuardar ? (
+                    <span className="text-[12.5px] text-amber-700 panel-oscuro:text-amber-300">Te falta guardar</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void guardarLosLinks()}
+                    disabled={!sinGuardar || guardandoLinks}
+                    className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 panel-oscuro:disabled:bg-gray-800 panel-oscuro:disabled:text-gray-600"
+                  >
+                    {guardandoLinks ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : "Guardar los links"}
+                  </button>
+                </div>
               </section>
             )}
 
@@ -641,6 +723,67 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                 </ul>
               </section>
             )}
+
+            {/* ── Borrar todo ──────────────────────────────────────────────
+                Al final, apartado del resto y en letra chica: es la salida, no
+                una opción más. Antes no existía — se podía apagar, pero no
+                deshacer: el archivo y las versiones quedaban guardados para
+                siempre y la pantalla seguía mostrando todo como si el diseño
+                propio siguiera siendo el plan. */}
+            <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
+              {!vaABorrar ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">¿No querés usar tu propio diseño?</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                      Podés borrar todo lo que subiste y quedarte con nuestra página, que está intacta.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setVaABorrar(true)}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-[13px] font-bold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-red-300 hover:text-red-700 panel-oscuro:hover:border-red-800 panel-oscuro:hover:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" /> Borrar mi diseño
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-red-200 panel-oscuro:border-red-900/50 bg-red-50 panel-oscuro:bg-red-500/10 p-4">
+                  <p className="flex items-center gap-2 text-sm font-bold text-red-800 panel-oscuro:text-red-300">
+                    <AlertTriangle className="h-4 w-4 shrink-0" /> Esto no se puede deshacer
+                  </p>
+                  {/* Qué se lleva y qué no, con números: "borrar todo" no dice
+                      nada, y lo que más tranquiliza es enterarse de que la
+                      página de secciones sigue ahí. */}
+                  <ul className="mt-2 space-y-1 text-[13px] leading-relaxed text-red-800 panel-oscuro:text-red-200">
+                    <li>· Se borran las {versiones.length === 1 ? "versión que subiste" : `${versiones.length} versiones que subiste`}, y con eso el diseño.</li>
+                    <li>· Se borran los lugares de foto que completaste y los links del pie.</li>
+                    <li>· <strong className="font-bold">Tu página de secciones queda como está</strong>, y tu dirección vuelve a mostrarla.</li>
+                  </ul>
+                  <p className="mt-2 text-[12.5px] text-red-700 panel-oscuro:text-red-300">
+                    Las fotos que subiste no se borran: siguen en tus archivos por si las usás en otro lado.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void borrarTodo()}
+                      disabled={borrando}
+                      className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-60"
+                    >
+                      {borrando ? <><Loader2 className="h-4 w-4 animate-spin" /> Borrando…</> : <><Trash2 className="h-4 w-4" /> Sí, borrar todo</>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVaABorrar(false)}
+                      disabled={borrando}
+                      className="rounded-xl px-4 py-2.5 text-[13px] font-bold text-gray-600 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800 disabled:opacity-60"
+                    >
+                      Mejor no
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
 
             <ConsejoDeUso>
               El diseño lo hacés en Claude y lo cambiás ahí las veces que quieras: acá sólo se cargan las fotos,

@@ -7690,3 +7690,58 @@ los dos. Queda anotado acá.
 Chequeos IFR-A..F y CSP-F..I. 108 chequeos, tsc, eslint y build ok.
 
 🔲 **Sin deployar**: commiteado local.
+
+---
+
+## Dos huecos del panel de la landing — 16/09/26
+
+### Se podía apagar, pero no deshacer
+
+El interruptor devuelve la página de secciones, sí, pero el archivo, las cinco
+versiones, las fotos y los links quedaban guardados para siempre, y la pantalla
+seguía mostrando todo como si el diseño propio siguiera siendo el plan. Quien
+probó, no le gustó y quiso volver atrás no tenía por dónde.
+
+Ahora hay un DELETE, con su confirmación. El cartel dice con números qué se
+lleva —cuántas versiones, las fotos, los links— y sobre todo qué NO: **la página
+de secciones queda como está**, que es lo que más tranquiliza.
+
+⚠️ **Borrar es lo único que no pide plan al día.** Con el plan vencido la
+landing ya no se muestra, así que lo único que le queda por hacer es limpiar;
+cobrarle un plan para poder borrar sus propias cosas sería tenerla de rehén.
+Subir y prender sí siguen siendo de los planes pagos. Vigilado por SAL-D, que
+falla si alguien le pone `puertaDeEntrada` al DELETE.
+
+Las fotos subidas NO se borran, a propósito: son archivos suyos y nada dice que
+no las esté usando en otro lado. Borrar un archivo porque dejó de estar
+referenciado acá es exactamente cómo se le rompe una imagen en otra pantalla.
+
+### Los links se guardaban solos, y no se veía
+
+Guardaban al salir de cada campo. Andaba — pero la pregunta "¿esto se guardó?"
+no tenía respuesta en ningún lado: quedaba un visto chiquito al costado que
+aparecía y se iba.
+
+Ahora hay un botón, apagado mientras no haya nada distinto que guardar, así el
+propio botón contesta esa pregunta. Y van **los cuatro en un pedido**: de a uno,
+cada guardado tenía que esperar su turno —cada uno manda el mapa entero— y pasar
+rápido de campo en campo hacía esperar 100 ms por vez.
+
+**Las fotos siguen guardándose solas, y está bien así.** Elegir un archivo ya es
+una acción con final propio; ponerle un Guardar aparte sería pedir dos gestos
+para una sola cosa. Lo mismo el interruptor. El botón es sólo para lo que se
+escribe.
+
+De paso, un latente: `sinGuardar` comparaba los mapas enteros, así que un campo
+que ella dejaba en blanco quedaba acá como `""` y en el servidor borrado — y la
+pantalla se declaraba "sin guardar" para siempre, con el aviso de salida
+saltando en cada navegación. Ahora compara sólo los llenos, y ordenados.
+
+Chequeos SAL-A..G; RUTA-B pasó de dos rutas a tres. 108 chequeos, tsc, eslint y
+build ok. Mirado a 360/768/1280.
+
+🔲 **Sin deployar**: commiteado local.
+
+🔲 Pendiente de charla: cómo se ve la relación entre las dos páginas (la de
+  secciones y la propia). Hoy es una tira fina arriba del editor y se siente
+  floja.
