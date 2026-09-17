@@ -1,41 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
+/* La verificación de firma vive en `lib/mp-firma`, con los otros tres
+   webhooks de pago. Acá había una copia a mano —idéntica, pero suelta—, que
+   es exactamente lo que esa pieza se escribió para evitar. */
+import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 import { calculateGoalAmount } from "@/lib/canasta";
 import { sendCanastaDonationConfirmedEmail, sendCanastaCompletedAdminEmail } from "@/lib/resend";
 import { despues } from "@/lib/despues";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
-
-// Mismo esquema de firma que el resto de los webhooks de MP en este
-// proyecto (ver src/app/api/suscripcion/webhook/route.ts).
-function verifyMPSignature(req: NextRequest, dataId: string): boolean {
-  const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("CRÍTICO: MP_WEBHOOK_SECRET no está configurado en producción");
-      return false;
-    }
-    return true;
-  }
-
-  const xSignature = req.headers.get("x-signature");
-  const xRequestId = req.headers.get("x-request-id") ?? "";
-  if (!xSignature) return false;
-
-  const ts = xSignature.match(/ts=([^,]+)/)?.[1];
-  const v1 = xSignature.match(/v1=([^,]+)/)?.[1];
-  if (!ts || !v1) return false;
-
-  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
-  const expected = createHmac("sha256", secret).update(manifest).digest("hex");
-
-  try {
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,7 +18,7 @@ export async function POST(req: NextRequest) {
     const paymentId = body.data?.id;
     if (!paymentId) return NextResponse.json({ ok: true });
 
-    if (!verifyMPSignature(req, String(paymentId))) {
+    if (!firmaDeMercadoPagoValida(req, String(paymentId))) {
       console.warn("[canasta/webhook] firma inválida — request ignorada", { paymentId });
       return NextResponse.json({ ok: true });
     }

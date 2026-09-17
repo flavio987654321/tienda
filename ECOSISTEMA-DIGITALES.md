@@ -7524,3 +7524,95 @@ landing no la puede ver nadie todavía.
 La migración `20260916020000_landing_propia` corrió en el build (es
 idempotente y la tabla ya existía: veníamos escribiendo en la base de
 producción desde local).
+
+---
+
+## Auditoría de registro y cobros — 16/09/26
+
+Disparada por dos preguntas concretas: estando en un plan, ¿`/precios` me
+muestra el plan que tengo? Y estando logueado, ¿me deja registrarme?
+
+### Las dos respuestas
+
+**El plan actual: los de tienda sí, los digitales no.** `TarjetaDigital` no
+recibía NADA de la sesión. A una cuenta que ya estaba en Pro le mostraba
+"Probar 7 días gratis" con un link al registro. La tarjeta de tienda lo hacía
+bien desde siempre; ésta se sumó después y se olvidó la mitad.
+
+**Y la misma pantalla tenía algo peor.** La tarjeta de tienda frena a los
+afiliados (`isAffiliate` → "Ya tenés cuenta activa") pero no tenía freno para
+digitales. Como `isCurrentPlan` sólo compara contra `"OWNER"`, a una cuenta
+DIGITAL le daba false y caía en el `if (userSub)`, que le ofrecía **"Cambiar de
+plan"**. Abría el modal, elegía, apretaba pagar — y recién ahí el 409 del
+candado de ecosistema. Nunca se cobró de más: lo que estaba mal era ofrecerlo.
+
+**Registrarse logueado: sí, entero.** Ni `/registro` ni `/login` miraban si
+había sesión, y el middleware tampoco las toca. Se creaba la cuenta nueva y la
+sesión vieja seguía viva (`handleSubmit` nunca cerraba nada): terminaba en
+`/login?registered=…` logueado como la anterior.
+
+### Lo que aguantó
+
+**El registro.** Turnstile antes de tocar la base, tope de 5 por minuto por IP,
+la contraseña validada en el servidor y no sólo en el formulario, el tipo de
+cuenta desde una tabla con `hasOwnProperty`. Y el mail se confirma de verdad
+con `generateLink`: aquel `email_confirm: true` está cerrado.
+
+**Los cobros.** El monto lo decide siempre el servidor, el candado de
+ecosistema está en las dos puntas, la firma se compara con `timingSafeEqual`, y
+sin `MP_WEBHOOK_SECRET` en producción se rechaza todo.
+
+### Lo que se arregló
+
+**1. El webhook de suscripción no era idempotente.** El único de los cuatro
+caminos de plata sin ese freno:
+
+| Webhook | Protección |
+|---|---|
+| `canasta/webhook` | compare-and-swap sobre `status: "PENDING"` |
+| `mp/webhook` | índice único, atrapa el P2002 |
+| `digitales/cobro` | idempotente por diseño, escrito en su encabezado |
+| `suscripcion/webhook` | **ninguna** |
+
+Guardaba `mpPaymentId` y no lo consultaba nunca. Cada aviso aprobado volvía a
+correr `periodFor(billing, now)` y **le movía el vencimiento a la fecha del
+último aviso**. Dos avisos con cinco segundos de diferencia no hacen daño; uno
+que llega tres meses después de un pago anual regala tres meses, sin ningún
+error a la vista.
+
+Ahora es un compare-and-swap sobre `mpPaymentId`. ⚠️ Un índice único NO habría
+alcanzado: el `upsert` es por `userId`, así que reaplicar el mismo pago escribe
+el mismo valor en LA MISMA fila y no viola ninguna unicidad.
+
+**2. Una firma válida servía para siempre.** El manifiesto incluye un `ts` y
+nadie miraba cuán viejo era. Ventana de una hora, y no de cinco minutos, porque
+perder un pago de verdad es peor que la ventana: se entiende que cada reintento
+de Mercado Pago va firmado de nuevo, pero eso no está prometido por escrito. El
+rechazo se loguea como error para que se vea si alguna vez pasa.
+
+**3. Las tarjetas digitales y el freno de la de tienda** (los dos de arriba).
+
+**4. `/registro` y `/login` con sesión abierta** → `SesionYaAbierta`. No es un
+redirect al panel a propósito: abrir una segunda cuenta es un camino legítimo
+—se lo decimos en los Términos y en las preguntas frecuentes a quien tiene
+tienda y quiere vender digitales—. Se le nombra en qué cuenta está y se le pide
+que la cierre primero.
+
+**5. La firma estaba escrita tres veces.** `lib/mp-firma` se extrajo el 03/09/26
+justamente para que arreglar una no dejara la otra con el agujero, y la mudanza
+se hizo sólo en dos de los cuatro webhooks. Las copias de `suscripcion` y
+`canasta` se habrían perdido la ventana de tiempo de arriba sin que nada
+fallara. Ahora los cuatro importan de la pieza.
+
+### Chequeos
+
+`mp-firma.check.ts`, 17 casos. Los FIRMA-* son de comportamiento; los COPIA-* e
+IDEM-* son de TEXTO sobre los archivos de las rutas, a propósito: el defecto no
+fue nunca que la firma estuviera mal escrita sino que estuviera escrita cuatro
+veces, y eso una prueba de comportamiento no lo puede ver —cada copia anda bien
+por su cuenta—.
+
+107 chequeos, tsc, eslint y build ok. Mirado a 360/768/1280 con la cuenta
+digital, la de tienda y sin sesión.
+
+🔲 **Sin deployar**: queda commiteado local, a pedido.

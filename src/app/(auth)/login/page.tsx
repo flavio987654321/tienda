@@ -3,6 +3,8 @@
 import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
+import { useSesion } from "@/components/AuthProvider";
+import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLoginForm } from "@/hooks/useLoginForm";
@@ -15,6 +17,8 @@ import {
 
 function LoginForm() {
   const searchParams = useSearchParams();
+  /* Sólo `logueado`, no `cargando`: ver el comentario del corte, más abajo. */
+  const { logueado } = useSesion();
   const registered = searchParams.get("registered");
   /* Vuelve de tocar el botón del mail. Lo pone Supabase al redirigir, después de
      dar el correo por confirmado. */
@@ -57,6 +61,18 @@ function LoginForm() {
       </div>
     );
   }
+
+  /* Igual que en `/registro`, y por el mismo motivo: la pantalla no se enteraba
+     de que ya había alguien adentro. Ver `SesionYaAbierta`.
+
+     Va después del corte de `redirecting` porque ese corte es el de la sesión
+     que ACABA de abrirse: sin eso, el instante entre entrar bien y que el
+     navegador se vaya al panel mostraría "ya tenés la sesión abierta", que es
+     cierto y es exactamente lo que nadie necesita leer ahí.
+
+     Y mira `logueado` y no `cargando`, como allá: la espera de averiguarlo no se
+     le pone a quien viene a entrar. */
+  if (logueado) return <SesionYaAbierta modo="login" />;
 
   return (
     <div className="min-h-screen bg-white flex">

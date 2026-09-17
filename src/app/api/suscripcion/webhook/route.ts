@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
+/* La verificación de firma vive en `lib/mp-firma`, con los otros tres
+   webhooks de pago. Acá había una copia a mano —idéntica, pero suelta—, que
+   es exactamente lo que esa pieza se escribió para evitar. */
+import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 import { periodFor } from "@/lib/subscription";
 import { planDe, ecosistemaDeRol, planCerrado } from "@/lib/planLimits";
 import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
@@ -10,36 +13,6 @@ import { despues } from "@/lib/despues";
 // Los planes ya no van en una lista escrita a mano: salen del registro, que es
 // el mismo que usa la ruta que creó la preferencia.
 const VALID_BILLINGS = new Set(["MONTHLY", "ANNUAL"]);
-
-function verifyMPSignature(req: NextRequest, dataId: string): boolean {
-  const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("WEBHOOK suscripcion: MP_WEBHOOK_SECRET no configurado en producción — bloqueando");
-      return false;
-    }
-    console.warn("WEBHOOK suscripcion: MP_WEBHOOK_SECRET no configurado, saltando verificación (solo dev)");
-    return true;
-  }
-
-  const xSignature = req.headers.get("x-signature");
-  const xRequestId = req.headers.get("x-request-id") ?? "";
-  if (!xSignature) return false;
-
-  const ts = xSignature.match(/ts=([^,]+)/)?.[1];
-  const v1 = xSignature.match(/v1=([^,]+)/)?.[1];
-  if (!ts || !v1) return false;
-
-  // Firma canónica según spec de MP: id:{paymentId};request-id:{reqId};ts:{ts};
-  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
-  const expected = createHmac("sha256", secret).update(manifest).digest("hex");
-
-  try {
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (!paymentId) return NextResponse.json({ ok: true });
 
     // Verificar firma HMAC-SHA256 antes de hacer cualquier cosa
-    if (!verifyMPSignature(req, String(paymentId))) {
+    if (!firmaDeMercadoPagoValida(req, String(paymentId))) {
       console.warn("WEBHOOK suscripcion: firma inválida — rechazando", {
         xSignature: req.headers.get("x-signature"),
         paymentId,
@@ -142,7 +115,7 @@ export async function POST(req: NextRequest) {
      * alguien que está pagando. */
     const subActual = await prisma.subscription.findUnique({
       where: { userId },
-      select: { role: true },
+      select: { role: true, mpPaymentId: true },
     });
     const ecoActual = ecosistemaDeRol(subActual?.role);
     if (
@@ -168,28 +141,94 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
     const period = periodFor(billing, now);
+    const idDelPago = String(payment.id);
 
-    await prisma.subscription.upsert({
-      where: { userId },
-      update: {
-        role: safeRole,
-        tier: safeTier,
-        plan: billing,
-        status: "ACTIVE",
-        ...period,
-        mpPaymentId: String(payment.id),
-      },
-      create: {
-        userId,
-        role: safeRole,
-        tier: safeTier,
-        plan: billing,
-        status: "ACTIVE",
-        trialEndsAt: now,
-        ...period,
-        mpPaymentId: String(payment.id),
-      },
-    });
+    /* ── Un pago se aplica UNA vez ────────────────────────────────────────────
+     *
+     * Mercado Pago manda el mismo aviso más de una vez con toda normalidad: uno
+     * cuando el pago se crea y otro cuando cambia de estado, más los reintentos
+     * de los que no pudo entregar. Los tres son avisos legítimos, con firma
+     * válida, y todos traen `status: "approved"`.
+     *
+     * Hasta el 16/09/26 esto era un `upsert` pelado. Cada aviso volvía a correr
+     * `periodFor(billing, now)`, o sea que **le movía el vencimiento a la fecha
+     * del último aviso**. Dos avisos con cinco segundos de diferencia no hacen
+     * daño; uno que llega tres meses después de un pago anual regala tres meses,
+     * y nadie se entera nunca — no hay ningún error, la cuenta simplemente vence
+     * más tarde de lo que se pagó.
+     *
+     * Era el único de los cuatro webhooks de pago del proyecto sin este freno:
+     * `canasta` lo hace con un compare-and-swap sobre el estado, `mp/webhook`
+     * con un índice único que le hace tirar P2002, y `digitales/cobro` lo dice
+     * en su encabezado. Guardábamos `mpPaymentId` desde siempre y nunca lo
+     * mirábamos.
+     *
+     * ── Por qué no alcanza con un índice único en `mpPaymentId` ──────────────
+     *
+     * Porque el `upsert` es por `userId`, y `Subscription.userId` es único: una
+     * cuenta tiene UNA suscripción. Reaplicar el mismo pago escribe el mismo
+     * `mpPaymentId` en LA MISMA FILA, y eso no viola ninguna unicidad. El índice
+     * no se enteraría.
+     *
+     * Por eso el freno es el `where` de abajo, que es además un compare-and-swap
+     * de verdad: si dos avisos entran a la vez, los dos leyeron `subActual`
+     * antes de que ninguno escribiera, pero sólo uno encuentra la fila con un
+     * `mpPaymentId` distinto del suyo. El otro cuenta cero y se va.
+     *
+     * El `OR` con `null` no es adorno: en SQL `mpPaymentId <> 'x'` sobre un
+     * valor nulo no da verdadero, da nulo. Sin esa rama, la primera suscripción
+     * que paga —la que todavía tiene la columna vacía— no la tomaría el `where`
+     * y el pago no se aplicaría nunca. */
+    if (subActual) {
+      const aplicado = await prisma.subscription.updateMany({
+        where: {
+          userId,
+          OR: [{ mpPaymentId: null }, { mpPaymentId: { not: idDelPago } }],
+        },
+        data: {
+          role: safeRole,
+          tier: safeTier,
+          plan: billing,
+          status: "ACTIVE",
+          ...period,
+          mpPaymentId: idDelPago,
+        },
+      });
+      if (aplicado.count === 0) {
+        console.warn("WEBHOOK suscripcion: aviso repetido — este pago ya estaba aplicado", {
+          paymentId: idDelPago,
+          userId,
+        });
+        return NextResponse.json({ ok: true });
+      }
+    } else {
+      /* Sin suscripción previa. El `create` puede chocar con el de un aviso
+         gemelo que entró primero (`userId` es único): eso es P2002, y significa
+         que el pago ya se aplicó. Se contesta 200 igual que arriba. */
+      try {
+        await prisma.subscription.create({
+          data: {
+            userId,
+            role: safeRole,
+            tier: safeTier,
+            plan: billing,
+            status: "ACTIVE",
+            trialEndsAt: now,
+            ...period,
+            mpPaymentId: idDelPago,
+          },
+        });
+      } catch (e) {
+        if ((e as { code?: string })?.code === "P2002") {
+          console.warn("WEBHOOK suscripcion: aviso repetido — la suscripción la creó el aviso gemelo", {
+            paymentId: idDelPago,
+            userId,
+          });
+          return NextResponse.json({ ok: true });
+        }
+        throw e;
+      }
+    }
 
     // Marcar cupón como usado si se aplicó uno
     if (couponId && typeof couponId === "string" && couponId.length > 0) {

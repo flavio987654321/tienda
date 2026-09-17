@@ -3,6 +3,8 @@
 import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
+import { useSesion } from "@/components/AuthProvider";
+import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import { useTurnstile } from "@/components/Turnstile";
 import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
 import { isPwa } from "@/lib/pwa";
@@ -175,6 +177,8 @@ function validate(form: { name: string; email: string; password: string; storeNa
 function RegistroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  /* Sólo `logueado`, no `cargando`: ver el comentario del corte, más abajo. */
+  const { logueado } = useSesion();
 
   useEffect(() => {
     if (isPwa()) router.replace("/login");
@@ -371,6 +375,24 @@ function RegistroContent() {
       </div>
     );
   }
+
+  /* Con la sesión ya abierta no se muestra el formulario: se dice en qué cuenta
+     está y se le ofrece cerrarla. Ver `SesionYaAbierta`.
+
+     Va DESPUÉS del corte de `redirecting`, y no antes: apenas termina un alta
+     exitosa se navega a `/login`, y si este corte estuviera arriba le taparía el
+     spinner de la ida con la pantalla de "ya tenés sesión" a quien acaba de
+     registrarse desde otra cuenta.
+
+     Y mira `logueado` y NO `cargando` a propósito. Averiguar si hay sesión
+     tarda un segundo largo; frenar la pantalla hasta saberlo le pondría esa
+     espera a TODOS —y acá la enorme mayoría es gente sin cuenta, que es
+     justamente a la que vinimos a no hacerle perder tiempo—. Mientras se
+     averigua se muestra el formulario, que es lo correcto para casi todos, y si
+     resulta que hay alguien adentro la pantalla se reemplaza. El que ve ese
+     cambio es el caso raro, y no perdió nada: el formulario todavía estaba
+     vacío. */
+  if (logueado) return <SesionYaAbierta modo="registro" />;
 
   const selected = TYPES.find((t) => t.key === accountType)!;
   const colors = COLOR_MAP[selected.color];

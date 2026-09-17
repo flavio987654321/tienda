@@ -39,14 +39,37 @@ const FAQ_DIGITAL = [
   { q: "Ya tengo una tienda en TiendaApps, ¿puedo usar la misma cuenta?", a: "No. Cada cuenta es una sola cosa, así que para vender productos digitales necesitás registrarte con otro correo. Son dos negocios distintos y cada uno tiene su panel." },
 ];
 
-/** Una de las tres tarjetas de adentro de Productos Digitales. */
-function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boolean }) {
+/**
+ * Una de las tres tarjetas de adentro de Productos Digitales.
+ *
+ * ⚠️ `sub` no es opcional a propósito. Hasta el 16/09/26 esta tarjeta no recibía
+ * NADA de la sesión: les mostraba "Probar 7 días gratis" con un link al registro
+ * a todo el mundo, incluida la persona que ya estaba en ese mismo plan pago y
+ * mirando esta página desde adentro de su cuenta. La tarjeta de tienda, que sí
+ * mira la suscripción, hacía lo correcto desde siempre; ésta se sumó después y
+ * se olvidó la mitad.
+ *
+ * Que el parámetro sea obligatorio es la parte que evita que vuelva a pasar: una
+ * tarjeta nueva no compila hasta que su autor decida qué hace con la sesión.
+ */
+function TarjetaDigital({ tier, isAnnual, sub }: { tier: TierDigital; isAnnual: boolean; sub: UserSub | null }) {
   const esPro = tier === "PRO";
   const gratis = tier === "FREE";
   const precio = gratis
     ? null
     : tier === "PRO" ? PRECIOS_DIGITALES.DIGITAL_PRO : PRECIOS_DIGITALES.DIGITAL_STARTER;
   const porMes = precio ? (isAnnual ? Math.round(precio.ANNUAL / 12) : precio.MONTHLY) : 0;
+
+  /* Quién está mirando. Se calcula acá arriba y no adentro del botón porque el
+     renglón de abajo lo necesita también: decirle "Sin tarjeta. Si no pagás,
+     volvés a Free" justo debajo de "Tu plan actual" sería avisarle de algo que
+     ya le pasó o que no le aplica. */
+  const esDigital = sub?.role === "DIGITAL";
+  /* Free no tiene ciclo: no se factura, así que comparar mensual contra anual en
+     esa tarjeta no quiere decir nada. En los pagos sí, porque pasar de mensual a
+     anual es un cambio de plan de verdad. */
+  const mismoPlan = !!esDigital && sub!.tier === tier &&
+    (gratis || sub!.plan === (isAnnual ? "ANNUAL" : "MONTHLY"));
 
   return (
     /* Free en gris como la tarjeta de Cliente, los dos pagos en naranja como el
@@ -108,30 +131,90 @@ function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boole
         ))}
       </ul>
 
-      {/* Los tres llevan al mismo lado: crear la cuenta con ese plan elegido.
+      {/* ── Qué botón va, y eso depende de quién está mirando ──────────────────
 
-          A Starter y Pro NO se les cobra acá: arrancan sus 7 días de prueba, sin
-          tarjeta. Al terminar, si no pagó, la cuenta cae a Free y no se cierra
-          nada. Por eso el botón dice "Probar 7 días gratis" y no "Suscribirme":
-          prometer una suscripción y arrancar una prueba son cosas distintas. */}
-      <Link
-        /* El ciclo viaja con el plan. Sin esto, tocar "Anual" acá y apretar el
-           botón perdía el descuento en el camino al registro, en silencio. */
-        href={`/registro?plan=digital&tier=${tier.toLowerCase()}${isAnnual ? "&billing=annual" : ""}`}
-        className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
-          gratis
-            ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/15 hover:shadow-xl hover:shadow-gray-900/25"
-            : "bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40"
-        }`}
-      >
-        {gratis ? "Crear cuenta gratis" : "Probar 7 días gratis"}
-        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-      </Link>
+          Cuatro situaciones, y antes las cuatro mostraban la misma invitación a
+          registrarse:
+
+          1. Sin sesión (o con sesión sin suscripción) → el camino de siempre:
+             crear la cuenta con este plan ya elegido.
+          2. Cuenta digital, en ESTE plan → "Tu plan actual". No hay nada que
+             comprar.
+          3. Cuenta digital, en otro plan → cambiar de plan, pero en
+             `/digitales/mi-cuenta`, que es donde vive ese trámite con su
+             prorrateo. Acá sería una segunda copia del mismo cobro en una
+             página pública.
+          4. Cuenta de tienda o de afiliado → no puede comprar esto. El servidor
+             ya lo corta con un 409 (el candado de ecosistema de
+             `api/suscripcion/preferencia`), así que plata no se pierde; lo que
+             se evitaba mal era el viaje hasta el modal de pago para enterarse.
+             Ahora se dice acá, con el mismo texto que contesta el servidor. */}
+      {(() => {
+        if (mismoPlan) {
+          return (
+            <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-teal-50 border border-teal-200 text-teal-700">
+              <BadgeCheck className="h-4 w-4" /> Tu plan actual
+            </div>
+          );
+        }
+
+        if (esDigital) {
+          return (
+            <Link
+              href="/digitales/mi-cuenta"
+              className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+                gratis
+                  ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/15"
+                  : "bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/25"
+              }`}
+            >
+              Cambiar de plan <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          );
+        }
+
+        if (sub) {
+          return (
+            <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 border border-gray-200 text-gray-400 cursor-default text-center px-3">
+              <BadgeCheck className="h-4 w-4 shrink-0" /> Necesitás otra cuenta
+            </div>
+          );
+        }
+
+        return (
+          /* A Starter y Pro NO se les cobra acá: arrancan sus 7 días de prueba,
+             sin tarjeta. Al terminar, si no pagó, la cuenta cae a Free y no se
+             cierra nada. Por eso el botón dice "Probar 7 días gratis" y no
+             "Suscribirme": prometer una suscripción y arrancar una prueba son
+             cosas distintas. */
+          <Link
+            /* El ciclo viaja con el plan. Sin esto, tocar "Anual" acá y apretar
+               el botón perdía el descuento en el camino al registro, en
+               silencio. */
+            href={`/registro?plan=digital&tier=${tier.toLowerCase()}${isAnnual ? "&billing=annual" : ""}`}
+            className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+              gratis
+                ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/15 hover:shadow-xl hover:shadow-gray-900/25"
+                : "bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40"
+            }`}
+          >
+            {gratis ? "Crear cuenta gratis" : "Probar 7 días gratis"}
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
+        );
+      })()}
       {/* Mismo alto para los tres: el renglón de los planes pagos parte en dos
           en pantallas angostas y el del Free no, y sin esto el botón del Free
           quedaba más abajo que los otros. */}
       <p className="text-center text-xs text-gray-400 mt-3 min-h-[36px]">
-        {gratis ? "Para siempre · Sin tarjeta" : "Sin tarjeta. Si no pagás, volvés a Free."}
+        {sub && !esDigital
+          ? "Cada cuenta es un solo producto. Registrate con otro correo."
+          : mismoPlan && !gratis
+          /* Mismo dato que muestra la tarjeta de tienda para su plan actual: lo
+             que le importa a quien ya está adentro no es cómo empezar, es
+             cuánto le queda. */
+          ? `${sub!.daysLeft} días restantes`
+          : gratis ? "Para siempre · Sin tarjeta" : "Sin tarjeta. Si no pagás, volvés a Free."}
       </p>
     </div>
   );
@@ -567,6 +650,23 @@ function PreciosContent() {
                     </div>
                   );
                 }
+                /* Y las cuentas de Productos Digitales tampoco, por la misma
+                   razón y con un agujero peor: el freno de los afiliados existía
+                   desde antes, pero al sumar el cuarto ecosistema nadie agregó
+                   éste. `isCurrentPlan` sólo sabe comparar contra "OWNER", así
+                   que a una cuenta DIGITAL le daba false y caía en el
+                   `if (userSub)` de más abajo — que le ofrecía "Cambiar de
+                   plan". Abría el modal, elegía, apretaba pagar, y recién ahí el
+                   servidor le contestaba 409 con el candado de ecosistema.
+                   Nunca se cobró de más: lo que estaba mal era ofrecerlo. */
+                if (userSub?.role === "DIGITAL" || (!userSub && userMetaRole === "DIGITAL")) {
+                  return (
+                    <div className="flex flex-col items-center justify-center gap-1 w-full py-3 rounded-2xl text-sm font-bold bg-gray-100 border border-gray-200 text-gray-400 cursor-default text-center px-3">
+                      <span className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 shrink-0" /> Necesitás otra cuenta</span>
+                      <span className="text-xs font-medium">Tu cuenta es de Productos Digitales</span>
+                    </div>
+                  );
+                }
                 if (isUpgradeToAnnual("OWNER", cardTier)) {
                   // Los dos números salen de la misma cotización del servidor.
                   // Antes el descuento se sacaba restando (precio − a pagar):
@@ -609,8 +709,16 @@ function PreciosContent() {
                   </Link>
                 );
               })()}
+              {/* El renglón de abajo también tiene que saber de la cuenta
+                  digital: prometerle "7 días gratis" justo debajo de un botón
+                  apagado que le dice que necesita otra cuenta es contradecirse
+                  en dos renglones seguidos. */}
               <p className="text-center text-xs text-gray-400 mt-3 min-h-[32px]">
-                {isCurrentPlan("OWNER", ownerTier) ? `${userSub!.daysLeft} días restantes` : "7 días gratis · Sin tarjeta · Cancelá cuando quieras"}
+                {isCurrentPlan("OWNER", ownerTier)
+                  ? `${userSub!.daysLeft} días restantes`
+                  : userSub?.role === "DIGITAL"
+                  ? "Cada cuenta es un solo producto. Registrate con otro correo."
+                  : "7 días gratis · Sin tarjeta · Cancelá cuando quieras"}
               </p>
             </div>
 
@@ -740,9 +848,9 @@ function PreciosContent() {
               </p>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <TarjetaDigital tier="FREE" isAnnual={isAnnual} />
-                <TarjetaDigital tier="STARTER" isAnnual={isAnnual} />
-                <TarjetaDigital tier="PRO" isAnnual={isAnnual} />
+                <TarjetaDigital tier="FREE" isAnnual={isAnnual} sub={userSub} />
+                <TarjetaDigital tier="STARTER" isAnnual={isAnnual} sub={userSub} />
+                <TarjetaDigital tier="PRO" isAnnual={isAnnual} sub={userSub} />
               </div>
 
               <p className="text-xs text-gray-400 mt-6 max-w-3xl">
