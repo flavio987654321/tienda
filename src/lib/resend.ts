@@ -1820,3 +1820,88 @@ export async function sendCorreoACompradoresEmail({
 
   return { error: r.error ? { message: r.error.message } : null };
 }
+
+/**
+ * A quien vende, por cada venta cobrada: el comprobante en la casilla.
+ *
+ * Es opcional (`Store.avisoMailVentas`, Configuración → Avisos), porque el
+ * push y la campanita ya avisan; esto es para quien quiere el registro por
+ * mail. Dice lo que le QUEDA después de la comisión —el número que nadie
+ * más le muestra— y quién compró, para que el mail sirva de comprobante.
+ *
+ * Misma regla que la entrega: sin clave de Resend contesta fallo, no
+ * silencio.
+ */
+export async function sendVentaDigitalVendedorEmail({
+  to,
+  vendedor,
+  producto,
+  total,
+  leQueda,
+  comprador,
+  enlace,
+}: {
+  to: string;
+  vendedor: string | null;
+  producto: string;
+  /** Ya formateados ("$ 6.900"): el formato es del que llama, no del mail. */
+  total: string;
+  leQueda: string;
+  comprador: { nombre: string | null; email: string | null };
+  /** La pantalla de Ventas del panel. */
+  enlace: string;
+}): Promise<ResultadoDeEnvio> {
+  if (!process.env.RESEND_API_KEY) {
+    return { error: { message: "RESEND_API_KEY no configurada" } };
+  }
+  const quien = [comprador.nombre, comprador.email].filter(Boolean).map((x) => escapeHtml(x)).join(" · ") || "sin datos";
+
+  const r = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Vendiste: ${producto} (${total})`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#0f172a;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#94a3b8;font-size:13px;margin:0 0 6px;font-weight:500;">¡Vendiste!</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${escapeHtml(producto)}</h1>
+        </div>
+
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">
+          Hola${vendedor ? ` <strong>${escapeHtml(vendedor)}</strong>` : ""},
+        </p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Se acreditó una venta y ya le estamos mandando el archivo a quien compró.
+        </p>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+          <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px;">Cobrado</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;font-weight:700;">${escapeHtml(total)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px;">Te queda después de la comisión</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#059669;font-size:14px;text-align:right;font-weight:800;">${escapeHtml(leQueda)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px;">Quien compró</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;text-align:right;">${quien}</td>
+          </tr>
+        </table>
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${enlace}"
+             style="display:inline-block;background:#0f172a;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ver mis ventas
+          </a>
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          Este mail se manda porque lo prendiste en Configuración → Avisos de ventas. Desde ahí lo apagás.
+        </p>
+      </div>
+    `,
+  });
+
+  return { error: r.error ? { message: r.error.message } : null };
+}

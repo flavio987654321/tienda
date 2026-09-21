@@ -61,14 +61,14 @@ export async function PATCH(req: NextRequest) {
   }
   const {
     nombre, slug, logo, checkoutName, supportEmail, iaProducto, iaDescripcion,
-    gaId, pixelId, clarityId, politicas,
+    gaId, pixelId, clarityId, politicas, avisoMailVentas,
   } = body as Record<string, unknown>;
 
   /* Nada que escribir. Sin esto, un pedido vacío devolvería ok y crearía el
      espacio de la cuenta de gorra. */
   const vino = [
     nombre, slug, logo, checkoutName, supportEmail, iaProducto, iaDescripcion,
-    gaId, pixelId, clarityId, politicas,
+    gaId, pixelId, clarityId, politicas, avisoMailVentas,
   ];
   if (vino.every((v) => v === undefined)) {
     return NextResponse.json({ error: "No mandaste nada para guardar" }, { status: 400 });
@@ -87,6 +87,9 @@ export async function PATCH(req: NextRequest) {
   /* El mail de soporte va adentro del mail de entrega: es la única forma que
      tiene de reclamar alguien que pagó y no recibió el archivo. Si acá entra
      cualquier cosa, esa persona se queda sin puerta. */
+  if (avisoMailVentas !== undefined && typeof avisoMailVentas !== "boolean") {
+    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+  }
   if (supportEmail !== undefined && supportEmail !== null) {
     const problema = validarEmail(supportEmail);
     if (problema) return NextResponse.json({ error: problema }, { status: 400 });
@@ -245,6 +248,7 @@ export async function PATCH(req: NextRequest) {
         ...(iaDescripcion !== undefined
           ? { iaDescripcion: limpiarTexto(iaDescripcion, LARGO_IA_DESCRIPCION) }
           : {}),
+        ...(typeof avisoMailVentas === "boolean" ? { avisoMailVentas } : {}),
         ...(configNueva !== undefined ? { storeConfig: configNueva } : {}),
       },
     });

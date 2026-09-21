@@ -23,6 +23,8 @@ type Props = {
   slug: string;
   logo: string | null;
   supportEmail: string;
+  /** Un mail a la cuenta por cada venta cobrada (Configuración → Avisos). */
+  avisoMailVentas: boolean;
   pixelId: string;
   gaId: string;
   clarityId: string;
@@ -98,6 +100,7 @@ export default function ConfiguracionClient(p: Props) {
   const [dir, setDir] = useState(p.slug);
   const [img, setImg] = useState<string | null>(p.logo);
   const [mail, setMail] = useState(p.supportEmail);
+  const [mailPorVenta, setMailPorVenta] = useState(p.avisoMailVentas);
   const [iaProd, setIaProd] = useState(p.iaProducto);
   const [iaDesc, setIaDesc] = useState(p.iaDescripcion);
   const [pixel, setPixel] = useState(p.pixelId);
@@ -155,8 +158,10 @@ export default function ConfiguracionClient(p: Props) {
 
   const dirLimpia = normalizarSlug(dir);
 
-  async function guardar(seccion: string, cuerpo: Record<string, unknown>) {
-    if (enVuelo.current) return;
+  /* Contesta si quedó guardado: el casillero del mail por venta se marca al
+     tocarlo y tiene que volver atrás si el servidor dijo que no. */
+  async function guardar(seccion: string, cuerpo: Record<string, unknown>): Promise<boolean> {
+    if (enVuelo.current) return false;
     enVuelo.current = true;
     setError("");
     setListo(null);
@@ -170,15 +175,17 @@ export default function ConfiguracionClient(p: Props) {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         setError(data.error ?? "No pudimos guardar.");
-        return;
+        return false;
       }
       /* La dirección se relee de la respuesta: el servidor la normaliza, así que
          lo que quedó guardado puede no ser lo que se escribió. Sin esto, la
          pantalla sigue mostrando "Mis Guías" y la base dice "mis-guias". */
       if (typeof data.slug === "string") setDir(data.slug);
       setListo(seccion);
+      return true;
     } catch {
       setError("No pudimos conectarnos. Revisá tu internet e intentá de nuevo.");
+      return false;
     } finally {
       enVuelo.current = false;
       setGuardando(null);
@@ -284,6 +291,7 @@ export default function ConfiguracionClient(p: Props) {
           checkout={checkout} setCheckout={setCheckout}
           dir={dir} setDir={setDir}
           mail={mail} setMail={setMail}
+          mailPorVenta={mailPorVenta} setMailPorVenta={setMailPorVenta}
           img={img} setImg={setImg}
           iaProd={iaProd} setIaProd={setIaProd}
           iaDesc={iaDesc} setIaDesc={setIaDesc}

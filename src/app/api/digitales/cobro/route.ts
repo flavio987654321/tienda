@@ -8,6 +8,7 @@ import {
 } from "@/lib/entrega-digital";
 import { comisionCongelada } from "@/lib/compra-digital";
 import { mandarLaEntrega } from "@/lib/envio-digital";
+import { sendVentaDigitalVendedorEmail } from "@/lib/resend";
 import { createNotification } from "@/lib/notifications";
 import { despues } from "@/lib/despues";
 import { sendPushToUser } from "@/lib/push";
@@ -240,7 +241,9 @@ async function acreditar(idDelPago: string) {
     select: {
       id: true, status: true, total: true, lockedCommissionRate: true, cuponCodigo: true,
       buyer: { select: { email: true, name: true } },
-      store: { select: { id: true, ownerId: true, owner: { select: { role: true, name: true } } } },
+      /* `avisoMailVentas` y el mail del dueño: para el comprobante por mail,
+         si lo prendió (Configuración → Avisos). */
+      store: { select: { id: true, ownerId: true, name: true, avisoMailVentas: true, owner: { select: { role: true, name: true, email: true } } } },
       items: {
         select: {
           id: true,
@@ -391,10 +394,14 @@ async function acreditar(idDelPago: string) {
    * nada. Un aviso que no se escribe no puede tumbar una venta cobrada.
    */
   const leQueda = orden.total - comisionCongelada(orden.total, orden.lockedCommissionRate);
+  /* ⚠️ El aviso dice QUÉ se vendió. Decía "¡Vendiste!" a secas, y con cinco
+     productos la persona no sabía cuál: el nombre va en el título, en el
+     push y en el mail. Es el mismo nombre que encabeza el mail de entrega. */
+  const { comoSeLlama: queSeVendio } = armadoDelMail(orden.items);
   await createNotification({
     userId: orden.store.ownerId,
     type: "DIGITAL_VENTA",
-    title: "¡Vendiste!",
+    title: `¡Vendiste «${queSeVendio}»!`,
     /* ⚠️ Dice "le estamos mandando", no "ya le mandamos". Este aviso se escribe
        ANTES de que el mail salga —a propósito: si esperara al mail, una entrega
        que falla dejaría a quien vende sin enterarse de que vendió—, así que no
@@ -421,7 +428,7 @@ async function acreditar(idDelPago: string) {
    * arriba — o sea que la persona se entera igual al entrar. */
   despues(
     () => sendPushToUser(orden.store.ownerId, {
-      title: "¡Vendiste!",
+      title: `¡Vendiste «${queSeVendio}»!`,
       body: `${plata(orden.total)} — te quedan ${plata(leQueda)} después de la comisión.`,
       url: "/digitales/ventas",
       /* El `tag` hace que dos ventas seguidas no apilen dos globos idénticos en
@@ -431,6 +438,25 @@ async function acreditar(idDelPago: string) {
     }),
     "[digital-cobro] push de la venta",
   );
+  /* ── Y el mail a quien vende, si lo pidió ──────────────────────────────────
+     Opcional a propósito: el push y la campanita ya avisan. Con `despues`, por
+     lo mismo que el push. Al mail de la CUENTA, no al de soporte: el de
+     soporte es a donde le escriben los compradores. */
+  if (orden.store.avisoMailVentas && orden.store.owner.email) {
+    const paraElVendedor = orden.store.owner.email;
+    despues(
+      () => sendVentaDigitalVendedorEmail({
+        to: paraElVendedor,
+        vendedor: orden.store.name,
+        producto: queSeVendio,
+        total: plata(orden.total),
+        leQueda: plata(leQueda),
+        comprador: { nombre: orden.buyer.name, email: orden.buyer.email },
+        enlace: `${APP_URL}/digitales/ventas`,
+      }),
+      "[digital-cobro] mail de la venta a quien vende",
+    );
+  }
 
   /* ⚠️ Cómo se arma el mail vive en `entrega-digital` y no acá, porque ahora lo
      arman DOS lugares: este aviso de pago, que lo manda solo, y el botón de

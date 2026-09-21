@@ -275,6 +275,10 @@ model Store {
   // A dónde escribe quien compró y no recibió el archivo. Va en el mail de
   // entrega, así que es la única forma que tiene esa persona de reclamar.
   supportEmail          String?
+  // Un mail a quien vende por cada venta cobrada (Configuración → Avisos).
+  // Apagado de fábrica: el push y la campanita ya avisan; el mail es para quien
+  // quiere el comprobante en la casilla.
+  avisoMailVentas       Boolean   @default(false)
   // ── El contexto de la IA ────────────────────────────────────────────────────
   // El NICHO de la cuenta: lo que la IA usa como referencia para todo lo que
   // genera (el ebook, los bonos, los upsells y los textos de venta). Sin esto,

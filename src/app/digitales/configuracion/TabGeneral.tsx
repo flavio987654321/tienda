@@ -24,6 +24,7 @@ type Props = {
   checkout: string; setCheckout: (v: string) => void;
   dir: string; setDir: (v: string) => void;
   mail: string; setMail: (v: string) => void;
+  mailPorVenta: boolean; setMailPorVenta: (v: boolean) => void;
   img: string | null; setImg: (v: string | null) => void;
   // Contexto de la IA
   iaProd: string; setIaProd: (v: string) => void;
@@ -34,7 +35,7 @@ type Props = {
   guardando: string | null;
   listo: string | null;
   subiendo: boolean;
-  guardar: (seccion: string, cuerpo: Record<string, unknown>) => void;
+  guardar: (seccion: string, cuerpo: Record<string, unknown>) => Promise<boolean>;
   subirLogo: (f: File) => void;
   // Contexto de lectura
   nombreOriginal: string;
@@ -395,10 +396,32 @@ export default function TabGeneral(p: Props) {
         bajada="Un aviso en tu teléfono o tu computadora apenas se concreta una venta. Es el único que mandamos: lo demás se lee en la campanita."
       >
         <AvisosDeVenta />
-        <Ayuda>
-          Si usás el panel desde el celular, instalalo como app (en el menú del navegador, «Agregar a
-          inicio»): los avisos llegan aunque tengas el navegador cerrado.
-        </Ayuda>
+        {/* El mail, aparte del push: se guarda al tocarlo, sin botón. Es un
+            sí/no, y un "Guardar" para un solo casillero es un paso de más. */}
+        <label className="mt-5 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={p.mailPorVenta}
+            disabled={p.guardando !== null}
+            onChange={(e) => {
+              const v = e.target.checked;
+              p.setMailPorVenta(v);
+              void p.guardar("avisos", { avisoMailVentas: v }).then((ok) => { if (!ok) p.setMailPorVenta(!v); });
+            }}
+            className="mt-0.5 h-5 w-5 shrink-0 accent-orange-600"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">
+              Recibir un mail por cada venta
+              {p.guardando === "avisos" && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-gray-400" />}
+              {p.listo === "avisos" && p.guardando === null && <span className="ml-2 text-[12px] font-bold text-green-700 panel-oscuro:text-green-400">Guardado</span>}
+            </span>
+            <span className="block text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+              Te llega el producto, lo cobrado, lo que te queda y quién compró, a la casilla de tu cuenta. El aviso
+              en pantalla se manda igual.
+            </span>
+          </span>
+        </label>
       </Seccion>
 
       {/* ── 5. Zona de peligro ─────────────────────────────────────────────── */}

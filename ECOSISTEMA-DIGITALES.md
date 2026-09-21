@@ -8247,6 +8247,34 @@ Dos cosas viejas que decían lo contrario de lo que pasa:
 Sigue pendiente de verdad, y sigue apagado: cerrar la cuenta (qué pasa con
 lo vendido). Chequeos VIEJO-A/B/C; el del panel dejó de contar `disabled`.
 
+### Avisos de ventas, completos — 21/09/26
+
+Flavio, mirando la sección de avisos de la competencia: "¿qué activamos?,
+¿cómo diferenciamos por producto?, ¿manda mail también?, ¿y la app?".
+
+- El aviso decía "¡Vendiste!" a secas: con cinco productos no se sabía
+  cuál. Ahora la campanita y el push dicen "¡Vendiste «Hamburguesas…»!",
+  con el mismo nombre que encabeza el mail de entrega (`armadoDelMail`).
+- **Mail por cada venta**, opcional: `Store.avisoMailVentas` (migración
+  `20260921180000_aviso_mail_ventas`, idempotente; 🔲 sin aplicar hasta que
+  Flavio la corra). Casillero en Configuración → Avisos, se guarda al
+  tocarlo y vuelve atrás si el servidor dijo que no (`guardar` contesta
+  booleano). `sendVentaDigitalVendedorEmail`: producto, cobrado, lo que le
+  queda, quién compró, botón a Ventas; con `despues`, al mail de la CUENTA
+  (el de soporte es para los compradores).
+- La sección dice si está en la app instalada o en el navegador, y qué
+  hacer en cada caso (iPhone: instalar; escritorio: «Instalar»).
+- En local el botón fallaba porque no hay `VAPID_PUBLIC_KEY` en
+  `.env.local`; ahora lo dice ("no están configurados en este servidor,
+  no es algo tuyo") en vez de "probá de nuevo". En producción la clave está.
+- La app YA se instala (manifest `/api/manifest/digitales`, scope
+  `/digitales`, splash) y si adentro se cierra la sesión aparece el
+  `LoginGate`, como en tiendas y afiliados. No había nada que hacer ahí.
+
+Chequeos AVI-O/P/Q.
+
+🔲 Migración sin aplicar: `npx dotenv -e .env.local -- npx prisma migrate deploy`.
+
 🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
   repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.

@@ -151,6 +151,31 @@ check("AVI-N",
   /body: `\$\{plata\(orden\.total\)\} — te quedan \$\{plata\(leQueda\)\}/.test(cobro),
   "el push dice lo que le queda después de la comisión, no sólo el bruto");
 
+/* ── 21/09/26: el aviso dice QUÉ se vendió, y el mail a quien vende ─────────
+   Decía "¡Vendiste!" a secas: con cinco productos no se sabía cuál. Y el mail
+   por venta es opcional (Store.avisoMailVentas), con `despues` como el push,
+   al mail de la CUENTA (el de soporte es a donde le escriben los compradores). */
+check("AVI-O",
+  (cobro.match(/title: `¡Vendiste «\$\{queSeVendio\}»!`/g) ?? []).length === 2
+  && /const \{ comoSeLlama: queSeVendio \} = armadoDelMail\(orden\.items\)/.test(cobro),
+  "la campanita y el push dicen qué producto se vendió, con el mismo nombre que encabeza el mail de entrega");
+check("AVI-P",
+  /if \(orden\.store\.avisoMailVentas && orden\.store\.owner\.email\)/.test(cobro)
+  && /despues\(\s*\(\) => sendVentaDigitalVendedorEmail\(\{\s*to: paraElVendedor,/.test(cobro)
+  && /avisoMailVentas: true, owner: \{ select: \{ role: true, name: true, email: true \} \}/.test(cobro)
+  && !/to: orden\.store\.supportEmail/.test(cobro),
+  "el mail a quien vende sale sólo si lo prendió, sin bloquear la venta, y al mail de la cuenta");
+const resendSrc = readFileSync("src/lib/resend.ts", "utf8");
+const configApi = readFileSync("src/app/api/digitales/configuracion/route.ts", "utf8");
+const schema = readFileSync("prisma/schema.prisma", "utf8");
+const migracionAviso = readFileSync("prisma/migrations/20260921180000_aviso_mail_ventas/migration.sql", "utf8");
+check("AVI-Q",
+  /export async function sendVentaDigitalVendedorEmail/.test(resendSrc) && /RESEND_API_KEY no configurada/.test(resendSrc.slice(resendSrc.indexOf("sendVentaDigitalVendedorEmail")))
+  && /escapeHtml\(producto\)/.test(resendSrc.slice(resendSrc.indexOf("sendVentaDigitalVendedorEmail")))
+  && /avisoMailVentas\s+Boolean\s+@default\(false\)/.test(schema) && /ADD COLUMN IF NOT EXISTS "avisoMailVentas" BOOLEAN NOT NULL DEFAULT false/.test(migracionAviso)
+  && /typeof avisoMailVentas !== "boolean"/.test(configApi) && /typeof avisoMailVentas === "boolean" \? \{ avisoMailVentas \}/.test(configApi),
+  "el mail escapa lo que escribe la gente, falla sin clave en vez de callarse, y la opción es una columna con migración idempotente que la API sólo acepta como booleano");
+
 console.log(fallos === 0
   ? "\nok — los avisos se pueden leer en los dos lados, y el push se gasta una vez"
   : `\nFALLA — ${fallos} chequeo(s) de los avisos`);

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getPushSubscription, isPushSupported } from "@/lib/push-client";
+import { esAppInstalada, esIOS } from "@/lib/pwa";
 
 /**
  * El interruptor de los avisos al teléfono, en Configuración → General.
@@ -25,7 +27,7 @@ import { subscribeToPush, unsubscribeFromPush, getPushSubscription, isPushSuppor
  *     botón que no hace nada;
  *   - activo / apagado: el interruptor.
  */
-type Estado = "cargando" | "activo" | "apagado" | "bloqueado" | "error";
+type Estado = "cargando" | "activo" | "apagado" | "bloqueado" | "error" | "sin-servidor";
 
 export default function AvisosDeVenta() {
   const [estado, setEstado] = useState<Estado>("cargando");
@@ -42,6 +44,10 @@ export default function AvisosDeVenta() {
     () => isPushSupported() && Notification.permission === "denied",
     () => false,
   );
+  /* Si está usando el panel instalado como app. Cosmético: decide qué
+     consejo se muestra, nada más. */
+  const instalada = useSyncExternalStore<boolean | null>(() => () => {}, () => esAppInstalada(), () => null);
+  const iphone = useSyncExternalStore<boolean>(() => () => {}, () => esIOS(), () => false);
 
   useEffect(() => {
     if (!soporta || bloqueadoAlEntrar) return;
@@ -56,6 +62,12 @@ export default function AvisosDeVenta() {
     const eraActivo = estado === "activo";
     setEstado("cargando");
     try {
+      if (!eraActivo) {
+        /* Sin la clave en el servidor (pasa en local) el error es nuestro, no
+           de ella: se dice tal cual y no "probá de nuevo". */
+        const clave = await fetch("/api/push/vapid-key").then((r) => r.ok).catch(() => false);
+        if (!clave) { setEstado("sin-servidor"); return; }
+      }
       const ok = eraActivo ? await unsubscribeFromPush() : await subscribeToPush();
       if (!ok && !eraActivo && Notification.permission === "denied") setEstado("bloqueado");
       else setEstado(ok ? (eraActivo ? "apagado" : "activo") : "error");
@@ -86,6 +98,24 @@ export default function AvisosDeVenta() {
 
   const activo = estado === "activo";
   return (
+    <div className="space-y-3">
+      {/* Dónde está parada: en la app instalada los avisos llegan con el
+          navegador cerrado; en el navegador, no siempre. Se dice antes del
+          botón, porque cambia qué conviene hacer primero. */}
+      {instalada !== null && (
+        <p className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed ${instalada
+          ? "bg-green-50 panel-oscuro:bg-green-500/10 text-green-800 panel-oscuro:text-green-300"
+          : "bg-gray-50 panel-oscuro:bg-gray-800/60 text-gray-600 panel-oscuro:text-gray-300"}`}>
+          <Smartphone className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {instalada
+              ? "Estás usando el panel instalado como app: los avisos llegan aunque lo tengas cerrado."
+              : iphone
+                ? "Estás en el navegador. En iPhone los avisos sólo llegan con la app instalada: Compartir → «Agregar a inicio», y abrila desde ahí."
+                : "Estás en el navegador. Para que los avisos lleguen con el navegador cerrado, instalá el panel como app: en el menú del navegador, «Instalar» o «Agregar a inicio»."}
+          </span>
+        </p>
+      )}
     <div className="flex flex-wrap items-center gap-3">
       <button
         type="button"
@@ -102,10 +132,13 @@ export default function AvisosDeVenta() {
       <span className="text-sm text-gray-600 panel-oscuro:text-gray-300">
         {activo
           ? "Activos en este navegador: cuando se concreta una venta, te avisamos."
-          : estado === "error"
-            ? "No pudimos activarlos. Probá de nuevo, o revisá el candadito al lado de la dirección."
-            : "Apenas se concreta una venta, un aviso en este dispositivo."}
+          : estado === "sin-servidor"
+            ? "Los avisos no están configurados en este servidor (falta la clave). No es algo tuyo: avisanos."
+            : estado === "error"
+              ? "No pudimos activarlos. Probá de nuevo, o revisá el candadito al lado de la dirección."
+              : "Apenas se concreta una venta, un aviso en este dispositivo."}
       </span>
+    </div>
     </div>
   );
 }
