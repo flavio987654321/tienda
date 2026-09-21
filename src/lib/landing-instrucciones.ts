@@ -47,22 +47,67 @@ export const HUECOS_EXPLICADOS: readonly { hueco: string; que: string }[] = [
 /** Hasta acá llega lo que escribe sobre el diseño: es un pedido, no un brief. */
 export const INDICACIONES_MAX = 1200;
 
-export function instruccionesParaClaude(p: ProductoParaInstrucciones, indicaciones = ""): string {
-  const suyas = indicaciones.replace(/\r\n/g, "\n").trim().slice(0, INDICACIONES_MAX);
-  const datos = [
+const indicacionesLimpias = (indicaciones: string) => indicaciones.replace(/\r\n/g, "\n").trim().slice(0, INDICACIONES_MAX);
+
+function datosDelProducto(p: ProductoParaInstrucciones): string {
+  return [
     `- Nombre: ${p.nombre}`,
     p.tipo ? `- Qué es: ${p.tipo}` : null,
     `- Precio: ${plata(p.precio)}${p.precioAnterior && p.precioAnterior > p.precio ? ` (antes ${plata(p.precioAnterior)})` : ""}`,
     p.vendedor ? `- Lo vende: ${p.vendedor}` : null,
     p.descripcion?.trim() ? `- Descripción:\n${p.descripcion.trim().split("\n").map((l) => `  ${l}`).join("\n")}` : null,
   ].filter(Boolean).join("\n");
+}
+
+export function instruccionesParaClaude(p: ProductoParaInstrucciones, indicaciones = ""): string {
+  const suyas = indicacionesLimpias(indicaciones);
 
   return `Quiero que diseñes la landing de venta de mi producto digital. El diseño es libre: elegí vos los colores, la tipografía, el orden y el estilo que mejor le queden (te doy indicaciones abajo si tengo alguna). Pero la landing se va a publicar en TiendaApps, que le pone el precio, las fotos y el botón de pago automáticamente, así que tiene que cumplir estas reglas técnicas AL PIE DE LA LETRA.
 
 MI PRODUCTO
-${datos}
+${datosDelProducto(p)}
 
-REGLAS TÉCNICAS (obligatorias)
+${REGLAS_TECNICAS}
+10. Escribí en el castellano de Argentina (vos, tenés, querés), como lo escribiría una persona, sin mayúsculas gritadas ni signos de exclamación en cadena. Podés escribir todo el texto de venta: titular, para quién es, qué incluye, beneficios, cómo funciona, garantía, preguntas frecuentes, cierre. Con los datos de mi producto de arriba; lo que no sepas, dejalo en genérico y marcalo con un comentario <!-- EDITAR --> para que lo cambie yo.
+
+Cuando termines, decime en dos líneas qué fotos tengo que subir (los nombres de los huecos foto:…).
+
+MIS INDICACIONES DE DISEÑO
+${suyas || "(escribí acá cómo la querés: colores, estilo, referencias, tono)"}
+`;
+}
+
+/**
+ * "Ya tengo una página": la hizo con otra IA, o con Claude sin nuestro
+ * pedido, y quiere usar ÉSA. No se le pide que la rehaga: se le pide a
+ * Claude que la deje igual y la adapte a las mismas reglas. Lo que traía con
+ * JavaScript (tildar y ver un mensaje, pestañas, carruseles) se rehace sin
+ * código; el archivo se adjunta en el chat, no se pega acá.
+ *
+ * Es la respuesta barata a "subí mi landing y no anda": pasarla por Claude
+ * dos minutos en vez de dejar correr código ajeno en la página. Las reglas
+ * son las MISMAS (`REGLAS_TECNICAS`), a propósito: dos copias se separan.
+ */
+export function pedidoDeConversion(p: ProductoParaInstrucciones, indicaciones = ""): string {
+  const suyas = indicacionesLimpias(indicaciones);
+
+  return `Ya tengo la landing de venta de mi producto digital hecha (te la adjunto como archivo .html). Quiero que la dejes IGUAL: mismo diseño, mismos colores, misma tipografía, mismo orden y mismos textos. Lo único que cambia es que se va a publicar en TiendaApps, que le pone el precio, las fotos y el botón de pago automáticamente, así que tiene que cumplir estas reglas técnicas AL PIE DE LA LETRA. Adaptala a las reglas sin rediseñarla.
+
+MI PRODUCTO
+${datosDelProducto(p)}
+
+${REGLAS_TECNICAS}
+10. Todo lo que mi página hace hoy con JavaScript (listas de tildar que muestran un mensaje, pestañas, carruseles, acordeones, textos que cambian, contadores) rehacelo sin código con lo del punto 1; lo que no se pueda sin código, mostralo todo junto, sin esconder nada. Las fotos que hoy tiene reemplazalas por huecos foto:… con un nombre que diga cuál era cada una. Si algún texto dice cantidades de ventas, opiniones o urgencia inventadas, sacalo (punto 2 y punto 6). No cambies el resto del texto.
+
+Cuando termines, decime en dos líneas qué cambiaste y qué fotos tengo que subir (los nombres de los huecos foto:…).
+
+MIS INDICACIONES
+${suyas || "(si querés cambiar algo de paso, escribilo acá; si no, dejalo vacío)"}
+`;
+}
+
+/** Las reglas, una sola vez: las comparten el pedido de cero y el de conversión. */
+const REGLAS_TECNICAS = `REGLAS TÉCNICAS (obligatorias)
 
 1. Devolveme UN SOLO archivo .html con HTML y CSS. Nada de JavaScript: sin <script>, sin onclick ni ningún on…=. Lo que necesite interacción hacelo sin código: el acordeón de preguntas con <details> y <summary>; una lista de "marcá lo que te pasa" con <input type="checkbox"> y CSS.
 2. NO pongas contadores, relojes, "quedan X cupos", "reservado por 15:00" ni ningún indicador de escasez o urgencia. TiendaApps tiene un reloj de verdad que se hace cumplir; si querés uno, dejá el hueco del punto 6.
@@ -82,15 +127,7 @@ ${HUECOS_EXPLICADOS.slice(5).map((h) => `   - ${h.hueco}: ${h.que}`).join("\n")}
 9.b Animaciones: las que son sólo CSS (transition, animation, :hover) andan todas. Para las que aparecen al bajar, TiendaApps te da esto: poné data-tienda-aparece en el elemento y escribí el estado escondido en [data-tienda-aparece] y el visible en [data-tienda-visto], que lo ponemos nosotros cuando entra en pantalla. Ejemplo:
    [data-tienda-aparece]{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
    [data-tienda-visto]{opacity:1;transform:none}
-   No uses ninguna otra forma de animar al hacer scroll: sin JavaScript no corre, y lo que se esconda sin esto se queda escondido para siempre.
-10. Escribí en el castellano de Argentina (vos, tenés, querés), como lo escribiría una persona, sin mayúsculas gritadas ni signos de exclamación en cadena. Podés escribir todo el texto de venta: titular, para quién es, qué incluye, beneficios, cómo funciona, garantía, preguntas frecuentes, cierre. Con los datos de mi producto de arriba; lo que no sepas, dejalo en genérico y marcalo con un comentario <!-- EDITAR --> para que lo cambie yo.
-
-Cuando termines, decime en dos líneas qué fotos tengo que subir (los nombres de los huecos foto:…).
-
-MIS INDICACIONES DE DISEÑO
-${suyas || "(escribí acá cómo la querés: colores, estilo, referencias, tono)"}
-`;
-}
+   No uses ninguna otra forma de animar al hacer scroll: sin JavaScript no corre, y lo que se esconda sin esto se queda escondido para siempre.`;
 
 /* ── El pedido de cambios ───────────────────────────────────────────────── */
 
@@ -116,9 +153,17 @@ export function pedidoDeCambios(inv: InventarioParaPedido): string {
   if (inv.fotos.length === 0) {
     puntos.push('No dejaste ningún lugar para mis fotos: poné entre 3 y 10 contenedores vacíos con data-tienda="foto:nombre" (foto:portada, foto:pagina-1…), con su tamaño dado por CSS.');
   }
-  for (const x of inv.sueltos) {
-    if (x.includes("necesitaban un programa") || x.includes("necesitaba un programa")) {
-      puntos.push("Sacá los botones que necesitan JavaScript para hacer algo (flechas de carrusel, pestañas, menús): acá no corre ningún programa. Si el contenido importa, mostralo todo junto o usá <details> y <summary>.");
+  /* Traía código: lo que hacía con él quedó quieto (tildar y ver un mensaje,
+     pestañas, carruseles). Es UN punto, no uno por script, y tapa al de los
+     botones sueltos: si hay programas, el pedido es rehacer todo sin código. */
+  const conCodigo = (inv.quitado?.scripts ?? 0) + (inv.quitado?.eventos ?? 0) > 0;
+  if (conCodigo) {
+    puntos.push('La página traía JavaScript y en TiendaApps no corre ningún programa: sacá todos los <script> y los on…=. Todo lo que hacía con código —listas de tildar que muestran un mensaje, pestañas, carruseles, acordeones, textos que cambian— rehacelo sin código: el acordeón con <details> y <summary>, la lista de tildar con <input type="checkbox"> y CSS (:checked o :has), y lo que no se pueda, mostralo todo junto sin esconder nada.');
+  } else {
+    for (const x of inv.sueltos) {
+      if (x.includes("necesitaban un programa") || x.includes("necesitaba un programa")) {
+        puntos.push("Sacá los botones que necesitan JavaScript para hacer algo (flechas de carrusel, pestañas, menús): acá no corre ningún programa. Si el contenido importa, mostralo todo junto o usá <details> y <summary>.");
+      }
     }
   }
   if (!puntos.length) return "";
@@ -136,4 +181,6 @@ export type InventarioParaPedido = {
   avisos: readonly string[];
   sueltos: readonly string[];
   fotos: readonly string[];
+  /** Lo que `limpiarLanding` le sacó al archivo; sin esto, no se pide nada por el código. */
+  quitado?: { scripts: number; eventos: number };
 };

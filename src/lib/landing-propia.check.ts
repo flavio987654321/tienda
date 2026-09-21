@@ -17,7 +17,7 @@ import {
 } from "./landing-propia";
 import { revisarLanding, tieneTraba } from "./landing-revision";
 import { leerInventario, leerEstadoDeLanding, acomodarEnlace, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING } from "./landing-estado";
-import { instruccionesParaClaude, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
+import { instruccionesParaClaude, pedidoDeConversion, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
 import { EFECTOS_DE_LA_LANDING, ESTILO_DE_LA_CAPSULA } from "./landing-efectos";
 
 let fallos = 0;
@@ -187,6 +187,16 @@ check("INS-C", /Panadería en Airfryer/.test(inst) && /\$\s?9\.900/.test(inst) &
 check("INS-E", instruccionesParaClaude({ nombre: "x", descripcion: null, precio: 1, precioAnterior: null, tipo: null, vendedor: null }, "  En bordó y crema.  ").trimEnd().endsWith("En bordó y crema.")
   && instruccionesParaClaude({ nombre: "x", descripcion: null, precio: 1, precioAnterior: null, tipo: null, vendedor: null }).includes("(escribí acá cómo la querés"),
   "lo que escribe sobre el diseño va adentro del mismo texto; sin nada, queda la ayuda");
+/* "Ya tengo una página": las MISMAS reglas (una sola copia), la consigna es
+   adaptar y no rediseñar, y lo que hacía con código se rehace sin código. */
+check("INS-F", (() => {
+  const conv = pedidoDeConversion({ nombre: "Panadería en Airfryer", descripcion: null, precio: 9900, precioAnterior: null, tipo: "Ebook", vendedor: null }, " Cambiá el titular. ");
+  const reglasDe = (t: string) => t.slice(t.indexOf("REGLAS TÉCNICAS"), t.indexOf("\n10. "));
+  return reglasDe(conv) === reglasDe(inst) && reglasDe(conv).length > 2000
+    && /te la adjunto como archivo \.html/.test(conv) && /la dejes IGUAL/.test(conv) && /sin rediseñarla/.test(conv)
+    && /rehacelo sin código/.test(conv) && /Panadería en Airfryer/.test(conv) && conv.trimEnd().endsWith("Cambiá el titular.")
+    && !/MIS INDICACIONES DE DISEÑO/.test(conv) && /qué cambiaste/.test(conv);
+})(), "el pedido de conversión lleva las mismas reglas que el de cero (una sola copia), pide dejarla igual y rehacer sin código lo que traía con JavaScript");
 check("INS-D", /360 px/.test(inst) && /position: fixed/.test(inst) && /castellano de Argentina/.test(inst) && /MIS INDICACIONES DE DISEÑO/.test(inst),
   "piden celular, sin fijos, en castellano de acá, y dejan el lugar para el pedido de diseño");
 
@@ -274,6 +284,17 @@ check("ARR-H", (() => {
     && texto.includes("1. ") && texto.includes("Devolveme el archivo")
     && pedidoDeCambios({ hallazgos: [], avisos: [], sueltos: [], fotos: ["portada"] }) === "";
 })(), "los arreglos se guardan y vuelven de la base, y el pedido de cambios se arma numerado (o vacío si no hay nada)");
+/* Traía código: UN punto que pide rehacer sin código, y tapa al de los
+   botones sueltos (que sin programas se sigue pidiendo solo). */
+check("ARR-J", (() => {
+  const base = { hallazgos: [], avisos: [], fotos: ["portada"], sueltos: ["2 botones que necesitaban un programa"] };
+  const conCodigo = pedidoDeCambios({ ...base, quitado: { scripts: 2, eventos: 0 } });
+  const soloEventos = pedidoDeCambios({ ...base, sueltos: [], quitado: { scripts: 0, eventos: 3 } });
+  const sinCodigo = pedidoDeCambios({ ...base, quitado: { scripts: 0, eventos: 0 } });
+  return /1\. La página traía JavaScript/.test(conCodigo) && /tildar/.test(conCodigo) && /<details>/.test(conCodigo) && !/2\. /.test(conCodigo)
+    && /traía JavaScript/.test(soloEventos)
+    && /1\. Sacá los botones que necesitan JavaScript/.test(sinCodigo) && !/traía JavaScript/.test(sinCodigo);
+})(), "si el archivo traía programas, el pedido de cambios pide rehacer todo sin código, en un solo punto");
 
 /* ── Los "[PRECIO]" que llenaba el script ───────────────────────────────── */
 
@@ -437,6 +458,9 @@ check("PAN-B", /landing=previa/.test(panel) && /sandbox="allow-scripts"/.test(pa
   "la previa es la página de verdad, en un marco que puede moverse pero no tiene nuestro origen, en computadora y celular");
 check("PAN-C", /No pudimos conectarnos/.test(panel) && /Starter y Pro/.test(panel) && /instruccionesParaClaude\(producto, indicaciones\)/.test(panel) && /producto=\{\{/.test(panelPage) && /usePedidoGuardado/.test(panel) && !/useEffect/.test(panel),
   "la pantalla dice los errores, el plan, y arma el pedido con los datos del producto más lo que ella escribió del diseño (guardado en su navegador)");
+check("PAN-C2", /pedidoDeConversion\(producto, indicaciones\)/.test(panel) && /Ya tengo una página/.test(panel) && /role="tablist"/.test(panel)
+  && /pedidoDeCambios\(\{ \.\.\.inv, quitado: version\.quitado \}\)/.test(panel) && /quedó quieto; abajo está el pedido/.test(panel),
+  "el paso 1 tiene el camino 'ya tengo una página' con el pedido de conversión, y el pedido de cambios sabe qué código se sacó");
 check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina),
   "con la landing prendida, el editor de secciones avisa que lo que se edita ahí no se muestra");
 

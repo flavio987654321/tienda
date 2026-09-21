@@ -12,7 +12,7 @@ import type { Bienvenida } from "@/lib/bienvenida";
    si la pantalla calculara la clave por su cuenta, un acento de más guardaría
    el link en un cajón que nadie lee después. */
 import { LANDING_MAX_BYTES, LANDING_VERSIONES, acomodarEnlace, claveDeLink, leerInventario, leerQuitado } from "@/lib/landing-estado";
-import { instruccionesParaClaude, pedidoDeCambios, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
+import { instruccionesParaClaude, pedidoDeConversion, pedidoDeCambios, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
 import { tieneTraba } from "@/lib/landing-revision";
 import ConsejoDeUso from "../../../ConsejoDeUso";
 import { useAvisoSinGuardar } from "../../../useAvisoSinGuardar";
@@ -64,6 +64,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
      tiene que avisar igual que la primera. */
   const [subiendo, setSubiendo] = useState<"archivo" | "revisando" | null>(null);
   const [copiado, setCopiado] = useState<"pedido" | "cambios" | null>(null);
+  /* De cero, o "ya tengo una página" (la adapta Claude, no la rehace). */
+  const [camino, setCamino] = useState<"nueva" | "convertir">("nueva");
   /* El informe de la última subida: los pasos con lo que encontró cada uno,
      que aparecen de a uno para poder leerlos. Ver `pasosDeLaSubida`. */
   const [informe, setInforme] = useState<{ pasos: Paso[]; visibles: number } | null>(null);
@@ -88,7 +90,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   /* A qué hueco de foto vuelve la previa al recargarse. Ver `MARCA_HUECO`. */
   const [mirando, setMirando] = useState<string | null>(null);
   const [indicaciones, anotar] = usePedidoGuardado(productoId);
-  const instrucciones = instruccionesParaClaude(producto, indicaciones);
+  const instrucciones = camino === "nueva" ? instruccionesParaClaude(producto, indicaciones) : pedidoDeConversion(producto, indicaciones);
 
   const version = versiones.find((v) => v.id === estado.versionId) ?? null;
   const inv = version?.inventario ?? null;
@@ -98,7 +100,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const trabada = tieneTraba(hallazgos);
   /* Lo que hay que pedirle a Claude, ya escrito para él. Vacío si no hay
      nada que pedir. Ver `pedidoDeCambios`. */
-  const cambios = inv ? pedidoDeCambios(inv) : "";
+  const cambios = inv && version ? pedidoDeCambios({ ...inv, quitado: version.quitado }) : "";
   /* ⚠️ Se comparan sólo los que tienen algo escrito, y ordenados.
      El servidor no guarda los vacíos: los borra del mapa. Así que después de
      guardar un campo que ella dejó en blanco, acá quedaba la clave con `""` y
@@ -309,18 +311,44 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
         {/* ── 1. El pedido para Claude ──────────────────────────────────────── */}
         <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
           <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">1. Pedile la página a Claude</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-            Copiá este texto, pegalo en Claude y abajo escribí cómo la querés: colores, estilo, a quién le
-            hablás. Ya lleva el nombre y el precio de «{nombre}», y las reglas para que la página nos llegue
-            lista para enchufar. Probá las veces que quieras: volver a subirla no te hace perder las fotos.
-          </p>
+          {/* Dos caminos con el mismo pedido de reglas: de cero, o adaptar la
+              que ya tiene. Un archivo hecho por fuera trae código que acá no
+              corre; pasarlo por Claude dos minutos lo deja andando entero. */}
+          <div className="mt-3 inline-flex rounded-xl bg-gray-100 panel-oscuro:bg-gray-800 p-1 text-[12.5px] font-bold" role="tablist" aria-label="Cómo llega la página">
+            {([["nueva", "Pedirla de cero"], ["convertir", "Ya tengo una página"]] as const).map(([c, t]) => (
+              <button
+                key={c} type="button" role="tab" aria-selected={camino === c} onClick={() => setCamino(c)}
+                className={`rounded-lg px-3 py-1.5 transition-colors ${camino === c ? "bg-white panel-oscuro:bg-gray-900 text-gray-900 panel-oscuro:text-gray-100 shadow-sm" : "text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700"}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          {camino === "nueva" ? (
+            <p className="mt-2 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+              Copiá este texto, pegalo en Claude y abajo escribí cómo la querés: colores, estilo, a quién le
+              hablás. Ya lleva el nombre y el precio de «{nombre}», y las reglas para que la página nos llegue
+              lista para enchufar. Probá las veces que quieras: volver a subirla no te hace perder las fotos.
+            </p>
+          ) : (
+            <p className="mt-2 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+              Si ya tenés una página hecha (con Claude, con otra IA o con un diseñador), no hace falta rehacerla:
+              en Claude adjuntá tu archivo .html y pegá este texto. Le pide que la deje igual y la adapte a
+              nuestras reglas: lo que hacía con código (tildar, pestañas, carruseles) lo rehace sin código, y
+              deja los huecos para el precio, el pago y tus fotos.
+            </p>
+          )}
           <div className="mt-3">
             <label htmlFor="pedido" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
-              Cómo la querés <span className="font-normal text-gray-400">(colores, tipografía, estilo, a quién le hablás)</span>
+              {camino === "nueva"
+                ? <>Cómo la querés <span className="font-normal text-gray-400">(colores, tipografía, estilo, a quién le hablás)</span></>
+                : <>Algo para cambiar de paso <span className="font-normal text-gray-400">(opcional)</span></>}
             </label>
             <textarea
               id="pedido" value={indicaciones} onChange={(e) => anotar(e.target.value)} maxLength={INDICACIONES_MAX} rows={3}
-              placeholder="Cálida y apetitosa, en bordó y crema, con una tipografía con serif para los títulos. Le hablo a mujeres de 30 a 55 que cocinan en casa."
+              placeholder={camino === "nueva"
+                ? "Cálida y apetitosa, en bordó y crema, con una tipografía con serif para los títulos. Le hablo a mujeres de 30 a 55 que cocinan en casa."
+                : "Cambiá el titular por «Pan casero de verdad». Todo lo demás dejalo igual."}
               className={`${CLASE_INPUT} resize-y`}
             />
             <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
@@ -924,7 +952,7 @@ function enPalabras(clave: string): string {
 /** El recibo de lo que se sacó, en castellano. Nada si no se sacó nada. */
 function quitadoEnPalabras(q: QuitadoDeLanding): string[] {
   const t: string[] = [];
-  if (q.scripts) t.push(`Le sacamos ${q.scripts === 1 ? "un programa" : `${q.scripts} programas`} que traía adentro: en tu página no puede correr código de otro lado.`);
+  if (q.scripts || q.eventos) t.push(`Le sacamos ${q.scripts === 1 ? "un programa" : q.scripts ? `${q.scripts} programas` : "el código"} que traía adentro: en tu página no puede correr código de otro lado. Lo que hacía con eso (tildar y ver un mensaje, pestañas, carruseles) quedó quieto; abajo está el pedido para que Claude lo rehaga sin código.`);
   if (q.contadores) t.push("Le sacamos un contador de los que se reinician solos. El nuestro cuenta de verdad y lo ponés desde Marketing.");
   if (q.formularios) t.push(`Le sacamos ${q.formularios === 1 ? "un formulario" : `${q.formularios} formularios`}: los datos de quien compra se piden en el pago.`);
   if (q.marcos) t.push(`Le sacamos ${q.marcos === 1 ? "un video o página incrustada" : `${q.marcos} videos o páginas incrustadas`}.`);

@@ -8067,5 +8067,37 @@ la página donde entra la plata.
 ✅ Mirado en la landing real a 360/1280 (prendido y vencido). Falta mirar a
   768 y el checkout con la cuenta real en local (`NEXTAUTH_SECRET`).
 ✅ **Sin deployar**: commiteado local el 21/09/26.
+### "Ya tengo una página": pasarla por Claude, no dejar correr su código — 21/09/26
+
+La landing de una amiga de Flavio traía una lista de "tocá las que te
+pasan" que mostraba un mensaje con JavaScript. Acá el código se saca y la
+lista quedó muda. La pregunta fue "¿cómo reconocemos todo?", y la respuesta
+honesta: no se reconoce código ajeno; se evita que haga falta.
+
+Decidido (y descartado por ahora): dejar correr su JavaScript en un marco
+sellado haría andar cualquier archivo, pero abre la puerta a contadores y
+"Juan compró hace 2 min" generados por código, que no se pueden detectar.
+Choca con "nada es mentira". Queda como proyecto aparte, sólo si duele.
+
+Hecho:
+- `pedidoDeConversion` (`landing-instrucciones`): "ya tengo la página, te la
+  adjunto; dejala IGUAL y adaptala a las reglas". Las reglas son UNA copia
+  (`REGLAS_TECNICAS`), compartida con el pedido de cero. Punto 10 propio:
+  lo que hacía con JavaScript se rehace sin código; las fotos pasan a
+  huecos; las mentiras se sacan. Chequeo INS-F.
+- El paso 1 del panel tiene dos caminos: "Pedirla de cero" / "Ya tengo una
+  página" (mismo botón de copiar, mismo cuadro de indicaciones, textos
+  distintos). PAN-C2.
+- `pedidoDeCambios` recibe `quitado`: si traía scripts o on…=, UN punto que
+  pide rehacer todo sin código (tapa al de los botones sueltos). ARR-J.
+- El renglón "le sacamos N programas" ahora dice qué quedó quieto y que
+  abajo está el pedido.
+
+Plan que sigue (acordado): juntar landings reales (la de la amiga y 3-4
+más) como banco de pruebas, pasar cada una por Claude con el pedido y
+afinar las reglas con lo que vuelva; rescates sólo para lo que traen todas.
+
+🔲 Mirar el paso 1 con los dos caminos a 360/768/1280 (necesita sesión).
+🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
 🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las
   previas) y las opiniones verificadas.
