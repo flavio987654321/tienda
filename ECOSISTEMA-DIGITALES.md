@@ -8097,6 +8097,22 @@ Plan que sigue (acordado): juntar landings reales (la de la amiga y 3-4
 más) como banco de pruebas, pasar cada una por Claude con el pedido y
 afinar las reglas con lo que vuelva; rescates sólo para lo que traen todas.
 
+### La lista de tildar se pinta sola — 21/09/26
+
+Mirado el archivo real: las casillas eran de verdad (`<label><input
+type=checkbox>`), pero el tilde se DIBUJABA con una clase `is-checked` que
+ponía su script. Sin script: se marca y no se ve. Es el patrón de todas las
+IAs. `rescatarCasillas` (`landing-arreglos`) reescribe SU CSS:
+`.clase.is-checked` (y checked/active/selected/on) → `.clase:has(input:checked)`,
+sólo para clases que envuelven una casilla (hasta tres niveles): un
+`.tab.active` sin casilla no se toca. Al subir y, para lo ya guardado, al
+dibujar (la hoja está adentro del `<style>` guardado). Probado con
+Playwright sobre la landing real guardada: dos casillas tocadas, pintadas
+en bordó con el tilde, su diseño. ARM-F4.
+
+El texto "Si te pasa aunque sea una…" era fijo en el HTML (el script lo
+cambiaba por "te pasan 3 de 5"); queda el fijo, que está bien.
+
 🔲 Mirar el paso 1 con los dos caminos a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
 🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las

@@ -560,3 +560,40 @@ export function rescatarContador(doc: Document): Arreglos & { textos: string[] }
   }
   return { hechos: [], sueltos: [], css: "", textos: [] };
 }
+
+/* ── La lista de tildar ─────────────────────────────────────────────────────
+ *
+ * "Tocá las que te pasan": casillas de verdad (<label><input type=checkbox>)
+ * —eso lo hacen bien— pero el tilde se DIBUJA con una clase que ponía su
+ * JavaScript: `.afl-pain.is-checked .afl-pain__box{…}`. Sin el programa la
+ * casilla se marca y no se ve nada. Es el patrón de todas las IAs (clase
+ * `is-checked`, `active`, `selected`, `on` puesta por código).
+ *
+ * El rescate es sólo CSS: en SU hoja, `.clase.is-checked` pasa a ser
+ * `.clase:has(input:checked)`, que el navegador entiende sin código. Sólo
+ * para clases que de verdad envuelven una casilla (hasta tres niveles arriba
+ * del <input>): un `.tab.active` de pestañas no tiene casilla y no se toca,
+ * porque no habría nada que lo prenda.
+ */
+const CLASE_DE_TILDE = /\.([\w-]+)\.(is-checked|checked|is-selected|selected|is-active|active|is-on|on)(?![\w-])/g;
+
+export function rescatarCasillas(doc: Document, hojas: readonly string[]): { hechos: string[]; hojas: string[] } {
+  const conCasilla = new Set<string>();
+  for (const input of findAll((e) => e.name === "input" && /^(checkbox|radio)$/i.test(e.attribs.type ?? ""), doc.children)) {
+    let p: ParentNode | null = input.parent;
+    for (let i = 0; i < 3 && p && p.type === "tag"; i++, p = p.parent) {
+      for (const c of ((p as Element).attribs.class ?? "").split(/\s+/)) if (c) conCasilla.add(c);
+    }
+  }
+  if (!conCasilla.size) return { hechos: [], hojas: [...hojas] };
+  const tocadas = new Set<string>();
+  const nuevas = hojas.map((h) => h.replace(CLASE_DE_TILDE, (m, base: string) => {
+    if (!conCasilla.has(base)) return m;
+    tocadas.add(base);
+    return `.${base}:has(input:checked)`;
+  }));
+  return {
+    hechos: tocadas.size ? ["La lista para tildar se pintaba con un programa: ahora cada casilla se marca sola al tocarla, con tu diseño."] : [],
+    hojas: nuevas,
+  };
+}

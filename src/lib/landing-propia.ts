@@ -59,7 +59,7 @@ import { findAll, findOne, removeElement, textContent, prependChild, appendChild
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
-import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, rescatarContador, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
+import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, rescatarContador, rescatarCasillas, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
 import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
 import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA, MARCA_RELOJ, MARCA_DESPUES, MARCA_CUENTA, MARCA_DEMO } from "@/lib/landing-efectos";
 import { claveDeBienvenida } from "@/lib/bienvenida";
@@ -467,7 +467,10 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   /* Y el "reservado por 15:00" escrito: pasa a ser el hueco del reloj de
      verdad. Ver `rescatarContador`. */
   const contador = rescatarContador(arbol);
-  const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
+  /* Y la lista de tildar que se pintaba con una clase puesta por su script:
+     se reescribe SU CSS. Ver `rescatarCasillas`. */
+  const casillas = rescatarCasillas(arbol, css);
+  const hoja = [...casillas.hojas.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
   /* Y lo genérico: aplicar SU CSS sobre SU html para ver qué queda invisible.
      Los arreglos conocen dos formas de romperse; esto encuentra las que no
      conocemos. Ver `lib/landing-invisible`. */
@@ -488,7 +491,7 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
     avisos.unshift("Tu archivo es muy grande para que lo revisemos entero, así que puede haber quedado algo escondido que no vemos. Mirala completa en la previa antes de prenderla.");
   }
   const inventario = inventariar(cuerpo, fuentes, avisos);
-  inventario.arreglos = [...arreglos.hechos, ...fotos.hechos, ...precios.hechos, ...contador.hechos, ...barras.hechos];
+  inventario.arreglos = [...arreglos.hechos, ...fotos.hechos, ...precios.hechos, ...contador.hechos, ...casillas.hechos, ...barras.hechos];
   inventario.sueltos = arreglos.sueltos;
   /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
      `lib/landing-revision`. */
@@ -691,6 +694,10 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
      apagado dejaría ese "15:00" clavado. Se rescata acá también, prendido o
      no; no cambia lo guardado ni el inventario. */
   if (!findOne((e) => e.attribs["data-tienda"] === "reloj", doc.children)) rescatarContador(doc);
+  /* Misma red para la lista de tildar: lo guardado antes del 21/09/26 tiene
+     el `.is-checked` en su hoja, y sin esto las casillas no se pintan. */
+  const hojaGuardada = findOne((e) => e.name === "style", doc.children)?.children[0];
+  if (hojaGuardada instanceof Text) hojaGuardada.data = rescatarCasillas(doc, [hojaGuardada.data]).hojas[0];
   const elementos = findAll(() => true, doc.children);
   let hayReloj = false;
   /* Lo que cada precio pasa a decir al vencer: sólo con el reloj de verdad.

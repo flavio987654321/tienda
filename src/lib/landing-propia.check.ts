@@ -167,7 +167,22 @@ check("ARM-F3", (() => {
     && !/afl-bar|15:00|data-tienda-reloj/.test(viejaApagada) && /9\.900/.test(viejaApagada)
     && /La clase termina a las <b>18:00<\/b> hs/.test(horarioPrendido) && /data-tienda-barra-propia/.test(horarioPrendido) && /La clase termina a las <b>18:00<\/b> hs/.test(horarioApagado);
 })(), "el contador escrito se rescata como hueco del reloj (la pastilla conserva su CSS), es un arreglo y no un aviso, apagado desaparece entero, 'a las 18:00' no se toca, lo guardado viejo se rescata al dibujar, prendido o apagado, y un horario del día no es un reloj");
-check("ARM-G", /<a href="https:\/\/queantojo\.com\/terminos" target="_blank" rel="noopener noreferrer">Términos y condiciones<\/a>/.test(armada) && /<a href="#">Instagram<\/a>/.test(armada),
+/* La lista de tildar de la landing real: casillas de verdad, tilde pintado
+   por una clase que ponía su script. Se reescribe SU CSS a `:has`. Un
+   `.tab.active` sin casilla no se toca. Y lo guardado viejo, al dibujar. */
+check("ARM-F4", (() => {
+  const crudo = `<html><head><style>.l .pain.is-checked{background:red}.l .pain.is-checked .box{opacity:1}.l .tab.active{color:red}.l .pain input:focus-visible ~ .box{outline:1px}</style></head><body><div class="l"><label class="pain"><input type="checkbox"><span>Texto</span><span class="box"></span></label><div class="tab active">Pestaña</div><p>$<span data-tienda="precio"></span></p><a data-tienda="comprar" href="#">Comprar</a></div><script>document.querySelectorAll(".pain").forEach(l=>l.onchange=()=>l.classList.toggle("is-checked"))</script></body></html>`;
+  const r = limpiarLanding(crudo);
+  if (!r.ok) return false;
+  const L = r.landing;
+  const base = { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {} };
+  const vieja = `<style>\n.l .pain.is-checked{background:red}\n</style>\n<div class="l"><label class="pain"><input type="checkbox"><span class="box"></span></label></div>`;
+  return /\.l \.pain:has\(input:checked\)\{background:red\}/.test(L.html) && /\.l \.pain:has\(input:checked\) \.box\{opacity:1\}/.test(L.html)
+    && !/is-checked/.test(L.html) && /\.l \.tab\.active\{color:red\}/.test(L.html) && /<input type="checkbox"/.test(L.html)
+    && L.inventario.arreglos.some((a) => /lista para tildar/.test(a))
+    && /\.l \.pain:has\(input:checked\)\{background:red\}/.test(armarLanding(vieja, base));
+})(), "la lista de tildar se pinta sola: `.clase.is-checked` pasa a `:has(input:checked)` sólo si la clase envuelve una casilla; lo guardado viejo se arregla al dibujar");
+check("ARM-G",/<a href="https:\/\/queantojo\.com\/terminos" target="_blank" rel="noopener noreferrer">Términos y condiciones<\/a>/.test(armada) && /<a href="#">Instagram<\/a>/.test(armada),
   "los links vacíos se llenan por su texto; un destino que no es http/mailto/tel no entra");
 check("ARM-H", (() => {
   const sinAnterior = armarLanding(L.html, { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {}, mostrarHuecos: true });
