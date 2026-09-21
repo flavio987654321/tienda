@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   Eye, EyeOff, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Plus, Trash2,
-  Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
+  Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle, Sparkles,
 } from "lucide-react";
 import {
   TONOS, buscarTono, TIPOGRAFIAS, CAMPOS_SEO,
@@ -629,12 +629,26 @@ export default function EditorDePagina({
           {/* ⚠️ Escribe en el borrador y NO guarda: lo que devuelve se ve en la
               previa, y si no gusta se sale sin guardar y vuelve lo de antes. Por
               eso marca `sucio` — es un cambio como cualquier otro del editor. */}
-          <EscribirConIA
-            productoId={productoId}
-            cupoInicial={cupoIA}
-            hayCambiosSinGuardar={sucio}
-            onListo={(nueva) => { setPagina(nueva); setSucio(true); setError(""); }}
-          />
+          {/* Con el diseño propio prendido, escribirla con IA gastaría una
+              generación en una página que nadie ve. El botón queda, apagado y
+              con el motivo; la API también lo rechaza. */}
+          {landingPrendida ? (
+            <button
+              type="button"
+              disabled
+              title="Está apagada: apagá tu propio diseño para escribirla con IA"
+              className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl bg-gray-200 px-3 py-2 text-xs font-bold text-gray-400 panel-oscuro:bg-gray-800 panel-oscuro:text-gray-600"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Escribir con IA
+            </button>
+          ) : (
+            <EscribirConIA
+              productoId={productoId}
+              cupoInicial={cupoIA}
+              hayCambiosSinGuardar={sucio}
+              onListo={(nueva) => { setPagina(nueva); setSucio(true); setError(""); }}
+            />
+          )}
           {/* Con el diseño propio prendido, la dirección muestra el otro: abrir
               "la página" ahí sería abrir la landing. Se abre la previa de ESTA. */}
           <Link

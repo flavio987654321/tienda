@@ -8170,6 +8170,12 @@ dice "Apagada: tu dirección está mostrando tu propio diseño → Ver tu
 diseño" (marco punteado ámbar; la previa NO se destiñe, porque ahí edita
 colores), y el botón pasa a "Ver esta página" y abre `?previa=1`. PAN-D.
 
+Y "Escribir con IA" con la landing prendida: gasta una generación (y plata)
+en una página que nadie ve. Botón apagado con el motivo, y la API
+(`/api/digitales/ia/pagina`) lo rechaza con 409 ANTES de consumir cupo,
+por si el pedido viene de otro lado. Editar a mano sigue permitido: es
+gratis, se guarda, y sirve para dejar preparada la nuestra. PAN-F.
+
 🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
   repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.

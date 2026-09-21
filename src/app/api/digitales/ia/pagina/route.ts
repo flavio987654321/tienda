@@ -9,6 +9,7 @@ import { normalizarContenido } from "@/lib/pagina-venta";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { leerEstadoDeLanding } from "@/lib/landing-estado";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       store: { ownerId: user.id },
     },
     select: {
-      id: true, name: true, description: true, price: true, paginaVenta: true,
+      id: true, name: true, description: true, price: true, paginaVenta: true, landingPropia: true,
       /* Los bonos y upsells, para que la sección de bonos hable de los que hay
          de verdad en vez de inventar regalos que nadie va a recibir. */
       hijos: {
@@ -118,6 +119,13 @@ export async function POST(req: NextRequest) {
      qué productos hay del otro lado. */
   if (!producto) {
     return NextResponse.json({ error: "No encontramos ese producto." }, { status: 404 });
+  }
+  /* Con su propio diseño prendido, esta página no la ve nadie: escribirla
+     con IA gasta una generación (y plata nuestra) en vano. El botón está
+     apagado en el panel; acá se cierra también, por si el pedido viene de
+     otro lado. */
+  if (leerEstadoDeLanding(producto.landingPropia).activa) {
+    return NextResponse.json({ error: "Tu dirección está mostrando tu propio diseño: esta página está apagada y no gasta generaciones. Apagá tu diseño para escribirla con IA." }, { status: 409 });
   }
   /**
    * ⚠️ ACÁ LA PRIMERA PÁGINA DE CADA PRODUCTO ERA GRATIS. SE SACÓ EL 08/09/26.
