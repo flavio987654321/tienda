@@ -72,6 +72,23 @@ export const CLASE_DE_LA_FOTO = "data-tienda-clase";
 /** Y la marca de "esta imagen la pusimos nosotros", para el CSS de abajo. */
 export const MARCA_FOTO = "data-tienda-foto";
 
+/* ── El precio de bienvenida ──────────────────────────────────────────────
+ *
+ * El reloj de verdad (ver `lib/bienvenida`). `armarLanding` lo escribe con
+ * la hora en que vence y el token; el script de abajo lo cuenta y, al
+ * llegar a cero, cambia los precios EN EL LUGAR: cada precio lleva en
+ * `data-tienda-despues` lo que tiene que decir cuando venza (vacío =
+ * sacarlo). Sin recargar, sin pedirle nada al servidor —que igual es quien
+ * decide cuánto se cobra—. */
+/** El elemento del reloj (el hueco de la autora, o la barra nuestra). */
+export const MARCA_RELOJ = "data-tienda-reloj";
+/** Lo que un precio pasa a decir cuando el reloj llega a cero. */
+export const MARCA_DESPUES = "data-tienda-despues";
+/** Los números que se mueven, adentro del reloj. */
+export const MARCA_CUENTA = "data-tienda-cuenta";
+/** En la previa del panel: reloj quieto, marcado "Ejemplo", sin guardar nada. */
+export const MARCA_DEMO = "data-tienda-demo";
+
 /**
  * El CSS nuestro, adentro de la cápsula y antes que el suyo.
  *
@@ -115,6 +132,9 @@ export const ESTILO_DE_LA_CAPSULA = `<style>
 img[${"data-tienda-foto"}]{display:block;max-width:100%;height:auto;object-fit:cover}
 [data-tienda-falta]{position:relative;min-height:48px;outline:2px dashed #f97316;outline-offset:-2px}
 [data-tienda-falta]::after{content:"Falta: " attr(data-tienda-falta);position:absolute;left:0;top:0;z-index:9;background:#f97316;color:#fff;font:600 11px/1.4 system-ui,sans-serif;padding:3px 7px;border-radius:0 0 6px 0;letter-spacing:.01em}
+[data-tienda-barra-propia]{position:sticky;top:0;z-index:50;background:#111;color:#fff;font:600 14px/1.4 system-ui,sans-serif;text-align:center;padding:9px 16px}
+[${MARCA_CUENTA}]{font-variant-numeric:tabular-nums}
+[data-tienda-ejemplo]{display:inline-block;margin-left:8px;background:#f97316;color:#fff;font:600 10px/1.4 system-ui,sans-serif;padding:2px 6px;border-radius:4px;vertical-align:middle;letter-spacing:.02em}
 </style>`;
 
 /**
@@ -191,6 +211,46 @@ if(e.key!=="Enter"&&e.key!==" ")return;
 var f=e.target&&e.target.closest?e.target.closest("[${MARCA_FLECHA}]"):null;
 if(f&&moverLaPista(f))e.preventDefault();
 });
+/* ── El reloj del precio de bienvenida ────────────────────────────────────
+   Se queda con el token que vence ANTES de los tres que puede tener a mano
+   (la cookie, el localStorage y el que trajo la página): recargar nunca
+   estira el plazo. Lo guarda en los dos lados y cuenta. Al llegar a cero
+   cambia los precios y saca el reloj. Sin firmas: eso lo verifica el
+   servidor al cobrar. */
+var reloj=raiz.querySelector("[${MARCA_RELOJ}]");
+if(reloj&&!reloj.hasAttribute("${MARCA_DEMO}")){
+/* La clave la escribimos nosotros (letras, números y guión bajo), pero se
+   filtra igual antes de meterla en una RegExp: es la regla, no la excepción. */
+var clave=(reloj.getAttribute("data-tienda-clave")||"").replace(/[^A-Za-z0-9_]/g,"");
+/* La cookie va SÓLO al camino de este producto: ver caminoDeLaCookie en
+   BarraDeBienvenida (con Path=/ se acumulan hasta romper la cabecera). */
+var camino=(location.pathname.match(/^\\/p\\/[A-Za-z0-9_-]{1,64}/)||["/"])[0];
+var deCookie=(document.cookie.match(new RegExp("(?:^|; )"+clave+"=([^;]*)"))||[])[1]||null;
+var deLocal=null;try{deLocal=window.localStorage.getItem(clave);}catch(e){}
+var token=null,vence=0;
+[deCookie,deLocal,reloj.getAttribute("data-tienda-token")].forEach(function(t){
+if(typeof t!=="string"||!/^\\d{10,16}\\.[A-Za-z0-9_-]{24}$/.test(t))return;
+var v=Number(t.split(".")[0]);
+if(!token||v<vence){token=t;vence=v;}
+});
+if(token){
+try{document.cookie=clave+"="+token+"; Max-Age=2592000; Path="+camino+"; SameSite=Lax"+(location.protocol==="https:"?"; Secure":"");}catch(e){}
+try{window.localStorage.setItem(clave,token);}catch(e){}
+var cuenta=reloj.querySelector("[${MARCA_CUENTA}]");
+var vencer=function(){
+var precios=raiz.querySelectorAll("[${MARCA_DESPUES}]");
+for(var k=0;k<precios.length;k++){var v=precios[k].getAttribute("${MARCA_DESPUES}");if(v==="")precios[k].remove();else precios[k].textContent=v;}
+reloj.remove();
+};
+var dos=function(n){return (n<10?"0":"")+n;};
+var tic=function(){
+var resto=Math.floor((vence-Date.now())/1000);
+if(resto<=0){vencer();if(latido)clearInterval(latido);return;}
+var h=Math.floor(resto/3600),m=Math.floor((resto%3600)/60),s=resto%60;
+if(cuenta)cuenta.textContent=h>0?h+":"+dos(m)+":"+dos(s):m+":"+dos(s);
+};
+var latido=null;tic();if(reloj.isConnected)latido=setInterval(tic,1000);
+}}
 var barras=raiz.querySelectorAll("[${MARCA_BARRA}]");
 if(barras.length){
 var mirar=function(){

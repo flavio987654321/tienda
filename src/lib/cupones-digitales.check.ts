@@ -108,11 +108,15 @@ check("RUTA-F", /checkRateLimit\(`digital-cupon:\$\{ip\}`, INTENTOS_POR_HORA/.te
 check("RUTA-G", /isActive: true, store: \{ owner: \{ role: "DIGITAL" \} \}/.test(publica), "sólo para productos digitales publicados");
 check("RUTA-H", /validarCuponNuevo\(await req\.json/.test(crear) && /storeId: store\.id \}/.test(crear) && /MAX_CUPONES_POR_CUENTA/.test(crear) && /P2002/.test(crear),
   "crear: valida, el producto tiene que ser propio, con tope por cuenta y el código repetido se dice");
-check("RUTA-I", /updateMany\(\{\n\s+where: \{ id, store: \{ ownerId: user\.id \} \}/.test(unoRuta) && /deleteMany\(\{ where: \{ id, store: \{ ownerId: user\.id \}, NOT: \{ codigo: \{ startsWith: PREFIJO_DE_LA_OFERTA \} \} \} \}\)/.test(unoRuta),
-  "apagar y borrar llevan el dueño en el where, y borrar no toca el cupón de la oferta de salida");
-check("PANT-A", /cupon: cupon\?\.codigo,/.test(checkout) && !/descuento:/.test(checkout.split("body: JSON.stringify({")[1]?.split("})")[0] ?? ""),
+check("RUTA-I", /updateMany\(\{\n\s+where: \{ id, store: \{ ownerId: user\.id \} \}/.test(unoRuta)
+  && /deleteMany\(\{ where: \{ id, store: \{ ownerId: user\.id \}, NOT: \{ OR: \[\{ codigo: \{ startsWith: PREFIJO_DE_LA_OFERTA \} \}, \{ codigo: \{ startsWith: PREFIJO_DE_BIENVENIDA \} \}\] \} \} \}\)/.test(unoRuta),
+  "apagar y borrar llevan el dueño en el where, y borrar no toca los cupones automáticos (oferta de salida, precio de bienvenida)");
+/* `cuponVigente` es el cupón puesto salvo que sea el del precio de bienvenida
+   y su reloj ya haya llegado a cero: es lo que suma la pantalla y lo que
+   viaja al pagar. Ver `BienvenidaEnElCheckout`. */
+check("PANT-A", /cupon: cuponVigente\?\.codigo,/.test(checkout) && !/descuento:/.test(checkout.split("body: JSON.stringify({")[1]?.split("})")[0] ?? ""),
   "el checkout manda el código, nunca el monto");
-check("PANT-B", /descuentoDe\(cupon, sinCupon\)/.test(checkout) && /fetch\("\/api\/digitales\/cupon"/.test(checkout), "el checkout muestra el precio con la misma función que cobra, y verifica contra la ruta pública");
+check("PANT-B", /descuentoDe\(cuponVigente, sinCupon\)/.test(checkout) && /fetch\("\/api\/digitales\/cupon"/.test(checkout), "el checkout muestra el precio con la misma función que cobra, y verifica contra la ruta pública");
 check("PANT-C", /estadoDelCupon\(puro, ahora\)/.test(pantalla) && /validarCuponNuevo\(borrador\)/.test(cliente) && /window\.confirm/.test(cliente),
   "la pantalla del panel muestra el estado, valida antes de mandar y confirma antes de borrar");
 check("BASE-A", /^model CuponDigital \{/m.test(schema) && /@@unique\(\[storeId, codigo\]\)/.test(schema) && /cuponCodigo String\?/.test(schema)

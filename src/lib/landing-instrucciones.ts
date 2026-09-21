@@ -39,7 +39,7 @@ export const HUECOS_EXPLICADOS: readonly { hueco: string; que: string }[] = [
   { hueco: `data-tienda="precio-anterior"`, que: "el precio tachado; si no hay, el elemento desaparece solo" },
   { hueco: `data-tienda="comprar"`, que: "cada botón o link de comprar (un <a>); el destino lo ponemos nosotros" },
   { hueco: `data-tienda="foto:portada"`, que: "una foto; después de los dos puntos va un nombre corto y único (foto:portada, foto:medialunas, foto:pagina-1)" },
-  { hueco: `data-tienda="reloj"`, que: "un contenedor vacío donde va el precio de bienvenida con reloj real (opcional)" },
+  { hueco: `data-tienda="reloj"`, que: "un contenedor vacío donde va la barra del precio de bienvenida: un texto corto y el reloj contando (\"Precio de bienvenida reservado por 14:59\"). Es opcional; si no lo dejás y el precio de bienvenida está prendido, va en una barra nuestra arriba de todo. Mientras corre, el hueco precio muestra el precio de bienvenida y precio-anterior el normal tachado" },
   { hueco: `data-tienda="opiniones"`, que: "un contenedor vacío donde van las opiniones verificadas de compradores (opcional)" },
   { hueco: `data-tienda="aviso-ventas"`, que: "un contenedor vacío donde va el aviso de compras reales recientes (opcional)" },
 ];

@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { validarOfertaSalida, codigoDeLaOferta } from "@/lib/oferta-salida";
 import { MAX_CUPONES_POR_CUENTA } from "@/lib/cupones-digitales";
+import { guardarCuponAutomatico } from "@/lib/cupones-automaticos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,9 +14,10 @@ export const dynamic = "force-dynamic";
  * PATCH /api/digitales/productos/[id]/salida — guardar la oferta de salida.
  *
  * Guarda el JSON en el producto y, si es un descuento, crea o actualiza el
- * cupón `SALIDA-…` de ESE producto en la misma transacción: prendido si la
- * oferta está prendida, apagado si no. Así el descuento es un cupón real,
- * cobrado por la misma ruta que cualquier otro, y aparece en Cupones.
+ * cupón `SALIDA-…` de ESE producto en la misma transacción
+ * (`guardarCuponAutomatico`, el mismo que usa el precio de bienvenida):
+ * prendido si la oferta está prendida, apagado si no. Así el descuento es un
+ * cupón real, cobrado por la misma ruta que cualquier otro, y aparece en Cupones.
  *
  * Starter y Pro al día. El producto más barato, si lo hay, tiene que ser
  * otro principal PROPIO: un id ajeno no guarda nada.
@@ -62,16 +64,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     await prisma.$transaction(async (tx) => {
       await tx.product.update({ where: { id: producto.id }, data: { ofertaSalida: JSON.stringify(oferta) } });
       if (oferta.tipo === "DESCUENTO") {
-        const existe = await tx.cuponDigital.findUnique({ where: { storeId_codigo: { storeId: producto.storeId, codigo } }, select: { id: true } });
-        if (!existe) {
-          const cuantos = await tx.cuponDigital.count({ where: { storeId: producto.storeId } });
-          if (cuantos >= MAX_CUPONES_POR_CUENTA) throw new Error("TOPE");
-        }
-        await tx.cuponDigital.upsert({
-          where: { storeId_codigo: { storeId: producto.storeId, codigo } },
-          create: { storeId: producto.storeId, codigo, tipo: "PORCENTAJE", valor: oferta.porcentaje, productId: producto.id, activo: oferta.activa },
-          update: { tipo: "PORCENTAJE", valor: oferta.porcentaje, productId: producto.id, venceAt: null, topeUsos: null, activo: oferta.activa },
-        });
+        await guardarCuponAutomatico(tx, { storeId: producto.storeId, productId: producto.id, codigo, porcentaje: oferta.porcentaje, activo: oferta.activa });
       } else {
         /* Con producto más barato el cupón no se usa: se apaga, no se borra
            (las ventas que lo usaron lo nombran). */

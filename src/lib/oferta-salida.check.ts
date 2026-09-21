@@ -103,14 +103,22 @@ const schema = leer("prisma/schema.prisma");
 const migracion = leer("prisma/migrations/20260915230000_oferta_de_salida/migration.sql");
 
 check("LIB-A", !/node:crypto/.test(lib) && /node:crypto/.test(leer("src/lib/oferta-salida-firma.ts")), "lo que importa el navegador no trae crypto: la firma vive aparte");
-check("RUTA-A", /esCodigoDeOferta\(cupon\.codigo\)[\s\S]*?leerTokenDeOferta\(cuerpo\.oferta, producto\.id\)[\s\S]*?motivo = "Esa oferta ya venció\."/.test(comprar),
-  "la compra: el cupón SALIDA-… no vale sin el plazo firmado y vivo");
-check("RUTA-B", /esCodigoDeOferta\(cupon\.codigo\)[\s\S]*?leerTokenDeOferta\(cuerpo\?\.oferta, producto\.id\)[\s\S]*?"Esa oferta ya venció\."/.test(publica),
-  "la ruta pública del cupón: la misma regla");
+/* La regla "vale por el plazo, no por el código" vive en UN lugar
+   (`cupones-automaticos`) y las dos rutas la llaman: estaba escrita dos
+   veces, y la auditoría del 16/09 ya había encontrado ese defecto en otro lado. */
+const automaticos = leer("src/lib/cupones-automaticos.ts");
+check("RUTA-A", /if \(cupon && !motivo\) motivo = porQueNoValeElAutomatico\(cupon\.codigo, producto, \{ oferta: cuerpo\.oferta, bienvenida: cuerpo\.bienvenida \}\);/.test(comprar)
+  && !/leerTokenDeOferta|esCodigoDeOferta/.test(comprar),
+  "la compra: el cupón SALIDA-… no vale sin el plazo firmado y vivo, por la regla compartida y no por una copia");
+check("RUTA-B", /porQueNoValeElAutomatico\(cupon\.codigo, producto, \{ oferta: cuerpo\?\.oferta, bienvenida: cuerpo\?\.bienvenida \}\)/.test(publica) && !/leerTokenDeOferta|esCodigoDeOferta/.test(publica)
+  && /esCodigoDeOferta\(codigo\)[\s\S]*?leerTokenDeOferta\(plazos\.oferta, producto\.id, ahora\)[\s\S]*?"Esa oferta ya venció\."/.test(automaticos),
+  "la ruta pública del cupón: la misma regla, y la regla dice lo de siempre");
 check("RUTA-C", /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)/.test(guardar) && /store: \{ ownerId: user\.id \}/.test(guardar) && /rolDigital: "PRINCIPAL", storeId: producto\.storeId/.test(guardar),
   "guardar: Starter y Pro al día, producto propio, y el más barato también propio");
-check("RUTA-D", /\$transaction[\s\S]*?ofertaSalida: JSON\.stringify\(oferta\)[\s\S]*?cuponDigital\.upsert[\s\S]*?activo: oferta\.activa/.test(guardar) && /updateMany\(\{ where: \{ storeId: producto\.storeId, codigo \}, data: \{ activo: false \} \}\)/.test(guardar),
-  "el cupón se crea o actualiza en la misma transacción que guarda la oferta, prendido o apagado con ella");
+check("RUTA-D", /\$transaction[\s\S]*?ofertaSalida: JSON\.stringify\(oferta\)[\s\S]*?guardarCuponAutomatico\(tx, \{ storeId: producto\.storeId, productId: producto\.id, codigo, porcentaje: oferta\.porcentaje, activo: oferta\.activa \}\)/.test(guardar)
+  && /updateMany\(\{ where: \{ storeId: producto\.storeId, codigo \}, data: \{ activo: false \} \}\)/.test(guardar)
+  && /cuponDigital\.upsert[\s\S]*?activo: d\.activo/.test(automaticos) && /throw new Error\("TOPE"\)/.test(automaticos),
+  "el cupón se crea o actualiza en la misma transacción que guarda la oferta, prendido o apagado con ella, con el guardado compartido");
 check("PAG-A", /if \(!seLePuedeVender \|\| !guardada\.activa\) return null;/.test(pagina) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(pagina),
   "el checkout arma la oferta sólo si se puede vender, está prendida y el plan la incluye");
 check("PAG-B", /leerTokenDeOferta\(tokenPedido, fila\.id\) \? \(tokenPedido as string\) : firmarOferta\(fila\.id, Date\.now\(\) \+ guardada\.horas \* 3_600_000\)/.test(pagina),
@@ -121,10 +129,16 @@ check("CHK-A", /e\.clientY <= 0\) mostrar\(\)/.test(checkout) && /addEventListen
   "aparece al sacar el mouse o al apretar atrás, una sola vez por persona");
 check("CHK-B", /venceGuardado > Date\.now\(\)\) token = guardado/.test(checkout) && /oferta: tokenDeOferta \?\? undefined/.test(checkout),
   "recargar no reinicia el plazo (se guarda el primer token) y el token viaja al pagar");
-check("CHK-C", /verificarCupon\(oferta\.codigo, tokenDeOferta\)/.test(checkout) && /import CartelDeSalida from "@\/components\/digitales\/CartelDeSalida"/.test(checkout) && /import CartelDeSalida, \{ type ParteDelCartel \} from "@\/components\/digitales\/CartelDeSalida"/.test(editor) && /alTocar=\{esPago \? irA : undefined\}/.test(editor),
+check("CHK-C", /verificarCupon\(oferta\.codigo, \{ oferta: tokenDeOferta \}\)/.test(checkout) && /import CartelDeSalida from "@\/components\/digitales\/CartelDeSalida"/.test(checkout) && /import CartelDeSalida, \{ type ParteDelCartel \} from "@\/components\/digitales\/CartelDeSalida"/.test(editor) && /alTocar=\{esPago \? irA : undefined\}/.test(editor),
   "aceptar aplica el cupón por la ruta pública con el token; el cartel del checkout y el de la vista previa son el mismo componente");
-check("CHK-D", !/cupos|reservad/i.test(cartel) && /cuentaRegresiva\(c\.venceEn, ahora\)/.test(cartel) && /vencida \? \(\s*<button type="button" disabled/.test(cartel) && /useSyncExternalStore/.test(cartel) && !/useEffect/.test(cartel),
-  "el cartel no tiene cupos; el reloj cuenta la hora firmada, y al llegar a cero el botón se apaga");
+/* El reloj ("ahora") es UNO, en `reloj-compartido`, para el cartel, la barra
+   del precio de bienvenida y el checkout: un solo latido, sin `setState` en
+   efectos. */
+const relojCompartido = leer("src/lib/reloj-compartido.ts");
+check("CHK-D", !/cupos|reservad/i.test(cartel) && /cuentaRegresiva\(c\.venceEn, ahora\)/.test(cartel) && /vencida \? \(\s*<button type="button" disabled/.test(cartel)
+  && /import \{ useAhora \} from "@\/lib\/reloj-compartido"/.test(cartel) && !/useEffect|useSyncExternalStore|setInterval/.test(cartel)
+  && /useSyncExternalStore/.test(relojCompartido) && /oyentes\.size === 0 && latido !== null\) \{ window\.clearInterval\(latido\)/.test(relojCompartido),
+  "el cartel no tiene cupos; el reloj cuenta la hora firmada con el reloj compartido, y al llegar a cero el botón se apaga");
 check("MAIL-C", /Math\.max\(o\.horas, HORAS_MINIMAS_DEL_MAIL\)/.test(leer("src/lib/oferta-salida-db.ts")) && /firmarOferta\(principal\.id, venceEn\)/.test(leer("src/lib/oferta-salida-db.ts")),
   "en el mail el plazo es de al menos un día, y el token firma esa misma hora");
 check("EDIT-A", /validarOfertaSalida\(o\)/.test(editor) && /key=\{elegido\?\.id/.test(editorPage) && /variablesDePagina\(pagina\)/.test(editorPage),
@@ -132,8 +146,8 @@ check("EDIT-A", /validarOfertaSalida\(o\)/.test(editor) && /key=\{elegido\?\.id/
 check("MAIL-A", /ofertaParaElMail\(principal, enlace, now\)/.test(cron) && /oferta,\n\s+\}\)/.test(cron) && /oferta \? `/.test(resend.slice(resend.indexOf("sendCarritoAbandonadoDigitalEmail"))),
   "el mail de carrito lleva la oferta, con el plazo firmado desde el envío");
 check("MAIL-B", /pagar\?oferta=\$\{encodeURIComponent\(token\)\}/.test(leer("src/lib/oferta-salida-db.ts")), "el link del mail lleva el token al checkout");
-check("LIST-A", /esCodigoDeOferta\(c\.codigo\)/.test(cupones) && /de la oferta de salida/.test(cupones) && /\{!esCodigoDeOferta\(c\.codigo\) && <button/.test(cupones),
-  "en Cupones el de la oferta se marca y no se borra desde ahí");
+check("LIST-A", /esCodigoDeOferta\(c\.codigo\)/.test(cupones) && /de la oferta de salida/.test(cupones) && /\{!esCodigoDeOferta\(c\.codigo\) && !esCodigoDeBienvenida\(c\.codigo\) && <button/.test(cupones),
+  "en Cupones el de la oferta se marca y no se borra desde ahí (ni el del precio de bienvenida)");
 check("HUB-A", /href: "\/digitales\/marketing\/salida"/.test(marketing) && /"Oferta de salida a quien se va sin pagar", on: pago/.test(planes), "la tarjeta en Marketing y la fila en los planes");
 check("BASE-A", /ofertaSalida  String\?/.test(schema) && /ADD COLUMN IF NOT EXISTS "ofertaSalida" TEXT/.test(migracion), "la columna y la migración idempotente");
 

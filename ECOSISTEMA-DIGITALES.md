@@ -7855,3 +7855,217 @@ HTML que sale del servidor —son idénticos en las dos versiones—, se ve reci
 el navegador. Lo único que se puede vigilar es cómo está escrito.
 
 108 chequeos, tsc, eslint y build ok. Mirado a 360/768/1280 adentro del iframe.
+
+---
+
+## El precio de bienvenida: el reloj de verdad — 21/09/26
+
+Lo que hace toda landing de ebooks ("precio promocional reservado por
+15:00") y lo que hacía la de la amiga: el reloj arranca cuando la persona
+ENTRA a la página. En todas es mentira —vuelve a 15:00 con F5 y nadie lo hace
+cumplir—. Acá es de verdad, con el mismo motor de la oferta de salida y otro
+disparador: al entrar, no al irse.
+
+### Cómo funciona (`lib/bienvenida`, `lib/bienvenida-servidor`)
+
+- Se configura en **Marketing → Precio de bienvenida**, por producto:
+  prendido, descuento (5 a 50 %), duración (15 min, 30 min, 1 hora) y el
+  texto de la barra. Starter y Pro. Se guarda en `Product.bienvenida` (JSON,
+  migración `20260921120000_precio_de_bienvenida`).
+- Crea solo un cupón **`BIENVENIDA-…`** (prefijo reservado, no se puede
+  escribir a mano ni borrar desde Cupones), con el MISMO guardado en
+  transacción que el `SALIDA-…`.
+- La primera vez que ESA persona entra, el servidor firma la hora en que
+  vence (`firmarBienvenida`). El navegador lo guarda en cookie y en
+  localStorage, y **se queda siempre con el que vence antes**
+  (`elTokenMasViejo`): recargar, cerrar o volver no reinicia nada.
+- Mientras corre: la página muestra el precio de bienvenida y el normal
+  tachado; la barra cuenta arriba, pegada. En la landing propia va en el
+  hueco `data-tienda="reloj"` si lo dejó, o en una barra nuestra si no.
+- Al llegar a cero: en la página de secciones, `router.refresh()` y el
+  servidor la dibuja con el precio normal (la cookie ya dice "vencida"); en la
+  landing, el script cambia los precios en el lugar (cada precio lleva en
+  `data-tienda-despues` lo que dice al vencer). En el checkout, el cupón deja
+  de contar solo y se dice: "El precio de bienvenida venció: se cobra el precio
+  normal."
+- **La plata la decide el servidor.** El checkout aplica el cupón solo, pero
+  `/api/digitales/comprar` sólo lo acepta con un token firmado y vivo. Vencido,
+  tocado, de otro producto, o de la oferta de salida: precio normal.
+
+### Las dos firmas no se cruzan
+
+Cada token lleva su nombre adentro del HMAC (`oferta-salida:` /
+`bienvenida:`). Sin eso, un token de salida de 48 horas hubiera dado 48 horas
+de precio de bienvenida. El lector de bienvenida además distingue **vencido**
+de **tocado**: vencido es "esta persona ya tuvo su plazo, precio normal, no
+le des otro"; tocado se ignora y se da uno nuevo —que es lo mismo que borrar
+la cookie, y eso no es un agujero (abajo).
+
+### Lo que NO se cierra, y por qué
+
+Otro navegador, incógnito, otro celular: es alguien nuevo. No se "recuerda"
+por IP porque los celulares comparten IP de a cientos (CGNAT) y en una casa
+todos tienen la misma: la segunda persona de la familia lo vería vencido. Y
+lo que consigue quien lo esquiva es exactamente el precio que el vendedor ya
+le ofrece a cualquiera que entra por primera vez: no hay descuento de más.
+
+### Mientras corre, no sale la oferta de salida
+
+Sería descuento sobre descuento. Vencida o apagada, el checkout es el de
+siempre.
+
+### Las previas muestran un ejemplo
+
+En el editor de secciones (`?previa=1`) y en la previa de la landing
+(`?landing=previa`) la barra se ve quieta en 14:59 y marcada **Ejemplo**,
+esté configurado o no: para que se vea dónde va. No se firma ni se guarda
+nada. Publicado, sólo lo real.
+
+### De paso, tres cosas de raíz
+
+- La regla "el cupón automático vale por el plazo, no por el código" estaba
+  escrita DOS veces (en `/cupon` y en `/comprar`). Ahora es una
+  (`lib/cupones-automaticos`, `porQueNoValeElAutomatico`) y las dos rutas la
+  llaman. El guardado del cupón en transacción también (`guardarCuponAutomatico`).
+- El reloj ("ahora") del cartel de salida se sacó a `lib/reloj-compartido`:
+  un solo latido para el cartel, la barra y el checkout, sin `setState` en
+  efectos.
+- `plantillas-marketing.check.ts` tenía HOY fijo en 15/09 y validaba un cupón
+  que vence a los 3 días: empezó a fallar solo el 19/09. Ahora valida con la
+  fecha real y cuenta días con la fija.
+
+### Un bug encontrado por el chequeo
+
+En el script de la landing, `\d` adentro del template literal perdía la barra
+y la forma del token quedaba como `d{10,16}`: ningún token pasaba el filtro.
+LAN-B mira el script YA ARMADO, no el archivo, y lo vio.
+
+### Un bucle evitado
+
+Con las cookies bloqueadas, la barra y el checkout pedían la página de nuevo
+(`router.refresh`) porque el token guardado nunca coincidía con el de la
+página, y el servidor daba otro nuevo: bucle. `guardarTokenDeBienvenida`
+devuelve `pedirDeNuevo` sólo si la cookie quedó escrita de verdad (se lee
+después de escribirla).
+
+Chequeos `bienvenida.check.ts` (VAL, CUP, FIR, NAV, REG, y de texto sobre
+rutas, páginas, checkout, barra, landing, editor, cupones, planes, base).
+110 chequeos, tsc, eslint y build ok.
+### Auditoría del diff, antes de commitear — 21/09/26
+
+Releído el diff entero (34 archivos). Tres cosas más, arregladas de raíz:
+
+1. 🔴 **El checkout gastaba el tope anti-adivinación.** Para poner el cupón
+   de bienvenida llamaba a `/api/digitales/cupon` en cada carga, y esa ruta
+   corta a 30 por hora **por IP**. Con cientos de celulares detrás de la misma
+   IP (CGNAT), el tope se pasaba y la pantalla le decía "venció" a gente con
+   el reloj corriendo. Ahora el cupón se pone desde los datos que la página
+   ya trae (el servidor decidió "viva" y mandó el porcentaje): sin llamada.
+   `/comprar` sigue decidiendo; si rechaza el cupón contesta
+   `cuponRechazado: true` y la pantalla lo saca en vez de quedarse trabada
+   —eso también arregla un cupón escrito que venciera entre ponerlo y pagar—.
+2. 🟠 **Un tick por segundo para todos.** `useAhora(0)` sin oferta se
+   suscribía igual al reloj (0 − ahora ≤ 1 h es siempre cierto): el formulario
+   de pago entero se redibujaba cada segundo para cualquier visitante, y la
+   barra en demo también. `useAhora(null)` = no hay nada que contar.
+3. 🟠 **Otro bucle:** un token guardado con buena forma pero firma inválida
+   (secreto rotado, o tocado) era elegido por el navegador por ser más viejo,
+   el servidor lo rechazaba y firmaba otro, y la página se volvía a pedir
+   para siempre. Regla: si la cookie que el servidor YA VIO es la que
+   elegiríamos y aun así dibujó con otra, manda el servidor y lo guardado se
+   reemplaza (`guardarTokenDeBienvenida`).
+
+Chequeos CHK-A/B, BAR-B/D actualizados. 110 chequeos, tsc, eslint y build ok.
+### Segunda auditoría: seguridad, bots y abuso — 21/09/26
+
+Lo que aguantó:
+- Firmas: HMAC-SHA256 con `NEXTAUTH_SECRET`, 24 letras base64url (144 bits),
+  comparación en tiempo constante, tope de largo (80) antes de mirar nada.
+  Por producto y por clase (`oferta-salida:` / `bienvenida:`): no se cruzan.
+- Nada que mande el navegador decide plata: cookie, `?bienvenida=` y
+  localStorage sólo pueden ACORTAR el plazo de quien los toca; alargarlo no,
+  porque `/comprar` firma de nuevo y no coincide. Un token tocado se ignora.
+- El token es público a propósito (viaja en la página): compartir un link
+  con él da exactamente lo que da entrar: el mismo descuento, por hasta una
+  hora. No hay más que sacar.
+- Marcas del reloj (`data-tienda-reloj`, `-despues`, `-token`, `-clave`,
+  `-demo`) fuera de la lista blanca del saneado: no vienen en el archivo.
+- Lo que escribe la dueña (texto de la barra, ≤ 60) entra como texto, nunca
+  como HTML: el serializador y React escapan.
+- La ruta PATCH: rol, dueño, plan, tope 60/h, validación, tope de cupones.
+- Bots sobre `/p/<id>`: por visita, un HMAC y una lectura de cupón. Del
+  mismo orden que lo que la página ya hacía; sin amplificación.
+
+Lo que se arregló:
+- 🟠 **La cookie con `Path=/` se acumulaba.** En el dominio de la plataforma
+  todos los productos viven bajo el mismo host: una cookie por producto
+  visitado, y un bot (o Googlebot) que recorre cientos pasa el límite de
+  cabecera (~4 KB) y el sitio entero le contesta "Request Header Too Large",
+  panel incluido. Además viajaba a todas las `/api/*`. Ahora `Path=/p/<id>`
+  en la plataforma (la página y su pago comparten ese camino) y `/` en
+  subdominio o dominio propio, donde el host ya es de un solo producto.
+- 🟡 La clave que el script mete en una RegExp se filtra a `[A-Za-z0-9_]`
+  aunque la escribamos nosotros: es la regla, no la excepción.
+
+Decidido y anotado: quien dejó vencer su plazo ve el precio normal hasta 30
+días (la cookie), aunque la dueña cambie la oferta. Es lo honesto: ya tuvo su
+ventana.
+### El contador escrito se rescata, no se avisa — 21/09/26
+
+Armada la landing real de Hamburguesas con el reloj prendido, se veían DOS
+relojes: el nuestro arriba (barra propia) y el "🔥 Precio promocional
+reservado por: 15:00" de su archivo, quieto, abajo. Es el patrón de todas
+estas landings: una barra con un texto y un `<span>` con la hora.
+
+`rescatarContador` (`landing-arreglos`), al subir el archivo: un elemento
+cuyo texto es SÓLO una hora, con señal de contador (clase con
+timer/countdown/time/reloj/contador/cuenta, o la caja dice
+reservado/expira/termina/quedan/vence) y una caja chica (≤ 120 letras, ≤ 6
+elementos) → la caja pasa a ser el hueco `reloj` y la pastilla, el lugar de
+la cuenta (`data-tienda-cuenta`). "Clase en vivo a las 18:00" no tiene señal
+y no se toca. Uno solo; un segundo contador se sigue avisando.
+
+- Prendido: adentro va el texto de la dueña y la cuenta de verdad, vestidos
+  con SU CSS (su barra roja, su pastilla blanca). Verificado con Playwright a
+  360 y 1280 sobre la landing real: un solo reloj, contando.
+- Apagado: la caja desaparece entera. Nunca un "15:00" quieto.
+- Es un arreglo (se lista en "lo que se acomodó") y ya no un aviso.
+- Lo guardado ANTES de esto no pasó por el rescate: `armarLanding` lo hace
+  también al dibujar, si no hay hueco (red de seguridad, como
+  `blindarElEstilo`). Prendido O apagado: al principio sólo corría prendido,
+  y una landing vieja con el reloj apagado dejaba su "15:00" clavado. Sin
+  cambiar lo guardado ni el inventario.
+
+Vencido (token pasado en localStorage): sin barra, tres precios en $6.900,
+sin tachado. Chequeo ARM-F3. 110 chequeos, tsc, eslint y build ok.
+
+También: `NEXTAUTH_SECRET` faltaba en `.env.local` y la página de venta
+contestaba 500. Ahora sin clave la página y el checkout salen sin oferta y con
+el error en el log (`hayClaveDeFirma`, SRV-C): una clave que falta no tumba
+la página donde entra la plata.
+
+
+
+
+✅ Migración aplicada a la base el 21/09/26 (la corrió Flavio).
+### Repaso antes del commit — 21/09/26
+
+- Falso positivo del rescate: "La clase termina a las 18:00 hs" cumplía
+  "hora sola + la caja dice *termina*" y, apagado, borraba el párrafo. Ahora
+  una hora del día ("a las 18:00", "18:00 hs/am/pm") no es un contador
+  (`HORA_DEL_DIA`). Probado SOLO (ARM-F3): con el "15:00" adelante el caso
+  pasaba igual porque se rescata uno solo.
+- El panel de la landing ("3. Cómo quedó") ahora dice si el reloj está
+  prendido (minutos y %) o apagado, con link a Marketing → Precio de
+  bienvenida del MISMO producto (`?p=`). Antes decía "cuando lo tengas
+  prendido" sin saber si lo estaba.
+- Lo subido antes de hoy conserva su inventario viejo: el renglón del reloj
+  no aparece y el aviso del "contador escrito" sigue ahí hasta que vuelva a
+  subir. La página pública sí lo rescata (red de seguridad al dibujar).
+- Variable muerta en `ponerReloj`, sacada.
+
+✅ Mirado en la landing real a 360/1280 (prendido y vencido). Falta mirar a
+  768 y el checkout con la cuenta real en local (`NEXTAUTH_SECRET`).
+✅ **Sin deployar**: commiteado local el 21/09/26.
+🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las
+  previas) y las opiniones verificadas.

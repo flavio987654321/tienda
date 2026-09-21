@@ -111,21 +111,62 @@ const armada = armarLanding(L.html, {
   nombre: "Panadería en Airfryer", precio: 9900, precioAnterior: 19900, hrefComprar: "/pagar?utm=x",
   fotos: { "portada-del-ebook": FOTO, donuts: "https://cdn.tiendaapps.com/f/donuts.jpg" },
   enlaces: { "terminos-y-condiciones": "https://queantojo.com/terminos", instagram: "javascript:alert(1)" },
-  bloques: { reloj: `<p class="reloj">14:59</p>` },
+  bloques: {},
+  /* El precio de bienvenida corriendo: 9.900 es el de bienvenida, 19.900 el
+     normal (tachado), y al vencer vuelve 12.000 con el 19.900 de siempre. */
+  bienvenida: { productId: "clx0000000000000000000009", token: "1800000000000.abcdefghijklmnopqrstuvwx", venceEn: 1_800_000_000_000, texto: "Precio de bienvenida reservado por", despues: { precio: 12000, precioAnterior: 19900 } },
 });
 const el = (sel: (e: { name: string; attribs: Record<string, string> }) => boolean) => primerElemento(armada, sel);
 
 check("ARM-A", /<h1 data-tienda="nombre">Panadería en Airfryer<\/h1>/.test(armada) && !/NOMBRE VIEJO|\[PRECIO/.test(armada), "el nombre y el precio salen del producto, no del archivo");
-check("ARM-B", /\$<span data-tienda="precio">9\.900<\/span>/.test(armada) && /<s data-tienda="precio-anterior">\$\s?19\.900<\/s>/.test(armada),
-  "si el archivo ya escribió el $ al lado, no se repite; si no, va con el signo");
+check("ARM-B", /\$<span data-tienda="precio" data-tienda-despues="12\.000">9\.900<\/span>/.test(armada) && /<s data-tienda="precio-anterior" data-tienda-despues="\$\s?19\.900">\$\s?19\.900<\/s>/.test(armada),
+  "si el archivo ya escribió el $ al lado, no se repite; si no, va con el signo. Y cada precio lleva escrito lo que dice cuando vence el reloj");
 check("ARM-C", armada.split(`href="/pagar?utm=x"`).length === 3 && !/checkout\.ajeno|target="_blank" rel="noopener noreferrer">Comprar/.test(armada),
   "los dos botones de comprar van al pago nuestro, sin target ni destino ajeno");
 check("ARM-D", /<div data-tienda="foto:Portada del ebook" class="cover"><img src="https:\/\/cdn\.tiendaapps\.com\/f\/portada\.jpg" alt="" loading="lazy" decoding="async" data-tienda-foto=""><\/div>/.test(armada),
   "un contenedor de foto recibe la <img> adentro y conserva su caja y su clase");
 check("ARM-E", /<img data-tienda="foto:donuts" alt="Donuts" src="https:\/\/cdn\.tiendaapps\.com\/f\/donuts\.jpg" data-tienda-foto="" loading="lazy" decoding="async">/.test(armada) && !/foto:falta/.test(armada),
   "una <img> de foto recibe el src; la foto que no se subió desaparece");
-check("ARM-F", /<div data-tienda="reloj"><p class="reloj">14:59<\/p><\/div>/.test(armada) && !/data-tienda="opiniones"|data-tienda="aviso-ventas"/.test(armada),
-  "un bloque vivo con HTML se pone adentro; sin HTML, el hueco se saca");
+check("ARM-F", /<div data-tienda="reloj" data-tienda-reloj="" data-tienda-vence="1800000000000" data-tienda-token="1800000000000\.abcdefghijklmnopqrstuvwx" data-tienda-clave="pv_bienvenida_clx0000000000000000000009">Precio de bienvenida reservado por <b data-tienda-cuenta="">[0-9:]+<\/b><\/div>/.test(armada)
+  && !/data-tienda="opiniones"|data-tienda="aviso-ventas"|data-tienda-barra-propia|Ejemplo/.test(armada),
+  "el hueco del reloj recibe el reloj de verdad (texto, cuenta, hora en que vence, token y clave); sin HTML, los otros huecos se sacan; con hueco no hay barra nuestra");
+check("ARM-F2", (() => {
+  const b = { productId: "clx0000000000000000000009", token: "1800000000000.abcdefghijklmnopqrstuvwx", venceEn: 1_800_000_000_000, texto: "Reservado por", despues: { precio: 12000, precioAnterior: null } };
+  const sinHueco = armarLanding(L.html.replace(/<div data-tienda="reloj"><\/div>/, ""), { nombre: "x", precio: 9900, precioAnterior: 12000, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {}, bienvenida: b });
+  const demo = armarLanding(L.html, { nombre: "x", precio: 9900, precioAnterior: 19900, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {}, bienvenida: { ...b, token: "", venceEn: 0, demo: true } });
+  const apagada = armarLanding(L.html, { nombre: "x", precio: 9900, precioAnterior: 19900, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {} });
+  return /^<div data-tienda-barra-propia="" data-tienda-reloj=""/.test(sinHueco) && /data-tienda-despues=""/.test(sinHueco)
+    && /data-tienda-demo=""/.test(demo) && /<b data-tienda-cuenta="">14:59<\/b><small data-tienda-ejemplo="">Ejemplo<\/small>/.test(demo) && !/data-tienda-despues/.test(demo)
+    && !/data-tienda="reloj"|data-tienda-reloj|data-tienda-despues/.test(apagada);
+})(), "sin hueco el reloj va en una barra nuestra arriba de todo; un tachado que no vuelve se marca para sacarse; la previa lo muestra quieto y marcado Ejemplo; apagado, ni hueco ni marcas");
+/* El "reservado por 15:00" escrito pasa a ser el hueco del reloj, con su
+   pastilla como lugar de la cuenta; "a las 18:00" no es un contador. Y lo
+   guardado antes del rescate se rescata al dibujar, si el reloj está prendido. */
+check("ARM-F3", (() => {
+  const crudo = `<html><body><div class="afl-bar"><span>🔥 Precio promocional reservado por:</span><span class="afl-bar__time">15:00</span></div><p>Clase en vivo a las <b>18:00</b></p><p class="aviso">La clase termina a las <b>18:00</b> hs</p><p>$<span data-tienda="precio"></span></p><a data-tienda="comprar" href="#">Comprar</a></body></html>`;
+  const r = limpiarLanding(crudo);
+  if (!r.ok) return false;
+  const L2 = r.landing;
+  const b = { productId: "clx0000000000000000000009", token: "1800000000000.abcdefghijklmnopqrstuvwx", venceEn: 1_800_000_000_000, texto: "Reservado por", despues: { precio: 12000, precioAnterior: null } };
+  const prendida = armarLanding(L2.html, { nombre: "x", precio: 9900, precioAnterior: 12000, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {}, bienvenida: b });
+  const apagada = armarLanding(L2.html, { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {} });
+  /* Una versión guardada SIN el rescate (limpieza vieja): se rescata al dibujar. */
+  const vieja = `<div class="afl-bar"><span>🔥 Reservado por:</span><span class="afl-bar__time">15:00</span></div><p>$<span data-tienda="precio"></span></p>`;
+  const rescatadaAlDibujar = armarLanding(vieja, { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {}, bienvenida: b });
+  const viejaApagada = armarLanding(vieja, { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {} });
+  /* Sin contador, sólo un horario que dice "termina": no es un reloj y no se
+     toca, ni prendido (va la barra nuestra) ni apagado. */
+  const horario = `<p class="aviso">La clase termina a las <b>18:00</b> hs</p><p>$<span data-tienda="precio"></span></p>`;
+  const horarioPrendido = armarLanding(horario, { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {}, bienvenida: b });
+  const horarioApagado = armarLanding(horario, { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, enlaces: {}, bloques: {} });
+  return /<div class="afl-bar" data-tienda="reloj"><span>🔥 Precio promocional reservado por:<\/span><span class="afl-bar__time" data-tienda-cuenta="">15:00<\/span><\/div>/.test(L2.html) && /<b>18:00<\/b>/.test(L2.html)
+    && L2.inventario.reloj && L2.inventario.arreglos.some((a) => /contador escrito .*pasó a ser el hueco del reloj/.test(a)) && !L2.inventario.avisos.some((a) => /contador escrito/.test(a))
+    && /<div class="afl-bar" data-tienda="reloj" data-tienda-reloj=""[^>]*>Reservado por <span class="afl-bar__time" data-tienda-cuenta="">[0-9:]+<\/span><\/div>/.test(prendida) && !/Precio promocional|data-tienda-barra-propia/.test(prendida)
+    && !/afl-bar|15:00|data-tienda-reloj/.test(apagada) && /<b>18:00<\/b>/.test(apagada) && /La clase termina a las <b>18:00<\/b> hs/.test(apagada)
+    && /<div class="afl-bar" data-tienda="reloj" data-tienda-reloj=""[^>]*>Reservado por <span class="afl-bar__time" data-tienda-cuenta="">/.test(rescatadaAlDibujar) && !/data-tienda-barra-propia/.test(rescatadaAlDibujar)
+    && !/afl-bar|15:00|data-tienda-reloj/.test(viejaApagada) && /9\.900/.test(viejaApagada)
+    && /La clase termina a las <b>18:00<\/b> hs/.test(horarioPrendido) && /data-tienda-barra-propia/.test(horarioPrendido) && /La clase termina a las <b>18:00<\/b> hs/.test(horarioApagado);
+})(), "el contador escrito se rescata como hueco del reloj (la pastilla conserva su CSS), es un arreglo y no un aviso, apagado desaparece entero, 'a las 18:00' no se toca, lo guardado viejo se rescata al dibujar, prendido o apagado, y un horario del día no es un reloj");
 check("ARM-G", /<a href="https:\/\/queantojo\.com\/terminos" target="_blank" rel="noopener noreferrer">Términos y condiciones<\/a>/.test(armada) && /<a href="#">Instagram<\/a>/.test(armada),
   "los links vacíos se llenan por su texto; un destino que no es http/mailto/tel no entra");
 check("ARM-H", (() => {
@@ -375,8 +416,9 @@ check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\/
 check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(publica),
   "la landing se muestra sólo si está prendida y el plan la incluye; si vence, vuelve la página de secciones");
 /* El link del pago lo mira PAGO-B, que es donde se explica por qué. */
-check("PUB-B", /nombre: fila\.name,\n\s+precio: fila\.price,\n\s+precioAnterior: fila\.comparePrice,/.test(publica),
-  "el precio y el nombre salen del producto: cambiar el precio en Productos cambia la landing");
+check("PUB-B", /nombre: fila\.name,[\s\S]{0,400}?precio: viva \? viva\.precio : fila\.price,\n\s+precioAnterior: viva \? viva\.precioNormal : fila\.comparePrice,/.test(publica)
+  && /despues: \{ precio: fila\.price, precioAnterior: fila\.comparePrice \}/.test(publica),
+  "el precio y el nombre salen del producto: cambiar el precio en Productos cambia la landing. Con el reloj corriendo, el de bienvenida; al vencer, el del producto");
 check("PUB-C", /apagado=\{!fila\.isActive \|\| previaDeLanding\}/.test(publica) && /\{fila\.isActive && !previaDeLanding && \(\(\) =>/.test(publica),
   "la visita y el píxel siguen afuera de la landing, y la previa de la dueña no cuenta ni mide");
 check("PUB-D", /landing \? <LandingPropia html=\{landing\.html\} fuentes=\{landing\.fuentes\} \/> : <PaginaDeVenta/.test(publica),

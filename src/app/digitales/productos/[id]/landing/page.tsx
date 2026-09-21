@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { leerEstadoDeLanding, leerInventario, leerQuitado, LANDING_VERSIONES } from "@/lib/landing-estado";
+import { leerBienvenida } from "@/lib/bienvenida";
 
 import BotonVolver from "../../../BotonVolver";
 import LandingClient, { type VersionEnPantalla } from "./LandingClient";
@@ -34,7 +35,7 @@ export default async function LandingPage({ params }: Props) {
       where: { id, deletedAt: null, rolDigital: "PRINCIPAL", store: { ownerId: user.id } },
       select: {
         id: true, name: true, description: true, price: true, comparePrice: true, isActive: true,
-        landingPropia: true,
+        landingPropia: true, bienvenida: true,
         store: { select: { name: true } },
         /* Las mismas que guarda el POST, ni una más: la lista no crece sin
            fin, así que no hay páginas que pasar. Pedir 10 cuando se guardan
@@ -83,6 +84,10 @@ export default async function LandingPage({ params }: Props) {
         esPago={esPago}
         estado={estado}
         versiones={versiones}
+        /* Si el archivo dejó lugar para el reloj, la pantalla dice si está
+           prendido o apagado: apagado, esa barra no se muestra, y se prende
+           en Marketing, no acá. */
+        bienvenida={leerBienvenida(fila.bienvenida)}
         /* Los datos, no el texto ya armado: la pantalla lo rehace con lo que
            ella escriba sobre el diseño, con la misma función. */
         producto={{

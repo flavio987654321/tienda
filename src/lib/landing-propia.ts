@@ -55,13 +55,15 @@
 import sanitizeHtml from "sanitize-html";
 import { parseDocument } from "htmlparser2";
 import { Element, Text, type ChildNode, type Document } from "domhandler";
-import { findAll, findOne, removeElement, textContent, prependChild } from "domutils";
+import { findAll, findOne, removeElement, textContent, prependChild, appendChild } from "domutils";
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
-import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
+import { arreglarLanding, rescatarBarras, rescatarFotos, llenarMarcadoresDePrecio, rescatarContador, ERA_BOTON, ERA_FOTO } from "@/lib/landing-arreglos";
 import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REVISION } from "@/lib/landing-invisible";
-import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA } from "@/lib/landing-efectos";
+import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA, MARCA_RELOJ, MARCA_DESPUES, MARCA_CUENTA, MARCA_DEMO } from "@/lib/landing-efectos";
+import { claveDeBienvenida } from "@/lib/bienvenida";
+import { cuentaRegresiva } from "@/lib/oferta-salida";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -462,6 +464,9 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   const arreglos = arreglarLanding(arbol);
   const fotos = rescatarFotos(arbol);
   const precios = llenarMarcadoresDePrecio(arbol);
+  /* Y el "reservado por 15:00" escrito: pasa a ser el hueco del reloj de
+     verdad. Ver `rescatarContador`. */
+  const contador = rescatarContador(arbol);
   const hoja = [...css.filter(Boolean), arreglos.css].filter(Boolean).join("\n");
   /* Y lo genérico: aplicar SU CSS sobre SU html para ver qué queda invisible.
      Los arreglos conocen dos formas de romperse; esto encuentra las que no
@@ -478,12 +483,12 @@ export function limpiarLanding(htmlCrudo: string): { ok: true; landing: LandingL
   const cuerpo = render(arbol, { encodeEntities: "utf8", emptyAttrs: true }).trim();
 
   const html = (hojaFinal ? `<style>\n${hojaFinal}\n</style>\n` : "") + cuerpo;
-  const avisos = avisosDelCrudo(docCrudo);
+  const avisos = avisosDelCrudo(docCrudo, contador.textos);
   if (muyGrande) {
     avisos.unshift("Tu archivo es muy grande para que lo revisemos entero, así que puede haber quedado algo escondido que no vemos. Mirala completa en la previa antes de prenderla.");
   }
   const inventario = inventariar(cuerpo, fuentes, avisos);
-  inventario.arreglos = [...arreglos.hechos, ...fotos.hechos, ...precios.hechos, ...barras.hechos];
+  inventario.arreglos = [...arreglos.hechos, ...fotos.hechos, ...precios.hechos, ...contador.hechos, ...barras.hechos];
   inventario.sueltos = arreglos.sueltos;
   /* Y qué DICE: la revisión mira el texto visible, no las etiquetas. Ver
      `lib/landing-revision`. */
@@ -529,16 +534,20 @@ function hueco(el: Element): string {
  * su script llenaba. Se avisan con el texto, para que la persona los
  * reconozca y le pida a Claude que los saque o use los huecos.
  */
-function avisosDelCrudo(doc: Document): string[] {
+function avisosDelCrudo(doc: Document, rescatados: readonly string[] = []): string[] {
   const avisos: string[] = [];
   const contadores = new Set<string>();
   const recortar = (t: string) => { const l = t.replace(/\s+/g, " ").trim(); return l.length > 70 ? `${l.slice(0, 67)}…` : l; };
+  const huellaDe = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, "");
+  /* El que pasó a ser el hueco del reloj (`rescatarContador`) ya no es un
+     aviso: es un arreglo, y se cuenta allá. */
+  for (const t of rescatados) contadores.add(huellaDe(recortar(t)));
   for (const el of findAll((e) => Object.keys(e.attribs).some((a) => /timer|countdown|cuenta-?regresiva/i.test(a)), doc.children)) {
     const padre = el.parent && el.parent.type === "tag" ? textContent(el.parent).replace(/\s+/g, " ").trim() : "";
     const t = recortar(padre && padre.length <= 120 ? padre : textContent(el));
     /* Dos veces el mismo contador con un emoji de diferencia es un aviso, no
        dos: se compara por las letras. */
-    const huella = t.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const huella = huellaDe(t);
     if (!t || contadores.has(huella)) continue;
     contadores.add(huella);
     avisos.push(`Quedó un contador escrito: «${t}». Sin su script no corre, y sigue siendo mentira: pedile a Claude que lo saque o que deje el hueco data-tienda="reloj".`);
@@ -626,7 +635,22 @@ export type DatosParaArmar = {
   /** Texto del link (normalizado con `claveDeLink`) → dirección. */
   enlaces: Record<string, string>;
   /** HTML ya dibujado por nosotros para cada bloque vivo; sin él, el hueco se saca. */
-  bloques: { reloj?: string; opiniones?: string; avisoVentas?: string };
+  bloques: { opiniones?: string; avisoVentas?: string };
+  /**
+   * El precio de bienvenida de ESTA visita, si está corriendo. Con esto,
+   * `precio` y `precioAnterior` son los de MIENTRAS corre el reloj, y acá
+   * viene lo que la página pasa a decir cuando llega a cero: el script lo
+   * cambia en el lugar, sin recargar. Ver `lib/bienvenida`.
+   */
+  bienvenida?: {
+    productId: string;
+    token: string;
+    venceEn: number;
+    texto: string;
+    despues: { precio: number; precioAnterior: number | null };
+    /** Sólo en la previa del panel: el reloj se muestra quieto y marcado "Ejemplo". */
+    demo?: boolean;
+  };
   /** En la previa del panel: los huecos de foto sin foto se ven, con su nombre. */
   mostrarHuecos?: boolean;
 };
@@ -661,7 +685,17 @@ function blindarElEstilo(html: string): string {
  */
 export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
   const doc = parseDocument(blindarElEstilo(htmlLimpio));
+  /* Red de seguridad para lo YA guardado, como `blindarElEstilo`: una versión
+     limpiada antes del 21/09/26 no pasó por `rescatarContador`: con el
+     reloj prendido mostraría el nuestro arriba y su "15:00" quieto abajo, y
+     apagado dejaría ese "15:00" clavado. Se rescata acá también, prendido o
+     no; no cambia lo guardado ni el inventario. */
+  if (!findOne((e) => e.attribs["data-tienda"] === "reloj", doc.children)) rescatarContador(doc);
   const elementos = findAll(() => true, doc.children);
+  let hayReloj = false;
+  /* Lo que cada precio pasa a decir al vencer: sólo con el reloj de verdad.
+     En la previa (demo) el reloj está quieto y los precios no cambian. */
+  const despues = d.bienvenida && !d.bienvenida.demo ? d.bienvenida.despues : null;
 
   for (const el of elementos) {
     const h = hueco(el);
@@ -669,9 +703,17 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
       if (el.name === "a") enlazar(el, d.enlaces);
       continue;
     }
-    if (h === "precio") ponerTexto(el, precioSinSignoRepetido(el, d.precio));
+    if (h === "precio") {
+      ponerTexto(el, precioSinSignoRepetido(el, d.precio));
+      if (despues) el.attribs[MARCA_DESPUES] = precioSinSignoRepetido(el, despues.precio);
+    }
     else if (h === "precio-anterior") {
-      if (d.precioAnterior && d.precioAnterior > d.precio) ponerTexto(el, precioSinSignoRepetido(el, d.precioAnterior));
+      if (d.precioAnterior && d.precioAnterior > d.precio) {
+        ponerTexto(el, precioSinSignoRepetido(el, d.precioAnterior));
+        /* Al vencer, el tachado vuelve a ser el de siempre —o desaparece si
+           no había—. Vacío significa "sacalo". */
+        if (despues) el.attribs[MARCA_DESPUES] = despues.precioAnterior && despues.precioAnterior > despues.precio ? precioSinSignoRepetido(el, despues.precioAnterior) : "";
+      }
       else removeElement(el);
     }
     else if (h === "nombre") ponerTexto(el, d.nombre);
@@ -688,11 +730,52 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
       delete el.attribs.target; delete el.attribs.rel;
     }
     else if (h.startsWith("foto:")) ponerFoto(el, nombreDeFoto(h), d);
-    else if (h === "reloj") ponerBloque(el, d.bloques.reloj);
+    else if (h === "reloj") {
+      if (d.bienvenida && !hayReloj) { hayReloj = true; ponerReloj(el, d.bienvenida); }
+      else removeElement(el);
+    }
     else if (h === "opiniones") ponerBloque(el, d.bloques.opiniones);
     else if (h === "aviso-ventas") ponerBloque(el, d.bloques.avisoVentas);
   }
+  /* Si el archivo no dejó dónde ponerlo, el reloj va en una barra nuestra,
+     pegada arriba: un precio que vence sin nada que lo diga es un precio que
+     cambia solo, y eso sí es lo que hace la competencia. */
+  if (d.bienvenida && !hayReloj) {
+    const barra = new Element("div", { "data-tienda-barra-propia": "" });
+    ponerReloj(barra, d.bienvenida);
+    prependChild(doc, barra);
+  }
   return render(doc, { encodeEntities: "utf8", emptyAttrs: true });
+}
+
+/**
+ * El reloj de verdad adentro del hueco: el texto de la dueña y la cuenta,
+ * que el script mueve cada segundo (`landing-efectos`). El token y la
+ * clave viajan en el elemento para que el navegador los guarde; la hora en
+ * que vence se escribe ya contada, así la página llega entera aunque el
+ * script no corra.
+ */
+function ponerReloj(el: Element, b: NonNullable<DatosParaArmar["bienvenida"]>) {
+  el.attribs[MARCA_RELOJ] = "";
+  el.attribs["data-tienda-vence"] = String(b.venceEn);
+  el.attribs["data-tienda-token"] = b.token;
+  el.attribs["data-tienda-clave"] = claveDeBienvenida(b.productId);
+  if (b.demo) el.attribs[MARCA_DEMO] = "";
+  const numero = cuentaRegresiva(b.venceEn, b.demo ? b.venceEn - 899_000 : Date.now()) ?? "0:00";
+  /* Un contador rescatado (`rescatarContador`) ya trae la pastilla de la
+     hora marcada: se le pone la cuenta AHÍ, para que conserve su CSS, y se
+     reemplaza el resto de la caja por el texto de la dueña. */
+  const suya = findOne((e) => e.attribs[MARCA_CUENTA] !== undefined, el.children);
+  if (suya) {
+    for (const hijo of [...el.children]) if (hijo !== suya && !(hijo instanceof Element && findOne((e) => e === suya, hijo.children))) removeElement(hijo);
+    suya.children = [];
+    prependChild(suya, new Text(numero));
+  } else {
+    el.children = [];
+    prependChild(el, new Element("b", { [MARCA_CUENTA]: "" }, [new Text(numero)]));
+  }
+  prependChild(el, new Text(`${b.texto} `));
+  if (b.demo) appendChild(el, new Element("small", { "data-tienda-ejemplo": "" }, [new Text("Ejemplo")]));
 }
 
 function ponerTexto(el: Element, texto: string) {

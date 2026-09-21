@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { origenAnotado } from "@/lib/visitas-digitales";
-import { descuentoDe, normalizarCodigo, type TipoDeCupon } from "@/lib/cupones-digitales";
-import { venceEnDelToken } from "@/lib/oferta-salida";
+import { descuentoDe, normalizarCodigo, textoDelDescuento, type TipoDeCupon } from "@/lib/cupones-digitales";
+import { venceEnDelToken, cuentaRegresiva } from "@/lib/oferta-salida";
+import { venceEnDelTokenDeBienvenida } from "@/lib/bienvenida";
+import { useAhora } from "@/lib/reloj-compartido";
 import CartelDeSalida from "@/components/digitales/CartelDeSalida";
+import { guardarTokenDeBienvenida } from "@/components/digitales/BarraDeBienvenida";
 import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } from "lucide-react";
 
 /**
@@ -39,6 +43,13 @@ export type OfertaEnElCheckout = {
   | { tipo: "PRODUCTO"; producto: { nombre: string; precio: number; descripcion: string | null; imagen: string | null; href: string } }
 );
 
+/**
+ * El precio de bienvenida de ESTA visita, ya decidido por el servidor
+ * (`bienvenidaDeLaVisita`): el cupón que aplica solo y el plazo firmado.
+ * Null = no hay (apagado, sin plan, o esta persona ya lo tuvo y venció).
+ */
+export type BienvenidaEnElCheckout = { productId: string; codigo: string; porcentaje: number; token: string; texto: string };
+
 type Bono = { id: string; nombre: string; vale: number };
 type Upsell = {
   id: string; nombre: string; descripcion: string | null;
@@ -70,6 +81,8 @@ type Props = {
   tarjeta: string;
   /** Null = sin oferta de salida (apagada, sin plan, o no se puede vender). */
   oferta: OfertaEnElCheckout | null;
+  /** Null = sin precio de bienvenida para esta visita. Ver `lib/bienvenida`. */
+  bienvenida: BienvenidaEnElCheckout | null;
 };
 
 const plata = (n: number) =>
@@ -99,6 +112,38 @@ export default function CheckoutClient(p: Props) {
   const [tokenDeOferta, setTokenDeOferta] = useState<string | null>(null);
   const [ofertaError, setOfertaError] = useState("");
   const ofertaMostrada = useRef(false);
+  /* ── El precio de bienvenida ──────────────────────────────────────────
+     El token que trajo la página es el plazo de ESTA persona, firmado por el
+     servidor; el cupón BIENVENIDA-… no vale sin él. Se pone solo al entrar
+     y deja de valer solo al vencer: la persona no escribe nada.
+
+     ⚠️ Y se pone SIN preguntarle a `/api/digitales/cupon`. Esa ruta tiene un
+     tope por IP contra quien adivina códigos (30 por hora), y acá cientos de
+     celulares comparten IP: un checkout que la llamara en cada carga se
+     comería el tope y le diría "venció" a gente con el reloj corriendo. El
+     servidor ya decidió que está viva y ya mandó el porcentaje del cupón
+     (`bienvenidaDeLaVisita`); con eso alcanza para mostrar. Cobrar lo decide
+     `/comprar`, como siempre, y si dice que no, lo dice (`cuponRechazado`).
+
+     Sin estado propio salvo `rechazada`: el plazo sale del token, la hora
+     del reloj compartido, y "vive o no" se deriva de los dos. Así no hay
+     `setState` en efectos. */
+  const router = useRouter();
+  const [bienvenidaRechazada, setBienvenidaRechazada] = useState(false);
+  const bienvenida = p.bienvenida;
+  /* `null` sin oferta: así el reloj no late y esta pantalla no se redibuja
+     cada segundo para quien no tiene precio de bienvenida. */
+  const bienvenidaVenceEn = bienvenida ? venceEnDelTokenDeBienvenida(bienvenida.token) ?? 0 : null;
+  const ahora = useAhora(bienvenidaVenceEn);
+  const bienvenidaVencida = bienvenidaVenceEn !== null && ahora > 0 && ahora >= bienvenidaVenceEn;
+  const bienvenidaViva = !!bienvenida && p.puedeCobrar && !bienvenidaVencida && !bienvenidaRechazada;
+  /* Lo que se cobra: el cupón que la persona puso, o si no puso ninguno, el
+     de bienvenida mientras viva. Es lo que suma `cuenta` y lo que viaja al
+     pagar. Escribir otro cupón lo reemplaza, como cualquier cupón. */
+  const cuponVigente = useMemo(() => cupon ?? (bienvenidaViva && bienvenida
+    ? { codigo: bienvenida.codigo, tipo: "PORCENTAJE" as const, valor: bienvenida.porcentaje, texto: textoDelDescuento({ tipo: "PORCENTAJE", valor: bienvenida.porcentaje }) }
+    : null), [cupon, bienvenida, bienvenidaViva]);
+  const esElDeBienvenida = !!bienvenida && cuponVigente?.codigo === bienvenida.codigo;
   /* ⚠️ El freno del doble click. `useState` no alcanza: dos clics seguidos leen
      el mismo `false` antes de que React vuelva a dibujar, y salen los dos. Con
      un `ref` el segundo ve el `true` en el mismo instante. Es el mismo patrón
@@ -115,23 +160,24 @@ export default function CheckoutClient(p: Props) {
       .reduce((s, u) => s + (u.regular ?? u.precio), 0);
 
     const sinCupon = p.totalBase + sumaUpsells;
-    const descuento = cupon ? descuentoDe(cupon, sinCupon) : 0;
+    const descuento = cuponVigente ? descuentoDe(cuponVigente, sinCupon) : 0;
     const pagas = sinCupon - descuento;
     const valorTotal = p.regular + valorBonos + regularUpsells;
     return { sinCupon, descuento, pagas, valorTotal, ahorro: valorTotal > pagas ? valorTotal - pagas : 0 };
-  }, [elegidos, p, cupon]);
+  }, [elegidos, p, cuponVigente]);
 
   /**
-   * Verifica un cupón contra el servidor y lo deja puesto. `oferta` es el
-   * token de la oferta de salida: el cupón SALIDA-… no vale sin él.
+   * Verifica un cupón contra el servidor y lo deja puesto. `plazos` son los
+   * tokens firmados: el cupón SALIDA-… no vale sin el de la oferta de
+   * salida, ni el BIENVENIDA-… sin el del precio de bienvenida.
    * Devuelve el error, o null si quedó aplicado.
    */
-  async function verificarCupon(c: string, oferta: string | null): Promise<string | null> {
+  async function verificarCupon(c: string, plazos: { oferta?: string | null; bienvenida?: string | null }): Promise<string | null> {
     try {
       const r = await fetch("/api/digitales/cupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productoId: p.productoId, codigo: c, ...(oferta ? { oferta } : {}) }),
+        body: JSON.stringify({ productoId: p.productoId, codigo: c, ...(plazos.oferta ? { oferta: plazos.oferta } : {}), ...(plazos.bienvenida ? { bienvenida: plazos.bienvenida } : {}) }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.ok) return d.error ?? "Ese cupón no existe.";
@@ -148,10 +194,21 @@ export default function CheckoutClient(p: Props) {
     if (!c || cuponMirando) return;
     setCuponMirando(true);
     setCuponError("");
-    const problema = await verificarCupon(c, null);
+    const problema = await verificarCupon(c, {});
     if (problema) { setCupon(null); setCuponError(problema); }
     setCuponMirando(false);
   }
+
+  /* ── El precio de bienvenida: el token se guarda ───────────────────────
+     Al montar se guarda (`guardarTokenDeBienvenida`). Si el navegador tenía
+     uno más viejo y la cookie quedó puesta, esta pantalla está dibujada con
+     un plazo que no es el suyo: se le pide al servidor que la vuelva a
+     dibujar (vencido incluido: sale sin descuento). Nunca en la previa de
+     la dueña. Ver `lib/bienvenida`. */
+  useEffect(() => {
+    if (!bienvenida || !p.puedeCobrar) return;
+    if (guardarTokenDeBienvenida(bienvenida.productId, bienvenida.token).pedirDeNuevo) router.refresh();
+  }, [bienvenida, p.puedeCobrar, router]);
 
   /* ── Cuándo aparece el cartel ─────────────────────────────────────────
      En computadora, cuando el mouse sale por arriba (va a cerrar la pestaña
@@ -207,7 +264,7 @@ export default function CheckoutClient(p: Props) {
     if (!oferta || oferta.tipo !== "DESCUENTO" || cuponMirando) return;
     setCuponMirando(true);
     setOfertaError("");
-    const problema = await verificarCupon(oferta.codigo, tokenDeOferta);
+    const problema = await verificarCupon(oferta.codigo, { oferta: tokenDeOferta });
     if (problema) setOfertaError(problema);
     else setCartel(null);
     setCuponMirando(false);
@@ -241,10 +298,12 @@ export default function CheckoutClient(p: Props) {
           /* Sólo identificadores. Ningún precio viaja desde acá. */
           upsells: elegidos,
           /* El CÓDIGO del cupón, nunca el monto: cuánto vale lo decide el servidor. */
-          cupon: cupon?.codigo,
+          cupon: cuponVigente?.codigo,
           /* El plazo firmado, para que el servidor lo haga cumplir con el
              cupón de la oferta de salida. Con otro cupón no hace nada. */
           oferta: tokenDeOferta ?? undefined,
+          /* Y el del precio de bienvenida, para el cupón BIENVENIDA-…. */
+          bienvenida: esElDeBienvenida && bienvenidaViva ? bienvenida.token : undefined,
           /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
              servidor. Una prueba que la escribe el navegador no prueba nada. */
           acepto: true,
@@ -257,6 +316,15 @@ export default function CheckoutClient(p: Props) {
       const datos = await r.json().catch(() => ({}));
       if (!r.ok || !datos.initPoint) {
         setError(datos.error ?? "No pudimos abrir el pago. Probá de nuevo.");
+        /* El servidor no aceptó el cupón (venció entre ponerlo y pagar, lo
+           apagaron, o el plazo de bienvenida se terminó en el camino): se saca,
+           así el segundo intento sale con el precio que corresponde en vez de
+           volver a chocar con lo mismo. */
+        if (datos.cuponRechazado) {
+          setCupon(null);
+          setCodigo("");
+          if (esElDeBienvenida) setBienvenidaRechazada(true);
+        }
         enVuelo.current = false;
         setYendo(false);
         return;
@@ -466,9 +534,17 @@ export default function CheckoutClient(p: Props) {
               Chico y abajo del detalle: quien tiene uno lo busca; quien no,
               no tiene que ver un campo vacío que le sugiera salir a buscarlo. */}
           <div className="mt-4">
-            {cupon ? (
+            {/* El precio de bienvenida puesto: con su reloj, y sin "sacar" —no
+                es un código que alguien escribió, es el precio de esta visita—.
+                Escribir otro cupón lo reemplaza, como cualquier cupón. */}
+            {cuponVigente && esElDeBienvenida ? (
               <p className="flex items-center justify-between gap-2 text-[13px] text-[color:var(--pv-ok)]">
-                <span className="inline-flex items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5" /> Cupón {cupon.codigo} · {cupon.texto}</span>
+                <span className="inline-flex items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5" /> Precio de bienvenida · {cuponVigente.texto}</span>
+                <span className="tabular-nums text-[12px] font-bold">{ahora > 0 && bienvenidaVenceEn !== null ? cuentaRegresiva(bienvenidaVenceEn, ahora) ?? "0:00" : ""}</span>
+              </p>
+            ) : cuponVigente ? (
+              <p className="flex items-center justify-between gap-2 text-[13px] text-[color:var(--pv-ok)]">
+                <span className="inline-flex items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5" /> Cupón {cuponVigente.codigo} · {cuponVigente.texto}</span>
                 <button type="button" onClick={() => { setCupon(null); setCodigo(""); }} className="text-[12px] underline underline-offset-2 text-[color:var(--pv-tenue)]">sacar</button>
               </p>
             ) : (
@@ -494,12 +570,17 @@ export default function CheckoutClient(p: Props) {
               </div>
             )}
             {cuponError && <p role="alert" className="mt-2 bg-[color:var(--pv-fuerte)] px-3 py-2 text-[12.5px] font-medium text-[color:var(--pv-tinta)]">{cuponError}</p>}
+            {/* Se dice, no se esconde: la persona vio un precio en la página y
+                acá ve otro. Sin esta línea parece un error nuestro. */}
+            {bienvenida && !bienvenidaViva && p.puedeCobrar && (
+              <p role="status" className="mt-2 text-[12.5px] text-[color:var(--pv-tenue)]">El precio de bienvenida venció: se cobra el precio normal.</p>
+            )}
           </div>
 
           <div className="mt-4 border-t-2 border-[color:var(--pv-linea)] pt-3">
             {cuenta.descuento > 0 && (
               <p className="flex justify-between text-sm text-[color:var(--pv-tenue)]">
-                <span>Cupón {cupon?.codigo}</span>
+                <span>{esElDeBienvenida ? "Precio de bienvenida" : `Cupón ${cuponVigente?.codigo}`}</span>
                 <span className="tabular-nums">−{plata(cuenta.descuento)}</span>
               </p>
             )}

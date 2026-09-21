@@ -33,6 +33,8 @@ export type TipoDeCupon = (typeof TIPOS_DE_CUPON)[number];
 export const CODIGO_RE = /^[A-Z0-9-]{3,20}$/;
 /** Reservado para el cupón que crea la oferta de salida. Mismo valor que `codigoDeLaOferta`. */
 export const PREFIJO_DE_LA_OFERTA = "SALIDA-";
+/** Reservado para el cupón que crea el precio de bienvenida. Mismo valor que `codigoDeBienvenida`. */
+export const PREFIJO_DE_BIENVENIDA = "BIENVENIDA-";
 export const LARGO_CODIGO = 20;
 /** Hasta este porcentaje. El 100 % no es un descuento, es un regalo, y se hace de otra forma. */
 export const PORCENTAJE_MAXIMO = 90;
@@ -73,6 +75,7 @@ export function validarCuponNuevo(body: unknown): { ok: true; datos: Omit<CuponD
      esa pantalla y sólo vale con el plazo firmado. Uno escrito a mano con
      ese prefijo no se podría usar nunca, y se mostraría como "de la oferta". */
   if (codigo.startsWith(PREFIJO_DE_LA_OFERTA)) return { ok: false, problema: "Los códigos que empiezan con SALIDA- son de la oferta de salida. Elegí otro." };
+  if (codigo.startsWith(PREFIJO_DE_BIENVENIDA)) return { ok: false, problema: "Los códigos que empiezan con BIENVENIDA- son del precio de bienvenida. Elegí otro." };
 
   const tipo = b.tipo === "PESOS" ? "PESOS" : b.tipo === "PORCENTAJE" ? "PORCENTAJE" : null;
   if (!tipo) return { ok: false, problema: "Elegí si el descuento es un porcentaje o un monto en pesos" };

@@ -7,6 +7,7 @@ import {
   Loader2, Upload, Copy, Check, Monitor, Smartphone, ExternalLink, AlertTriangle, Image as IconoImagen, Lock, RotateCcw, Wrench, Trash2,
 } from "lucide-react";
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
+import type { Bienvenida } from "@/lib/bienvenida";
 /* `claveDeLink` y `acomodarEnlace` son las mismas del servidor, a propósito:
    si la pantalla calculara la clave por su cuenta, un acento de más guardaría
    el link en un cajón que nadie lee después. */
@@ -46,7 +47,7 @@ const MAX_FOTO_MB = 4;
  * subió, y marca con un borde punteado —y el nombre que pide el paso 4— cada
  * lugar de foto que todavía está vacío.
  */
-export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, producto }: {
+export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, producto, bienvenida }: {
   productoId: string;
   nombre: string;
   publicado: boolean;
@@ -54,6 +55,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   estado: EstadoDeLanding;
   versiones: VersionEnPantalla[];
   producto: ProductoParaInstrucciones;
+  bienvenida: Bienvenida;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -420,11 +422,26 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   mal={`Faltan ${fotosFaltan.length} de ${inv.fotos.length} fotos`}
                 />
                 <Renglon ok={linksFaltan.length === 0} bien="Los links del pie, completos" mal={`${linksFaltan.length} ${linksFaltan.length === 1 ? "link va" : "links van"} a ninguna parte`} />
-                {(inv.reloj || inv.opiniones || inv.avisoVentas) && (
+                {/* El reloj no es "cuando lo tengas prendido" a secas: la pantalla
+                    sabe si lo está. Apagado, la barra del archivo no se muestra,
+                    y sin decirlo ella creería que se perdió. */}
+                {inv.reloj && (bienvenida.activa
+                  ? <Renglon ok bien={`El reloj, adentro de tu diseño: ${bienvenida.minutos} minutos al ${bienvenida.porcentaje}% desde que entran`} mal="" />
+                  : (
+                    <li className="flex gap-2 text-gray-500 panel-oscuro:text-gray-400">
+                      <span aria-hidden="true">•</span>
+                      <span>
+                        Dejó lugar para el reloj, pero está apagado: esa barra no se muestra.{" "}
+                        <Link href={`/digitales/marketing/bienvenida?p=${productoId}`} className="font-semibold text-orange-600 underline-offset-2 hover:underline">Prendelo en Marketing</Link>
+                        {" "}y aparece ahí, con tu diseño.
+                      </span>
+                    </li>
+                  ))}
+                {(inv.opiniones || inv.avisoVentas) && (
                   <li className="flex gap-2 text-gray-500 panel-oscuro:text-gray-400">
                     <span aria-hidden="true">•</span>
                     <span>
-                      Dejó lugar para {[inv.reloj && "el reloj", inv.opiniones && "las opiniones", inv.avisoVentas && "el aviso de ventas"].filter(Boolean).join(", ")}.
+                      Dejó lugar para {[inv.opiniones && "las opiniones", inv.avisoVentas && "el aviso de ventas"].filter(Boolean).join(" y ")}.
                       Eso lo ponemos nosotros, con datos de verdad, cuando lo tengas prendido.
                     </span>
                   </li>

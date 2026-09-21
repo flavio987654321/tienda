@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket, Mail, DoorOpen } from "lucide-react";
+import { Film, TrendingUp, ArrowRight, Share2, BarChart3, Ticket, Mail, DoorOpen, Timer } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { medicionDeLaTienda } from "@/lib/medicion-digital";
@@ -58,6 +58,13 @@ export default async function MarketingPage() {
       titulo: "Cupones de descuento",
       que: "Un código que la persona escribe al pagar: para un lanzamiento, para quien ya te compró, o para cerrar a quien preguntó y no se decidió.",
       accion: "Crear un cupón",
+    },
+    {
+      href: "/digitales/marketing/bienvenida",
+      Icon: Timer,
+      titulo: "Precio de bienvenida",
+      que: "Quien entra a tu página ve un precio más bajo y un reloj que cuenta hacia atrás. De verdad: no se reinicia al recargar, y al llegar a cero se cobra el precio normal. Starter y Pro.",
+      accion: "Armar el precio",
     },
     {
       href: "/digitales/marketing/salida",

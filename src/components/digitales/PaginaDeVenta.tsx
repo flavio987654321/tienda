@@ -27,6 +27,7 @@ import {
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
+import BarraDeBienvenida from "./BarraDeBienvenida";
 
 export type ProductoParaPagina = {
   id: string;
@@ -48,6 +49,14 @@ export type DatosDePagina = {
   anio: number;
   /** `true` en la vista previa: apaga el botón para no arrancar un pago. */
   esPrevia?: boolean;
+  /**
+   * El precio de bienvenida de ESTA visita, mientras corre. Con esto,
+   * `producto.price` ya es el de bienvenida y `comparePrice` el normal (lo
+   * decide la página, no el dibujante), y arriba va la barra con el reloj.
+   * `demo` es la previa del editor: quieta y marcada "Ejemplo". Ver
+   * `lib/bienvenida`.
+   */
+  bienvenida?: { productId: string; token: string; venceEn: number; texto: string; demo?: boolean };
   /**
    * Sólo en la previa del panel: al pasar el mouse marca cada sección y muestra
    * su nombre, y al tocarla avisa cuál fue.
@@ -163,8 +172,11 @@ function Titulo({ children, estilo }: { children: string; estilo: Estilo }) {
 function cuentaDeLaOferta(datos: DatosDePagina) {
   const { producto, bonos } = datos;
   /* Ver `ofertaVencida`: pasada la fecha, el descuento del producto deja de
-     mostrarse. Los bonos siguen contando porque siguen viniendo. */
-  const vencida = ofertaVencida(datos.pagina, Date.now());
+     mostrarse. Los bonos siguen contando porque siguen viniendo.
+     ⚠️ Salvo mientras corre el precio de bienvenida: ahí el tachado es el
+     precio normal, y es cierto aunque una "Oferta con fecha" vieja haya
+     quedado vencida. Son dos ofertas distintas. */
+  const vencida = !(datos.bienvenida && !datos.bienvenida.demo) && ofertaVencida(datos.pagina, Date.now());
   /* Sin precio tachado —o con la oferta ya terminada— el regular es el que se
      cobra: el ebook no aporta ahorro y el total es sólo lo que suman los bonos. */
   const regular = !vencida && producto.comparePrice && producto.comparePrice > producto.price
@@ -1190,6 +1202,9 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
       style={colores}
       className={`min-h-screen overflow-x-clip [overflow-wrap:anywhere] bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased ${conBarra ? "pb-24" : ""}`}
     >
+      {/* El reloj del precio de bienvenida, arriba de todo y pegado: un precio
+          que vence sin nada que lo diga es un precio que cambia solo. */}
+      {datos.bienvenida && <BarraDeBienvenida {...datos.bienvenida} />}
       {datos.pagina.secciones.map((s) => {
         if (!seDibuja(s, ctx)) return null;
         const dibujo = <Contenido key={s.clave} clave={s.clave} campos={s.campos} tono={s.tono} datos={datos} />;

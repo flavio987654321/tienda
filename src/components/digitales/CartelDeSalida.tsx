@@ -1,8 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { Clock, X } from "lucide-react";
 import { cuentaRegresiva, mostrarReloj, venceEnTexto } from "@/lib/oferta-salida";
+import { useAhora } from "@/lib/reloj-compartido";
 
 /**
  * El cartel de la oferta de salida. Uno solo para dos lugares: el checkout
@@ -55,34 +55,8 @@ export type ContenidoDelCartel = {
 const plata = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
-/* ── "Ahora" ────────────────────────────────────────────────────────────────
-   Un reloj compartido que late cada segundo mientras algún cartel con menos
-   de una hora por delante lo escucha; los carteles largos leen la hora una
-   vez y no se vuelven a dibujar. Es un `useSyncExternalStore` y no un
-   `setInterval` con estado: en el servidor la hora es 0 (no hay reloj que
-   leer) y la hidratación no choca con un segundo que ya pasó. */
-let ahoraCache = 0;
-const oyentes = new Set<() => void>();
-let latido: number | null = null;
-function suscribir(avisar: () => void) {
-  oyentes.add(avisar);
-  ahoraCache = Date.now();
-  if (latido === null) latido = window.setInterval(() => { ahoraCache = Date.now(); oyentes.forEach((f) => f()); }, 1000);
-  return () => {
-    oyentes.delete(avisar);
-    if (oyentes.size === 0 && latido !== null) { window.clearInterval(latido); latido = null; }
-  };
-}
-const sinSuscribir = () => () => {};
-function leerAhora(): number {
-  if (ahoraCache === 0) ahoraCache = Date.now();
-  return ahoraCache;
-}
-const enElServidor = () => 0;
-
-function useAhora(venceEn: number): number {
-  return useSyncExternalStore(mostrarReloj(venceEn, leerAhora()) ? suscribir : sinSuscribir, leerAhora, enElServidor);
-}
+/* "Ahora" sale del reloj compartido (`lib/reloj-compartido`): un solo
+   latido para este cartel, la barra del precio de bienvenida y el checkout. */
 
 export default function CartelDeSalida({ c, tarjeta, botonRedondo, onAceptar, onCerrar, yendo = false, error = "", href, alTocar }: {
   c: ContenidoDelCartel;

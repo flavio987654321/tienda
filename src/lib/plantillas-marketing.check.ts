@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { IDEAS_DE_CUPON, cuponDeLaIdea, PLANTILLAS_DE_CORREO, correoDeLaPlantilla, CONSEJO_DE_CUPON, CONSEJO_DE_CORREO, CONSEJO_DE_ENLACES, CONSEJO_DE_MEDICION } from "./plantillas-marketing";
 import { validarCuponNuevo } from "./cupones-digitales";
 import { validarCorreoNuevo } from "./correos-compradores";
+import { getArgentinaDayKey } from "./fechas-comerciales";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -22,12 +23,18 @@ const check = (id: string, ok: boolean, desc: string) => {
 };
 const leer = (f: string) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
 
+/* Una fecha fija para las cuentas de días (CUP-C: el resultado tiene que ser
+   siempre el mismo), y la de HOY de verdad para validar (CUP-B):
+   `validarCuponNuevo` rechaza un vencimiento que ya pasó, así que con la fija
+   este chequeo empezó a fallar solo el 19/09/26, cuatro días después de
+   escribirse, sin que nada estuviera roto. */
 const HOY = "2026-09-15";
+const HOY_DE_VERDAD = getArgentinaDayKey();
 
 /* ── Cupones ─────────────────────────────────────────────────────────────── */
 
 check("CUP-A", IDEAS_DE_CUPON.length === 3 && new Set(IDEAS_DE_CUPON.map((i) => i.codigo)).size === 3, "tres ideas, con códigos distintos");
-check("CUP-B", IDEAS_DE_CUPON.every((i) => validarCuponNuevo(cuponDeLaIdea(i, HOY)).ok), "cada idea pasa por validarCuponNuevo: lo que se sugiere se puede crear");
+check("CUP-B", IDEAS_DE_CUPON.every((i) => validarCuponNuevo(cuponDeLaIdea(i, HOY_DE_VERDAD)).ok), "cada idea pasa por validarCuponNuevo: lo que se sugiere se puede crear");
 const lanz = cuponDeLaIdea(IDEAS_DE_CUPON.find((i) => i.clave === "lanzamiento")!, HOY);
 check("CUP-C", lanz.venceAt === "2026-09-22" && lanz.topeUsos === "50" && cuponDeLaIdea(IDEAS_DE_CUPON.find((i) => i.clave === "volver")!, HOY).venceAt === "", "el vencimiento se cuenta desde hoy; sin vida es sin vencimiento");
 check("CUP-D", IDEAS_DE_CUPON.every((i) => i.porQue.length > 40 && !/\d+ ?% de (la gente|los compradores|las personas)/i.test(i.porQue)), "cada idea dice por qué, sin estadísticas inventadas");

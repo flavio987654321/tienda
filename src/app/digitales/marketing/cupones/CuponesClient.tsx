@@ -8,6 +8,7 @@ import { validarCuponNuevo, normalizarCodigo, textoDelDescuento, aQuienesNoLesAl
 import { IDEAS_DE_CUPON, cuponDeLaIdea, CONSEJO_DE_CUPON } from "@/lib/plantillas-marketing";
 import ConsejoDeUso from "../../ConsejoDeUso";
 import { esCodigoDeOferta } from "@/lib/oferta-salida";
+import { esCodigoDeBienvenida } from "@/lib/bienvenida";
 
 export type CuponEnPantalla = {
   id: string;
@@ -258,6 +259,11 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
                         de la oferta de salida
                       </Link>
                     )}
+                    {esCodigoDeBienvenida(c.codigo) && (
+                      <Link href="/digitales/marketing/bienvenida" className="rounded-full bg-orange-50 panel-oscuro:bg-orange-500/10 px-2 py-0.5 text-[11px] font-bold text-orange-700 panel-oscuro:text-orange-300 hover:underline">
+                        del precio de bienvenida
+                      </Link>
+                    )}
                   </div>
                   <p className="mt-1 text-[12.5px] text-gray-600 panel-oscuro:text-gray-400">
                     <span className="font-semibold text-gray-800 panel-oscuro:text-gray-200">{textoDelDescuento(c)} de descuento</span>
@@ -276,7 +282,7 @@ export default function CuponesClient({ cupones, productos, tope, hoy }: {
                     {tocando === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5" />}
                     {c.activo ? "Apagar" : "Prender"}
                   </button>
-                  {!esCodigoDeOferta(c.codigo) && <button
+                  {!esCodigoDeOferta(c.codigo) && !esCodigoDeBienvenida(c.codigo) && <button
                     type="button"
                     onClick={() => tocar(c, "borrar")}
                     disabled={tocando !== null}

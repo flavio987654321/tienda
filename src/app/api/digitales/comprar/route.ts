@@ -12,8 +12,7 @@ import { COMISION_DIGITAL } from "@/lib/planLimits";
 import { clasificarOrigen } from "@/lib/origen-visita";
 import { campaniaDe } from "@/lib/utm-digital";
 import { normalizarCodigo, porQueNoAplica, descuentoDe, type CuponDigitalPuro } from "@/lib/cupones-digitales";
-import { esCodigoDeOferta, leerOfertaSalida } from "@/lib/oferta-salida";
-import { leerTokenDeOferta } from "@/lib/oferta-salida-firma";
+import { porQueNoValeElAutomatico } from "@/lib/cupones-automaticos";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
@@ -209,7 +208,7 @@ export async function POST(req: NextRequest) {
     select: {
       id: true, name: true, price: true, archivoPath: true, rolDigital: true,
       /* Sólo para saber si promete garantía. Ver el bloque del consentimiento. */
-      paginaVenta: true, ofertaSalida: true,
+      paginaVenta: true, ofertaSalida: true, bienvenida: true,
       store: {
         select: {
           id: true, ownerId: true, mpAccessToken: true, isPublished: true,
@@ -370,15 +369,15 @@ export async function POST(req: NextRequest) {
       });
     }
     let motivo = cupon ? porQueNoAplica(cupon, { productId: producto.id, total: totalSinCupon }) : "Ese cupón no existe.";
-    /* El cupón de la oferta de salida vale por el plazo firmado, no por el
-       código. Misma regla que en `/api/digitales/cupon`. */
-    if (cupon && !motivo && esCodigoDeOferta(cupon.codigo)) {
-      const oferta = leerOfertaSalida(producto.ofertaSalida);
-      const plazo = oferta.activa && oferta.tipo === "DESCUENTO" ? leerTokenDeOferta(cuerpo.oferta, producto.id) : null;
-      if (!plazo) motivo = "Esa oferta ya venció.";
-    }
+    /* Los cupones automáticos valen por el plazo firmado, no por el código.
+       La MISMA función que `/api/digitales/cupon`: ver `lib/cupones-automaticos`. */
+    if (cupon && !motivo) motivo = porQueNoValeElAutomatico(cupon.codigo, producto, { oferta: cuerpo.oferta, bienvenida: cuerpo.bienvenida });
     if (!cupon || motivo) {
-      return NextResponse.json({ error: motivo ?? "Ese cupón no existe." }, { status: 400 });
+      /* `cuponRechazado` es para la pantalla: que saque el cupón en vez de
+         volver a mandarlo en cada intento. Vale para uno escrito que venció
+         entre aplicarlo y pagar, y para el de bienvenida que se quedó sin
+         plazo en el camino. */
+      return NextResponse.json({ error: motivo ?? "Ese cupón no existe.", cuponRechazado: true }, { status: 400 });
     }
     cuponAplicado = { codigo: cupon.codigo, descuento: descuentoDe(cupon, totalSinCupon) };
   }

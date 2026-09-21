@@ -12,11 +12,12 @@ import VisitaDigital from "../VisitaDigital";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 import { leerOfertaSalida, codigoDeLaOferta } from "@/lib/oferta-salida";
-import { firmarOferta, leerTokenDeOferta } from "@/lib/oferta-salida-firma";
+import { firmarOferta, leerTokenDeOferta, hayClaveDeFirma } from "@/lib/oferta-salida-firma";
 import { isSubscriptionActive, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { direccionBase } from "@/lib/enlaces-compartir";
-import type { OfertaEnElCheckout } from "./CheckoutClient";
+import type { OfertaEnElCheckout, BienvenidaEnElCheckout } from "./CheckoutClient";
+import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie } from "@/lib/bienvenida-servidor";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -45,11 +46,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ oferta?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ oferta?: string; bienvenida?: string }> };
 
 export default async function PantallaDePago({ params, searchParams }: Props) {
   const { id } = await params;
-  const { oferta: tokenPedido } = await searchParams;
+  const { oferta: tokenPedido, bienvenida: tokenDeBienvenidaPedido } = await searchParams;
 
   const fila = await prisma.product.findFirst({
     /* ⚠️ Sin `isActive` en el `where`, a propósito: se busca igual y se decide
@@ -57,7 +58,7 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, price: true, comparePrice: true, archivoPath: true,
-      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true, ofertaSalida: true,
+      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true, ofertaSalida: true, bienvenida: true,
       store: {
         select: {
           id: true, isPublished: true, mpAccessToken: true, ownerId: true, storeConfig: true,
@@ -140,7 +141,16 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
      y Pro, al día). El plazo se firma ACÁ: si el link ya traía un token
      válido —el del mail de carrito— se respeta ése, así la cuenta corre desde
      que se lo mandaron y no desde que abrió. Ver `lib/oferta-salida`. */
-  const oferta = await armarOferta(fila, seLePuedeVender, tokenPedido);
+  /* ── El precio de bienvenida ──────────────────────────────────────────────
+     La MISMA función que la página de venta, con la cookie y el token que
+     pueda venir en el link. Viva: el cupón se aplica solo en la pantalla.
+     Y mientras corre, la oferta de salida no sale: sería un descuento
+     arriba de otro. Vencida o nada: el checkout de siempre. */
+  const b = seLePuedeVender ? await bienvenidaDeLaVisita(fila, [await tokenDeBienvenidaDeLaCookie(fila.id), tokenDeBienvenidaPedido]) : null;
+  const bienvenida: BienvenidaEnElCheckout | null = b?.estado === "viva"
+    ? { productId: fila.id, codigo: b.codigo, porcentaje: b.porcentaje, token: b.token, texto: b.texto }
+    : null;
+  const oferta = bienvenida ? null : await armarOferta(fila, seLePuedeVender, tokenPedido);
 
   return (
     <div className={CLASES_FUENTES}>
@@ -194,6 +204,7 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
           botonRedondo={estilo.boton}
           tarjeta={estilo.tarjeta}
           oferta={oferta}
+          bienvenida={bienvenida}
         />
       </div>
     </div>
@@ -201,13 +212,16 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
 }
 
 type FilaDelPago = {
-  id: string; name: string; price: number; images: string; ofertaSalida: string | null;
+  id: string; name: string; price: number; images: string; ofertaSalida: string | null; bienvenida: string | null;
   store: { id: string; owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
 };
 
 async function armarOferta(fila: FilaDelPago, seLePuedeVender: boolean, tokenPedido: string | undefined): Promise<OfertaEnElCheckout | null> {
   const guardada = leerOfertaSalida(fila.ofertaSalida);
   if (!seLePuedeVender || !guardada.activa) return null;
+  /* Sin clave no hay plazo que firmar: el checkout sale sin oferta, con el
+     error en el log, en vez de un 500 en la pantalla de pago. */
+  if (!hayClaveDeFirma("la oferta de salida")) return null;
   const sub = fila.store.owner.subscription;
   if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) return null;
 

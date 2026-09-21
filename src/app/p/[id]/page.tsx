@@ -13,6 +13,8 @@ import { leerEstadoDeLanding, leerInventario } from "@/lib/landing-estado";
 import { armarLanding } from "@/lib/landing-propia";
 import LandingPropia from "@/components/digitales/LandingPropia";
 import { isSubscriptionActive } from "@/lib/subscription";
+import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie, type BienvenidaDeLaVisita } from "@/lib/bienvenida-servidor";
+import { BIENVENIDA_DE_FABRICA, leerBienvenida } from "@/lib/bienvenida";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,10 +53,10 @@ async function loQueSeMuestra(id: string) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, description: true, price: true, comparePrice: true,
-      images: true, isActive: true, paginaVenta: true, medicion: true, landingPropia: true,
+      images: true, isActive: true, paginaVenta: true, medicion: true, landingPropia: true, bienvenida: true,
       store: {
         select: {
-          ownerId: true, name: true, whatsappNumber: true, storeConfig: true,
+          id: true, ownerId: true, name: true, whatsappNumber: true, storeConfig: true,
           /* Para la landing propia: es de los planes pagos, como la oferta de
              salida. Si el plan vence, la dirección vuelve sola a la página de
              secciones y no se pierde nada de lo subido. */
@@ -162,21 +164,32 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
      `previa`). */
   const quiereLaPrevia = (await searchParams).landing === "previa";
   const previaDeLanding = quiereLaPrevia && (await getCurrentUser())?.id === fila.store.ownerId;
-  const landing = await laLanding(fila, previaDeLanding);
-
-  const datos = {
-    pagina: normalizarContenido(fila.paginaVenta),
-    producto: paraPagina(fila),
-    bonos: fila.hijos.map(paraPagina),
-    vendedor: { nombre: fila.store.name, contacto: fila.store.whatsappNumber },
-    anio: fila.anio,
-  };
-
   /* `?previa=1` es lo que carga el editor adentro de su iframe. Sólo cambia dos
      cosas: la página escucha el borrador que le manda el editor, y el botón de
      comprar queda apagado para no arrancar un pago desde el panel.
      No abre ninguna puerta: es la misma página y los mismos datos. */
   const previa = (await searchParams).previa === "1";
+
+  /* ── El precio de bienvenida de ESTA visita ──────────────────────────────
+     Viva, vencida o nada, según la cookie y lo configurado. En las previas
+     del panel no se firma nada ni se guarda nada: se muestra quieto y
+     marcado "Ejemplo", esté configurado o no, para que se vea dónde va. */
+  const bienvenida = previa || previaDeLanding ? null : await bienvenidaDeLaVisita(fila, [await tokenDeBienvenidaDeLaCookie(fila.id)]);
+  const viva = bienvenida?.estado === "viva" ? bienvenida : null;
+  const landing = await laLanding(fila, previaDeLanding, bienvenida);
+
+  const datos = {
+    pagina: normalizarContenido(fila.paginaVenta),
+    /* Mientras corre el reloj, el precio es el de bienvenida y el normal es
+       el que se tacha: la página entera —sello, ahorro, barra— sigue sola. */
+    producto: viva ? { ...paraPagina(fila), price: viva.precio, comparePrice: viva.precioNormal } : paraPagina(fila),
+    bonos: fila.hijos.map(paraPagina),
+    vendedor: { nombre: fila.store.name, contacto: fila.store.whatsappNumber },
+    anio: fila.anio,
+    bienvenida: viva
+      ? { productId: fila.id, token: viva.token, venceEn: viva.venceEn, texto: viva.texto }
+      : previa ? { productId: fila.id, token: "", venceEn: 0, texto: leerTextoDeBienvenida(fila.bienvenida), demo: true } : undefined,
+  };
   /* ⚠️ Las dos letras se declaran acá y no adentro del dibujante, y van las
      DOS aunque se use una. El dibujante lo comparten la página pública y la
      previa del editor —y la previa cambia de letra sin recargar—, así que las
@@ -225,9 +238,9 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
  * donde el número vive a mano adentro de un `<script>`.
  */
 async function laLanding(fila: {
-  id: string; name: string; price: number; comparePrice: number | null; landingPropia: string | null;
+  id: string; name: string; price: number; comparePrice: number | null; landingPropia: string | null; bienvenida: string | null;
   store: { owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
-}, previa = false): Promise<{ html: string; fuentes: string[] } | null> {
+}, previa: boolean, bienvenida: BienvenidaDeLaVisita): Promise<{ html: string; fuentes: string[] } | null> {
   const estado = leerEstadoDeLanding(fila.landingPropia);
   if ((!estado.activa && !previa) || !estado.versionId) return null;
   const sub = fila.store.owner.subscription;
@@ -236,10 +249,13 @@ async function laLanding(fila: {
   const version = await laVersion(estado.versionId, fila.id);
   if (!version) return null;
 
+  const viva = bienvenida?.estado === "viva" ? bienvenida : null;
   const html = armarLanding(version.html, {
     nombre: fila.name,
-    precio: fila.price,
-    precioAnterior: fila.comparePrice,
+    /* Mientras corre el reloj: el precio de bienvenida, y el normal tachado.
+       Lo que dice cada uno al vencer va aparte (`despues`). */
+    precio: viva ? viva.precio : fila.price,
+    precioAnterior: viva ? viva.precioNormal : fila.comparePrice,
     /* ⚠️ El MISMO link que pone la página de secciones (`PaginaDeVenta`), y
        por el mismo motivo: en el dominio de la plataforma
        —`tiendaapps.com/p/<id>`, que es donde vive la previa del panel y la
@@ -249,10 +265,13 @@ async function laLanding(fila: {
     hrefComprar: `/p/${fila.id}/pagar`,
     fotos: estado.fotos,
     enlaces: estado.enlaces,
-    /* Los bloques vivos llegan en el paso siguiente (reloj, opiniones,
-       aviso de ventas). Hasta entonces sus huecos se sacan, que es lo que
-       hace `armarLanding` sin HTML: mejor nada que un cuadro vacío. */
+    /* Los otros bloques vivos (opiniones, aviso de ventas) llegan en el paso
+       siguiente. Hasta entonces sus huecos se sacan, que es lo que hace
+       `armarLanding` sin HTML: mejor nada que un cuadro vacío. */
     bloques: {},
+    bienvenida: viva
+      ? { productId: fila.id, token: viva.token, venceEn: viva.venceEn, texto: viva.texto, despues: { precio: fila.price, precioAnterior: fila.comparePrice } }
+      : previa ? { productId: fila.id, token: "", venceEn: 0, texto: leerTextoDeBienvenida(fila.bienvenida), despues: { precio: fila.price, precioAnterior: fila.comparePrice }, demo: true } : undefined,
     /* En la previa, un hueco sin foto se marca en vez de desaparecer: es la
        forma de ver qué falta subir. */
     mostrarHuecos: previa,
@@ -294,4 +313,9 @@ async function laVersion(versionId: string, productId: string) {
   }
   guardadas.set(versionId, valor);
   return valor;
+}
+
+/** Para la previa: el texto de la barra si lo configuró, o el de fábrica. */
+function leerTextoDeBienvenida(raw: string | null): string {
+  return leerBienvenida(raw).texto || BIENVENIDA_DE_FABRICA.texto;
 }

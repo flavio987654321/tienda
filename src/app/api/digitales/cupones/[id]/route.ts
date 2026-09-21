@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { PREFIJO_DE_LA_OFERTA } from "@/lib/cupones-digitales";
+import { PREFIJO_DE_LA_OFERTA, PREFIJO_DE_BIENVENIDA } from "@/lib/cupones-digitales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,9 +30,10 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   const { id } = await ctx.params;
-  /* El de la oferta de salida no se borra desde acá: se apaga la oferta.
-     La pantalla no muestra el botón, y la ruta no lo permite igual. */
-  const { count } = await prisma.cuponDigital.deleteMany({ where: { id, store: { ownerId: user.id }, NOT: { codigo: { startsWith: PREFIJO_DE_LA_OFERTA } } } });
-  if (count === 0) return NextResponse.json({ error: "Ese cupón no existe, o es el de la oferta de salida: se apaga desde esa pantalla." }, { status: 404 });
+  /* Los automáticos —el de la oferta de salida y el del precio de bienvenida—
+     no se borran desde acá: se apaga la oferta. La pantalla no muestra el
+     botón, y la ruta no lo permite igual. */
+  const { count } = await prisma.cuponDigital.deleteMany({ where: { id, store: { ownerId: user.id }, NOT: { OR: [{ codigo: { startsWith: PREFIJO_DE_LA_OFERTA } }, { codigo: { startsWith: PREFIJO_DE_BIENVENIDA } }] } } });
+  if (count === 0) return NextResponse.json({ error: "Ese cupón no existe, o es el de una oferta automática: se apaga desde esa pantalla." }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

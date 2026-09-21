@@ -679,6 +679,11 @@ model Product {
   /// checkout sin pagar, como JSON. Null = apagada. La forma la declara
   /// `lib/oferta-salida`; el cupón que crea vive en `CuponDigital`.
   ofertaSalida  String?
+  /// El precio de bienvenida: un descuento que vale un rato desde que cada
+  /// visitante ENTRA a la página (el "reservado por 15:00", pero de verdad:
+  /// el plazo lo firma el servidor y lo hace cumplir al cobrar). JSON; la
+  /// forma la declara `lib/bienvenida`; el cupón que crea vive en `CuponDigital`.
+  bienvenida    String?
   /// La landing propia (el HTML que diseñó con Claude): si está prendida,
   /// qué versión se muestra, las fotos por nombre de hueco y los links del
   /// pie. JSON; la forma la declara `lib/landing-estado`. Las versiones del

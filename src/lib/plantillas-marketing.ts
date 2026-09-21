@@ -132,3 +132,8 @@ export const CONSEJO_DE_MEDICION =
 
 export const CONSEJO_DE_SALIDA =
   "El descuento de salida tiene que ser más grande que cualquier cupón que repartas afuera: si en la bio hay 10 % y acá 10 %, no hay motivo para quedarse. Y no lo cuentes en ningún lado: es para quien ya estaba por irse, no un precio de lista con otro nombre.";
+
+/* ── Precio de bienvenida ────────────────────────────────────────────────── */
+
+export const CONSEJO_DE_BIENVENIDA =
+  "Poné el precio de lista como el precio real, no inflado para que el de bienvenida parezca una ganga: quien vuelve al día siguiente lo ve, y si el número de antes era inventado, deja de creerte todo lo demás. Quince minutos alcanzan: es lo que dura leer la página y decidir; una hora es para quien compara.";

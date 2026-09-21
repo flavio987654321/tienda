@@ -35,7 +35,7 @@
 
 import { Element, Text, type ChildNode, type Document, type ParentNode } from "domhandler";
 import { findAll, textContent, appendChild, replaceElement, removeElement } from "domutils";
-import { MARCA_BARRA, CSS_DE_LA_BARRA, MARCA_FLECHA, CSS_DE_LAS_FLECHAS } from "@/lib/landing-efectos";
+import { MARCA_BARRA, CSS_DE_LA_BARRA, MARCA_FLECHA, CSS_DE_LAS_FLECHAS, MARCA_CUENTA } from "@/lib/landing-efectos";
 
 /** La marca que deja `limpiarLanding` en un `<button>` que pasó a `<span>`. */
 export const ERA_BOTON = "data-tienda-era";
@@ -510,4 +510,53 @@ function anteriorElemento(el: Element): Element | null {
     n = n.prev;
   }
   return null;
+}
+
+/* ── El contador escrito ────────────────────────────────────────────────────
+ *
+ * "🔥 Precio promocional reservado por: 15:00". Lo traen todas, y en todas
+ * es mentira: sin su script queda clavado. Hasta el 21/09/26 se avisaba
+ * ("pedile a Claude que lo saque o que deje el hueco"), y con el precio de
+ * bienvenida prendido quedaban DOS relojes: el nuestro arriba y el suyo
+ * quieto abajo. Ahora se rescata: la caja que lo contiene pasa a ser el
+ * hueco `reloj`, y la pastilla con la hora, el lugar de la cuenta.
+ *
+ *   - Prendido: adentro va el texto de la dueña y la cuenta de verdad,
+ *     vestidos con SU CSS —la barra sigue siendo su barra, la pastilla su
+ *     pastilla—.
+ *   - Apagado: la caja desaparece entera. Nunca un "15:00" quieto.
+ *
+ * Qué se reconoce: un elemento cuyo texto es SÓLO una hora ("15:00",
+ * "09:59:59"), sin hijos, con una señal de contador —su clase o la de su
+ * caja dice timer/countdown/time/reloj/contador/cuenta, o el texto de la
+ * caja dice "reservado", "expira", "termina", "quedan", "vence"— y una caja
+ * chica (≤ 120 letras, ≤ 6 elementos): una barra, no la sección entera.
+ * "Clase en vivo a las 18:00" no tiene señal y no se toca. Y "la clase
+ * termina a las 18:00" dice "termina", pero "a las" (o "18:00 hs") la
+ * delata como hora del día, y un horario no se toca. Uno solo: si hay un
+ * segundo contador, ése se sigue avisando.
+ */
+const HORA_ESCRITA = /^\s*\d{1,2}:\d{2}(:\d{2})?\s*$/;
+const SENAL_DE_CONTADOR = /timer|countdown|\btime\b|reloj|contador|cuenta/i;
+const TEXTO_DE_CONTADOR = /reservad|expira|termina|quedan|vence|se acaba/i;
+const HORA_DEL_DIA = /\b(a|desde|hasta|de)\s+las?\s+\d{1,2}:\d{2}|\d{1,2}:\d{2}\s*(hs\b|h\b|am\b|pm\b)/i;
+
+export function rescatarContador(doc: Document): Arreglos & { textos: string[] } {
+  for (const el of findAll((e) => !e.children.some((c) => c.type === "tag") && HORA_ESCRITA.test(textContent(e)), doc.children)) {
+    const caja = el.parent && el.parent.type === "tag" ? (el.parent as Element) : null;
+    if (!caja || caja.attribs["data-tienda"] !== undefined) continue;
+    /* Los trozos se unen con un espacio: pegados quedaría "reservado por:15:00". */
+    const textoCaja = caja.children.map((c) => textContent(c)).join(" ").replace(/\s+/g, " ").trim();
+    const clases = `${el.attribs.class ?? ""} ${caja.attribs.class ?? ""}`;
+    if (!SENAL_DE_CONTADOR.test(clases) && !TEXTO_DE_CONTADOR.test(textoCaja)) continue;
+    if (HORA_DEL_DIA.test(textoCaja)) continue;
+    if (textoCaja.length > 120 || findAll(() => true, caja.children).length > 6) continue;
+    caja.attribs["data-tienda"] = "reloj";
+    el.attribs[MARCA_CUENTA] = "";
+    return {
+      hechos: [`El contador escrito («${textoCaja}») pasó a ser el hueco del reloj: con el precio de bienvenida prendido cuenta de verdad, con tu diseño; apagado, esa barra desaparece.`],
+      sueltos: [], css: "", textos: [textoCaja],
+    };
+  }
+  return { hechos: [], sueltos: [], css: "", textos: [] };
 }
