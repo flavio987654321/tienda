@@ -476,6 +476,15 @@ check("PAN-C", /No pudimos conectarnos/.test(panel) && /Starter y Pro/.test(pane
 check("PAN-C2", /pedidoDeConversion\(producto, indicaciones\)/.test(panel) && /Ya tengo una página/.test(panel) && /role="tablist"/.test(panel)
   && /pedidoDeCambios\(\{ \.\.\.inv, quitado: version\.quitado \}\)/.test(panel) && /quedó quieto; abajo está el pedido/.test(panel),
   "el paso 1 tiene el camino 'ya tengo una página' con el pedido de conversión, y el pedido de cambios sabe qué código se sacó");
+/* Prender es lo que ve el público: el interruptor abre un repaso (fotos,
+   links guardados y completos, legales cargados, avisos, publicado) y recién
+   "Sí, prenderla" pide al servidor. Con links sin guardar no se puede.
+   Apagar sigue siendo inmediato: vuelve nuestra página. */
+check("PAN-E", panel.includes("if (estado.activa) void pedir({ activa: false }); else setVaAPrender(true)")
+  && /Antes de prenderla, así está:/.test(panel) && /Sí, prenderla/.test(panel) && /Todavía no/.test(panel)
+  && /onClick=\{\(\) => \{ setVaAPrender\(false\); void pedir\(\{ activa: true \}\); \}\}\s+disabled=\{sinGuardar\}/.test(panel)
+  && /esos lugares se sacan de la página/.test(panel) && /Te falta cargar/.test(panel) && panel.includes("!enlaces[claveDeLink(t)] && !legalDelLink(t)"),
+  "prender pide confirmación con el repaso de lo que falta y no deja prender con links sin guardar; apagar es inmediato; los legales no cuentan como links sin dirección");
 check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina),
   "con la landing prendida, el editor de secciones avisa que lo que se edita ahí no se muestra");
 

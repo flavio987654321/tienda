@@ -8148,8 +8148,20 @@ reembolso/devoluciones/garantía/cambios, arrepentimiento);
   esto es la red para las hechas por fuera.
 - Chequeos LEG-A…F (`landing-legales.check.ts`).
 
-🔲 Mirar el paso 1 con los dos caminos y el paso 5 con el selector a
-  360/768/1280 (necesita sesión).
+### Prender pide un repaso — 21/09/26
+
+El interruptor prendía al toque; sólo lo frenaba lo rojo. Ahora, al
+prender, se abre adentro de la tarjeta (como el borrado) "Antes de
+prenderla, así está": precio y botón conectados, fotos (las que faltan se
+sacan de la página), links guardados, links sin dirección (los legales no
+cuentan: van solos), legales sin cargar, avisos, y si el producto no está
+publicado. Nada frena salvo los links sin guardar (el botón "Sí,
+prenderla" se apaga hasta que guarde): lo demás es decisión de ella.
+Apagar sigue siendo inmediato. El servidor ya rechazaba prender con
+trabas; sigue igual. PAN-E.
+
+🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector y el
+  repaso de prender a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
 🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las
   previas) y las opiniones verificadas.

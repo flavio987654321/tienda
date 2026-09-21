@@ -86,6 +86,9 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const [linksOk, setLinksOk] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [vaABorrar, setVaABorrar] = useState(false);
+  /* Prender es lo que ve el público: antes, un repaso de lo que falta.
+     Apagar no pide nada, porque vuelve nuestra página. */
+  const [vaAPrender, setVaAPrender] = useState(false);
   const enVuelo = useRef(false);
   const archivo = useRef<HTMLInputElement>(null);
   /* Cambia con cada guardado: la previa se recarga sola al subir una versión
@@ -103,7 +106,10 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   const version = versiones.find((v) => v.id === estado.versionId) ?? null;
   const inv = version?.inventario ?? null;
   const fotosFaltan = inv ? inv.fotos.filter((f) => !estado.fotos[f]) : [];
-  const linksFaltan = inv ? inv.linksVacios.filter((t) => !enlaces[claveDeLink(t)]) : [];
+  /* Los legales no cuentan como "sin dirección": van solos a nuestra página. */
+  const linksFaltan = inv ? inv.linksVacios.filter((t) => !enlaces[claveDeLink(t)] && !legalDelLink(t)) : [];
+  /* Documentos legales que el pie linkea y ella no cargó todavía. */
+  const legalesFaltan = inv ? [...new Set(inv.linksVacios.map(legalDelLink).filter((l): l is NonNullable<typeof l> => !!l && faltaElDocumento(l, legalesCargados)))] : [];
   const hallazgos = inv?.hallazgos ?? [];
   const trabada = tieneTraba(hallazgos);
   /* Lo que hay que pedirle a Claude, ya escrito para él. Vacío si no hay
@@ -808,12 +814,48 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   aria-label="Usar mi propio diseño"
                   disabled={trabada && !estado.activa}
                   title={trabada && !estado.activa ? "Primero arreglá lo que está marcado en rojo" : undefined}
-                  onClick={() => { setMirando(null); void pedir({ activa: !estado.activa }); }}
+                  onClick={() => { setMirando(null); if (estado.activa) void pedir({ activa: false }); else setVaAPrender(true); }}
                   className={`mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${estado.activa ? "bg-orange-600" : "bg-gray-300 panel-oscuro:bg-gray-700"}`}
                 >
                   <span className={`block h-6 w-6 rounded-full bg-white transition-transform ${estado.activa ? "translate-x-5" : ""}`} />
                 </button>
               </div>
+              {vaAPrender && !estado.activa && (
+                <div className="mt-4 rounded-2xl border border-orange-200 panel-oscuro:border-orange-900/50 bg-orange-50 panel-oscuro:bg-orange-500/10 p-4">
+                  <p className="text-sm font-bold text-orange-900 panel-oscuro:text-orange-200">Antes de prenderla, así está:</p>
+                  {/* Cada renglón es un número que ya se calculó arriba; acá
+                      sólo se junta para que lo vea de una, antes de que lo vea
+                      el público. Lo que no está bien no frena —salvo los
+                      cambios sin guardar—: es su decisión. */}
+                  <ul className="mt-2 space-y-1 text-[13px] leading-relaxed">
+                    <Repaso ok={(inv?.precio ?? 0) > 0 && (inv?.comprar ?? 0) > 0} bien="El precio y el botón de pago están conectados." mal="El precio o el botón de pago no están conectados: la página no vende." />
+                    <Repaso ok={fotosFaltan.length === 0} bien={inv?.fotos.length ? "Las fotos están todas." : "No pide fotos."} mal={`Faltan ${fotosFaltan.length} de ${inv?.fotos.length ?? 0} fotos: esos lugares se sacan de la página.`} />
+                    <Repaso ok={!sinGuardar} bien="Los links del pie están guardados." mal="Tenés links sin guardar: guardalos primero (el botón de arriba)." />
+                    <Repaso ok={linksFaltan.length === 0} bien="Los links del pie llevan a algún lado." mal={`${linksFaltan.length} ${linksFaltan.length === 1 ? "link del pie no lleva" : "links del pie no llevan"} a ninguna parte (${linksFaltan.join(", ")}).`} />
+                    <Repaso ok={legalesFaltan.length === 0} bien="Los legales van a tu página de legales." mal={`Te falta cargar ${legalesFaltan.length === 1 ? "un documento legal" : `${legalesFaltan.length} documentos legales`} en Configuración → Legales: el link va a llevar a una página sin él.`} />
+                    {(inv?.avisos.length ?? 0) > 0 && <Repaso ok={false} bien="" mal={`Hay ${inv!.avisos.length} ${inv!.avisos.length === 1 ? "aviso" : "avisos"} más arriba que conviene mirar.`} />}
+                    {!publicado && <Repaso ok={false} bien="" mal="El producto no está publicado: prendida o no, la dirección no la ve nadie todavía." />}
+                  </ul>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setVaAPrender(false); void pedir({ activa: true }); }}
+                      disabled={sinGuardar}
+                      title={sinGuardar ? "Primero guardá los links" : undefined}
+                      className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Check className="h-4 w-4" /> Sí, prenderla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVaAPrender(false)}
+                      className="rounded-xl px-4 py-2.5 text-[13px] font-bold text-gray-600 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800"
+                    >
+                      Todavía no
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* ── Versiones ────────────────────────────────────────────── */}
@@ -994,6 +1036,16 @@ function usePedidoGuardado(productoId: string): [string, (v: string) => void] {
     oyentesDelPedido.forEach((f) => f());
   }, [clave]);
   return [valor, anotar];
+}
+
+/** Un renglón del repaso antes de prender: lo mismo que `Renglon`, en naranja. */
+function Repaso({ ok, bien, mal }: { ok: boolean; bien: string; mal: string }) {
+  return (
+    <li className={`flex gap-2 ${ok ? "text-gray-700 panel-oscuro:text-gray-300" : "text-orange-900 panel-oscuro:text-orange-200"}`}>
+      {ok ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600" /> : <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+      <span>{ok ? bien : mal}</span>
+    </li>
+  );
 }
 
 function Renglon({ ok, bien, mal }: { ok: boolean; bien: string; mal: string }) {
