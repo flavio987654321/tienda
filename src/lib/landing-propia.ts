@@ -55,7 +55,7 @@
 import sanitizeHtml from "sanitize-html";
 import { parseDocument } from "htmlparser2";
 import { Element, Text, type ChildNode, type Document } from "domhandler";
-import { findAll, findOne, removeElement, textContent, prependChild, appendChild } from "domutils";
+import { findAll, findOne, removeElement, textContent, prependChild, appendChild, append } from "domutils";
 import render from "dom-serializer";
 import { LANDING_MAX_BYTES, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 import { revisarLanding } from "@/lib/landing-revision";
@@ -64,6 +64,8 @@ import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REV
 import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA, MARCA_RELOJ, MARCA_DESPUES, MARCA_CUENTA, MARCA_DEMO } from "@/lib/landing-efectos";
 import { claveDeBienvenida } from "@/lib/bienvenida";
 import { cuentaRegresiva } from "@/lib/oferta-salida";
+import { legalDelLink, urlDeLegal, TEXTO_DE_ARREPENTIMIENTO } from "@/lib/landing-legales";
+import { CLAVE_ARREPENTIMIENTO } from "@/lib/politicas-tienda";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
 
@@ -637,6 +639,12 @@ export type DatosParaArmar = {
   fotos: Record<string, string>;
   /** Texto del link (normalizado con `claveDeLink`) → dirección. */
   enlaces: Record<string, string>;
+  /**
+   * Con esto, los links legales del pie que ella no llenó van a nuestra
+   * página de legales de ESTE producto, y el botón de arrepentimiento se
+   * garantiza. Sin esto (chequeos viejos), quedan como texto.
+   */
+  productId?: string;
   /** HTML ya dibujado por nosotros para cada bloque vivo; sin él, el hueco se saca. */
   bloques: { opiniones?: string; avisoVentas?: string };
   /**
@@ -707,7 +715,7 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
   for (const el of elementos) {
     const h = hueco(el);
     if (!h) {
-      if (el.name === "a") enlazar(el, d.enlaces);
+      if (el.name === "a") enlazar(el, d.enlaces, d.productId);
       continue;
     }
     if (h === "precio") {
@@ -751,6 +759,21 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
     const barra = new Element("div", { "data-tienda-barra-propia": "" });
     ponerReloj(barra, d.bienvenida);
     prependChild(doc, barra);
+  }
+  /* El botón de arrepentimiento es ley (Res. 424/2020): si el archivo no
+     trae un link que lo diga, va uno nuestro. Al lado del último link legal
+     del pie, con su misma clase —uno más de su fila, con su diseño—; y si
+     no hay ninguno, un párrafo al final, discreto. Ver `lib/landing-legales`. */
+  if (d.productId && !findOne((e) => e.name === "a" && legalDelLink(textContent(e)) === CLAVE_ARREPENTIMIENTO, doc.children)) {
+    const link = new Element("a", { href: urlDeLegal(d.productId, CLAVE_ARREPENTIMIENTO) }, [new Text(TEXTO_DE_ARREPENTIMIENTO)]);
+    const legales = findAll((e) => e.name === "a" && legalDelLink(textContent(e)) !== null, doc.children);
+    const ultimo = legales[legales.length - 1];
+    if (ultimo) {
+      if (ultimo.attribs.class) link.attribs.class = ultimo.attribs.class;
+      append(ultimo, link);
+    } else {
+      appendChild(doc, new Element("p", { "data-tienda-arrepentimiento": "" }, [link]));
+    }
   }
   return render(doc, { encodeEntities: "utf8", emptyAttrs: true });
 }
@@ -861,14 +884,27 @@ function ponerBloque(el: Element, html: string | undefined) {
   for (const hijo of [...trozo.children].reverse()) prependChild(el, hijo as ChildNode);
 }
 
-function enlazar(el: Element, enlaces: Record<string, string>) {
+function enlazar(el: Element, enlaces: Record<string, string>, productId?: string) {
+  const texto = textContent(el);
+  const legal = productId ? legalDelLink(texto) : null;
+  /* El de arrepentimiento es SIEMPRE el nuestro, traiga la dirección que
+     traiga: es ley, no una opción, y tiene que llevar al formulario real. */
+  if (legal === CLAVE_ARREPENTIMIENTO && productId) {
+    el.attribs.href = urlDeLegal(productId, legal);
+    delete el.attribs.target; delete el.attribs.rel;
+    return;
+  }
   const href = (el.attribs.href ?? "").trim();
   if (href !== "" && href !== "#") return;
-  const url = enlaces[claveDeLink(textContent(el))];
+  const url = enlaces[claveDeLink(texto)];
   if (url && /^(https?:|mailto:|tel:)/i.test(url)) {
     el.attribs.href = url;
     if (/^https?:/i.test(url)) { el.attribs.target = "_blank"; el.attribs.rel = "noopener noreferrer"; }
+    return;
   }
+  /* Un link legal sin dirección suya va a nuestra página de legales, que
+     muestra lo que cargó en Configuración → Legales. */
+  if (legal && productId) el.attribs.href = urlDeLegal(productId, legal);
 }
 
 /* Para los chequeos y para la previa. */

@@ -265,6 +265,9 @@ async function laLanding(fila: {
     hrefComprar: `/p/${fila.id}/pagar`,
     fotos: estado.fotos,
     enlaces: estado.enlaces,
+    /* Los links legales del pie van a `/p/<id>/legales`, y el botón de
+       arrepentimiento se garantiza. Ver `lib/landing-legales`. */
+    productId: fila.id,
     /* Los otros bloques vivos (opiniones, aviso de ventas) llegan en el paso
        siguiente. Hasta entonces sus huecos se sacan, que es lo que hace
        `armarLanding` sin HTML: mejor nada que un cuadro vacío. */

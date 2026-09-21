@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import type { EstadoDeLanding, InventarioDeLanding, QuitadoDeLanding } from "@/lib/landing-estado";
 import type { Bienvenida } from "@/lib/bienvenida";
+import { legalDelLink, urlDeLegal, faltaElDocumento } from "@/lib/landing-legales";
+import { CLAVE_ARREPENTIMIENTO } from "@/lib/politicas-tienda";
 /* `claveDeLink` y `acomodarEnlace` son las mismas del servidor, a propósito:
    si la pantalla calculara la clave por su cuenta, un acento de más guardaría
    el link en un cajón que nadie lee después. */
@@ -47,7 +49,7 @@ const MAX_FOTO_MB = 4;
  * subió, y marca con un borde punteado —y el nombre que pide el paso 4— cada
  * lugar de foto que todavía está vacío.
  */
-export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, producto, bienvenida }: {
+export default function LandingClient({ productoId, nombre, publicado, esPago, estado, versiones, producto, bienvenida, legalesCargados }: {
   productoId: string;
   nombre: string;
   publicado: boolean;
@@ -56,6 +58,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   versiones: VersionEnPantalla[];
   producto: ProductoParaInstrucciones;
   bienvenida: Bienvenida;
+  /** Claves de los documentos legales que ya cargó (Configuración → Legales). */
+  legalesCargados: readonly string[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +94,10 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
   /* A qué hueco de foto vuelve la previa al recargarse. Ver `MARCA_HUECO`. */
   const [mirando, setMirando] = useState<string | null>(null);
   const [indicaciones, anotar] = usePedidoGuardado(productoId);
+  /* En el paso 5, qué legales eligió mandar a otra dirección (aunque todavía
+     no la haya escrito): sin esto el selector volvería solo a "la nuestra"
+     al borrar el campo. */
+  const [eligioOtra, setEligioOtra] = useState<Record<string, boolean>>({});
   const instrucciones = camino === "nueva" ? instruccionesParaClaude(producto, indicaciones) : pedidoDeConversion(producto, indicaciones);
 
   const version = versiones.find((v) => v.id === estado.versionId) ?? null;
@@ -637,14 +645,86 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
               <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
                 <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">5. Los links que quedaron sueltos</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  Pegá a dónde lleva cada uno. Los que dejes vacíos no se van a poder tocar. No hace falta
-                  escribir el <code className="rounded bg-gray-100 panel-oscuro:bg-gray-800 px-1">https://</code>:
-                  ponelo como te lo copia el navegador y lo acomodamos. También vale un correo o un teléfono.
+                  Los legales (términos, privacidad, reembolsos) van solos a tu página de legales, con lo que
+                  cargaste en Configuración; si preferís otra dirección, elegila. Para el resto, pegá a dónde
+                  lleva cada uno: no hace falta escribir el{" "}
+                  <code className="rounded bg-gray-100 panel-oscuro:bg-gray-800 px-1">https://</code>, también vale
+                  un correo o un teléfono. Los que dejes vacíos no se van a poder tocar.
                 </p>
                 <ul className="mt-3 space-y-2">
                   {inv.linksVacios.map((texto) => {
                     const clave = claveDeLink(texto);
                     const mal = linkMal[clave];
+                    const legal = legalDelLink(texto);
+                    /* El de arrepentimiento no se elige: es ley, siempre el nuestro. */
+                    if (legal === CLAVE_ARREPENTIMIENTO) {
+                      return (
+                        <li key={clave} className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+                          <span className="truncate text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300">{texto}</span>
+                          <span className="text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">Va a tu botón de arrepentimiento, siempre: lo exige la ley.</span>
+                        </li>
+                      );
+                    }
+                    /* Un legal: nuestra página salvo que escriba otra dirección. El
+                       selector es la misma cosa dicha en dos palabras: vacío = la
+                       nuestra; con texto = la suya. */
+                    if (legal) {
+                      const otra = (enlaces[clave] ?? "") !== "" || eligioOtra[clave] === true;
+                      const falta = faltaElDocumento(legal, legalesCargados);
+                      return (
+                        <li key={clave} className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
+                          <span className="truncate text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300 sm:mt-2.5">{texto}</span>
+                          <div className="min-w-0 space-y-1.5">
+                            <select
+                              value={otra ? "otra" : "nuestra"}
+                              disabled={guardandoLinks}
+                              aria-label={`A dónde lleva "${texto}"`}
+                              onChange={(e) => {
+                                const eligeOtra = e.target.value === "otra";
+                                setEligioOtra((m) => ({ ...m, [clave]: eligeOtra }));
+                                if (!eligeOtra) { setEnlaces((m) => ({ ...m, [clave]: "" })); setLinkMal((m) => ({ ...m, [clave]: "" })); }
+                              }}
+                              className={CLASE_INPUT}
+                            >
+                              <option value="nuestra">Tu página de legales (recomendado)</option>
+                              <option value="otra">Otra dirección</option>
+                            </select>
+                            {otra ? (
+                              <>
+                                <input
+                                  value={enlaces[clave] ?? ""}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    setEnlaces((m) => ({ ...m, [clave]: v }));
+                                    if (mal) setLinkMal((m) => ({ ...m, [clave]: "" }));
+                                  }}
+                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); void guardarLosLinks(); } }}
+                                  disabled={guardandoLinks}
+                                  inputMode="url"
+                                  autoComplete="off"
+                                  spellCheck={false}
+                                  aria-label={`Otra dirección para "${texto}"`}
+                                  aria-invalid={!!mal}
+                                  placeholder="tutienda.com/terminos"
+                                  className={`${CLASE_INPUT} ${mal ? "border-red-300 panel-oscuro:border-red-800 focus:border-red-400 focus:ring-red-100" : ""}`}
+                                />
+                                {mal ? <p role="alert" className="mt-1 text-[12px] font-medium text-red-600">{mal}</p> : null}
+                              </>
+                            ) : falta ? (
+                              <p className="text-[12px] leading-relaxed text-amber-700 panel-oscuro:text-amber-300">
+                                Todavía no tenés cargado este documento: el link va a llevar a una página sin él.{" "}
+                                <Link href="/digitales/configuracion?tab=legales" className="font-semibold underline underline-offset-2">Cargalo en Configuración → Legales</Link>.
+                              </p>
+                            ) : (
+                              <p className="text-[12px] text-gray-500 panel-oscuro:text-gray-400">
+                                Lleva a{" "}
+                                <a href={urlDeLegal(productoId, legal)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">tu página de legales</a>, con lo que cargaste.
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    }
                     return (
                       <li key={clave} className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
                         <span className="truncate text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300 sm:mt-2.5">{texto}</span>

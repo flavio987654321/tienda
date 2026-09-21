@@ -8113,7 +8113,36 @@ en bordó con el tilde, su diseño. ARM-F4.
 El texto "Si te pasa aunque sea una…" era fijo en el HTML (el script lo
 cambiaba por "te pasan 3 de 5"); queda el fijo, que está bien.
 
-🔲 Mirar el paso 1 con los dos caminos a 360/768/1280 (necesita sesión).
+### Los links legales del pie van solos, y el botón de arrepentimiento es ley — 21/09/26
+
+El pie de la landing propia trae "Términos", "Privacidad", "Reembolso"
+vacíos y el paso 5 le pedía a la vendedora que escribiera a mano una
+dirección que no conoce (`/p/<id>/legales?tipo=…`). Y peor: ninguna landing
+propia tenía el botón de arrepentimiento (Res. 424/2020): el pedido a
+Claude no lo pedía. Con la landing prendida, el producto incumplía.
+
+`lib/landing-legales` (puro): `legalDelLink(texto)` reconoce por lo que
+dice (términos/condiciones, privacidad/datos personales,
+reembolso/devoluciones/garantía/cambios, arrepentimiento);
+`urlDeLegal(productId, clave)`.
+
+- `armarLanding` recibe `productId`: un link legal sin dirección suya va a
+  nuestra página de legales; con la suya, gana la suya. El de
+  arrepentimiento es SIEMPRE el nuestro, traiga lo que traiga (tiene que
+  llevar al formulario real). Si el archivo no lo trae, se agrega al lado
+  del último legal del pie con su misma clase (uno más de su fila, con su
+  diseño; verificado a 360 y 1280 sobre la landing real: no lo tapa su
+  barra pegada); sin ningún legal, un párrafo discreto al final.
+- Paso 5 del panel: los legales tienen selector "Tu página de legales
+  (recomendado) / Otra dirección" (vacío = la nuestra; con texto = la
+  suya, sin sentinelas); si el documento no está cargado, aviso con link a
+  Configuración → Legales; el arrepentimiento no se elige.
+- El pedido a Claude (punto 7) pide los cinco links con texto exacto,
+  incluido "Botón de arrepentimiento".
+- Chequeos LEG-A…F (`landing-legales.check.ts`).
+
+🔲 Mirar el paso 1 con los dos caminos y el paso 5 con el selector a
+  360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
 🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las
   previas) y las opiniones verificadas.

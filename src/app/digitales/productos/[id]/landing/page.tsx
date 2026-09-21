@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { leerEstadoDeLanding, leerInventario, leerQuitado, LANDING_VERSIONES } from "@/lib/landing-estado";
 import { leerBienvenida } from "@/lib/bienvenida";
+import { documentosPublicados } from "@/lib/politicas-tienda";
 
 import BotonVolver from "../../../BotonVolver";
 import LandingClient, { type VersionEnPantalla } from "./LandingClient";
@@ -36,7 +37,7 @@ export default async function LandingPage({ params }: Props) {
       select: {
         id: true, name: true, description: true, price: true, comparePrice: true, isActive: true,
         landingPropia: true, bienvenida: true,
-        store: { select: { name: true } },
+        store: { select: { name: true, policyTerms: true, policyTermsActive: true, policyPrivacy: true, policyPrivacyActive: true, policyReturns: true, policyReturnsActive: true } },
         /* Las mismas que guarda el POST, ni una más: la lista no crece sin
            fin, así que no hay páginas que pasar. Pedir 10 cuando se guardan
            5 sólo servía para mostrar restos si alguna vez bajamos el número. */
@@ -88,6 +89,9 @@ export default async function LandingPage({ params }: Props) {
            prendido o apagado: apagado, esa barra no se muestra, y se prende
            en Marketing, no acá. */
         bienvenida={leerBienvenida(fila.bienvenida)}
+        /* Qué legales tiene cargados: los links legales del pie van a nuestra
+           página, y si el documento falta, el paso 5 se lo dice. */
+        legalesCargados={documentosPublicados(fila.store)}
         /* Los datos, no el texto ya armado: la pantalla lo rehace con lo que
            ella escriba sobre el diseño, con la misma función. */
         producto={{
