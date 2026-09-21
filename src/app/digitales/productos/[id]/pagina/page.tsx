@@ -108,6 +108,9 @@ export default async function EditorPaginaPage({ params }: Props) {
         cuantosBonos={fila.hijos.filter((h) => h.isActive).length}
         bonosSinPublicar={fila.hijos.filter((h) => !h.isActive).length}
         cupoIA={cupoIA}
+        /* Con el diseño propio prendido, la previa lo dice encima y el botón
+           de abrir muestra ESTA página, no la dirección (que muestra el otro). */
+        landingPrendida={leerEstadoDeLanding(fila.landingPropia).activa}
         /* Nunca tuvo página: esa primera generación no gasta cupo. */
       />
     </div>

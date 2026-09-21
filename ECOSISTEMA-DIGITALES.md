@@ -8160,8 +8160,18 @@ prenderla" se apaga hasta que guarde): lo demás es decisión de ella.
 Apagar sigue siendo inmediato. El servidor ya rechazaba prender con
 trabas; sigue igual. PAN-E.
 
-🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector y el
-  repaso de prender a 360/768/1280 (necesita sesión).
+### El editor de secciones dice "apagada" encima de la previa — 21/09/26
+
+Con el diseño propio prendido, el editor ya tenía la franja amarilla
+arriba, pero la previa se veía viva como si fuera lo publicado, y el botón
+"Abrirla" abría la dirección… que muestra la landing. Ahora: la etiqueta
+dice "Así se vería · apagada", una cinta ámbar pegada al marco de la previa
+dice "Apagada: tu dirección está mostrando tu propio diseño → Ver tu
+diseño" (marco punteado ámbar; la previa NO se destiñe, porque ahí edita
+colores), y el botón pasa a "Ver esta página" y abre `?previa=1`. PAN-D.
+
+🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
+  repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
 🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las
   previas) y las opiniones verificadas.

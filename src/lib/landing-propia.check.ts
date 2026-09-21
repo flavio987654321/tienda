@@ -485,8 +485,12 @@ check("PAN-E", panel.includes("if (estado.activa) void pedir({ activa: false });
   && /onClick=\{\(\) => \{ setVaAPrender\(false\); void pedir\(\{ activa: true \}\); \}\}\s+disabled=\{sinGuardar\}/.test(panel)
   && /esos lugares se sacan de la página/.test(panel) && /Te falta cargar/.test(panel) && panel.includes("!enlaces[claveDeLink(t)] && !legalDelLink(t)"),
   "prender pide confirmación con el repaso de lo que falta y no deja prender con links sin guardar; apagar es inmediato; los legales no cuentan como links sin dirección");
-check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina),
-  "con la landing prendida, el editor de secciones avisa que lo que se edita ahí no se muestra");
+const editorClient = leer("src/app/digitales/productos/[id]/pagina/EditorClient.tsx");
+check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina)
+  && /landingPrendida=\{leerEstadoDeLanding\(fila\.landingPropia\)\.activa\}/.test(editorPagina)
+  && /Apagada: tu dirección está mostrando tu propio diseño\./.test(editorClient) && /Así se vería · apagada/.test(editorClient)
+  && editorClient.includes("landingPrendida ? `/p/${productoId}?previa=1` : `/p/${productoId}`") && /landingPrendida \? "Ver esta página" : "Abrirla"/.test(editorClient),
+  "con la landing prendida, el editor de secciones lo avisa arriba, encima de la previa (sin desteñirla), y 'Abrirla' abre esta página y no la landing");
 
 check("BASE-A", /landingPropia String\?/.test(schema) && /model LandingDigital \{/.test(schema)
   && /ADD COLUMN IF NOT EXISTS "landingPropia" TEXT/.test(migracion) && /CREATE TABLE IF NOT EXISTS "LandingDigital"/.test(migracion),

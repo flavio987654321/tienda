@@ -48,6 +48,8 @@ type Props = {
   bonosSinPublicar: number;
   /** Cuántas generaciones de IA le quedan a la cuenta. */
   cupoIA: EstadoDelCupo;
+  /** La dirección está mostrando su propio diseño: esta página está apagada. */
+  landingPrendida: boolean;
 };
 
 /* ── Fechas ─────────────────────────────────────────────────────────────────
@@ -378,7 +380,7 @@ function CasillaLista({
 
 export default function EditorDePagina({
   productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar,
-  cupoIA,
+  cupoIA, landingPrendida,
 }: Props) {
   const [pagina, setPagina] = useState<PaginaVenta>(inicial);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -633,13 +635,15 @@ export default function EditorDePagina({
             hayCambiosSinGuardar={sucio}
             onListo={(nueva) => { setPagina(nueva); setSucio(true); setError(""); }}
           />
+          {/* Con el diseño propio prendido, la dirección muestra el otro: abrir
+              "la página" ahí sería abrir la landing. Se abre la previa de ESTA. */}
           <Link
-            href={`/p/${productoId}`}
+            href={landingPrendida ? `/p/${productoId}?previa=1` : `/p/${productoId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:bg-gray-800"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> Abrirla
+            <ExternalLink className="h-3.5 w-3.5" /> {landingPrendida ? "Ver esta página" : "Abrirla"}
           </Link>
           {/* ⚠️ En pantalla chica este botón NO va acá: se va con el scroll, y el
               formulario es larguísimo. Abajo hay uno igual, pegado arriba, que
@@ -1124,7 +1128,7 @@ export default function EditorDePagina({
           <div className="sticky top-4">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-                {sucio ? "Así va a quedar · sin guardar" : "Así se ve"}
+                {landingPrendida ? (sucio ? "Así quedaría · sin guardar · apagada" : "Así se vería · apagada") : sucio ? "Así va a quedar · sin guardar" : "Así se ve"}
               </p>
               <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5 panel-oscuro:bg-gray-800">
                 <button
@@ -1146,7 +1150,16 @@ export default function EditorDePagina({
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-800">
+            <div className={`overflow-hidden rounded-2xl border bg-gray-100 panel-oscuro:bg-gray-800 ${landingPrendida ? "border-dashed border-amber-400 panel-oscuro:border-amber-600" : "border-gray-200 panel-oscuro:border-gray-700"}`}>
+              {/* La cinta va ENCIMA de la previa y no en vez de ella: acá está
+                  editando colores, y desteñirla le mentiría sobre lo que elige.
+                  Que se vea viva y diga "apagada" es exactamente la verdad. */}
+              {landingPrendida && (
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-amber-100 panel-oscuro:bg-amber-500/20 px-3 py-2 text-[12px] font-semibold text-amber-900 panel-oscuro:text-amber-200">
+                  <span>Apagada: tu dirección está mostrando tu propio diseño.</span>
+                  <Link href={`/digitales/productos/${productoId}/landing`} className="shrink-0 underline underline-offset-2">Ver tu diseño</Link>
+                </div>
+              )}
               <div className={`mx-auto bg-white ${ancho === "celular" ? "max-w-[390px]" : ""}`}>
                 {/* `?previa=1` hace dos cosas: la página escucha el borrador que
                     le mandamos, y apaga el botón de comprar para que un clic acá
