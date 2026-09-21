@@ -8271,6 +8271,14 @@ Flavio, mirando la sección de avisos de la competencia: "¿qué activamos?,
   `/digitales`, splash) y si adentro se cierra la sesión aparece el
   `LoginGate`, como en tiendas y afiliados. No había nada que hacer ahí.
 
+- **Botón "Instalar la app"**: nadie guardaba el `beforeinstallprompt` del
+  navegador, así que la única puerta era el ícono chico de la barra de
+  direcciones. `lib/instalar-app` lo guarda una vez (lo engancha
+  `PWAManager`, que monta en el layout) y `useSePuedeInstalar` /
+  `instalarLaApp` lo ofrecen. En la sección de avisos: botón si el
+  navegador lo ofreció y no está instalada (Chrome, Edge, Android); en
+  iPhone, instrucciones. Se usa una sola vez. INST-A…F.
+
 Chequeos AVI-O/P/Q.
 
 ✅ Migración aplicada a la base el 21/09/26 (la corrió Flavio).

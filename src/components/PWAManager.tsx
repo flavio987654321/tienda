@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RefreshCw, X, Bell, Loader2 } from "lucide-react";
 import { subscribeToPush, isPushSupported, asegurarSuscripcionDelPanel } from "@/lib/push-client";
 import { esIOS, esAppInstalada } from "@/lib/pwa";
+import { escucharInstalacion } from "@/lib/instalar-app";
 
 // ─── Notification sound via Web Audio API (no binary file needed) ───────────
 function playNotificationSound() {
@@ -84,6 +85,11 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
   // deploy eso daba un falso positivo: al abrir la app ya te bajabas el código
   // nuevo, pero como el valor guardado era el viejo te aparecía igual el cartel
   // de "actualizá" para algo que acababas de recibir.
+  /* Guarda el "se puede instalar" del navegador para el botón de las
+     pantallas (`lib/instalar-app`). Acá porque el layout monta primero y el
+     evento llega una sola vez. */
+  useEffect(() => { escucharInstalacion(); }, []);
+
   useEffect(() => {
     if (!appVersion) return;
 

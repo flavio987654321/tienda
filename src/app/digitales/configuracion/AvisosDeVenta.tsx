@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
-import { Smartphone } from "lucide-react";
+import { Smartphone, Download } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getPushSubscription, isPushSupported } from "@/lib/push-client";
 import { esAppInstalada, esIOS } from "@/lib/pwa";
+import { useSePuedeInstalar, instalarLaApp } from "@/lib/instalar-app";
 
 /**
  * El interruptor de los avisos al teléfono, en Configuración → General.
@@ -48,6 +49,15 @@ export default function AvisosDeVenta() {
      consejo se muestra, nada más. */
   const instalada = useSyncExternalStore<boolean | null>(() => () => {}, () => esAppInstalada(), () => null);
   const iphone = useSyncExternalStore<boolean>(() => () => {}, () => esIOS(), () => false);
+  /* El navegador ofreció instalar (Chrome, Edge, Android): botón de verdad.
+     En iPhone no existe: instrucciones. */
+  const sePuedeInstalar = useSePuedeInstalar();
+  const [instalando, setInstalando] = useState(false);
+  async function instalar() {
+    if (instalando) return;
+    setInstalando(true);
+    try { await instalarLaApp(); } finally { setInstalando(false); }
+  }
 
   useEffect(() => {
     if (!soporta || bloqueadoAlEntrar) return;
@@ -103,18 +113,33 @@ export default function AvisosDeVenta() {
           navegador cerrado; en el navegador, no siempre. Se dice antes del
           botón, porque cambia qué conviene hacer primero. */}
       {instalada !== null && (
-        <p className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed ${instalada
+        <div className={`flex flex-wrap items-center gap-3 rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed ${instalada
           ? "bg-green-50 panel-oscuro:bg-green-500/10 text-green-800 panel-oscuro:text-green-300"
           : "bg-gray-50 panel-oscuro:bg-gray-800/60 text-gray-600 panel-oscuro:text-gray-300"}`}>
-          <Smartphone className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            {instalada
-              ? "Estás usando el panel instalado como app: los avisos llegan aunque lo tengas cerrado."
-              : iphone
-                ? "Estás en el navegador. En iPhone los avisos sólo llegan con la app instalada: Compartir → «Agregar a inicio», y abrila desde ahí."
-                : "Estás en el navegador. Para que los avisos lleguen con el navegador cerrado, instalá el panel como app: en el menú del navegador, «Instalar» o «Agregar a inicio»."}
+          <span className="flex min-w-0 flex-1 items-start gap-2">
+            <Smartphone className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              {instalada
+                ? "Estás usando el panel instalado como app: los avisos llegan aunque lo tengas cerrado."
+                : sePuedeInstalar
+                  ? "Estás en el navegador. Instalá el panel como app y los avisos llegan aunque lo tengas cerrado."
+                  : iphone
+                    ? "Estás en el navegador. En iPhone los avisos sólo llegan con la app instalada: Compartir → «Agregar a inicio», y abrila desde ahí."
+                    : "Estás en el navegador. Para que los avisos lleguen con el navegador cerrado, instalá el panel como app: en el menú del navegador, «Instalar» o «Agregar a inicio»."}
+            </span>
           </span>
-        </p>
+          {!instalada && sePuedeInstalar && (
+            <button
+              type="button"
+              onClick={() => void instalar()}
+              disabled={instalando}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-3.5 py-2 text-[12.5px] font-bold text-white panel-oscuro:text-gray-900 transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {instalando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              Instalar la app
+            </button>
+          )}
+        </div>
       )}
     <div className="flex flex-wrap items-center gap-3">
       <button
