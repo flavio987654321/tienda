@@ -794,11 +794,13 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             <section className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{estado.activa ? "Está prendida" : "Prenderla"}</p>
+                  <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{estado.activa ? "Tu dirección muestra tu diseño" : "Usar tu diseño en tu dirección"}</p>
+                  {/* No es "publicar": es elegir cuál de las dos páginas muestra
+                      la dirección. Publicar es del producto, y se dice. */}
                   <p className="mt-1 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
                     {estado.activa
-                      ? "Quien entra a la dirección de tu producto ve esta página. Apagala y vuelve la nuestra, tal como la tenías."
-                      : "Tu dirección va a mostrar esta página en vez de la nuestra. El pago, los cupones y las estadísticas siguen igual."}
+                      ? "Quien entra a la dirección de tu producto ve esta página en vez de la nuestra. Apagalo y vuelve la nuestra, tal como la tenías."
+                      : "Hoy tu dirección muestra nuestra página de secciones. Prendé esto y muestra la tuya. No es publicar: eso sigue siendo del producto, desde Productos. El pago, los cupones y las estadísticas siguen igual."}
                   </p>
                   {trabada && !estado.activa && (
                     <p className="mt-1.5 text-[12.5px] font-semibold text-red-700 panel-oscuro:text-red-300">

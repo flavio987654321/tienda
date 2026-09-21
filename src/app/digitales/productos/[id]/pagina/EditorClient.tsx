@@ -623,6 +623,16 @@ export default function EditorDePagina({
               </span>
             )}
           </p>
+          {/* Cómo se publica, dicho una vez y acá: no hay botón de publicar
+              porque no hay borrador. Lo que se guarda es lo que se ve, y si se
+              ve o no lo decide el producto, no esta pantalla. */}
+          <p className="mt-1 text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            {landingPrendida
+              ? "Ahora tu dirección muestra tu propio diseño; lo que guardes acá queda listo para cuando lo apagues."
+              : publicado
+                ? "Es la página que muestra tu dirección: lo que guardás se ve al instante."
+                : "Es la página que va a mostrar tu dirección: lo que guardás se ve en cuanto publiques el producto, desde Productos."}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">

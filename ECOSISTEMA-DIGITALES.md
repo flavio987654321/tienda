@@ -8176,6 +8176,26 @@ en una página que nadie ve. Botón apagado con el motivo, y la API
 por si el pedido viene de otro lado. Editar a mano sigue permitido: es
 gratis, se guarda, y sirve para dejar preparada la nuestra. PAN-F.
 
+### "Publicar" es una sola cosa, y se dice — 21/09/26
+
+Flavio: "en nuestra página no hay nada que diga publicar, ¿por qué sí hay
+un toggle en la landing? ¿se activa sola? ¿se publica desde el producto?".
+El modelo es simple y las pantallas no lo decían:
+
+- Publicar es UNO: el del producto (Productos). Sin eso, la dirección no
+  muestra nada, con cualquier diseño.
+- Nuestra página de secciones existe siempre y no se prende: lo que se
+  guarda es lo que se ve (si el producto está publicado). No hay borrador.
+- El toggle de la landing no publica: elige cuál de las dos páginas
+  muestra la dirección.
+
+Texto, no lógica: el editor dice bajo el título "Es la página que muestra
+tu dirección: lo que guardás se ve al instante" (o "…en cuanto publiques
+el producto, desde Productos", o "ahora tu dirección muestra tu propio
+diseño; lo que guardes queda listo para cuando lo apagues"). Y el toggle
+pasa de "Prenderla" a "Usar tu diseño en tu dirección", con "No es
+publicar: eso sigue siendo del producto".
+
 🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
   repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
