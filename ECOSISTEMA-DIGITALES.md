@@ -8257,7 +8257,7 @@ Flavio, mirando la sección de avisos de la competencia: "¿qué activamos?,
   con el mismo nombre que encabeza el mail de entrega (`armadoDelMail`).
 - **Mail por cada venta**, opcional: `Store.avisoMailVentas` (migración
   `20260921180000_aviso_mail_ventas`, idempotente; 🔲 sin aplicar hasta que
-  Flavio la corra). Casillero en Configuración → Avisos, se guarda al
+  Flavio la corra; ✅ aplicada el 21/09/26). Casillero en Configuración → Avisos, se guarda al
   tocarlo y vuelve atrás si el servidor dijo que no (`guardar` contesta
   booleano). `sendVentaDigitalVendedorEmail`: producto, cobrado, lo que le
   queda, quién compró, botón a Ventas; con `despues`, al mail de la CUENTA
@@ -8273,7 +8273,7 @@ Flavio, mirando la sección de avisos de la competencia: "¿qué activamos?,
 
 Chequeos AVI-O/P/Q.
 
-🔲 Migración sin aplicar: `npx dotenv -e .env.local -- npx prisma migrate deploy`.
+✅ Migración aplicada a la base el 21/09/26 (la corrió Flavio).
 
 🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
   repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).
