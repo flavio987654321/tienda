@@ -147,8 +147,10 @@ export const ESQUEMA_DEL_EMBUDO = {
       "El precio en pesos argentinos.",
     ),
     bono: ficha(
-      "Un regalo que va INCLUIDO con el principal y lo complementa: una plantilla, una checklist, un"
-      + " recetario. Tiene que ser algo distinto del principal, no un resumen de lo mismo.",
+      "Un regalo que va INCLUIDO con el principal y lo complementa: una checklist, un recetario, una"
+      + " guía corta, una plantilla para imprimir. Se entrega como PDF de texto: nada que haya que"
+      + " completar en la computadora (planillas de cálculo, calculadoras, apps). Tiene que ser algo"
+      + " distinto del principal, no un resumen de lo mismo.",
       "Siempre 0: el bono es gratis.",
     ),
     upsell: ficha(
@@ -209,10 +211,12 @@ export const INSTRUCCIONES = [
   "Te van a contar de qué es su negocio o su conocimiento, y tenés que devolver TRES fichas:",
   "el producto principal, un bono que va incluido, y un upsell que se ofrece después de pagar.",
   "",
-  "⚠️ TODO lo que propongas se entrega como UN ARCHIVO QUE SE DESCARGA: un PDF, una guía, una",
-  "planilla, un recetario. No propongas videos, clases en vivo, comunidades, grupos de WhatsApp,",
-  "asesorías ni acompañamiento — nada de eso se puede entregar acá, y quien vende se queda",
-  "prometiendo algo que la plataforma no le va a mandar a nadie.",
+  "⚠️ TODO lo que propongas se entrega como UN PDF QUE SE DESCARGA Y SE LEE: una guía, un recetario,",
+  "una checklist, un manual, una plantilla para imprimir. No propongas planillas de cálculo,",
+  "calculadoras, hojas de Excel ni nada que haya que completar en la computadora: acá sólo se",
+  "entrega PDF, y una 'calculadora en PDF' no calcula nada. Tampoco videos, clases en vivo,",
+  "comunidades, grupos de WhatsApp, asesorías ni acompañamiento — nada de eso se puede entregar",
+  "acá, y quien vende se queda prometiendo algo que la plataforma no le va a mandar a nadie.",
   "",
   "Cómo escribir:",
   "- Castellano rioplatense, de vos. Como habla alguien en Buenos Aires, no un manual.",
@@ -308,9 +312,11 @@ export function esquemaDeUnaFicha(rol: "BONO" | "UPSELL") {
     properties: {
       ficha: rol === "BONO"
         ? ficha(
-          "Un regalo que va INCLUIDO con el producto principal y lo complementa: una plantilla, una"
-          + " checklist, un recetario. Tiene que ser algo DISTINTO del principal, no un resumen de lo"
-          + " mismo, y distinto de los que ya existen.",
+          "Un regalo que va INCLUIDO con el producto principal y lo complementa: una checklist, un"
+          + " recetario, una guía corta, una plantilla para imprimir. Se entrega como PDF de texto:"
+          + " nada que haya que completar en la computadora (planillas de cálculo, calculadoras)."
+          + " Tiene que ser algo DISTINTO del principal, no un resumen de lo mismo, y distinto de"
+          + " los que ya existen.",
           "Siempre 0: el bono es gratis.",
         )
         : ficha(

@@ -6,7 +6,7 @@ import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   RotateCcw,
   Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
-  FileText, Download,
+  FileText, Download, CircleDashed,
 } from "lucide-react";
 import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -68,6 +68,8 @@ export type ProductoEnPantalla = {
   slugDigital: string | null;
   /** El dominio que conectó, si conectó alguno. Viene con Pro. */
   dominioPropio: string | null;
+  /** La dirección muestra su propio diseño (landing subida) en vez de la página de secciones. */
+  landingPrendida: boolean;
 };
 
 function money(n: number) {
@@ -424,14 +426,23 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
           {/* El aviso va ACÁ adentro y no en un panel de errores aparte: el
               lugar donde se ve el problema tiene que ser el lugar donde se
               arregla. */}
+          {/* Y el color dice qué tan grave es. En un BORRADOR lo que falta es
+              un pendiente —"Armar todo con IA" deja tres borradores sin PDF a
+              propósito, y tres franjas rojas de golpe parecían tres errores—:
+              gris, con "para publicarlo". En uno PUBLICADO es una urgencia de
+              verdad (se le desconectó el cobro): rojo. */}
           {falta && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/25 px-3 py-2">
-              <AlertTriangle aria-hidden className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+            <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 ${p.publicado
+              ? "bg-red-50 panel-oscuro:bg-red-500/10 border-red-100 panel-oscuro:border-red-500/25"
+              : "bg-gray-50 panel-oscuro:bg-gray-800/60 border-gray-200 panel-oscuro:border-gray-700"}`}>
+              {p.publicado
+                ? <AlertTriangle aria-hidden className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                : <CircleDashed aria-hidden className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />}
               {/* El `id` lo usa el botón de publicar con `aria-describedby`: el
                   motivo por el que está apagado tiene que llegarle también a
-                  quien no ve la franja roja. Ver ese botón más abajo. */}
-              <p id={`falta-${p.id}`} className="text-xs text-red-700 panel-oscuro:text-red-300 font-medium">
-                {falta}
+                  quien no ve la franja. Ver ese botón más abajo. */}
+              <p id={`falta-${p.id}`} className={`text-xs font-medium ${p.publicado ? "text-red-700 panel-oscuro:text-red-300" : "text-gray-600 panel-oscuro:text-gray-300"}`}>
+                {p.publicado ? falta : `Para publicarlo: ${falta.charAt(0).toLowerCase()}${falta.slice(1)}`}
               </p>
             </div>
           )}
@@ -996,7 +1007,20 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   motivo={porQueApagado}
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
-                  <LayoutTemplate className="h-3.5 w-3.5" /> Editar la página
+                  <LayoutTemplate className="h-3.5 w-3.5" /> {p.landingPrendida ? "Editar la página (apagada)" : "Editar la página"}
+                </Enlace>
+                {/* La otra puerta, a la vista: quien viene con su landing es lo
+                    primero que busca, y estaba escondida adentro del editor.
+                    Prendida, se destaca: es lo que la dirección muestra. */}
+                <Enlace
+                  href={`/digitales/productos/${p.id}/landing`}
+                  apagado={acc.deMentira}
+                  motivo={porQueApagado}
+                  className={p.landingPrendida
+                    ? "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                    : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"}
+                >
+                  <FileText className="h-3.5 w-3.5" /> {p.landingPrendida ? "Tu propio diseño · prendido" : "Tu propio diseño"}
                 </Enlace>
                 <Enlace
                   href={`/digitales/productos/${p.id}/direccion`}

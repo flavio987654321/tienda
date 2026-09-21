@@ -8196,6 +8196,34 @@ diseño; lo que guardes queda listo para cuando lo apagues"). Y el toggle
 pasa de "Prenderla" a "Usar tu diseño en tu dirección", con "No es
 publicar: eso sigue siendo del producto".
 
+### Repaso de la pantalla de productos — 21/09/26
+
+Flavio pidió un análisis con pros y contras. Veredicto: bien pensada, mal
+dosificada. Decidió: el tamaño de las tarjetas de bono y upsell queda
+igual; el resto se arregla.
+
+- **Bug**: la IA propuso como bono una "Calculadora de costos… una planilla
+  donde cargás…", y acá sólo se entrega PDF: el panel le pedía un PDF y le
+  ofrecía "Escribir el ebook" de una calculadora. El prompt del embudo
+  decía "una planilla" como ejemplo válido. Ahora pide "un PDF que se
+  descarga y se lee" y prohíbe planillas de cálculo, calculadoras y todo
+  lo que haya que completar en la computadora (instrucciones y esquema).
+  EMB-P2.
+- El cartel "Falta el archivo" era rojo también en un borrador, y "Armar
+  todo con IA" deja tres borradores sin PDF a propósito: tres alarmas de
+  golpe. Ahora en un borrador es gris, "Para publicarlo: falta el archivo…";
+  rojo sólo en uno publicado (se le desconectó el cobro).
+- Bajadas de Bonos y Upsells en criollo, con lo que decide quien compra y
+  que sin publicar no se muestran/ofrecen.
+- Botón "Tu propio diseño" en la tarjeta del principal, al lado de "Editar
+  la página" (estaba escondido adentro del editor). Prendido, se destaca en
+  naranja y "Editar la página" dice "(apagada)". `landingPrendida` en
+  `ProductoEnPantalla`.
+- Import sin usar (`SECCIONES`) en el editor, sacado: cero warnings.
+
+Queda anotado y NO se hace por decisión de Flavio: hijos como renglones
+compactos. Pendiente menor: plegar productos; la dirección como link.
+
 🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
   repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.

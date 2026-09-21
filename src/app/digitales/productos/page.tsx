@@ -6,6 +6,7 @@ import BotonVolver from "../BotonVolver";
 import { estadoDelCupo } from "@/lib/cupo-ia";
 import { estadoDelBorrador } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus } from "@/lib/subscription";
+import { leerEstadoDeLanding } from "@/lib/landing-estado";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
 
 /**
@@ -132,7 +133,7 @@ export default async function ProductosPage({
           id: true, name: true, description: true, price: true, comparePrice: true,
           rolDigital: true, padreId: true, archivoPath: true, archivoNombre: true,
           archivoPeso: true, isActive: true, images: true, slugDigital: true,
-          dominioPropio: true,
+          dominioPropio: true, landingPropia: true,
           /* Si tuvo alguna venta cobrada. Sólo el número, en la misma consulta:
              la tarjeta lo usa para avisar qué pasa al reemplazar o borrar. */
           _count: { select: { orderItems: { where: { order: { status: "CONFIRMED" } } } } },
@@ -181,6 +182,9 @@ export default async function ProductosPage({
     contado: f.ebookIA ? { tema: f.ebookIA.tema, publico: f.ebookIA.publico ?? "" } : null,
     slugDigital: f.slugDigital,
     dominioPropio: f.dominioPropio,
+    /* Para el botón "Tu propio diseño" de la tarjeta: prendido, la página
+       de secciones no es lo que muestra la dirección, y se dice ahí. */
+    landingPrendida: leerEstadoDeLanding(f.landingPropia).activa,
   }));
 
   /* ⚠️ `max-w-4xl` — 896 px — y no más.

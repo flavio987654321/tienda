@@ -42,14 +42,17 @@ export const COPY_ROL: Record<RolDigital, { titulo: string; bajada: string; cort
     bajada: "Es lo que la persona compra. Tiene su propia página de venta.",
     corto: "Principal",
   },
+  /* "Bono" y "upsell" son jerga: el dueño de la plataforma preguntó qué era
+     un upsell. El nombre queda (es el que usa todo el rubro y los correos),
+     pero la bajada lo explica en criollo, con lo que decide quien compra. */
   BONO: {
     titulo: "Bonos",
-    bajada: "Van de regalo con la compra. No se cobran: suman valor.",
+    bajada: "Regalos que van con la compra: no se cobran, suman valor. Sin publicar no se entregan ni se muestran.",
     corto: "Bono",
   },
   UPSELL: {
     titulo: "Upsells",
-    bajada: "Se ofrecen aparte durante la compra, con su propio precio.",
+    bajada: "Una oferta extra al pagar y después de pagar, con su propio precio; quien compra puede decir que no. Sin publicar no se ofrece.",
     corto: "Upsell",
   },
 };

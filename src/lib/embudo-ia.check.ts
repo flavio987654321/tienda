@@ -122,6 +122,16 @@ check("EMB-P",
   /No inventes títulos, matrículas/.test(INSTRUCCIONES) &&
   /salud, medicamentos, inversiones ni apuestas/.test(INSTRUCCIONES),
   "y prohíbe inventar respaldos, y los rubros que no se tocan");
+/* El 21/09/26 la IA propuso como bono una "Calculadora de costos… una
+   planilla donde cargás…": acá sólo se entrega PDF, y el panel le pedía un
+   PDF y le ofrecía "Escribir el ebook" de una calculadora. El prompt decía
+   "una planilla" como ejemplo válido. */
+check("EMB-P2",
+  /UN PDF QUE SE DESCARGA Y SE LEE/.test(INSTRUCCIONES) && /No propongas planillas de cálculo,/.test(INSTRUCCIONES)
+  && !/PDF, una guía, una",\n  "planilla/.test(INSTRUCCIONES)
+  && /nada que haya que completar en la computadora/.test(JSON.stringify(ESQUEMA_DEL_EMBUDO))
+  && !/una plantilla, una checklist/.test(JSON.stringify(ESQUEMA_DEL_EMBUDO)),
+  "el prompt y el esquema piden sólo cosas que se entregan como PDF de texto: nada de planillas ni calculadoras");
 
 /* Las tres fichas son obligatorias en el esquema: es lo que hace que la forma la
    garantice la API y no una frase pidiendo JSON. */

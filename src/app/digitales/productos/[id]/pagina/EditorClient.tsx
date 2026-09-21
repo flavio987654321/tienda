@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import {
   TONOS, buscarTono, TIPOGRAFIAS, CAMPOS_SEO,
-  SECCIONES, ESTILOS, PALETAS, buscarSeccion, buscarEstilo, porQueNoSeDibuja,
+  ESTILOS, PALETAS, buscarSeccion, buscarEstilo, porQueNoSeDibuja,
   AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
