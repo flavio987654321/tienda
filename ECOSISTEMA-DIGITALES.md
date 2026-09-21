@@ -3740,10 +3740,11 @@ la campanita del panel:
 - **"Devolución"** / **"Contracargo"** — que la plata salió y que se cortó el
   acceso, porque son dos cosas graves que pasaron sin que las pidiera.
 
-Van a la campanita y no como push: una cuenta digital hoy no tiene pedido el
-permiso de notificaciones (`disableNotifPrompt` en el layout, a propósito). El
-día que se saque esa bandera, la venta es el primer aviso que justifica
-interrumpir a alguien.
+Van a la campanita. La venta, además, como push al teléfono: es el único push
+del ecosistema (ver `/api/digitales/cobro`), y el panel armado pide el permiso
+(`PWAManager` sin `disableNotifPrompt`). Desde el 21/09/26, Configuración →
+General tiene el interruptor de verdad (`AvisosDeVenta`); antes había un botón
+apagado que decía lo contrario.
 
 ### ✅ El inicio del panel dejó de mentir — HECHO (03/09/26)
 
@@ -8223,6 +8224,28 @@ igual; el resto se arregla.
 
 Queda anotado y NO se hace por decisión de Flavio: hijos como renglones
 compactos. Pendiente menor: plegar productos; la dirección como link.
+
+### Repaso de Configuración — 21/09/26
+
+Flavio pidió revisar botones, doble click, validaciones y textos. Lo que
+está: `enVuelo` en cada guardado, las mismas validaciones en pantalla y
+servidor (nombre, checkout, dirección con reservados y unicidad contra
+tiendas y productos, mail, IDs de medición), rate limit, logo con tipo y
+peso, desconectar MP con confirmación, legales con tope y contador. Bien.
+
+Dos cosas viejas que decían lo contrario de lo que pasa:
+- **Dominio** decía "viene después". Existe por producto desde el 04/09.
+  Ahora dice que va por producto, se conecta desde "Cambiar la dirección",
+  y lleva a Productos. Sin punto gris.
+- **"Activar avisos"** estaba apagado diciendo que a una cuenta digital no
+  le llega ningún aviso. El cobro manda el push de "¡Vendiste!" y el panel
+  pide el permiso desde que hay ventas. Ahora es un interruptor de verdad
+  (`AvisosDeVenta`, con `push-client`): activar/apagar, doble click
+  cubierto, "bloqueado" explicado (candadito), iPhone sin app explicado.
+  Sin setState en efectos.
+
+Sigue pendiente de verdad, y sigue apagado: cerrar la cuenta (qué pasa con
+lo vendido). Chequeos VIEJO-A/B/C; el del panel dejó de contar `disabled`.
 
 🔲 Mirar el paso 1 con los dos caminos, el paso 5 con el selector, el
   repaso de prender y la cinta del editor a 360/768/1280 (necesita sesión).

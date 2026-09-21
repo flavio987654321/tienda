@@ -227,6 +227,26 @@ check("LOGO-B", !logoValido("https://rastreador.example.com/pixel.png"),
 check("LOGO-C", !logoValido("//rastreador.example.com/x.png"),
   "ni una que arranca con dos barras");
 
+/* ── Lo que la pantalla dice que no existe, tiene que no existir ──────────
+   El 21/09/26 la pestaña Dominio decía "viene después" (existía por producto
+   desde el 04/09) y "Activar avisos" estaba apagado diciendo que a una cuenta
+   digital no le llega ningún aviso (el cobro manda el push de "¡Vendiste!" y
+   el panel pide el permiso). Un panel que dice que algo no anda cuando anda
+   es peor que uno que no lo nombra. */
+const cliente = readFileSync("src/app/digitales/configuracion/ConfiguracionClient.tsx", "utf8");
+const general = readFileSync("src/app/digitales/configuracion/TabGeneral.tsx", "utf8");
+const avisos = readFileSync("src/app/digitales/configuracion/AvisosDeVenta.tsx", "utf8");
+const layout = readFileSync("src/app/digitales/layout.tsx", "utf8");
+check("VIEJO-A", !/lista: false/.test(cliente) && /El dominio va <strong[^>]*>por producto<\/strong>/.test(cliente) && /href="\/digitales\/productos"/.test(cliente),
+  "la pestaña Dominio no dice 'viene después': dice que va por producto y lleva a Productos");
+check("VIEJO-B", !/todavía no le llega ningún\s+aviso/.test(general) && /<AvisosDeVenta \/>/.test(general)
+  && /subscribeToPush\(\)/.test(avisos) && /unsubscribeFromPush\(\)/.test(avisos) && /enVuelo\.current/.test(avisos)
+  && /Notification\.permission === "denied"/.test(avisos) && /candadito/.test(avisos)
+  && !/useEffect\(\(\) => \{[^}]*setEstado\("bloqueado"\)/.test(avisos),
+  "'Activar avisos' es un interruptor de verdad, con doble click cubierto, el caso bloqueado explicado y sin setState en el efecto");
+check("VIEJO-C", (layout.match(/<PWAManager[^>]*scope="\/digitales"/g) ?? []).some((t) => !/disableNotifPrompt/.test(t)),
+  "el panel armado pide el permiso de avisos (sin disableNotifPrompt), así el push de la venta tiene a quién llegar");
+
 console.log(fallos === 0
   ? "\nok — la Configuración de una cuenta digital se sostiene"
   : `\nFALLA — ${fallos} chequeo(s) de la Configuración`);

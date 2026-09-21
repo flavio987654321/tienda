@@ -515,8 +515,11 @@ chequear("y dicen QUÉ falta, no 'próximamente'",
 /* Cada control de una sección apagada va deshabilitado de verdad. Un cartel que
    dice "todavía no" arriba de un campo que se puede escribir es un cartel que
    nadie lee. */
+/* Contaba `disabled` a secas (≥ 5) y bajó a 4 el 21/09/26 cuando "Activar
+   avisos" pasó a andar de verdad: el push de la venta existe. Ahora mira lo
+   único que sigue pendiente: cerrar la cuenta. */
 chequear("y sus controles están apagados de verdad",
-  (tabGeneral.match(/disabled\b/g) ?? []).length >= 5);
+  /<button\s+disabled[\s\S]{0,400}Cerrar mi cuenta/.test(tabGeneral) && !/todavía no le llega ningún\s+aviso/.test(tabGeneral));
 
 /* ⚠️ La zona de peligro es la que MENOS se puede apurar: de la cuenta cuelgan
    pedidos y permisos de descarga de gente que ya pagó. Un borrado hecho de

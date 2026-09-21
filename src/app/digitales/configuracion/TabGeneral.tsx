@@ -7,6 +7,7 @@ import {
 import {
   Seccion, BotonGuardar, Etiqueta, Ayuda, NotaPendiente, CLASE_INPUT,
 } from "./piezas";
+import AvisosDeVenta from "./AvisosDeVenta";
 import {
   LARGO_NOMBRE, LARGO_CHECKOUT, LARGO_EMAIL, LARGO_IA_PRODUCTO, LARGO_IA_DESCRIPCION,
   SLUG_MAXIMO,
@@ -386,23 +387,18 @@ export default function TabGeneral(p: Props) {
       </Seccion>
 
       {/* ── 4. App y notificaciones ────────────────────────────────────────── */}
+      {/* El interruptor de verdad: el push de "¡Vendiste!" existe desde que
+          hay ventas. Ver `AvisosDeVenta`. */}
       <Seccion
-        apagada
         Icono={Bell}
-        titulo="App y avisos de ventas"
-        bajada="Instalá el panel como app y recibí un aviso apenas se concreta una venta."
+        titulo="Avisos de ventas"
+        bajada="Un aviso en tu teléfono o tu computadora apenas se concreta una venta. Es el único que mandamos: lo demás se lee en la campanita."
       >
-        <button
-          disabled
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-bold text-gray-400 panel-oscuro:text-gray-500"
-        >
-          <Bell className="h-4 w-4" /> Activar avisos
-        </button>
-        <NotaPendiente>
-          El panel ya se instala como app, pero a una cuenta digital todavía no le llega ningún
-          aviso. Pedirte permiso ahora sería prometerte algo que no va a pasar: se prende cuando
-          haya una venta que avisar.
-        </NotaPendiente>
+        <AvisosDeVenta />
+        <Ayuda>
+          Si usás el panel desde el celular, instalalo como app (en el menú del navegador, «Agregar a
+          inicio»): los avisos llegan aunque tengas el navegador cerrado.
+        </Ayuda>
       </Seccion>
 
       {/* ── 5. Zona de peligro ─────────────────────────────────────────────── */}

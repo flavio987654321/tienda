@@ -378,10 +378,9 @@ async function acreditar(idDelPago: string) {
      la pantalla de gracias cuelga del producto del embudo, no de la línea. */
   /* ── El aviso a quien vendió ────────────────────────────────────────────
    *
-   * La campanita del panel, no un push: una cuenta digital hoy no tiene permiso
-   * de notificaciones pedido (ver el comentario largo en el layout del panel),
-   * así que esto se lee al entrar. Es el primer aviso que digitales escribe por
-   * algo que pasó bien, y es el que hace que Ventas valga la pena abrir.
+   * La campanita del panel, que se lee al entrar; el push al teléfono va
+   * aparte, más abajo. Es el primer aviso que digitales escribe por algo que
+   * pasó bien, y es el que hace que Ventas valga la pena abrir.
    *
    * ⚠️ Dice lo que LE QUEDA, no lo que se vendió. El bruto ya lo va a ver en
    * Mercado Pago; el número que nadie le muestra es el de después de la

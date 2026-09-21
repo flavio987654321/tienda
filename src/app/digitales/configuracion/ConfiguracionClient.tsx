@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Settings, CreditCard, BarChart3, Globe, Scale } from "lucide-react";
+import Link from "next/link";
+import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight } from "lucide-react";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   normalizarSlug, validarSlug, validarNombre, validarCheckoutName, validarEmail,
   validarContextoIA,
 } from "@/lib/configuracion-digital";
 import { validarGaId, validarPixelId, validarClarityId } from "@/lib/tracking-ids";
-import { EtiquetaPendiente, NotaPendiente, Seccion } from "./piezas";
+import { Seccion } from "./piezas";
 import TabGeneral, { MAX_LOGO_MB } from "./TabGeneral";
 import TabPagos from "./TabPagos";
 import TabMeta from "./TabMeta";
@@ -49,19 +50,21 @@ type Props = {
 /**
  * Las pestañas, en el orden que pidió Flavio.
  *
- * Meta y Dominio se dibujan aunque todavía no hagan nada: lo que no está
- * dibujado se olvida. Pero se marcan fuerte — una pestaña que promete algo que
- * no existe se lee como que el panel se rompió, no como que eso viene después.
+ * Dominio no se configura acá: el dominio propio cuelga de cada producto
+ * (`Product.dominioPropio`, desde el 04/09/26) y se conecta desde "Cambiar la
+ * dirección" del producto. La pestaña queda para que quien lo busque acá lo
+ * encuentre: dice dónde está y lleva. Hasta el 21/09/26 decía "viene después",
+ * cuando ya existía hacía dos semanas.
  */
 const PESTANAS = [
   { id: "general", label: "General", Icon: Settings, lista: true },
   { id: "pagos", label: "Pagos", Icon: CreditCard, lista: true },
   { id: "meta", label: "Meta / Tracking", Icon: BarChart3, lista: true },
-  /* Legales va DESPUES de lo que hace falta para vender y ANTES de Dominio, que
-     todavia no existe: no es lo primero que alguien viene a hacer, pero tiene
-     que estar antes de la primera venta. */
+  /* Legales va DESPUES de lo que hace falta para vender y ANTES de Dominio: no
+     es lo primero que alguien viene a hacer, pero tiene que estar antes de la
+     primera venta. */
   { id: "legales", label: "Legales", Icon: Scale, lista: true },
-  { id: "dominio", label: "Dominio", Icon: Globe, lista: false },
+  { id: "dominio", label: "Dominio", Icon: Globe, lista: true },
 ] as const;
 
 type Pestana = (typeof PESTANAS)[number]["id"];
@@ -341,25 +344,24 @@ export default function ConfiguracionClient(p: Props) {
 
       {pestana === "dominio" && (
         <Seccion
-          apagada
           Icono={Globe}
           titulo="Dominio propio"
-          bajada="Que tus páginas vivan en tu propia dirección en vez de colgar de la nuestra."
+          bajada="Que tu página viva en tu propia dirección (mecanicafacil.com) en vez de colgar de la nuestra."
         >
-          <NotaPendiente>
-            Hoy tus páginas están en una ruta nuestra. El paso de por medio es darle dirección
-            propia a cada producto; el dominio propio viene después de eso.
-            {" "}Cuando esté, va a ser de <span className="font-semibold text-gray-500 panel-oscuro:text-gray-400">Starter y Pro</span>.
-          </NotaPendiente>
+          <p className="text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+            El dominio va <strong className="font-bold">por producto</strong>, no por cuenta: cada página de
+            venta puede tener el suyo. Se conecta desde el producto, en{" "}
+            <strong className="font-bold">Cambiar la dirección</strong>. Es de los planes Pro.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/digitales/productos"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500"
+            >
+              Ir a tus productos <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </Seccion>
-      )}
-
-      {/* La etiqueta también abajo: si entraste a una pestaña apagada, el aviso
-          tiene que estar donde termina la lectura y no sólo arriba. */}
-      {pestana === "dominio" && (
-        <div className="flex justify-center mt-4">
-          <EtiquetaPendiente />
-        </div>
       )}
     </div>
   );
