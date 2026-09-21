@@ -18,6 +18,8 @@
  * chequeos.
  */
 
+import type { Document } from "domhandler";
+import { findAll, textContent } from "domutils";
 import { CLAVE_ARREPENTIMIENTO, type ClaveDigital } from "@/lib/politicas-tienda";
 
 export type ClaveLegalDelPie = ClaveDigital | typeof CLAVE_ARREPENTIMIENTO;
@@ -52,5 +54,27 @@ export function faltaElDocumento(clave: ClaveLegalDelPie, publicados: readonly s
   return clave !== CLAVE_ARREPENTIMIENTO && !publicados.includes(clave);
 }
 
-/** El texto del link que agregamos nosotros cuando el archivo no lo trae. */
-export const TEXTO_DE_ARREPENTIMIENTO = "Botón de arrepentimiento";
+/** El texto de cada link cuando lo agregamos nosotros. */
+export const TEXTO_DE_LEGAL: Record<ClaveLegalDelPie, string> = {
+  terminos: "Términos y condiciones",
+  privacidad: "Política de privacidad",
+  devoluciones: "Política de devoluciones",
+  [CLAVE_ARREPENTIMIENTO]: "Botón de arrepentimiento",
+};
+
+/** En este orden se agregan: como en el pie de nuestra página de secciones. */
+const ORDEN: readonly ClaveLegalDelPie[] = ["terminos", "privacidad", "devoluciones", CLAVE_ARREPENTIMIENTO];
+
+/**
+ * Qué legales le faltan al pie: los cargados que no tienen link, y el de
+ * arrepentimiento si no está. Uno no cargado no se agrega: un link a una
+ * política vacía es peor que ninguno (el panel se lo dice).
+ */
+export function legalesQueFaltan(doc: Document, cargados: readonly string[]): ClaveLegalDelPie[] {
+  const tiene = new Set<ClaveLegalDelPie>();
+  for (const a of findAll((e) => e.name === "a", doc.children)) {
+    const l = legalDelLink(textContent(a));
+    if (l) tiene.add(l);
+  }
+  return ORDEN.filter((c) => !tiene.has(c) && !faltaElDocumento(c, cargados));
+}

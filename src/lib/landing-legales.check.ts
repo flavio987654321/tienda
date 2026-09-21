@@ -3,7 +3,7 @@
    siempre el nuestro. Correr: npx tsx src/lib/landing-legales.check.ts */
 
 import { readFileSync } from "node:fs";
-import { legalDelLink, urlDeLegal, faltaElDocumento, TEXTO_DE_ARREPENTIMIENTO } from "./landing-legales";
+import { legalDelLink, urlDeLegal, faltaElDocumento, TEXTO_DE_LEGAL } from "./landing-legales";
 import { armarLanding } from "./landing-propia";
 
 let fallas = 0;
@@ -25,25 +25,30 @@ check("LEG-B", urlDeLegal("clx1", "terminos") === "/p/clx1/legales?tipo=terminos
 
 const base = { nombre: "x", precio: 9900, precioAnterior: null, hrefComprar: "/pagar", fotos: {}, bloques: {} };
 const pie = `<footer><a href="#">Términos y condiciones</a><a href="#">Política de privacidad</a><a href="#">Política de reembolso</a><a href="https://malo.com" target="_blank">Botón de arrepentimiento</a><a href="#">Instagram</a><a href="mailto:a@b.co">Contacto</a></footer>`;
-const conId = armarLanding(pie, { ...base, enlaces: { "politica-de-privacidad": "https://mia.com/priv", instagram: "https://instagram.com/yo" }, productId: "clx1" });
+const conId = armarLanding(pie, { ...base, enlaces: { "politica-de-privacidad": "https://mia.com/priv", instagram: "https://instagram.com/yo" }, productId: "clx1", legalesCargados: ["terminos", "privacidad", "devoluciones"] });
 check("LEG-C", /<a href="\/p\/clx1\/legales\?tipo=terminos">Términos y condiciones<\/a>/.test(conId)
   && /<a href="https:\/\/mia\.com\/priv" target="_blank" rel="noopener noreferrer">Política de privacidad<\/a>/.test(conId)
   && /<a href="\/p\/clx1\/legales\?tipo=devoluciones">Política de reembolso<\/a>/.test(conId)
   && /<a href="\/p\/clx1\/legales\?tipo=arrepentimiento">Botón de arrepentimiento<\/a>/.test(conId) && !/malo\.com/.test(conId)
   && /<a href="https:\/\/instagram\.com\/yo" target="_blank" rel="noopener noreferrer">Instagram<\/a>/.test(conId)
   && /<a href="mailto:a@b\.co">Contacto<\/a>/.test(conId)
-  && !/data-tienda-arrepentimiento/.test(conId),
+  && !/data-tienda-legales/.test(conId) && (conId.match(/legales[?]tipo=/g) ?? []).length === 3,
   "los legales sin dirección van a nuestra página; con la suya, gana la suya; el arrepentimiento es el nuestro aunque traiga otra; y si el archivo lo trae no se agrega otro");
 
-const sinBoton = armarLanding(`<footer><nav><a class="pie" href="#">Términos y condiciones</a><a class="pie" href="#">Instagram</a></nav><p>© 2026</p></footer>`, { ...base, enlaces: {}, productId: "clx1" });
-const sinPie = armarLanding(`<h1>Hola</h1>`, { ...base, enlaces: {}, productId: "clx1" });
-check("LEG-D", /<a class="pie" href="\/p\/clx1\/legales\?tipo=terminos">Términos y condiciones<\/a><a href="\/p\/clx1\/legales\?tipo=arrepentimiento" class="pie">Botón de arrepentimiento<\/a><a class="pie" href="#">Instagram<\/a>/.test(sinBoton)
-  && !/data-tienda-arrepentimiento/.test(sinBoton)
-  && new RegExp(`<p data-tienda-arrepentimiento=""><a href="/p/clx1/legales\\?tipo=arrepentimiento">${TEXTO_DE_ARREPENTIMIENTO}</a></p>$`).test(sinPie),
-  "sin link de arrepentimiento en el archivo, se agrega el nuestro al lado del último legal del pie, con su clase; sin ningún legal, un párrafo al final");
+/* Lo que falta se agrega: los cargados sin link, y el arrepentimiento
+   siempre. Al lado del último legal del pie con su clase, en orden; sin
+   ningún legal, un renglón al final. Un documento NO cargado no se agrega. */
+const sinBoton = armarLanding(`<footer><nav><a class="pie" href="#">Términos y condiciones</a><a class="pie" href="#">Instagram</a></nav><p>© 2026</p></footer>`, { ...base, enlaces: {}, productId: "clx1", legalesCargados: ["terminos", "privacidad"] });
+const sinPie = armarLanding(`<h1>Hola</h1>`, { ...base, enlaces: {}, productId: "clx1", legalesCargados: ["devoluciones"] });
+const sinCargados = armarLanding(`<h1>Hola</h1>`, { ...base, enlaces: {}, productId: "clx1" });
+check("LEG-D", /<a class="pie" href="\/p\/clx1\/legales\?tipo=terminos">Términos y condiciones<\/a><a href="\/p\/clx1\/legales\?tipo=privacidad" class="pie">Política de privacidad<\/a><a href="\/p\/clx1\/legales\?tipo=arrepentimiento" class="pie">Botón de arrepentimiento<\/a><a class="pie" href="#">Instagram<\/a>/.test(sinBoton)
+  && !/devoluciones|data-tienda-legales/.test(sinBoton)
+  && new RegExp(`<p data-tienda-legales=""><a href="/p/clx1/legales\\?tipo=devoluciones">${TEXTO_DE_LEGAL.devoluciones}</a> · <a href="/p/clx1/legales\\?tipo=arrepentimiento">${TEXTO_DE_LEGAL.arrepentimiento}</a></p>$`).test(sinPie)
+  && /<p data-tienda-legales=""><a href="\/p\/clx1\/legales\?tipo=arrepentimiento">Botón de arrepentimiento<\/a><\/p>$/.test(sinCargados),
+  "los legales cargados que faltan y el arrepentimiento se agregan al lado del último legal del pie, con su clase y en orden; sin ningún legal, un renglón al final; un documento no cargado no se agrega");
 
 const sinId = armarLanding(pie, { ...base, enlaces: {} });
-check("LEG-E", /<a href="#">Términos y condiciones<\/a>/.test(sinId) && !/data-tienda-arrepentimiento/.test(sinId),
+check("LEG-E", /<a href="#">Términos y condiciones<\/a>/.test(sinId) && !/data-tienda-legales|legales[?]tipo=/.test(sinId),
   "sin productId (chequeos viejos, previa sin producto) no se inventa ninguna dirección");
 
 const panel = readFileSync("src/app/digitales/productos/[id]/landing/LandingClient.tsx", "utf8");

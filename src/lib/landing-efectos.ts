@@ -135,8 +135,8 @@ img[${"data-tienda-foto"}]{display:block;max-width:100%;height:auto;object-fit:c
 [data-tienda-barra-propia]{position:sticky;top:0;z-index:50;background:#111;color:#fff;font:600 14px/1.4 system-ui,sans-serif;text-align:center;padding:9px 16px}
 [${MARCA_CUENTA}]{font-variant-numeric:tabular-nums}
 [data-tienda-ejemplo]{display:inline-block;margin-left:8px;background:#f97316;color:#fff;font:600 10px/1.4 system-ui,sans-serif;padding:2px 6px;border-radius:4px;vertical-align:middle;letter-spacing:.02em}
-[data-tienda-arrepentimiento]{margin:0;padding:14px 16px 18px;text-align:center;font:500 13px/1.4 system-ui,sans-serif;color:#555;background:#fff}
-[data-tienda-arrepentimiento] a{color:inherit;text-decoration:underline}
+[data-tienda-legales]{margin:0;padding:14px 16px 18px;text-align:center;font:500 13px/1.4 system-ui,sans-serif;color:#555;background:#fff}
+[data-tienda-legales] a{color:inherit;text-decoration:underline}
 </style>`;
 
 /**

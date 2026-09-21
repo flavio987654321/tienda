@@ -64,7 +64,7 @@ import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REV
 import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA, MARCA_RELOJ, MARCA_DESPUES, MARCA_CUENTA, MARCA_DEMO } from "@/lib/landing-efectos";
 import { claveDeBienvenida } from "@/lib/bienvenida";
 import { cuentaRegresiva } from "@/lib/oferta-salida";
-import { legalDelLink, urlDeLegal, TEXTO_DE_ARREPENTIMIENTO } from "@/lib/landing-legales";
+import { legalDelLink, urlDeLegal, legalesQueFaltan, TEXTO_DE_LEGAL } from "@/lib/landing-legales";
 import { CLAVE_ARREPENTIMIENTO } from "@/lib/politicas-tienda";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
@@ -645,6 +645,8 @@ export type DatosParaArmar = {
    * garantiza. Sin esto (chequeos viejos), quedan como texto.
    */
   productId?: string;
+  /** Qué documentos legales tiene cargados: los que falten en el pie se agregan. */
+  legalesCargados?: readonly string[];
   /** HTML ya dibujado por nosotros para cada bloque vivo; sin él, el hueco se saca. */
   bloques: { opiniones?: string; avisoVentas?: string };
   /**
@@ -760,19 +762,29 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
     ponerReloj(barra, d.bienvenida);
     prependChild(doc, barra);
   }
-  /* El botón de arrepentimiento es ley (Res. 424/2020): si el archivo no
-     trae un link que lo diga, va uno nuestro. Al lado del último link legal
-     del pie, con su misma clase —uno más de su fila, con su diseño—; y si
-     no hay ninguno, un párrafo al final, discreto. Ver `lib/landing-legales`. */
-  if (d.productId && !findOne((e) => e.name === "a" && legalDelLink(textContent(e)) === CLAVE_ARREPENTIMIENTO, doc.children)) {
-    const link = new Element("a", { href: urlDeLegal(d.productId, CLAVE_ARREPENTIMIENTO) }, [new Text(TEXTO_DE_ARREPENTIMIENTO)]);
-    const legales = findAll((e) => e.name === "a" && legalDelLink(textContent(e)) !== null, doc.children);
-    const ultimo = legales[legales.length - 1];
-    if (ultimo) {
-      if (ultimo.attribs.class) link.attribs.class = ultimo.attribs.class;
-      append(ultimo, link);
-    } else {
-      appendChild(doc, new Element("p", { "data-tienda-arrepentimiento": "" }, [link]));
+  /* Los legales que el archivo no trae los ponemos nosotros: los que ella
+     tiene cargados, y el botón de arrepentimiento siempre (Res. 424/2020).
+     Al lado del último link legal del pie, con su misma clase —uno más de
+     su fila, con su diseño—; si no hay ninguno, un renglón discreto al
+     final. Ver `lib/landing-legales`. */
+  if (d.productId) {
+    const faltan = legalesQueFaltan(doc, d.legalesCargados ?? []);
+    if (faltan.length) {
+      const legales = findAll((e) => e.name === "a" && legalDelLink(textContent(e)) !== null, doc.children);
+      let ultimo: Element | null = legales[legales.length - 1] ?? null;
+      const renglon = ultimo ? null : new Element("p", { "data-tienda-legales": "" });
+      for (const clave of faltan) {
+        const link = new Element("a", { href: urlDeLegal(d.productId, clave) }, [new Text(TEXTO_DE_LEGAL[clave])]);
+        if (ultimo) {
+          if (ultimo.attribs.class) link.attribs.class = ultimo.attribs.class;
+          append(ultimo, link);
+          ultimo = link;
+        } else if (renglon) {
+          if (renglon.children.length) appendChild(renglon, new Text(" · "));
+          appendChild(renglon, link);
+        }
+      }
+      if (renglon) appendChild(doc, renglon);
     }
   }
   return render(doc, { encodeEntities: "utf8", emptyAttrs: true });

@@ -11,6 +11,7 @@ import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { leerEstadoDeLanding, leerInventario } from "@/lib/landing-estado";
 import { armarLanding } from "@/lib/landing-propia";
+import { documentosPublicados, type FilaPoliticas } from "@/lib/politicas-tienda";
 import LandingPropia from "@/components/digitales/LandingPropia";
 import { isSubscriptionActive } from "@/lib/subscription";
 import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie, type BienvenidaDeLaVisita } from "@/lib/bienvenida-servidor";
@@ -57,6 +58,9 @@ async function loQueSeMuestra(id: string) {
       store: {
         select: {
           id: true, ownerId: true, name: true, whatsappNumber: true, storeConfig: true,
+          /* Para el pie de la landing propia: los legales que tiene cargados se
+             linkean, y los que falten se agregan. Ver `lib/landing-legales`. */
+          policyTerms: true, policyTermsActive: true, policyPrivacy: true, policyPrivacyActive: true, policyReturns: true, policyReturnsActive: true,
           /* Para la landing propia: es de los planes pagos, como la oferta de
              salida. Si el plan vence, la dirección vuelve sola a la página de
              secciones y no se pierde nada de lo subido. */
@@ -239,7 +243,7 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
  */
 async function laLanding(fila: {
   id: string; name: string; price: number; comparePrice: number | null; landingPropia: string | null; bienvenida: string | null;
-  store: { owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
+  store: FilaPoliticas & { owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
 }, previa: boolean, bienvenida: BienvenidaDeLaVisita): Promise<{ html: string; fuentes: string[] } | null> {
   const estado = leerEstadoDeLanding(fila.landingPropia);
   if ((!estado.activa && !previa) || !estado.versionId) return null;
@@ -268,6 +272,7 @@ async function laLanding(fila: {
     /* Los links legales del pie van a `/p/<id>/legales`, y el botón de
        arrepentimiento se garantiza. Ver `lib/landing-legales`. */
     productId: fila.id,
+    legalesCargados: documentosPublicados(fila.store),
     /* Los otros bloques vivos (opiniones, aviso de ventas) llegan en el paso
        siguiente. Hasta entonces sus huecos se sacan, que es lo que hace
        `armarLanding` sin HTML: mejor nada que un cuadro vacío. */

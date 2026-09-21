@@ -8139,6 +8139,13 @@ reembolso/devoluciones/garantía/cambios, arrepentimiento);
   Configuración → Legales; el arrepentimiento no se elige.
 - El pedido a Claude (punto 7) pide los cinco links con texto exacto,
   incluido "Botón de arrepentimiento".
+- Y si al pie le faltan legales, se agregan TODOS los que ella tiene
+  cargados (`legalesQueFaltan`: los publicados sin link, más el
+  arrepentimiento siempre), en el orden de nuestra página de secciones. Uno
+  no cargado no se agrega: un link a una política vacía es peor que
+  ninguno. La página pública pasa `legalesCargados` (documentosPublicados
+  de la Store). Una landing hecha con nuestro pedido ya los trae (punto 7);
+  esto es la red para las hechas por fuera.
 - Chequeos LEG-A…F (`landing-legales.check.ts`).
 
 🔲 Mirar el paso 1 con los dos caminos y el paso 5 con el selector a
