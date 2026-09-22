@@ -258,6 +258,16 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
   check("SAS-AD", /Te quedan \$\{quedan\} mensaje/.test(burbuja),
     "cuando quedan pocos mensajes del día se avisa antes de que se acaben");
 
+  /* Se arrastra, como en tiendas: tapa una esquina, y cuál molesta depende de
+     la pantalla. La posición queda en ESTE navegador. Y soltarla no puede
+     abrir el chat: el clic llega justo después de soltar. */
+  check("SAS-AD2", /drag\n\s+dragMomentum=\{false\}/.test(burbuja) && /dragConstraints=\{limites\}/.test(burbuja)
+    && /onClick=\{\(\) => \{ if \(!arrastrando\.current\) setAbierto/.test(burbuja)
+    && /localStorage\.setItem\("sasha-digital-pos"/.test(burbuja)
+    && /medir = \(\) => setLimites/.test(burbuja)
+    && (burbuja.match(/catch \{ \/\* sin localStorage/g) ?? []).length >= 2,
+    "la burbuja se arrastra, se acuerda dónde la dejaste, no se puede tirar fuera de la ventana, y soltarla no abre el chat");
+
   /* El botón de "ir a" sale de una lista blanca compartida con el prompt: el
      texto lo escribe un modelo y puede inventar una dirección que suene bien. */
   check("SAS-AE", leerMarcaDeIr("Andá a Productos. [[IR:/digitales/productos]]").ir?.href === "/digitales/productos"

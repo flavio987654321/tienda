@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue } from "framer-motion";
 import Link from "next/link";
 import { X, Send, Loader2, Lock, Sparkles, ArrowRight } from "lucide-react";
 import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
@@ -61,6 +62,38 @@ export default function Sasha() {
   const abortRef = useRef<AbortController | null>(null);
   const cajaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /* ── Se arrastra, igual que en el panel de tiendas ──────────────────────
+     Sasha tapa una esquina, y la esquina que tapa molesta distinto en cada
+     pantalla —acá abajo a la derecha está el botón de guardar de varias—.
+     Se puede mover a donde no moleste y ahí se queda: la posición se guarda
+     en ESTE navegador (`localStorage`), porque es una comodidad de quien la
+     corrió, no un dato de la cuenta.
+     `arrastrando` existe porque soltarla también dispara el clic: sin esa
+     guarda, moverla abría el chat todas las veces. */
+  const arrastrando = useRef(false);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const [limites, setLimites] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
+
+  useEffect(() => {
+    /* Los límites son el tamaño de la ventana menos el botón: que no se pueda
+       tirar afuera y quedarse sin forma de traerla de vuelta. Se recalculan al
+       rotar el celular o cambiar el tamaño de la ventana. */
+    const medir = () => setLimites({ left: -(window.innerWidth - 80), right: 0, top: -(window.innerHeight - 120), bottom: 0 });
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const guardada = localStorage.getItem("sasha-digital-pos");
+      if (!guardada) return;
+      const { x: gx, y: gy } = JSON.parse(guardada) as { x: number; y: number };
+      if (typeof gx === "number" && typeof gy === "number") { x.set(gx); y.set(gy); }
+    } catch { /* sin localStorage (o con basura adentro) arranca en su esquina */ }
+  }, [x, y]);
 
   /* El estado se pide UNA vez al abrir, no al cargar el panel: si no, cada
      pantalla del panel haría una consulta para algo que casi nunca se abre. */
@@ -156,14 +189,33 @@ export default function Sasha() {
           —aunque adentro sepa de otra cosa—. `bottom-20` en el celular para no
           taparle la barra de abajo del panel. `print:hidden` en todo: si el
           chat quedó abierto y se imprime, tapa la pantalla entera. */}
-      <button
-        type="button"
-        onClick={() => setAbierto((v) => !v)}
-        aria-label={abierto ? "Cerrar el chat con Sasha" : "Abrir el chat con Sasha"}
-        className="fixed bottom-20 right-4 z-[60] h-14 w-14 rounded-full transition-transform hover:scale-110 lg:bottom-6 lg:right-6 print:hidden"
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.05}
+        dragConstraints={limites}
+        style={{ x, y }}
+        onDragStart={() => { arrastrando.current = true; }}
+        onDragEnd={() => {
+          /* El clic llega justo después de soltar: se baja la guarda un
+             instante más tarde para que ese clic no abra el chat. */
+          setTimeout(() => { arrastrando.current = false; }, 50);
+          try {
+            localStorage.setItem("sasha-digital-pos", JSON.stringify({ x: x.get(), y: y.get() }));
+          } catch { /* sin localStorage se mueve igual, sólo que no se recuerda */ }
+        }}
+        className="fixed bottom-20 right-4 z-[60] h-14 w-14 cursor-grab touch-none active:cursor-grabbing lg:bottom-6 lg:right-6 print:hidden"
       >
-        <AsistentePersonaje estado={enviando ? "pensando" : abierto ? "sonriente" : "reposo"} size={56} />
-      </button>
+        <button
+          type="button"
+          onClick={() => { if (!arrastrando.current) setAbierto((v) => !v); }}
+          aria-label={abierto ? "Cerrar el chat con Sasha" : "Abrir el chat con Sasha"}
+          title="Sasha — arrastrala para moverla"
+          className="h-14 w-14 rounded-full transition-transform hover:scale-110"
+        >
+          <AsistentePersonaje estado={enviando ? "pensando" : abierto ? "sonriente" : "reposo"} size={56} />
+        </button>
+      </motion.div>
 
       {abierto && (
         <>
