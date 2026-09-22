@@ -363,7 +363,7 @@ const CONTENT = {
           "Datos de tu producto: nombre, precio, textos e imágenes de tu página de venta, y el archivo que subís para entregar (por ejemplo un PDF). El archivo se guarda en Supabase Storage y no es público: solo se llega a él con un enlace firmado de cinco minutos que emitimos al canjear un permiso de descarga.",
           "Datos de suscripción: el plan que tenés, su estado y sus fechas. Los pagos los procesa Mercado Pago; no almacenamos datos de tarjetas.",
           "Datos de tu cuenta de cobro: si conectás Mercado Pago, guardamos el permiso de acceso que nos otorga, cifrado. Sirve solo para crear los cobros de tus ventas a tu nombre.",
-          "Datos de tus ventas: el email y el nombre de quien te compra, qué compró, cuánto pagó y la comisión de la plataforma.",
+          "Datos de tus ventas: el email y el nombre de quien te compra, qué compró, cuánto pagó y la comisión de la plataforma. Si esa persona dejó su celular —es un campo opcional del checkout— también queda guardado, junto con esa compra.",
           "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
         ],
       },
@@ -422,9 +422,11 @@ const CONTENT = {
         title: "3 bis. Compras que alguien empezó y no terminó",
         body: "Cuando alguien completa su correo para comprarte y no llega a pagar, esa compra queda guardada. Vos la ves en tu panel y, si tenés plan Pro, le mandamos un recordatorio en tu nombre.",
         list: [
-          "Qué se guarda: el correo y el nombre que esa persona escribió, qué producto iba a comprar y por cuánto. Es lo mismo que habría quedado si el pago se completaba.",
-          "Qué ves vos: eso mismo, en la pantalla de Carritos abandonados, en los tres planes. Podés escribirle desde tu propio correo.",
-          "El recordatorio automático (plan Pro): lo manda TiendaApps desde su servidor, con el nombre de tu negocio en el asunto y el enlace a tu página. Se manda UNA sola vez por compra y nunca más: insistirle a quien no quiso comprar es correo no deseado.",
+          "Qué se guarda: el correo y el nombre que esa persona escribió, qué producto iba a comprar y por cuánto, y su celular si lo dejó (es opcional). Es lo mismo que habría quedado si el pago se completaba.",
+          "Qué ves vos: eso mismo, en la pantalla de Carritos abandonados, en los tres planes. Podés escribirle desde tu propio correo y, si dejó el celular, por WhatsApp desde tu propio teléfono.",
+          "⚠️ Para qué podés usar esos datos: para recuperar ESA compra, y nada más. No podés sumarlos a una lista de difusión ni mandarles promociones. No es una recomendación nuestra: esa persona los dejó para comprarte, y la ley 25.326 dice que un dato se usa para el fin con el que se pidió. Lo mismo vale para el celular de una venta ya cobrada.",
+          "El recordatorio automático (plan Pro): lo manda TiendaApps desde su servidor, POR MAIL, con el nombre de tu negocio en el asunto y el enlace a tu página. Se manda UNA sola vez por compra y nunca más: insistirle a quien no quiso comprar es correo no deseado.",
+          "Por WhatsApp no mandamos nada automático. El botón de la pantalla de Carritos abre TU WhatsApp con el mensaje escrito y lo mandás vos, desde tu teléfono, a alguien que empezó a comprarte.",
           "Nunca se le escribe a quien tiene el pago en camino —efectivo o en revisión—: esa compra todavía se puede pagar sola.",
           "Base legal: interés legítimo en recuperar una operación que la propia persona empezó (art. 5 inc. f, Ley 25.326). No es publicidad: no se le ofrece otra cosa ni se la suma a ninguna lista.",
           "Cuánto dura: si la compra no se completa, se elimina sola a los 45 días. Después de eso no queda ni el correo ni el registro del intento.",
@@ -528,7 +530,12 @@ const CONTENT = {
           "Cuánto dura: si no completás la compra, el carrito se elimina automáticamente a los 45 días de tu última actividad.",
           /* Agregado el 05/09/26: lo de arriba es de una tienda con carrito. Una
              compra de un producto digital no pasa por ahí y funciona distinto. */
-          "Si era la compra de un producto digital (un ebook, una guía): no hay carrito, así que lo que queda guardado es la compra sin pagar con tu correo, tu nombre y qué ibas a comprar. Quien vende la ve en su panel. Si tiene plan Pro, TiendaApps le manda de su parte UN único recordatorio con el enlace para terminarla, y nunca más. Si el pago estaba en camino —efectivo o en revisión— no se manda ninguno. Esa compra sin pagar también se elimina sola a los 45 días.",
+          "Si era la compra de un producto digital (un ebook, una guía): no hay carrito, así que lo que queda guardado es la compra sin pagar con tu correo, tu nombre y qué ibas a comprar, y también tu celular si lo dejaste — es un campo opcional del checkout. Quien vende lo ve en su panel. Si tiene plan Pro, TiendaApps le manda de su parte UN único recordatorio por MAIL con el enlace para terminarla, y nunca más. Si el pago estaba en camino —efectivo o en revisión— no se manda ninguno. Esa compra sin pagar también se elimina sola a los 45 días.",
+          /* Agregado el 23/09/26 junto con el campo de celular del checkout
+             digital. Va explícito quién manda el WhatsApp —la persona que
+             vende, desde su teléfono— porque no es lo mismo que un envío
+             automático nuestro, ni para quien lo recibe ni legalmente. */
+          "Ese celular sirve para dos cosas y nada más: que quien te vende pueda escribirte por WhatsApp si hay algún problema con tu compra, y que pueda recordarte esa compra que no terminaste. El mensaje lo manda esa persona desde su propio teléfono, no lo mandamos nosotros ni es automático. Usarlo para mandarte promociones o sumarte a una lista de difusión no está permitido: quien vende lo acepta al usar la plataforma, y lo tiene escrito en su panel.",
           "Cómo frenarlo: escribiendo a marketplacemitienda@gmail.com pedís que se borre el carrito y no recibís el recordatorio. También podés pedírselo directamente a la tienda.",
         ],
       },

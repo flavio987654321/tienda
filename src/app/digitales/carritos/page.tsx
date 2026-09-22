@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShoppingCart, Clock, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { ShoppingCart, Clock, Lock, ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { carritosDeLaCuenta, haceCuanto, MADURACION_MS } from "@/lib/carritos-digitales";
@@ -66,8 +66,23 @@ export default async function CarritosPage() {
           Carritos abandonados
         </h1>
         <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-          Gente que llegó hasta la pantalla de pago y no terminó de pagar. Ya te dejaron su correo,
-          así que les podés escribir.
+          Gente que llegó hasta la pantalla de pago y no terminó de pagar. Ya te dejaron su correo
+          —y a veces su celular—, así que les podés escribir.
+        </p>
+        {/* ⚠️ EL LÍMITE, ESCRITO DONDE SE USA EL DATO.
+            Ese correo y ese celular los dejaron para COMPRAR, no para recibir
+            cosas nuestras. La ley 25.326 dice que un dato se usa para el fin
+            con el que se pidió, y el fin que declaramos en el checkout y en la
+            política es recuperar ESA compra. Sumarlos a una lista de difusión
+            o mandarles otra oferta es otra cosa, y necesita su permiso.
+            Está también en la política; acá va porque es donde alguien está a
+            un clic de hacerlo. */}
+        <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-900 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+          <span>
+            Estos datos son para recuperar <strong>esa</strong> compra. No los sumes a una lista
+            para mandar promociones: te los dejaron para comprarte, no para eso.
+          </span>
         </p>
       </div>
 
@@ -115,6 +130,7 @@ export default async function CarritosPage() {
                    figurar con la fecha del día siguiente. */
                 cuando: haceCuanto(c.cuando, ahora),
                 recordado: c.recordadoEl !== null,
+                telefono: c.telefono,
               }))}
               tienda={store?.name ?? ""}
             />

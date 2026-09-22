@@ -855,6 +855,19 @@ model Order {
   // TIENDA, que tiene su propio `AbandonedCart`.
   recordatorioAt DateTime?
 
+  /// El celular que dejó quien compra, en el checkout digital. OPCIONAL: el
+  /// único campo obligatorio es el mail, que es a donde va el archivo.
+  ///
+  /// Va en la ORDEN y no en `User.phone` a propósito, y no es un detalle: la
+  /// cuenta de quien compra es UNA para toda la plataforma, así que un número
+  /// mal tipeado en una tienda le pisaría el dato a otra. Acá el dato es "el
+  /// teléfono que dio para ESTA compra", que es exactamente lo que dice la
+  /// política de privacidad y lo que limita para qué se puede usar:
+  /// recuperar esa compra, nunca una lista de difusión.
+  ///
+  /// Nulo en toda venta de TIENDA, que guarda el suyo en `shippingAddress`.
+  telefonoDigital String?
+
   /// De dónde vino la VISITA que terminó en esta compra digital: una de las
   /// etiquetas de `origen-visita` ("instagram", "whatsapp", "directo"…). La
   /// página de venta anota el referente y el utm al entrar, el checkout los

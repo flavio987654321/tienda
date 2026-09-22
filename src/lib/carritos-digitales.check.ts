@@ -271,6 +271,53 @@ check("CAR-AI",
   && /tokenDeBaja\(orden\.storeId, correo\)/.test(bloqueCarritoD) && /bajaPostUrl: urlBajaCorreoUnClic\(baseCarritoD, tokenBaja\)/.test(bloqueCarritoD),
   "el mail de carrito trae la baja de un clic y el link, con el mismo token firmado que los correos a compradores");
 
+/* ── El celular, que es opcional y de ESA compra ──────────────────────────── */
+
+const checkout = readFileSync("src/app/p/[id]/pagar/CheckoutClient.tsx", "utf8");
+const rutaComprar = readFileSync("src/app/api/digitales/comprar/route.ts", "utf8");
+const esquemaCarritos = readFileSync("prisma/schema.prisma", "utf8");
+const pantallaCarritos = readFileSync("src/app/digitales/carritos/page.tsx", "utf8");
+const listaCarritos = readFileSync("src/app/digitales/carritos/CarritosClient.tsx", "utf8");
+const politica = readFileSync("src/app/privacidad/page.tsx", "utf8");
+
+/* ⚠️ OPCIONAL, Y NUNCA PUEDE FRENAR UNA VENTA. Un checkout de impulso con un
+   campo obligatorio de más es gente que se va, y el teléfono no entrega nada:
+   lo que entrega es el mail. En el servidor se vuelve a validar —lo que llega
+   de un navegador no es una validación— y si no parece un celular se guarda
+   nulo y la compra sigue. */
+check("CAR-AJ",
+  /type="tel"/.test(checkout) && !/required/.test(checkout)
+  && /telefono: celularArgentino\(telefono\) \?\? undefined/.test(checkout)
+  && /const telefono = celularArgentino\(/.test(rutaComprar) && /telefonoDigital: telefono,/.test(rutaComprar),
+  "el celular es opcional, se valida de los dos lados, y uno inválido no frena la compra");
+
+/* ⚠️ VA EN LA ORDEN, NO EN LA CUENTA DE QUIEN COMPRA. Esa cuenta es UNA para
+   toda la plataforma: un número mal tipeado en una tienda le pisaría el dato a
+   otra. Y en la orden el dato es "el teléfono que dio para ESTA compra", que
+   es exactamente lo que la política dice y lo que limita para qué se usa. */
+check("CAR-AK",
+  /telefonoDigital String\?/.test(esquemaCarritos)
+  && !/phone: telefono|user\.update\([^)]*phone/.test(rutaComprar),
+  "el celular se guarda en la compra y nunca pisa el teléfono de la cuenta de quien compra");
+
+/* El botón abre el WhatsApp de quien vende, con el mensaje escrito: lo manda
+   ella, desde su teléfono. Automático por WhatsApp no mandamos nada — eso
+   sería otra cosa, y necesitaría otro permiso. */
+check("CAR-AL",
+  /https:\/\/wa\.me\/549\$\{cel\}\?text=\$\{cuerpo\}/.test(listaCarritos)
+  && /const cel = celularArgentino\(c\.telefono\)/.test(listaCarritos)
+  && /\{whatsapp && \(/.test(listaCarritos),
+  "en Carritos el WhatsApp lo abre quien vende, con el mismo mensaje que el mail, y sólo si dejó el celular");
+
+/* El límite, escrito donde alguien está a un clic de cruzarlo, y en la
+   política. Ese dato se dejó para comprar, no para recibir promociones. */
+check("CAR-AM",
+  /No los sumes a una lista/.test(pantallaCarritos)
+  && /tu celular si lo dejaste/.test(politica) && /El mensaje lo manda esa persona desde su propio teléfono/.test(politica)
+  && /recuperar ESA compra, y nada más/.test(politica),
+  "el límite de uso está en la pantalla donde se usa el dato y declarado en la política");
+
+
 console.log(fallos === 0
   ? "\nok — no se le escribe a quien está por pagar, y se escribe una sola vez"
   : `\nFALLA — ${fallos} chequeo(s) de los carritos abandonados`);

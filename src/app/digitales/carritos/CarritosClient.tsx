@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Mail, MailCheck } from "lucide-react";
+import { Copy, Check, Mail, MailCheck, MessageCircle } from "lucide-react";
+import { celularArgentino } from "@/lib/ventas-digitales";
+import { primerNombre } from "@/lib/texto";
 
 /**
  * La lista de carritos abandonados.
@@ -22,6 +24,8 @@ export type CarritoEnPantalla = {
   ordenId: string;
   email: string;
   nombre: string | null;
+  /** El celular que dejó en el checkout, si lo dejó: es opcional allá. */
+  telefono: string | null;
   productos: string[];
   total: number;
   /** Ya formateado en el servidor: ver el comentario en la página. */
@@ -60,10 +64,15 @@ export default function CarritosClient({
            abra con algo escrito. `encodeURIComponent` es obligatorio: un nombre
            de producto con un `&` o un `#` cortaría el enlace a la mitad. */
         const asunto = encodeURIComponent(`Tu compra de ${que}`);
-        const cuerpo = encodeURIComponent(
-          `Hola${c.nombre ? ` ${c.nombre}` : ""}, vi que empezaste a comprar ${que} y no llegaste a terminar. ` +
-          `Si te quedó alguna duda, contame y lo vemos.\n\n${tienda}`,
-        );
+        const texto =
+          `Hola${primerNombre(c.nombre) ? ` ${primerNombre(c.nombre)}` : ""}, vi que empezaste a comprar ${que} y no llegaste a terminar. ` +
+          `Si te quedó alguna duda, contame y lo vemos.\n\n${tienda}`;
+        const cuerpo = encodeURIComponent(texto);
+        /* El mismo mensaje por WhatsApp, para no escribir dos veces lo mismo.
+           `celularArgentino` deja el número como lo quiere wa.me (sin 15, sin
+           0, sin +54); si lo que dejó no parece un celular, no hay botón. */
+        const cel = celularArgentino(c.telefono);
+        const whatsapp = cel ? `https://wa.me/549${cel}?text=${cuerpo}` : null;
 
         return (
           <div
@@ -116,6 +125,27 @@ export default function CarritosClient({
                   >
                     <Mail className="h-3.5 w-3.5" />
                   </a>
+
+                  {/* ⚠️ WhatsApp SÓLO si dejó el celular: es opcional en el
+                      checkout, así que la mayoría de las filas no lo va a
+                      tener, y un botón que no hace nada es peor que no estar.
+
+                      Abre TU WhatsApp con el mensaje escrito: lo mandás vos,
+                      desde tu teléfono, a alguien que empezó a comprarte. No
+                      lo mandamos nosotros ni es automático — eso sería otra
+                      cosa, y necesitaría otro permiso. */}
+                  {whatsapp && (
+                    <a
+                      href={whatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Escribirle por WhatsApp al ${c.telefono}`}
+                      title="Escribirle por WhatsApp"
+                      className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-emerald-50 panel-oscuro:hover:bg-emerald-500/15 hover:text-emerald-600 transition-colors"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                 </>
               )}
             </div>

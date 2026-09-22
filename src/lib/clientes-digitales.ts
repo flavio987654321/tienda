@@ -105,6 +105,8 @@ export type CompraCruda = {
   /** Null en órdenes viejas: `comisionCongelada` lo toma como cero. */
   lockedCommissionRate: number | null;
   createdAt: Date;
+  /** El celular que dejó en el checkout de ESA compra. Opcional allá. */
+  telefonoDigital: string | null;
   items: {
     product: { name: string; rolDigital: string | null };
     descargas: { descargas: number; expiresAt: Date }[];
@@ -185,7 +187,13 @@ export function armarCliente(persona: PersonaCruda, compras: CompraCruda[], ahor
     id: persona.id,
     nombre: persona.name?.trim() || null,
     email: persona.email,
-    telefono: persona.phone,
+    /* ⚠️ EL TELÉFONO SALE DE LAS COMPRAS, no de la cuenta de la persona.
+       El checkout digital lo guarda en la orden a propósito —esa cuenta es
+       una sola para toda la plataforma y un número mal tipeado en una tienda
+       le pisaría el dato a otra—, así que acá se toma el de la compra más
+       reciente que haya dejado uno. `persona.phone` queda de respaldo para
+       quien además tiene cuenta y lo cargó ahí. */
+    telefono: ordenadas.find((o) => o.telefonoDigital)?.telefonoDigital ?? persona.phone,
     compras: cobradas.length,
     devoluciones: historial.length - cobradas.length,
     gasto: cobradas.reduce((s, h) => s + h.total, 0),

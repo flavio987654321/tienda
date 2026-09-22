@@ -251,8 +251,13 @@ check("PAN-D", /if \(esPrevia\)[\s\S]{0,200}disabled/.test(dibujante),
    precio, no entre el botón y el pago, y quien tiene un cupón lo BUSCA; sin
    el campo, es esa persona la que se va. */
 const paraEscribir = (formulario.match(/<input\b(?![^>]*type="checkbox")(?![^>]*aria-label="C.{1,2}digo de cup.{1,2}n")/g) ?? []).length;
-check("PAN-E", paraEscribir === 2 && formulario.includes("Opcional"),
-  "hay dos casillas para escribir y sólo una es obligatoria: el mail (el cupón aparte, y opcional)");
+/* Tres desde el 23/09/26, con el celular. Sigue habiendo UNO obligatorio —el
+   mail— y los otros dos están bajo el rótulo "Opcional" con el para qué al
+   lado. El número sube sólo con una decisión escrita; que este chequeo se
+   dispare es justamente lo que se quiere el día que alguien agregue un cuarto
+   sin pensarlo. */
+check("PAN-E", paraEscribir === 3 && formulario.includes("Opcional"),
+  "hay tres casillas para escribir y sólo una es obligatoria: el mail (el cupón aparte, y opcional)");
 
 /* ⚠️ Ningún precio viaja del navegador al servidor. Lo único que sube son
    identificadores; los importes los vuelve a buscar la ruta en la base. */

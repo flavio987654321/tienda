@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { normalizarEmail } from "@/lib/newsletter";
 import { limpiarTexto } from "@/lib/texto-limpio";
+import { celularArgentino } from "@/lib/ventas-digitales";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { normalizarContenido, diasDeGarantia } from "@/lib/pagina-venta";
 import { loQueFalta } from "@/lib/productos-digitales";
@@ -125,6 +126,16 @@ export async function POST(req: NextRequest) {
      mail quede escrito, y ahí se pierde la venta Y la recuperación. Se usa para
      saludar en el mail de entrega. */
   const nombre = limpiarTexto(cuerpo.nombre, LARGO_NOMBRE);
+
+  /* El celular, también opcional, y VUELTO A VALIDAR acá: la pantalla ya lo
+     filtró, pero lo que llega de un navegador no es una validación. Si no
+     parece un celular argentino se guarda `null` y la compra sigue igual —
+     este dato no entrega nada, así que jamás puede frenar una venta.
+
+     Se guarda en la ORDEN y no en la cuenta de quien compra: esa cuenta es
+     una sola para toda la plataforma, y un número mal tipeado en una tienda
+     le pisaría el dato a otra. Ver `schema.prisma`. */
+  const telefono = celularArgentino(typeof cuerpo.telefono === "string" ? cuerpo.telefono : null);
 
   /* ══════════════════════════════════════════════════════════════════════
      EL CONSENTIMIENTO, Y POR QUÉ SE FRENA ACÁ Y NO EN LA PANTALLA
@@ -482,6 +493,7 @@ export async function POST(req: NextRequest) {
           digitalConsentAt: new Date(),
           digitalConsentIp: ip,
           digitalConsentTexto: textoAceptado,
+          telefonoDigital: telefono,
           origenVisita,
           utmMedio: campania?.medio ?? null,
           utmCampania: campania?.campania ?? null,

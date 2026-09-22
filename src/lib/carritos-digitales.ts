@@ -52,6 +52,8 @@ export type CarritoDigital = {
   ordenId: string;
   email: string;
   nombre: string | null;
+  /** El celular que dejó en el checkout, si lo dejó. Es OPCIONAL allá. */
+  telefono: string | null;
   /** Lo que iba a comprar: el principal primero. */
   productos: string[];
   total: number;
@@ -91,6 +93,7 @@ export async function carritosDeLaCuenta(
     select: {
       id: true, total: true, createdAt: true,
       recordatorioAt: true,
+      telefonoDigital: true,
       buyer: { select: { email: true, name: true } },
       payment: { select: { status: true } },
       items: {
@@ -121,6 +124,7 @@ export async function carritosDeLaCuenta(
       ordenId: o.id,
       email: o.buyer.email ?? "",
       nombre: o.buyer.name,
+      telefono: o.telefonoDigital,
       productos: nombres,
       total: o.total,
       cuando: o.createdAt,

@@ -107,6 +107,7 @@ export async function armarClientes(ctx: ContextoDeClientes & { store: { id: str
       take: TECHO_DE_COMPRAS,
       select: {
         id: true, status: true, total: true, lockedCommissionRate: true, createdAt: true, buyerId: true,
+        telefonoDigital: true,
         items: { select: { productId: true, product: { select: { name: true, rolDigital: true } }, descargas: { select: { descargas: true, expiresAt: true } } } },
       },
     }),

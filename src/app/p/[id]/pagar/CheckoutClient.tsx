@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { origenAnotado } from "@/lib/visitas-digitales";
+import { celularArgentino } from "@/lib/ventas-digitales";
 import { descuentoDe, normalizarCodigo, textoDelDescuento, type TipoDeCupon } from "@/lib/cupones-digitales";
 import { venceEnDelToken, cuentaRegresiva } from "@/lib/oferta-salida";
 import { venceEnDelTokenDeBienvenida } from "@/lib/bienvenida";
@@ -22,7 +23,18 @@ import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } fro
  * un PDF hace falta uno. Cada campo de más entre el botón y el pago es gente que
  * se va, y ninguno de los otros tres entrega nada.
  *
- * El nombre está y es opcional: se usa para saludar en el mail de entrega.
+ * Los otros dos están y son OPCIONALES, cada uno con el para qué al lado:
+ *
+ *   - Nombre y apellido: para saludar en el mail, y para que quien vende sepa
+ *     quién le compró. Entero en un solo campo; donde hace falta partido —la
+ *     lista para Meta Ads— se parte solo.
+ *   - Celular: para que puedan escribirle por WhatsApp si hay un problema con
+ *     la compra, y —si la persona lo deja— para recuperar el carrito por ahí.
+ *     Se guarda en la ORDEN, no en la cuenta de quien compra: es el teléfono
+ *     de ESTA compra. Ver el comentario en `schema.prisma` y la política.
+ *
+ * Que el para qué esté al lado del campo no es cortesía: la ley 25.326 pide
+ * que el dato se pida para un fin declarado.
  *
  * ── Los números NO se calculan acá ──────────────────────────────────────────
  *
@@ -91,6 +103,7 @@ const plata = (n: number) =>
 export default function CheckoutClient(p: Props) {
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [error, setError] = useState("");
   /* Arranca APAGADA, siempre. Una casilla de consentimiento que viene marcada
@@ -295,6 +308,9 @@ export default function CheckoutClient(p: Props) {
           productoId: p.productoId,
           email: email.trim(),
           nombre: nombre.trim() || undefined,
+          /* Opcional, y sólo si parece un celular argentino: un número a
+             medio escribir no sirve ni para WhatsApp ni para Meta. */
+          telefono: celularArgentino(telefono) ?? undefined,
           /* Sólo identificadores. Ningún precio viaja desde acá. */
           upsells: elegidos,
           /* El CÓDIGO del cupón, nunca el monto: cuánto vale lo decide el servidor. */
@@ -425,6 +441,35 @@ export default function CheckoutClient(p: Props) {
               />
             </label>
             <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">Para saludarte en el mail y que quien vende sepa quién le compró.</p>
+
+            {/* ⚠️ EL CELULAR, OPCIONAL Y CON EL PARA QUÉ A LA VISTA. Dos cosas
+                que no son estética:
+
+                1. Opcional de verdad. Un teléfono obligatorio en un checkout
+                   de impulso es gente que se va, y uno escrito de apuro no
+                   sirve para nada. El que lo deja, lo deja bien.
+                2. Dice PARA QUÉ, al lado del campo y no escondido en un link.
+                   Es lo que pide la ley 25.326: el dato se pide para un fin
+                   declarado, y ese fin es ESTA compra — no una lista de
+                   difusión. Lo mismo está escrito en la política y en la
+                   pantalla de Carritos, para quien vende. */}
+            <label className="mt-3 block">
+              <span className="sr-only">Celular</span>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                maxLength={30}
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="Celular (11 5555-5555)"
+                disabled={!p.puedeCobrar}
+                className={`${campo} border py-2.5 text-sm`}
+              />
+            </label>
+            <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">
+              Por si hay algún problema con tu compra, para que puedan escribirte por WhatsApp. No se usa para nada más.
+            </p>
           </div>
 
           {/* ── La casilla del art. 1116 ──────────────────────────────────
