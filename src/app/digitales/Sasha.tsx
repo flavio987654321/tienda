@@ -105,10 +105,13 @@ export default function Sasha() {
     abortRef.current = control;
 
     try {
+      /* Se manda SÓLO el mensaje nuevo: lo dicho hasta ahora lo arma el
+         servidor con lo que tiene guardado. Ver el comentario en la ruta —
+         una charla que viaja desde el navegador se puede inventar. */
       const r = await fetch("/api/digitales/sasha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: conmigo }),
+        body: JSON.stringify({ mensaje: texto.trim() }),
         signal: control.signal,
       });
       if (!r.ok || !r.body) {

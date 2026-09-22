@@ -288,6 +288,25 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
     /rounded-xl bg-orange-500 p-2\.5 text-white/,                     // el botón de enviar
   ];
   const distintos = mismoAspecto.filter((re) => !(re.test(burbuja) && re.test(deTiendas)));
+  /* LA CHARLA LA ARMA EL SERVIDOR. Antes viajaba entera desde el navegador y
+     se usaba tal cual: cualquiera podía inventar mensajes "de Sasha" que ella
+     nunca dijo y meterlos en su propio contexto. Ahora el navegador manda
+     sólo el texto nuevo y lo anterior sale de la base. */
+  check("SAS-Y5", /const mensaje = leerMensaje\(body\);/.test(ruta) && !/messages: unknown/.test(ruta)
+    && /where: \{ userId: user\.id, day \},[\s\S]{0,200}take: MAX_MENSAJES_CONTEXTO/.test(ruta)
+    && /charlaDeHoy\(/.test(ruta)
+    && ruta.indexOf("findMany") < ruta.indexOf('role: "user", content: mensaje')
+    && /body: JSON\.stringify\(\{ mensaje: texto\.trim\(\) \}\)/.test(burbuja)
+    && !/messages: conmigo/.test(burbuja),
+    "el navegador manda sólo el mensaje nuevo: la charla que va al modelo sale de la base, no del pedido");
+
+  /* Leer la charla propia no cuesta plata, así que acá el contador caído deja
+     pasar — al revés que el del POST, que frena. Pero hay tope: que nadie
+     pueda martillar la base abriendo y cerrando. */
+  check("SAS-Y6", /checkRateLimit\(`sasha-digital-leer:\$\{user\.id\}`, LECTURAS_POR_MINUTO, 60_000\)/.test(ruta)
+    && /se deja pasar \(no cuesta plata\)/.test(ruta),
+    "leer el historial tiene tope, y si el contador se cae igual te deja ver lo tuyo");
+
   check("SAS-AH", distintos.length === 0,
     "Sasha se ve igual que en el panel de tiendas: mismo personaje, mismo cajón, mismas burbujas",
     distintos.map(String));

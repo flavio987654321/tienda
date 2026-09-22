@@ -8,6 +8,7 @@ import { snapshotDigital } from "@/lib/sasha-digital-datos";
 import { armarPromptDigital } from "@/lib/sasha-digital-prompt";
 import type { TierDigital } from "@/lib/planes-digitales";
 import { anthropic } from "@/lib/anthropic";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,36 +26,48 @@ export const dynamic = "force-dynamic";
  * rechazado no tiene que costar ni una consulta.
  */
 
-const MAX_MENSAJES_ABS = 200;
 const MAX_MENSAJES_CONTEXTO = 12;
 const MAX_CHARS_POR_MENSAJE = 2_000;
 const MAX_CHARS_TOTAL = 8_000;
 /** La respuesta es corta a propósito: se paga por token de salida, y Sasha contesta en tres frases. */
 const MAX_TOKENS_RESPUESTA = 500;
+/** Lecturas del historial por minuto. No cuesta plata: es leer lo propio. */
+const LECTURAS_POR_MINUTO = 60;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-function validarMensajes(body: unknown): ChatMessage[] | null {
-  if (typeof body !== "object" || body === null) return null;
-  const messages = (body as { messages?: unknown }).messages;
-  if (!Array.isArray(messages) || messages.length > MAX_MENSAJES_ABS) return null;
-  const validados: ChatMessage[] = [];
-  for (const m of messages) {
-    if (typeof m !== "object" || m === null) return null;
-    const { role, content } = m as { role?: unknown; content?: unknown };
-    if (role !== "user" && role !== "assistant") return null;
-    if (typeof content !== "string" || content.length === 0 || content.length > MAX_CHARS_POR_MENSAJE) return null;
-    validados.push({ role, content });
-  }
-  /* Una charla larga no se rechaza: se recorta por los mensajes más viejos
-     hasta entrar en el presupuesto. Lo que se manda se paga. */
-  let recientes = validados.slice(-MAX_MENSAJES_CONTEXTO);
+/**
+ * La charla de hoy, ARMADA EN EL SERVIDOR.
+ *
+ * ⚠️ El navegador manda SÓLO el mensaje nuevo. Lo anterior sale de la base,
+ * que es lo único que sabe qué se dijo de verdad. Antes viajaba la charla
+ * entera desde el navegador y se usaba tal cual: cualquiera podía inventar
+ * mensajes "de Sasha" que ella nunca dijo y meterlos en su propio contexto
+ * —para torcerla, o para hacerle repetir algo como si lo hubiera dicho el
+ * panel—. Además, lo que viaja se paga: mandar la charla dos veces (ida y
+ * contexto) era pagar por algo que ya teníamos guardado.
+ *
+ * Se recorta por los más viejos hasta entrar en el presupuesto, así una
+ * charla larga sigue andando en vez de rechazarse.
+ */
+function charlaDeHoy(previos: ChatMessage[], nuevo: string): ChatMessage[] {
+  let recientes = [...previos, { role: "user" as const, content: nuevo }].slice(-MAX_MENSAJES_CONTEXTO);
   let chars = recientes.reduce((n, m) => n + m.content.length, 0);
   while (chars > MAX_CHARS_TOTAL && recientes.length > 1) {
     chars -= recientes[0].content.length;
     recientes = recientes.slice(1);
   }
   return recientes;
+}
+
+/** El texto que escribió la persona, o `null` si el pedido no sirve. */
+function leerMensaje(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) return null;
+  const mensaje = (body as { mensaje?: unknown }).mensaje;
+  if (typeof mensaje !== "string") return null;
+  const limpio = mensaje.trim();
+  if (limpio.length === 0 || limpio.length > MAX_CHARS_POR_MENSAJE) return null;
+  return limpio;
 }
 
 /**
@@ -68,6 +81,19 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (user.role !== "DIGITAL") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
+  /* Un tope flojo, sólo para que nadie pueda martillar la base abriendo y
+     cerrando. ⚠️ Acá, si Redis no contesta, SE DEJA PASAR — al revés que en
+     el POST: esto no llama a ningún modelo ni cuesta plata, y dejar a alguien
+     sin ver su propia charla porque se cayó el contador sería peor que el
+     problema que evita. Lo que frena el gasto es el tope del POST. */
+  try {
+    if (!(await checkRateLimit(`sasha-digital-leer:${user.id}`, LECTURAS_POR_MINUTO, 60_000))) {
+      return NextResponse.json({ error: "Esperá un momento." }, { status: 429 });
+    }
+  } catch {
+    console.error("[sasha-digital] sin limitador al leer el historial; se deja pasar (no cuesta plata)");
+  }
 
   const sub = await getUserSubscription(user.id);
   const tier = (sub?.tier ?? "FREE") as TierDigital;
@@ -121,12 +147,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const historial = validarMensajes(body);
-  if (historial === null || historial.length === 0) {
-    return NextResponse.json({ error: "No entendimos el pedido." }, { status: 400 });
-  }
-  const ultima = historial[historial.length - 1];
-  if (ultima.role !== "user") return NextResponse.json({ error: "No entendimos el pedido." }, { status: 400 });
+  const mensaje = leerMensaje(body);
+  if (mensaje === null) return NextResponse.json({ error: "No entendimos el pedido." }, { status: 400 });
 
   const snapshot = await snapshotDigital(user.id, tier);
   /* Una cuenta que la dueña cerró no tiene panel, pero la ruta sí sigue
@@ -138,14 +160,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tu cuenta está cerrada. Reabrila para volver a usar el panel." }, { status: 403 });
   }
 
+  /* Lo dicho hasta ahora, de la base. Se lee DESPUÉS del tope y del corte por
+     cuenta cerrada: un pedido que se va a rechazar no tiene que costar una
+     consulta. */
+  const previos = await prisma.asistenteMensaje.findMany({
+    where: { userId: user.id, day },
+    orderBy: { createdAt: "desc" },
+    select: { role: true, content: true },
+    take: MAX_MENSAJES_CONTEXTO,
+  });
+  const historial = charlaDeHoy(
+    previos.reverse().map((m) => ({ role: m.role === "assistant" ? "assistant" as const : "user" as const, content: m.content })),
+    mensaje,
+  );
+
   const prompt = armarPromptDigital({
     snapshot,
     nombreDeQuienVende: user.name?.split(" ")[0] ?? null,
-    pregunta: ultima.content,
+    pregunta: mensaje,
     momento,
   });
 
-  await prisma.asistenteMensaje.create({ data: { userId: user.id, role: "user", content: ultima.content, day } });
+  /* Se guarda DESPUÉS de leer los previos: si no, el mensaje nuevo entraría
+     dos veces al contexto. */
+  await prisma.asistenteMensaje.create({ data: { userId: user.id, role: "user", content: mensaje, day } });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
