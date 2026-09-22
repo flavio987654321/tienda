@@ -173,6 +173,17 @@ export function enlaceDeMail(correo: string, m: { asunto: string; cuerpo: string
  * que uno que abre un chat con un desconocido.
  */
 export function enlaceDeWhatsApp(telefono: string | null | undefined, m: { cuerpo: string }): string | null {
+  const d = celularArgentino(telefono);
+  if (!d) return null;
+  return `https://wa.me/549${d}?text=${encodeURIComponent(m.cuerpo)}`;
+}
+
+/**
+ * Los diez dígitos de un celular argentino (área + número), o null si lo que
+ * escribió no parece uno. Lo comparten el botón de WhatsApp y la lista para
+ * Meta: los dos quieren el número limpio, con el 549 puesto por ellos.
+ */
+export function celularArgentino(telefono: string | null | undefined): string | null {
   if (!telefono) return null;
   let d = telefono.replace(/\D/g, "");
   if (d.startsWith("00")) d = d.slice(2);
@@ -183,6 +194,5 @@ export function enlaceDeWhatsApp(telefono: string | null | undefined, m: { cuerp
      Sólo si sobran dos dígitos: en un número de diez, un 15 en el medio es
      parte del número (11 1555-1234 existe). */
   if (d.length === 12) d = d.replace(/^(\d{2,4})15(\d{6,8})$/, "$1$2");
-  if (d.length !== 10) return null;
-  return `https://wa.me/549${d}?text=${encodeURIComponent(m.cuerpo)}`;
+  return d.length === 10 ? d : null;
 }

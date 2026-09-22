@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Search, X, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Mail, MessageCircle, Receipt, Repeat, AlertTriangle, BellOff, Users, Send,
+  Search, X, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Mail, MessageCircle, Receipt, Repeat, AlertTriangle, BellOff, Users, Send, FileDown, Lock, Megaphone,
 } from "lucide-react";
+import { COPY_DIGITAL } from "@/lib/planes-digitales";
+import { DESDE_QUE_PLAN } from "@/lib/estadisticas-digitales";
 import {
   direccionDeClientes, direccionParaEscribirles, LARGO_MAXIMO_DE_BUSQUEDA, FILTROS_DE_CLIENTES,
   type ClienteEnPantalla, type ResumenDeClientes, type FiltroDeClientes,
@@ -24,7 +26,7 @@ import { mensajeParaElComprador, enlaceDeMail, enlaceDeWhatsApp } from "@/lib/ve
  * mail?"; si no, el de "¿cómo te fue?". A quien pidió la baja no se le
  * ofrece el mail: se marca, y punto.
  */
-export default function ClientesClient({ clientes, resumen, q, p, sin, f, productos, pagina, paginas }: {
+export default function ClientesClient({ clientes, resumen, q, p, sin, f, productos, puedeExportar, pagina, paginas }: {
   clientes: ClienteEnPantalla[];
   resumen: ResumenDeClientes;
   q: string;
@@ -33,6 +35,8 @@ export default function ClientesClient({ clientes, resumen, q, p, sin, f, produc
   sin: string | null;
   f: FiltroDeClientes | null;
   productos: { id: string; name: string }[];
+  /** Starter y Pro: bajar la lista (planilla o para Meta). */
+  puedeExportar: boolean;
   pagina: number;
   paginas: number;
 }) {
@@ -44,6 +48,8 @@ export default function ClientesClient({ clientes, resumen, q, p, sin, f, produc
   const ir = (cambios: { q?: string; pagina?: number; p?: string | null; sin?: string | null; f?: FiltroDeClientes | null }) =>
     direccionDeClientes({ q, p, sin, f, ...cambios });
   const hayFiltro = !!(p || sin || f);
+  /* La exportación baja EXACTAMENTE lo que se ve: mismos filtros y búsqueda. */
+  const exportar = (formato: "planilla" | "meta") => `/api/digitales/clientes/exportar?formato=${formato}${ir({}).replace(/^\/digitales\/clientes\??/, "&")}`.replace(/&$/, "");
   /* El segmento que se le puede escribir: compraron / no compraron. Los
      otros dos no son segmentos del mail; ahí se escribe de a uno. */
   const escribibles = (p || sin) && !f;
@@ -122,6 +128,33 @@ export default function ClientesClient({ clientes, resumen, q, p, sin, f, produc
         </div>
       )}
 
+      {/* ── Bajar la lista ────────────────────────────────────────────────
+          Dos archivos: la planilla, y la lista que Meta Ads acepta para un
+          público personalizado. Lo segundo vale plata de verdad: excluir a
+          quien ya compró de los anuncios, o pedirle a Meta gente parecida.
+          Con candado en Free, como exportar ventas; apagado con la lista
+          vacía. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {puedeExportar && clientes.length === 0 ? (
+          <>
+            <span aria-disabled="true" title="Nada para bajar todavía" className={BOTON_APAGADO}><FileDown className="h-3.5 w-3.5" /> Bajar planilla</span>
+            <span aria-disabled="true" title="Nada para bajar todavía" className={BOTON_APAGADO}><Megaphone className="h-3.5 w-3.5" /> Lista para Meta Ads</span>
+          </>
+        ) : puedeExportar ? (
+          <>
+            <a href={exportar("planilla")} className={BOTON_CHICO}><FileDown className="h-3.5 w-3.5" /> Bajar planilla</a>
+            <a href={exportar("meta")} className={BOTON_CHICO}><Megaphone className="h-3.5 w-3.5" /> Lista para Meta Ads</a>
+          </>
+        ) : (
+          <Link href="/digitales/mi-cuenta" aria-label={`Bajar la lista: disponible desde ${COPY_DIGITAL[DESDE_QUE_PLAN.exportar].nombre}`} className={BOTON_CANDADO}>
+            <Lock className="h-3.5 w-3.5 text-orange-500" /> Bajar la lista (planilla o para Meta Ads) · desde {COPY_DIGITAL[DESDE_QUE_PLAN.exportar].nombre}
+          </Link>
+        )}
+        <span className="basis-full text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+          La lista para Meta se sube en Audiencias → Público personalizado → Lista de clientes: para <strong>excluir</strong> de tus anuncios a quien ya te compró, o para que Meta busque <strong>gente parecida</strong> a tus compradores.
+        </span>
+      </div>
+
       {/* ── Buscar ──────────────────────────────────────────────────────── */}
       <form onSubmit={buscar} className="mt-4 flex gap-2">
         <div className="relative flex-1">
@@ -182,6 +215,9 @@ export default function ClientesClient({ clientes, resumen, q, p, sin, f, produc
 
 const plata = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
+const BOTON_CHICO = "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-700 panel-oscuro:hover:text-orange-400";
+const BOTON_APAGADO = "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-800 px-2.5 py-1.5 text-[12px] font-semibold text-gray-300 panel-oscuro:text-gray-600";
+const BOTON_CANDADO = "inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-200 panel-oscuro:border-gray-700 px-2.5 py-1.5 text-[12px] font-semibold text-gray-400 panel-oscuro:text-gray-500";
 const CLASE_SELECTOR = "rounded-full border border-gray-200 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 px-3 py-1.5 text-[13px] font-semibold text-gray-600 panel-oscuro:text-gray-400 focus:border-orange-400 focus:outline-none";
 
 function Chip({ href, activo, children }: { href: string; activo: boolean; children: React.ReactNode }) {

@@ -57,14 +57,16 @@ check("CLI-F", q.q === "ana@x.com" && q.pagina === 3 && mala.q.length === 120 &&
 
 /* ── Lo que toca la base y la pantalla ──────────────────────────────────── */
 const page = leer("src/app/digitales/clientes/page.tsx");
+/* El `where` vive en la lib de base, que comparten la página y la exportación. */
+const db = leer("src/lib/clientes-digitales-db.ts");
 const cliente = leer("src/app/digitales/clientes/ClientesClient.tsx");
 const barra = leer("src/app/digitales/DigitalesSidebar.tsx");
 
 check("CLI-G", /user\.role !== "DIGITAL"/.test(page)
-  && /OR: \[\{ status: "CONFIRMED" \}, \{ status: "CANCELLED", payment: \{ status: "REFUNDED" \} \}\]/.test(page)
-  && /consulta\.q \? \[\{ OR: \[\{ email: \{ contains: consulta\.q, mode: "insensitive" as const \} \}, \{ name: \{ contains: consulta\.q, mode: "insensitive" as const \} \}\] \}\]/.test(page)
-  && /orderBy: \{ _max: \{ createdAt: "desc" \} \}/.test(page) && /skip: \(consulta\.pagina - 1\) \* CLIENTES_POR_PAGINA/.test(page)
-  && !/status: "PENDING"/.test(page),
+  && /OR: \[\{ status: "CONFIRMED" \}, \{ status: "CANCELLED", payment: \{ status: "REFUNDED" \} \}\]/.test(db)
+  && /consulta\.q \? \[\{ OR: \[\{ email: \{ contains: consulta\.q, mode: "insensitive" as const \} \}, \{ name: \{ contains: consulta\.q, mode: "insensitive" as const \} \}\] \}\]/.test(db)
+  && /orderBy: \{ _max: \{ createdAt: "desc" \} \}/.test(db) && /idsDeClientes\(ctx, \(ctx\.consulta\.pagina - 1\) \* CLIENTES_POR_PAGINA, CLIENTES_POR_PAGINA\)/.test(page)
+  && !/status: "PENDING"/.test(db) && !/status: "PENDING"/.test(page),
   "la página pide sesión digital, trae lo pagado (cobradas y devueltas, nunca pendientes), busca por la persona, y pagina en el servidor por última compra");
 
 /* ── 21/09/26: los filtros ─────────────────────────────────────────────────
@@ -80,17 +82,17 @@ check("CLI-K", f1.p === "c" + "a".repeat(24) && f1.sin === null && f1.f === "rep
   && direccionParaEscribirles({ p: "x", sin: "y" }) === "/digitales/marketing/compradores?p=x&sin=y"
   && direccionParaEscribirles({ p: null, sin: null }) === "/digitales/marketing/compradores",
   "los filtros se leen limpios de la dirección, y «Escribirles a estos» lleva a Mail a tus compradores con el mismo segmento");
-check("CLI-L", /const propio = \(id: string \| null\) => \(id && productos\.some/.test(page)
-  && /\.\.\.\(p \? \[\{ orders: \{ some: cobradaCon\(p\) \} \}\] : \[\]\)/.test(page) && /\.\.\.\(sin \? \[\{ NOT: \{ orders: \{ some: cobradaCon\(sin\) \} \} \}\] : \[\]\)/.test(page)
-  && /buyer: \{ AND: condiciones \}/.test(page)
-  && /const cobradaCon = \(productId: string\): Prisma\.OrderWhereInput => \(\{ storeId: store\.id, status: "CONFIRMED", items: \{ some: \{ productId \} \} \}\)/.test(page)
-  && /having = f === "repiten" \? \{ buyerId: \{ _count: \{ gte: 2 \} \} \} : undefined/.test(page)
-  && /descargas: \{ some: \{ descargas: 0, expiresAt: \{ gt: ahora \} \} \}/.test(page),
+check("CLI-L", /const propio = \(id: string \| null\) => \(id && productos\.some/.test(db)
+  && /\.\.\.\(p \? \[\{ orders: \{ some: cobradaCon\(p\) \} \}\] : \[\]\)/.test(db) && /\.\.\.\(sin \? \[\{ NOT: \{ orders: \{ some: cobradaCon\(sin\) \} \} \}\] : \[\]\)/.test(db)
+  && /buyer: \{ AND: condiciones \}/.test(db)
+  && /const cobradaCon = \(productId: string\): Prisma\.OrderWhereInput => \(\{ storeId: store\.id, status: "CONFIRMED", items: \{ some: \{ productId \} \} \}\)/.test(db)
+  && /having = f === "repiten" \? \{ buyerId: \{ _count: \{ gte: 2 \} \} \} : undefined/.test(db)
+  && /descargas: \{ some: \{ descargas: 0, expiresAt: \{ gt: ahora \} \} \}/.test(db),
   "los filtros se aplican sobre la PERSONA con el mismo criterio que el mail; repiten cuenta cobradas; sin bajar mira permisos vigentes");
 check("CLI-M", /direccionParaEscribirles\(\{ p, sin \}\)/.test(cliente) && /const escribibles = \(p \|\| sin\) && !f;/.test(cliente)
   && /productos\.length > 1 && \(/.test(cliente) && /Escribirles a estos/.test(cliente),
   "el botón de escribirles aparece sólo con un segmento del mail, y «no compraron» sólo con más de un producto");
-check("CLI-H", /prisma\.bajaCorreoDigital\.findMany\(\{ where: \{ storeId: store\.id, email: \{ in: personas\.map\(\(p\) => p\.email\.toLowerCase\(\)\) \}/.test(page)
+check("CLI-H", /prisma\.bajaCorreoDigital\.findMany\(\{\s*where: \{ storeId: ctx\.store\.id, email: \{ in: personas\.map\(\(x\) => x\.email\.toLowerCase\(\)\) \}/.test(db)
   && /\{!c\.dioDeBaja && \(\s*<a href=\{enlaceDeMail\(c\.email, mensaje\)\}/.test(cliente) && /Sin mails/.test(cliente),
   "a quien pidió la baja se lo marca y no se le ofrece el mail; WhatsApp y Ventas siguen");
 check("CLI-I", /mensajeParaElComprador\(\{ nombre: c\.nombre, producto: c\.ultimoProducto, sinBajar: c\.sinBajar > 0 \}\)/.test(cliente)
