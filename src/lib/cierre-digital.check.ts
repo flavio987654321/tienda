@@ -88,7 +88,7 @@ async function main() {
   const puerta = layout.indexOf("if (cuenta?.closedAt)");
   check("CIE-I", puerta > 0 && puerta < layout.indexOf("estadoDelRecibimiento(user.id)") && puerta > layout.indexOf('user.role !== "DIGITAL"')
     && /<CuentaCerrada cerradaEl=\{cuenta\.closedAt\.toISOString\(\)\} vuelven=\{await pausadosPorCierreDe\(prisma, cuenta\.id\)\} exportar=/.test(layout)
-    && /<PWAManager[^>]*disableNotifPrompt \/>\s*<PanelSplash[^>]*\/>\s*<CuentaCerrada/.test(layout),
+    && /<PWAManager[^>]*disableNotifPrompt \/>\s*<PanelSplash[^>]*\/>\s*(\{\/\*[\s\S]*?\*\/\}\s*)?<CuentaCerrada/.test(layout),
     "con la cuenta cerrada el panel no existe: sólo la puerta de reabrir, después del rol y antes del recibimiento, sin pedir permiso de avisos");
   const gate = leer("src/app/digitales/CuentaCerrada.tsx");
   check("CIE-J", /fetch\("\/api\/digitales\/reabrir", \{ method: "POST" \}\)/.test(gate) && /enVuelo\.current/.test(gate)
