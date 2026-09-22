@@ -311,6 +311,25 @@ check("CAR-AL",
 
 /* El límite, escrito donde alguien está a un clic de cruzarlo, y en la
    política. Ese dato se dejó para comprar, no para recibir promociones. */
+/* ⚠️ Y LAS OTRAS DOS PANTALLAS QUE LO USAN TIENEN QUE MIRAR EL MISMO LUGAR.
+   Ventas buscaba el teléfono sólo en la cuenta de quien compra, que en una
+   cuenta digital está siempre vacía: su botón de WhatsApp no iba a aparecer
+   nunca, justo en la pantalla donde más se lo necesita ("no me llegó el
+   archivo"). Se encontró auditando, no probando. */
+const ventasDb = readFileSync("src/lib/ventas-digitales-db.ts", "utf8");
+const clientesDb = readFileSync("src/lib/clientes-digitales.ts", "utf8");
+check("CAR-AN",
+  /telefonoDigital: true,/.test(ventasDb) && /telefono: o\.telefonoDigital \?\? o\.buyer\.phone,/.test(ventasDb)
+  && /ordenadas\.find\(\(o\) => o\.telefonoDigital\)\?\.telefonoDigital \?\? persona\.phone/.test(clientesDb),
+  "Ventas y Clientes buscan el teléfono en la compra antes que en la cuenta: si no, el botón de WhatsApp no aparece nunca");
+
+/* Si escribió algo que no parece un celular se descarta —así se guarda uno que
+   sirva o ninguno— pero hay que DECÍRSELO: descartarlo en silencio deja a la
+   persona creyendo que dejó un teléfono. Es un aviso, no un freno. */
+check("CAR-AO",
+  /Revisá el número/.test(checkout) && /telefono\.trim\(\) && !celularArgentino\(telefono\)/.test(checkout),
+  "un celular mal escrito se avisa en pantalla en vez de descartarse en silencio");
+
 check("CAR-AM",
   /No los sumes a una lista/.test(pantallaCarritos)
   && /tu celular si lo dejaste/.test(politica) && /El mensaje lo manda esa persona desde su propio teléfono/.test(politica)

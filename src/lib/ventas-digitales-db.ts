@@ -56,6 +56,7 @@ export async function contextoDeVentas(userId: string, params: Record<string, st
 /** Lo que se trae de cada venta, para la lista y para el archivo. */
 export const SELECT_DE_VENTA = {
   id: true, status: true, total: true, createdAt: true, lockedCommissionRate: true,
+  telefonoDigital: true,
   buyer: { select: { email: true, name: true, phone: true } },
   items: {
     select: {
@@ -99,7 +100,14 @@ export function aVentaEnPantalla(o: VentaCruda, ahora: Date): VentaEnPantalla {
     neto: o.total - comisionDeEsta,
     comprador: o.buyer.email ?? "",
     nombre: o.buyer.name,
-    telefono: o.buyer.phone,
+    /* ⚠️ PRIMERO EL DE LA COMPRA. El checkout digital guarda el celular en
+       la ORDEN —esa cuenta es una sola para toda la plataforma y un número
+       mal tipeado en una tienda le pisaría el dato a otra—, así que buscarlo
+       sólo en la cuenta dejaba el botón de WhatsApp apagado para siempre,
+       justo en la pantalla donde más se lo necesita: "no me llegó el
+       archivo". `buyer.phone` queda de respaldo para quien además tiene
+       cuenta y lo cargó ahí. Mismo criterio que Tus clientes. */
+    telefono: o.telefonoDigital ?? o.buyer.phone,
     lineas: o.items.map((i) => {
       /* `descargas` viene como lista porque así lo declara el esquema, pero
          `orderItemId` es único: trae uno solo o ninguno. Ninguno significa que

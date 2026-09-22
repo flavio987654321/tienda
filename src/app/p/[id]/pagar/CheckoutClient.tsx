@@ -467,8 +467,16 @@ export default function CheckoutClient(p: Props) {
                 className={`${campo} border py-2.5 text-sm`}
               />
             </label>
+            {/* ⚠️ Si escribió algo que no parece un celular, HAY QUE DECÍRSELO.
+                El número se descarta —así se guarda uno que sirva o ninguno—
+                pero descartarlo en silencio es peor que no pedirlo: la persona
+                se va creyendo que dejó un teléfono, y del otro lado el botón
+                de WhatsApp nunca aparece. Es un aviso, no un freno: el campo
+                es opcional y el botón de pagar sigue prendido. */}
             <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">
-              Por si hay algún problema con tu compra, para que puedan escribirte por WhatsApp. No se usa para nada más.
+              {telefono.trim() && !celularArgentino(telefono)
+                ? "Revisá el número: con código de área y sin el 0 ni el 15 (por ejemplo, 11 5555-5555). Así como está no lo vamos a guardar."
+                : "Por si hay algún problema con tu compra, para que puedan escribirte por WhatsApp. No se usa para nada más."}
             </p>
           </div>
 
