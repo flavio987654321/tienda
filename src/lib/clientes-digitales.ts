@@ -35,23 +35,63 @@ export const LARGO_MAXIMO_DE_BUSQUEDA = 120;
 /** Hasta cuántos clientes se cuentan para los números de arriba. */
 export const TECHO_DE_CLIENTES = 5000;
 
-export type ConsultaDeClientes = { q: string; pagina: number };
+/**
+ * Los filtros. `p` y `sin` son el MISMO segmento que "Mail a tus
+ * compradores" (compraron X, y no compraron Y): lo que se filtra acá se le
+ * puede escribir allá con un clic, y la cuenta coincide. `f` son los otros
+ * dos: quienes repiten, y quienes tienen algo pago sin bajar.
+ */
+export const FILTROS_DE_CLIENTES = {
+  repiten: "Repiten",
+  "sin-bajar": "Sin bajar",
+} as const;
+export type FiltroDeClientes = keyof typeof FILTROS_DE_CLIENTES;
+
+export type ConsultaDeClientes = {
+  q: string;
+  pagina: number;
+  /** Compraron este principal (id crudo: la página lo verifica contra los propios). */
+  p: string | null;
+  /** …y NO compraron este otro. */
+  sin: string | null;
+  f: FiltroDeClientes | null;
+};
+
+/* Un cuid: lo que la base pone de id. Cualquier otra cosa se ignora. */
+const ID_RE = /^c[a-z0-9]{20,30}$/;
 
 export function leerConsultaDeClientes(params: Record<string, string | string[] | undefined>): ConsultaDeClientes {
   const uno = (k: string) => { const v = params[k]; return Array.isArray(v) ? v[0] : v; };
   const pagina = Number.parseInt(uno("pagina") ?? "1", 10);
+  const id = (k: string) => { const v = uno(k); return v && ID_RE.test(v) ? v : null; };
+  const f = uno("f");
   return {
     q: (uno("q") ?? "").trim().slice(0, LARGO_MAXIMO_DE_BUSQUEDA),
     pagina: Number.isInteger(pagina) && pagina > 0 && pagina < 10_000 ? pagina : 1,
+    p: id("p"),
+    sin: id("sin"),
+    f: f && f in FILTROS_DE_CLIENTES ? (f as FiltroDeClientes) : null,
   };
 }
 
-export function direccionDeClientes(c: { q?: string; pagina?: number }): string {
+export function direccionDeClientes(c: { q?: string; pagina?: number; p?: string | null; sin?: string | null; f?: FiltroDeClientes | null }): string {
   const s = new URLSearchParams();
   if (c.q) s.set("q", c.q);
+  if (c.p) s.set("p", c.p);
+  if (c.sin) s.set("sin", c.sin);
+  if (c.f) s.set("f", c.f);
   if (c.pagina && c.pagina > 1) s.set("pagina", String(c.pagina));
   const qs = s.toString();
   return `/digitales/clientes${qs ? `?${qs}` : ""}`;
+}
+
+/** A dónde lleva "Escribirles a estos": Mail a tus compradores con el mismo segmento. */
+export function direccionParaEscribirles(c: { p: string | null; sin: string | null }): string {
+  const s = new URLSearchParams();
+  if (c.p) s.set("p", c.p);
+  if (c.sin) s.set("sin", c.sin);
+  const qs = s.toString();
+  return `/digitales/marketing/compradores${qs ? `?${qs}` : ""}`;
 }
 
 /* ── Lo que entra ───────────────────────────────────────────────────────── */

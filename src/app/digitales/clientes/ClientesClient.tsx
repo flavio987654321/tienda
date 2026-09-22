@@ -4,9 +4,12 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Search, X, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Mail, MessageCircle, Receipt, Repeat, AlertTriangle, BellOff, Users,
+  Search, X, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Mail, MessageCircle, Receipt, Repeat, AlertTriangle, BellOff, Users, Send,
 } from "lucide-react";
-import { direccionDeClientes, LARGO_MAXIMO_DE_BUSQUEDA, type ClienteEnPantalla, type ResumenDeClientes } from "@/lib/clientes-digitales";
+import {
+  direccionDeClientes, direccionParaEscribirles, LARGO_MAXIMO_DE_BUSQUEDA, FILTROS_DE_CLIENTES,
+  type ClienteEnPantalla, type ResumenDeClientes, type FiltroDeClientes,
+} from "@/lib/clientes-digitales";
 import { mensajeParaElComprador, enlaceDeMail, enlaceDeWhatsApp } from "@/lib/ventas-digitales";
 
 /**
@@ -21,10 +24,15 @@ import { mensajeParaElComprador, enlaceDeMail, enlaceDeWhatsApp } from "@/lib/ve
  * mail?"; si no, el de "¿cómo te fue?". A quien pidió la baja no se le
  * ofrece el mail: se marca, y punto.
  */
-export default function ClientesClient({ clientes, resumen, q, pagina, paginas }: {
+export default function ClientesClient({ clientes, resumen, q, p, sin, f, productos, pagina, paginas }: {
   clientes: ClienteEnPantalla[];
   resumen: ResumenDeClientes;
   q: string;
+  /** Compraron este / no compraron este / repiten o sin bajar. Ya verificados. */
+  p: string | null;
+  sin: string | null;
+  f: FiltroDeClientes | null;
+  productos: { id: string; name: string }[];
   pagina: number;
   paginas: number;
 }) {
@@ -33,7 +41,12 @@ export default function ClientesClient({ clientes, resumen, q, pagina, paginas }
   const [buscando, arrancar] = useTransition();
   const [abierto, setAbierto] = useState<string | null>(null);
 
-  const ir = (cambios: { q?: string; pagina?: number }) => direccionDeClientes({ q, ...cambios });
+  const ir = (cambios: { q?: string; pagina?: number; p?: string | null; sin?: string | null; f?: FiltroDeClientes | null }) =>
+    direccionDeClientes({ q, p, sin, f, ...cambios });
+  const hayFiltro = !!(p || sin || f);
+  /* El segmento que se le puede escribir: compraron / no compraron. Los
+     otros dos no son segmentos del mail; ahí se escribe de a uno. */
+  const escribibles = (p || sin) && !f;
 
   function buscar(e: React.FormEvent) {
     e.preventDefault();
@@ -63,8 +76,54 @@ export default function ClientesClient({ clientes, resumen, q, pagina, paginas }
         </p>
       )}
 
+      {/* ── Filtros ─────────────────────────────────────────────────────
+          "Compraron X" y "no compraron Y" son el MISMO segmento que Mail a
+          tus compradores: lo que se ve acá se le escribe allá con el botón de
+          abajo. Con un solo producto, "no compraron" no tiene a quién
+          apuntar y no se ofrece. */}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <Chip href={ir({ p: null, sin: null, f: null, pagina: 1 })} activo={!hayFiltro}>Todos</Chip>
+        {(Object.keys(FILTROS_DE_CLIENTES) as FiltroDeClientes[]).map((k) => (
+          <Chip key={k} href={ir({ f: f === k ? null : k, pagina: 1 })} activo={f === k}>{FILTROS_DE_CLIENTES[k]}</Chip>
+        ))}
+        {productos.length > 0 && (
+          <select
+            value={p ?? ""}
+            onChange={(e) => arrancar(() => router.push(ir({ p: e.target.value || null, pagina: 1 })))}
+            aria-label="Compraron este producto"
+            className={CLASE_SELECTOR + (p ? " border-orange-400 text-orange-700 panel-oscuro:text-orange-300" : "")}
+          >
+            <option value="">Compraron cualquiera</option>
+            {productos.map((x) => <option key={x.id} value={x.id}>Compraron {x.name}</option>)}
+          </select>
+        )}
+        {productos.length > 1 && (
+          <select
+            value={sin ?? ""}
+            onChange={(e) => arrancar(() => router.push(ir({ sin: e.target.value || null, pagina: 1 })))}
+            aria-label="No compraron este producto"
+            className={CLASE_SELECTOR + (sin ? " border-orange-400 text-orange-700 panel-oscuro:text-orange-300" : "")}
+          >
+            <option value="">Sin excluir</option>
+            {productos.filter((x) => x.id !== p).map((x) => <option key={x.id} value={x.id}>No compraron {x.name}</option>)}
+          </select>
+        )}
+      </div>
+      {escribibles && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 px-4 py-3">
+          <p className="text-[13px] text-orange-900 panel-oscuro:text-orange-200">
+            {sin && p
+              ? "Le podés ofrecer el segundo producto a quien ya tiene el primero: es la venta más barata que existe."
+              : sin ? "Todos los que te compraron algo y todavía no tienen éste." : "Todos los que compraron este producto."}
+          </p>
+          <Link href={direccionParaEscribirles({ p, sin })} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-2 text-[13px] font-bold text-white hover:bg-orange-500 transition-colors">
+            <Send className="h-3.5 w-3.5" /> Escribirles a estos
+          </Link>
+        </div>
+      )}
+
       {/* ── Buscar ──────────────────────────────────────────────────────── */}
-      <form onSubmit={buscar} className="mt-6 flex gap-2">
+      <form onSubmit={buscar} className="mt-4 flex gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -96,10 +155,10 @@ export default function ClientesClient({ clientes, resumen, q, pagina, paginas }
         <div className="mt-6 rounded-3xl border border-dashed border-gray-200 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 px-6 py-12 text-center">
           <Users className="mx-auto h-8 w-8 text-gray-300 panel-oscuro:text-gray-600" />
           <p className="mt-3 text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">
-            {q ? `No encontramos a nadie con «${q}»` : "Todavía nadie te compró"}
+            {q ? `No encontramos a nadie con «${q}»` : hayFiltro ? "Nadie con ese filtro" : "Todavía nadie te compró"}
           </p>
           <p className="mt-1 text-[13px] text-gray-500 panel-oscuro:text-gray-400">
-            {q ? "Probá con otra parte del correo o del nombre." : "Cuando alguien pague, aparece acá con sus compras y si bajó lo suyo."}
+            {q ? "Probá con otra parte del correo o del nombre." : hayFiltro ? "Sacá el filtro para ver a todos." : "Cuando alguien pague, aparece acá con sus compras y si bajó lo suyo."}
           </p>
         </div>
       ) : (
@@ -122,6 +181,21 @@ export default function ClientesClient({ clientes, resumen, q, pagina, paginas }
 }
 
 const plata = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+
+const CLASE_SELECTOR = "rounded-full border border-gray-200 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 px-3 py-1.5 text-[13px] font-semibold text-gray-600 panel-oscuro:text-gray-400 focus:border-orange-400 focus:outline-none";
+
+function Chip({ href, activo, children }: { href: string; activo: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${activo
+        ? "bg-orange-600 text-white"
+        : "bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-800 text-gray-600 panel-oscuro:text-gray-400 hover:border-orange-300"}`}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function Fila({ c, abierta, alTocar }: { c: ClienteEnPantalla; abierta: boolean; alTocar: () => void }) {
   const mensaje = mensajeParaElComprador({ nombre: c.nombre, producto: c.ultimoProducto, sinBajar: c.sinBajar > 0 });

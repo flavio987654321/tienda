@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, Mail, Send, ArrowRight } from "lucide-react";
 import { validarCorreoNuevo, saludo, ASUNTO_MAX, CUERPO_MAX } from "@/lib/correos-compradores";
+import type { Conteo } from "@/lib/correos-compradores-db";
 import { PLANTILLAS_DE_CORREO, correoDeLaPlantilla, CONSEJO_DE_CORREO } from "@/lib/plantillas-marketing";
 import ConsejoDeUso from "../../ConsejoDeUso";
 import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
@@ -12,8 +13,8 @@ import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
 export type CorreoEnPantalla = {
   id: string;
   asunto: string;
-  /** A los compradores de este producto, o null = a todos. */
-  producto: string | null;
+  /** A quién fue, en castellano y en minúscula: "compradores de X y no Y". */
+  segmento: string;
   cuando: string;
   resumen: string;
   enviando: boolean;
@@ -38,19 +39,30 @@ const personas = (n: number) => (n === 1 ? "1 persona" : `${n} personas`);
  * apretar ocho veces. Si cierra la pestaña en el medio, el historial le
  * deja el botón de seguir.
  */
-export default function CompradoresClient({ esPro, productos, cuantos, correos, topePorDia, vendedor }: {
+export default function CompradoresClient({ esPro, productos, cuantos, correos, inicial, topePorDia, vendedor }: {
   esPro: boolean;
   productos: { id: string; name: string }[];
-  cuantos: { todos: number; porProducto: Record<string, number> };
+  cuantos: Conteo;
   correos: CorreoEnPantalla[];
+  /** Lo que trae la dirección: el segmento desde Tus clientes, o el lanzamiento (`plantilla`). */
+  inicial: { productId: string | null; sinProductoId: string | null; enlaceProductId: string | null; plantilla: "siguiente" | null };
   topePorDia: number;
   vendedor: string | null;
 }) {
   const router = useRouter();
-  const [productId, setProductId] = useState("");
-  const [enlaceProductId, setEnlaceProductId] = useState("");
-  const [asunto, setAsunto] = useState("");
-  const [cuerpo, setCuerpo] = useState("");
+  const [productId, setProductId] = useState(inicial.productId ?? "");
+  const [sinProductoId, setSinProductoId] = useState(inicial.sinProductoId ?? "");
+  const [enlaceProductId, setEnlaceProductId] = useState(inicial.enlaceProductId ?? "");
+  /* El lanzamiento llega con la plantilla puesta, con el nombre del producto
+     nuevo: lo que la vendedora corrige es el texto, no el destinatario. */
+  const arranque = (() => {
+    if (!inicial.plantilla) return { asunto: "", cuerpo: "" };
+    const p = PLANTILLAS_DE_CORREO.find((x) => x.clave === inicial.plantilla);
+    const nombre = productos.find((x) => x.id === inicial.enlaceProductId)?.name ?? null;
+    return p ? correoDeLaPlantilla(p, nombre) : { asunto: "", cuerpo: "" };
+  })();
+  const [asunto, setAsunto] = useState(arranque.asunto);
+  const [cuerpo, setCuerpo] = useState(arranque.cuerpo);
   const [error, setError] = useState<string | null>(null);
   const [mandando, setMandando] = useState(false);
   const [progreso, setProgreso] = useState<Resultado | null>(null);
@@ -60,8 +72,13 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
      mandar, no mientras escribe la tercera letra del asunto. */
   const [revisar, setRevisar] = useState(false);
 
-  const destinatarios = productId ? (cuantos.porProducto[productId] ?? 0) : cuantos.todos;
-  const borrador = { asunto, cuerpo, productId: productId || null, enlaceProductId: enlaceProductId || null };
+  /* La misma cuenta que hizo el servidor, ya hecha para cada combinación. */
+  const destinatarios = productId && sinProductoId
+    ? (cuantos.porPar[productId]?.[sinProductoId] ?? 0)
+    : productId ? (cuantos.porProducto[productId] ?? 0)
+      : sinProductoId ? (cuantos.sinProducto[sinProductoId] ?? 0)
+        : cuantos.todos;
+  const borrador = { asunto, cuerpo, productId: productId || null, sinProductoId: sinProductoId || null, enlaceProductId: enlaceProductId || null };
   const problema = asunto || cuerpo ? (() => { const r = validarCorreoNuevo(borrador); return r.ok ? null : r.problema; })() : null;
   const enlazado = productos.find((p) => p.id === enlaceProductId) ?? null;
   /* Un mail a medio escribir se pierde con un clic en el menú: se avisa. */
@@ -186,6 +203,23 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
                 {productos.map((p) => <option key={p.id} value={p.id}>Compradores de {p.name} ({cuantos.porProducto[p.id] ?? 0})</option>)}
               </select>
             </div>
+            {/* El segundo producto a quien tiene el primero: es la venta más
+                barata que existe, y hasta el 21/09/26 no se podía apuntar. Con
+                un solo producto no hay a qué excluir y el campo no se muestra. */}
+            {productos.length > 1 && (
+              <div>
+                <label htmlFor="sin" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Y que no compraron <span className="font-normal text-gray-400">(opcional)</span></label>
+                <select id="sin" value={sinProductoId} onChange={(e) => setSinProductoId(e.target.value)} className={CLASE_INPUT}>
+                  <option value="">Sin filtro</option>
+                  {productos.filter((p) => p.id !== productId).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({productId ? (cuantos.porPar[productId]?.[p.id] ?? 0) : (cuantos.sinProducto[p.id] ?? 0)})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">Para ofrecerle el segundo producto a quien ya tiene el primero: le escribís a {personas(destinatarios)}.</p>
+              </div>
+            )}
             <div>
               <label htmlFor="boton" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Botón del mail <span className="font-normal text-gray-400">(opcional)</span></label>
               <select id="boton" value={enlaceProductId} onChange={(e) => setEnlaceProductId(e.target.value)} className={CLASE_INPUT}>
@@ -260,7 +294,7 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
                     <Mail className="h-4 w-4 shrink-0 text-orange-500" /> <span className="truncate">{c.asunto}</span>
                   </p>
                   <p className="mt-1 text-[12.5px] text-gray-600 panel-oscuro:text-gray-400">
-                    {c.cuando} · {c.producto ? `compradores de ${c.producto}` : "todos los compradores"} · {c.resumen}
+                    {c.cuando} · {c.segmento} · {c.resumen}
                   </p>
                 </div>
                 {/* En pantalla chica va abajo, entero: al lado le come el asunto. */}

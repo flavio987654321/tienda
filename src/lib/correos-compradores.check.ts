@@ -16,6 +16,7 @@ process.env.NEXTAUTH_SECRET ??= "clave-de-prueba-para-los-chequeos-0123456789";
 import {
   validarCorreoNuevo, saludo, destinatarios, enlaceDelBoton, resumenDelEnvio,
   urlBajaCorreo, urlBajaCorreoUnClic, ASUNTO_MAX, CUERPO_MAX, MAX_CORREOS_POR_DIA,
+  cuantosDelSegmento, nombreDelSegmento,
 } from "./correos-compradores";
 import { tokenDeBaja, leerTokenDeBaja } from "./correos-compradores-firma";
 
@@ -101,14 +102,45 @@ check("DB-B", /destinatarios\(pagina, bajas, cursor\)/.test(db) && /buyer: \{ em
   "se lee de a páginas por correo desde el cursor, sin las bajas; los contadores suman, no pisan");
 check("DB-C", db.indexOf("Promise.allSettled") < db.indexOf("cursor = pagina[pagina.length - 1].email") && /if \(pagina\.length === 0\)/.test(db),
   "el cursor pasa al final de la PÁGINA y se guarda DESPUÉS de mandar; termina cuando no queda página");
-check("RUTA-F", /cuantosRecibirian\(store\.id, publico \? \[publico\.id\] : \[\]\)/.test(crear), "la ruta cuenta con la misma función que la pantalla: el número que confirmó es el que se guarda");
+check("RUTA-F", /const cuantos = await cuantosDe\(store\.id, segmento\)/.test(crear) && /cuantosDelSegmento\(await quienComproQue\(storeId\), s\)/.test(db) && /cuantosDelSegmento\(compradores, s\)/.test(db),
+  "la ruta cuenta con la misma función que la pantalla (cuantosDelSegmento sobre quién compró qué): el número que confirmó es el que se guarda");
 check("DB-D", /if \(!correo \|\| correo\.estado !== "ENVIANDO"\) return/.test(db), "un envío terminado no se vuelve a mandar");
 check("DB-E", /NODE_ENV !== "production" && process\.env\.NEXT_PUBLIC_APP_URL/.test(db) && !/req\.headers/.test(db), "la base de los links es la del sitio, nunca el Host del pedido");
 
 check("RUTA-A", /sub\?\.tier !== "PRO" \|\| !isSubscriptionActive\(sub\)/.test(crear), "manda sólo Pro AL DÍA: con la tarjeta rebotada, no");
 check("RUTA-B", /MAX_CORREOS_POR_DIA/.test(crear) && /createdAt: \{ gte: hace24h \}/.test(crear) && MAX_CORREOS_POR_DIA <= 3, "tope de envíos por día: el dominio lo comparten todas las cuentas");
-check("RUTA-C", /rolDigital: "PRINCIPAL", storeId: store\.id/.test(crear) && /\(r\.datos\.productId && !publico\) \|\| \(r\.datos\.enlaceProductId && !enlazado\)/.test(crear),
-  "el producto del público y el del botón tienen que ser principales PROPIOS: un id ajeno no manda nada");
+check("RUTA-C", /rolDigital: "PRINCIPAL", storeId: store\.id/.test(crear) && /\(r\.datos\.productId && !publico\) \|\| \(r\.datos\.sinProductoId && !excluido\) \|\| \(r\.datos\.enlaceProductId && !enlazado\)/.test(crear),
+  "el producto del público, el excluido y el del botón tienen que ser principales PROPIOS: un id ajeno no manda nada");
+
+/* ── 21/09/26: "compraron X y NO compraron Y" ──────────────────────────────
+   El segundo producto a quien ya tiene el primero. Una sola cuenta para la
+   pantalla, la ruta y Tus clientes; el envío filtra con el mismo criterio. */
+const gente = [
+  { email: "a@x.com", productos: ["p1"] },
+  { email: "b@x.com", productos: ["p1", "p2"] },
+  { email: "c@x.com", productos: ["p2"] },
+];
+check("SEG-A", cuantosDelSegmento(gente, { productId: null, sinProductoId: null }) === 3
+  && cuantosDelSegmento(gente, { productId: "p1", sinProductoId: null }) === 2
+  && cuantosDelSegmento(gente, { productId: "p1", sinProductoId: "p2" }) === 1
+  && cuantosDelSegmento(gente, { productId: null, sinProductoId: "p2" }) === 1,
+  "todos; compraron X; compraron X y no Y; todos los que no tienen Y");
+const mismo = validarCorreoNuevo({ asunto: "Hola hola", cuerpo: "x".repeat(30), productId: "c" + "a".repeat(24), sinProductoId: "c" + "a".repeat(24) });
+const conSin = validarCorreoNuevo({ asunto: "Hola hola", cuerpo: "x".repeat(30), productId: "c" + "a".repeat(24), sinProductoId: "c" + "b".repeat(24) });
+check("SEG-B", !mismo.ok && /mismo producto/.test(mismo.ok ? "" : mismo.problema) && conSin.ok && conSin.datos.sinProductoId === "c" + "b".repeat(24),
+  "el mismo producto en «compraron» y «no compraron» se rechaza (sería nadie); uno distinto pasa");
+const nombreDe = (id: string) => ({ p1: "Guía", p2: "Recetario" } as Record<string, string>)[id] ?? null;
+check("SEG-C", nombreDelSegmento({ productId: "p1", sinProductoId: "p2" }, nombreDe) === "Compraron Guía y no Recetario"
+  && nombreDelSegmento({ productId: null, sinProductoId: "p2" }, nombreDe) === "Todos los que no compraron Recetario"
+  && nombreDelSegmento({ productId: null, sinProductoId: null }, nombreDe) === "Todos los que te compraron",
+  "el segmento se dice en castellano en el historial");
+check("SEG-D", /buyer: \{ orders: \{ none: \{ storeId, status: "CONFIRMED", items: \{ some: \{ productId: sinProductoId \} \} \} \}/.test(db)
+  && /compradoresDe\(correo\.storeId, \{ productId: correo\.productId, sinProductoId: correo\.sinProductoId \}, cursor\)/.test(db)
+  && /sinProductoId String\?/.test(leer("prisma/schema.prisma")) && /ADD COLUMN IF NOT EXISTS "sinProductoId" TEXT/.test(leer("prisma/migrations/20260921230000_correo_sin_producto/migration.sql")),
+  "el envío excluye con el mismo criterio (ninguna cobrada de esta cuenta con ese producto), el filtro se guarda con el mail, y la migración es idempotente");
+check("SEG-E", /Y que no compraron/.test(cliente) && /productos\.length > 1 && \(/.test(cliente) && /cuantos\.porPar\[productId\]\?\.\[sinProductoId\]/.test(cliente)
+  && /useState\(inicial\.sinProductoId \?\? ""\)/.test(cliente) && /plantilla: "siguiente" as const/.test(pantalla) && /nuevo = propio\(uno\("nuevo"\)\)/.test(pantalla),
+  "la pantalla ofrece el segundo selector (sólo con más de un producto), muestra la cuenta de la combinación, y llega con el segmento o el lanzamiento puestos desde la dirección");
 check("RUTA-D", /if \(cuantos === 0\) return/.test(crear), "sin destinatarios no se crea nada");
 check("RUTA-E", /where: \{ id, estado: "ENVIANDO", store: \{ ownerId: user\.id \} \}/.test(seguir), "seguir: sólo el dueño, y sólo un envío a medias");
 

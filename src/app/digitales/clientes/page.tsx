@@ -6,6 +6,7 @@ import {
   CLIENTES_POR_PAGINA, TECHO_DE_CLIENTES,
   type ClienteEnPantalla, type ResumenDeClientes,
 } from "@/lib/clientes-digitales";
+import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 import BotonVolver from "../BotonVolver";
 import ClientesClient from "./ClientesClient";
 
@@ -32,7 +33,21 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
 
   const consulta = leerConsultaDeClientes(await searchParams);
   const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
-  if (!store) return <Pantalla clientes={[]} resumen={VACIO} q={consulta.q} pagina={1} paginas={1} />;
+  const sinFiltros = { q: consulta.q, p: null, sin: null, f: null, productos: [] as { id: string; name: string }[] };
+  if (!store) return <Pantalla clientes={[]} resumen={VACIO} pagina={1} paginas={1} {...sinFiltros} />;
+
+  /* Los principales, para los filtros "compraron / no compraron". Un id de
+     la dirección que no sea de uno propio se cae a "sin filtro". */
+  const productos = await prisma.product.findMany({
+    where: { storeId: store.id, rolDigital: "PRINCIPAL", deletedAt: null },
+    orderBy: { createdAt: "asc" },
+    take: MAX_PRODUCTOS_DIGITALES_CREADOS,
+    select: { id: true, name: true },
+  });
+  const propio = (id: string | null) => (id && productos.some((x) => x.id === id) ? id : null);
+  const p = propio(consulta.p);
+  const sin = propio(consulta.sin);
+  const f = consulta.f;
 
   const ahora = new Date();
   /* Las cobradas y las devueltas: lo que alguna vez se pagó. */
@@ -40,22 +55,37 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     storeId: store.id,
     OR: [{ status: "CONFIRMED" }, { status: "CANCELLED", payment: { status: "REFUNDED" } }],
   };
-  /* La búsqueda es por la persona, no por la compra. */
-  const buscadas: Prisma.OrderWhereInput = consulta.q
-    ? { ...pagadas, buyer: { OR: [{ email: { contains: consulta.q, mode: "insensitive" } }, { name: { contains: consulta.q, mode: "insensitive" } }] } }
-    : pagadas;
+  /* La búsqueda y los filtros son por la PERSONA, no por la compra: "compró
+     X" mira todas sus cobradas de esta cuenta, no la fila que se está
+     leyendo. Es el mismo criterio que Mail a tus compradores. */
+  const cobradaCon = (productId: string): Prisma.OrderWhereInput => ({ storeId: store.id, status: "CONFIRMED", items: { some: { productId } } });
+  /* ⚠️ En un `AND`, no en un objeto: "compraron X" y "sin bajar" son las dos
+     una condición sobre `orders`, y en un objeto la segunda pisa a la
+     primera sin avisar. */
+  const condiciones: Prisma.UserWhereInput[] = [
+    ...(consulta.q ? [{ OR: [{ email: { contains: consulta.q, mode: "insensitive" as const } }, { name: { contains: consulta.q, mode: "insensitive" as const } }] }] : []),
+    ...(p ? [{ orders: { some: cobradaCon(p) } }] : []),
+    ...(sin ? [{ NOT: { orders: { some: cobradaCon(sin) } } }] : []),
+    ...(f === "sin-bajar" ? [{ orders: { some: { storeId: store.id, status: "CONFIRMED", items: { some: { descargas: { some: { descargas: 0, expiresAt: { gt: ahora } } } } } } } }] : []),
+  ];
+  const buscadas: Prisma.OrderWhereInput = condiciones.length ? { ...pagadas, buyer: { AND: condiciones } } : pagadas;
 
+  /* "Repiten" es sobre las cobradas y se decide contando: dos o más. Por eso
+     va en el `having` y la cuenta de arriba lo repite con `groupBy`. */
+  const paraAgrupar: Prisma.OrderWhereInput = f === "repiten" ? { ...buscadas, status: "CONFIRMED" } : buscadas;
+  const having = f === "repiten" ? { buyerId: { _count: { gte: 2 } } } : undefined;
   const [porPersona, cuantas, resumen] = await Promise.all([
     /* Una fila por comprador, las últimas compras primero. */
     prisma.order.groupBy({
       by: ["buyerId"],
-      where: buscadas,
+      where: paraAgrupar,
+      having,
       _max: { createdAt: true },
       orderBy: { _max: { createdAt: "desc" } },
       skip: (consulta.pagina - 1) * CLIENTES_POR_PAGINA,
       take: CLIENTES_POR_PAGINA,
     }),
-    prisma.order.findMany({ where: buscadas, distinct: ["buyerId"], select: { buyerId: true }, take: TECHO_DE_CLIENTES }).then((f) => f.length),
+    prisma.order.groupBy({ by: ["buyerId"], where: paraAgrupar, having, orderBy: { buyerId: "asc" }, take: TECHO_DE_CLIENTES }).then((g) => g.length),
     resumenDeTodos(store.id, ahora),
   ]);
 
@@ -93,6 +123,10 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
       clientes={clientes}
       resumen={resumen}
       q={consulta.q}
+      p={p}
+      sin={sin}
+      f={f}
+      productos={productos}
       pagina={consulta.pagina}
       paginas={Math.max(1, Math.ceil(cuantas / CLIENTES_POR_PAGINA))}
     />

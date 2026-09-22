@@ -6,7 +6,7 @@ import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { direccionBase } from "@/lib/enlaces-compartir";
 import { validarCorreoNuevo, enlaceDelBoton, MAX_CORREOS_POR_DIA } from "@/lib/correos-compradores";
-import { cuantosRecibirian, enviarCorreo } from "@/lib/correos-compradores-db";
+import { cuantosDe, enviarCorreo } from "@/lib/correos-compradores-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,24 +51,25 @@ export async function POST(req: NextRequest) {
 
   /* Los dos productos, si vienen, propios y principales. Un id ajeno no
      manda nada: ni le escribe a compradores de otra, ni enlaza a otra. */
-  const ids = [r.datos.productId, r.datos.enlaceProductId].filter((x): x is string => !!x);
+  const ids = [r.datos.productId, r.datos.sinProductoId, r.datos.enlaceProductId].filter((x): x is string => !!x);
   const propios = ids.length
     ? await prisma.product.findMany({
         where: { id: { in: ids }, deletedAt: null, rolDigital: "PRINCIPAL", storeId: store.id },
         select: { id: true, name: true, slugDigital: true, dominioPropio: true },
-        take: 2,
+        take: 3,
       })
     : [];
   const publico = r.datos.productId ? propios.find((p) => p.id === r.datos.productId) : null;
+  const excluido = r.datos.sinProductoId ? propios.find((p) => p.id === r.datos.sinProductoId) : null;
   const enlazado = r.datos.enlaceProductId ? propios.find((p) => p.id === r.datos.enlaceProductId) : null;
-  if ((r.datos.productId && !publico) || (r.datos.enlaceProductId && !enlazado)) {
+  if ((r.datos.productId && !publico) || (r.datos.sinProductoId && !excluido) || (r.datos.enlaceProductId && !enlazado)) {
     return NextResponse.json({ error: "Ese producto no existe." }, { status: 404 });
   }
 
   /* Se cuenta con la misma función que la pantalla: el número que confirmó
      es el número que se guarda. */
-  const conteo = await cuantosRecibirian(store.id, publico ? [publico.id] : []);
-  const cuantos = publico ? (conteo.porProducto[publico.id] ?? 0) : conteo.todos;
+  const segmento = { productId: publico?.id ?? null, sinProductoId: excluido?.id ?? null };
+  const cuantos = await cuantosDe(store.id, segmento);
   if (cuantos === 0) return NextResponse.json({ error: "Todavía no hay a quién mandarle." }, { status: 409 });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com";
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
     data: {
       storeId: store.id,
       productId: publico?.id ?? null,
+      sinProductoId: excluido?.id ?? null,
       asunto: r.datos.asunto,
       cuerpo: r.datos.cuerpo,
       enlace: enlazado ? enlaceDelBoton(direccionBase(enlazado, dominioDeLaPlataforma(), appUrl), r.datos.asunto) : null,

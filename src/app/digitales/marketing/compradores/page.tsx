@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
-import { MAX_CORREOS_EN_PANTALLA, MAX_CORREOS_POR_DIA, resumenDelEnvio } from "@/lib/correos-compradores";
+import { MAX_CORREOS_EN_PANTALLA, MAX_CORREOS_POR_DIA, resumenDelEnvio, nombreDelSegmento } from "@/lib/correos-compradores";
 import { cuantosRecibirian } from "@/lib/correos-compradores-db";
 import BotonVolver from "../../BotonVolver";
 import CompradoresClient, { type CorreoEnPantalla } from "./CompradoresClient";
@@ -24,7 +24,16 @@ export const dynamic = "force-dynamic";
 const AR_TZ = "America/Argentina/Buenos_Aires";
 const fecha = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: AR_TZ });
 
-export default async function CompradoresPage() {
+/**
+ * La dirección puede traer el segmento ya elegido (`?p=` compraron,
+ * `?sin=` no compraron): así llega desde Tus clientes con el filtro puesto.
+ * Y `?nuevo=` es el lanzamiento: "a todos los que no tienen éste", con la
+ * plantilla de "salió el siguiente" y el botón a ese producto. Los ids se
+ * verifican contra los propios; uno ajeno se ignora.
+ */
+export default async function CompradoresPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
+  const uno = (k: string) => { const v = params[k]; return typeof v === "string" ? v : null; };
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
 
@@ -51,17 +60,23 @@ export default async function CompradoresPage() {
           orderBy: { createdAt: "desc" },
           take: MAX_CORREOS_EN_PANTALLA,
           select: {
-            id: true, asunto: true, destinatarios: true, enviados: true, fallidos: true, estado: true, createdAt: true,
-            product: { select: { name: true } },
+            id: true, asunto: true, destinatarios: true, enviados: true, fallidos: true, estado: true, createdAt: true, productId: true, sinProductoId: true,
           },
         }),
       ])
-    : [{ todos: 0, porProducto: {} }, []];
+    : [{ todos: 0, porProducto: {}, sinProducto: {}, porPar: {} }, []];
+
+  const nombreDe = (id: string) => productos.find((p) => p.id === id)?.name ?? null;
+  const propio = (id: string | null) => (id && productos.some((p) => p.id === id) ? id : null);
+  const nuevo = propio(uno("nuevo"));
+  const inicial = nuevo
+    ? { productId: null, sinProductoId: nuevo, enlaceProductId: nuevo, plantilla: "siguiente" as const }
+    : { productId: propio(uno("p")), sinProductoId: propio(uno("sin")), enlaceProductId: null, plantilla: null };
 
   const correos: CorreoEnPantalla[] = filas.map((f) => ({
     id: f.id,
     asunto: f.asunto,
-    producto: f.product?.name ?? null,
+    segmento: nombreDelSegmento({ productId: f.productId, sinProductoId: f.sinProductoId }, nombreDe).toLowerCase(),
     cuando: fecha.format(f.createdAt),
     resumen: resumenDelEnvio(f),
     enviando: f.estado === "ENVIANDO",
@@ -84,6 +99,7 @@ export default async function CompradoresPage() {
         productos={productos}
         cuantos={cuantos}
         correos={correos}
+        inicial={inicial}
         topePorDia={MAX_CORREOS_POR_DIA}
         vendedor={user.name ?? null}
       />

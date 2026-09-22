@@ -9,7 +9,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { armarCliente, leerConsultaDeClientes, direccionDeClientes, resumirClientes, type CompraCruda } from "./clientes-digitales";
+import { armarCliente, leerConsultaDeClientes, direccionDeClientes, direccionParaEscribirles, resumirClientes, type CompraCruda } from "./clientes-digitales";
 import { comisionCongelada } from "./compra-digital";
 
 let fallos = 0;
@@ -62,10 +62,34 @@ const barra = leer("src/app/digitales/DigitalesSidebar.tsx");
 
 check("CLI-G", /user\.role !== "DIGITAL"/.test(page)
   && /OR: \[\{ status: "CONFIRMED" \}, \{ status: "CANCELLED", payment: \{ status: "REFUNDED" \} \}\]/.test(page)
-  && /buyer: \{ OR: \[\{ email: \{ contains: consulta\.q, mode: "insensitive" \} \}, \{ name: \{ contains: consulta\.q, mode: "insensitive" \} \}\] \}/.test(page)
+  && /consulta\.q \? \[\{ OR: \[\{ email: \{ contains: consulta\.q, mode: "insensitive" as const \} \}, \{ name: \{ contains: consulta\.q, mode: "insensitive" as const \} \}\] \}\]/.test(page)
   && /orderBy: \{ _max: \{ createdAt: "desc" \} \}/.test(page) && /skip: \(consulta\.pagina - 1\) \* CLIENTES_POR_PAGINA/.test(page)
   && !/status: "PENDING"/.test(page),
   "la página pide sesión digital, trae lo pagado (cobradas y devueltas, nunca pendientes), busca por la persona, y pagina en el servidor por última compra");
+
+/* ── 21/09/26: los filtros ─────────────────────────────────────────────────
+   "Compraron X" y "no compraron Y" son el MISMO segmento que Mail a tus
+   compradores (mismo criterio: alguna cobrada de ESTA cuenta con ese
+   producto), y "Escribirles a estos" lleva allá con el segmento puesto.
+   "Repiten" se decide contando cobradas (having ≥ 2). Un id que no sea de
+   un producto propio se cae a "sin filtro". */
+const f1 = leerConsultaDeClientes({ p: "c" + "a".repeat(24), sin: "no-es-un-id", f: "repiten" });
+const f2 = leerConsultaDeClientes({ f: "otra" });
+check("CLI-K", f1.p === "c" + "a".repeat(24) && f1.sin === null && f1.f === "repiten" && f2.f === null
+  && direccionDeClientes({ p: "x", sin: "y", f: "sin-bajar", pagina: 2 }) === "/digitales/clientes?p=x&sin=y&f=sin-bajar&pagina=2"
+  && direccionParaEscribirles({ p: "x", sin: "y" }) === "/digitales/marketing/compradores?p=x&sin=y"
+  && direccionParaEscribirles({ p: null, sin: null }) === "/digitales/marketing/compradores",
+  "los filtros se leen limpios de la dirección, y «Escribirles a estos» lleva a Mail a tus compradores con el mismo segmento");
+check("CLI-L", /const propio = \(id: string \| null\) => \(id && productos\.some/.test(page)
+  && /\.\.\.\(p \? \[\{ orders: \{ some: cobradaCon\(p\) \} \}\] : \[\]\)/.test(page) && /\.\.\.\(sin \? \[\{ NOT: \{ orders: \{ some: cobradaCon\(sin\) \} \} \}\] : \[\]\)/.test(page)
+  && /buyer: \{ AND: condiciones \}/.test(page)
+  && /const cobradaCon = \(productId: string\): Prisma\.OrderWhereInput => \(\{ storeId: store\.id, status: "CONFIRMED", items: \{ some: \{ productId \} \} \}\)/.test(page)
+  && /having = f === "repiten" \? \{ buyerId: \{ _count: \{ gte: 2 \} \} \} : undefined/.test(page)
+  && /descargas: \{ some: \{ descargas: 0, expiresAt: \{ gt: ahora \} \} \}/.test(page),
+  "los filtros se aplican sobre la PERSONA con el mismo criterio que el mail; repiten cuenta cobradas; sin bajar mira permisos vigentes");
+check("CLI-M", /direccionParaEscribirles\(\{ p, sin \}\)/.test(cliente) && /const escribibles = \(p \|\| sin\) && !f;/.test(cliente)
+  && /productos\.length > 1 && \(/.test(cliente) && /Escribirles a estos/.test(cliente),
+  "el botón de escribirles aparece sólo con un segmento del mail, y «no compraron» sólo con más de un producto");
 check("CLI-H", /prisma\.bajaCorreoDigital\.findMany\(\{ where: \{ storeId: store\.id, email: \{ in: personas\.map\(\(p\) => p\.email\.toLowerCase\(\)\) \}/.test(page)
   && /\{!c\.dioDeBaja && \(\s*<a href=\{enlaceDeMail\(c\.email, mensaje\)\}/.test(cliente) && /Sin mails/.test(cliente),
   "a quien pidió la baja se lo marca y no se le ofrece el mail; WhatsApp y Ventas siguen");

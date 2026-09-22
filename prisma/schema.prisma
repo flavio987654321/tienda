@@ -1276,6 +1276,10 @@ model CorreoDigital {
   /// A los compradores de este principal; null = de toda la cuenta.
   productId     String?
   product       Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// …y que NO compraron este principal (el segundo producto a quien tiene el
+  /// primero). Sin relación a propósito: es el filtro guardado, para el
+  /// historial; si el producto se borra, el mail ya salió igual.
+  sinProductoId String?
   asunto        String
   cuerpo        String
   /// El botón del mail, ya armado con su etiqueta UTM. Null = sin botón.

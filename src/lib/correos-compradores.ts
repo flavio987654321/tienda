@@ -45,9 +45,18 @@ export type CorreoNuevo = {
   cuerpo: string;
   /** A los compradores de este principal, o null = de toda la cuenta. */
   productId: string | null;
+  /**
+   * …y que NO compraron este principal. Es la jugada de todo el rubro: el
+   * segundo producto a quien ya tiene el primero, sin pagar un anuncio. Con
+   * `productId` null es "todos los que no tienen éste". Null = sin filtro.
+   */
+  sinProductoId: string | null;
   /** El botón del mail lleva a este principal propio, o null = sin botón. */
   enlaceProductId: string | null;
 };
+
+/** El segmento: a quién. Lo comparten la pantalla, la ruta y Tus clientes. */
+export type Segmento = { productId: string | null; sinProductoId: string | null };
 
 /* Un cuid, que es lo que la base pone de id. Es la misma forma que mira la
    ruta de compra; un id con puntos rompería el token de baja, que los usa
@@ -70,7 +79,32 @@ export function validarCorreoNuevo(body: unknown): { ok: true; datos: CorreoNuev
   if (cuerpo.length > CUERPO_MAX) return { ok: false, problema: `El mensaje va hasta ${CUERPO_MAX} letras.` };
 
   const id = (v: unknown) => (typeof v === "string" && ID_RE.test(v) ? v : null);
-  return { ok: true, datos: { asunto, cuerpo, productId: id(b.productId), enlaceProductId: id(b.enlaceProductId) } };
+  const productId = id(b.productId);
+  const sinProductoId = id(b.sinProductoId);
+  /* "Compraron X y no compraron X" es nadie: se avisa en vez de mandar a cero. */
+  if (productId && sinProductoId && productId === sinProductoId) {
+    return { ok: false, problema: "Elegiste el mismo producto en «compraron» y en «no compraron»: así no queda nadie." };
+  }
+  return { ok: true, datos: { asunto, cuerpo, productId, sinProductoId, enlaceProductId: id(b.enlaceProductId) } };
+}
+
+/**
+ * Cuántos recibirían un mail con ese segmento, contando sobre la lista de
+ * "quién compró qué" que arma `cuantosRecibirian` (uno por correo, sin las
+ * bajas). Es la MISMA cuenta para la pantalla, la ruta y Tus clientes.
+ */
+export function cuantosDelSegmento(compradores: { email: string; productos: readonly string[] }[], s: Segmento): number {
+  return compradores.filter((c) => (!s.productId || c.productos.includes(s.productId)) && (!s.sinProductoId || !c.productos.includes(s.sinProductoId))).length;
+}
+
+/** El segmento en castellano, para el historial y los botones. */
+export function nombreDelSegmento(s: Segmento, nombreDe: (id: string) => string | null): string {
+  const a = s.productId ? nombreDe(s.productId) : null;
+  const b = s.sinProductoId ? nombreDe(s.sinProductoId) : null;
+  if (a && b) return `Compraron ${a} y no ${b}`;
+  if (a) return `Compradores de ${a}`;
+  if (b) return `Todos los que no compraron ${b}`;
+  return "Todos los que te compraron";
 }
 
 /** "Hola Ana," con el primer nombre; "Hola," si no lo dejó. */

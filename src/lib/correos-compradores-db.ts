@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendCorreoACompradoresEmail } from "@/lib/resend";
 import { siteUrl } from "@/lib/site";
-import { destinatarios, saludo, urlBajaCorreo, urlBajaCorreoUnClic, type Comprador } from "@/lib/correos-compradores";
+import { destinatarios, saludo, urlBajaCorreo, urlBajaCorreoUnClic, cuantosDelSegmento, type Comprador, type Segmento } from "@/lib/correos-compradores";
 import { tokenDeBaja } from "@/lib/correos-compradores-firma";
 
 /**
@@ -39,13 +39,16 @@ const PRESUPUESTO_MS = 8_000;
  * minúsculas, así que el orden de Postgres y el de `destinatarios` coinciden.
  * Igual `destinatarios` vuelve a limpiar: acá es crudo.
  */
-export async function compradoresDe(storeId: string, productId: string | null, despuesDe: string | null = null, take = PAGINA): Promise<Comprador[]> {
+export async function compradoresDe(storeId: string, segmento: Segmento, despuesDe: string | null = null, take = PAGINA): Promise<Comprador[]> {
+  const { productId, sinProductoId } = segmento;
   const filas = await prisma.order.findMany({
     where: {
       storeId,
       status: "CONFIRMED",
       ...(productId ? { items: { some: { productId } } } : {}),
-      ...(despuesDe ? { buyer: { email: { gt: despuesDe } } } : {}),
+      /* "Y no compraron Y": ninguna orden cobrada de ESTA cuenta con ese
+         producto. Mismo criterio que `cuantosDelSegmento`. */
+      ...(sinProductoId ? { buyer: { orders: { none: { storeId, status: "CONFIRMED", items: { some: { productId: sinProductoId } } } }, ...(despuesDe ? { email: { gt: despuesDe } } : {}) } } : despuesDe ? { buyer: { email: { gt: despuesDe } } } : {}),
     },
     distinct: ["buyerId"],
     orderBy: { buyer: { email: "asc" } },
@@ -65,7 +68,40 @@ export async function bajasDe(storeId: string): Promise<string[]> {
  * lo que la pantalla muestra al lado de cada opción, para que la vendedora
  * sepa a cuánta gente le escribe ANTES de apretar.
  */
-export async function cuantosRecibirian(storeId: string, productIds: string[]): Promise<{ todos: number; porProducto: Record<string, number> }> {
+export type Conteo = {
+  todos: number;
+  porProducto: Record<string, number>;
+  /** Cuántos NO compraron cada principal (de los que compraron algo). */
+  sinProducto: Record<string, number>;
+  /** `porPar[x][y]`: compraron x y no compraron y. */
+  porPar: Record<string, Record<string, number>>;
+};
+
+export async function cuantosRecibirian(storeId: string, productIds: string[]): Promise<Conteo> {
+  const compradores = await quienComproQue(storeId);
+  const cuenta = (s: Segmento) => cuantosDelSegmento(compradores, s);
+  const porProducto: Record<string, number> = {};
+  const sinProducto: Record<string, number> = {};
+  const porPar: Record<string, Record<string, number>> = {};
+  for (const x of productIds) {
+    porProducto[x] = cuenta({ productId: x, sinProductoId: null });
+    sinProducto[x] = cuenta({ productId: null, sinProductoId: x });
+    porPar[x] = {};
+    for (const y of productIds) if (y !== x) porPar[x][y] = cuenta({ productId: x, sinProductoId: y });
+  }
+  return { todos: cuenta({ productId: null, sinProductoId: null }), porProducto, sinProducto, porPar };
+}
+
+/** Cuántos recibirían UN segmento. La ruta lo usa para guardar el número que se confirmó. */
+export async function cuantosDe(storeId: string, s: Segmento): Promise<number> {
+  return cuantosDelSegmento(await quienComproQue(storeId), s);
+}
+
+/**
+ * Quién compró qué: uno por correo (en minúsculas, sin las bajas) con los
+ * principales que tiene. Es la base de todas las cuentas de segmentos.
+ */
+async function quienComproQue(storeId: string): Promise<{ email: string; productos: string[] }[]> {
   const [filas, bajas] = await Promise.all([
     prisma.order.findMany({
       where: { storeId, status: "CONFIRMED" },
@@ -74,13 +110,16 @@ export async function cuantosRecibirian(storeId: string, productIds: string[]): 
     }),
     bajasDe(storeId),
   ]);
-  const todos = destinatarios(filas.map((f) => ({ email: f.buyer.email, nombre: null })), bajas).length;
-  const porProducto: Record<string, number> = {};
-  for (const id of productIds) {
-    const suyas = filas.filter((f) => f.items.some((i) => i.productId === id));
-    porProducto[id] = destinatarios(suyas.map((f) => ({ email: f.buyer.email, nombre: null })), bajas).length;
+  const fuera = new Set(bajas.map((e) => e.toLowerCase()));
+  const porCorreo = new Map<string, Set<string>>();
+  for (const f of filas) {
+    const email = f.buyer.email.trim().toLowerCase();
+    if (!email || fuera.has(email)) continue;
+    const suyos = porCorreo.get(email) ?? new Set<string>();
+    for (const i of f.items) suyos.add(i.productId);
+    porCorreo.set(email, suyos);
   }
-  return { todos, porProducto };
+  return [...porCorreo].map(([email, productos]) => ({ email, productos: [...productos] }));
 }
 
 /**
@@ -113,7 +152,7 @@ export async function enviarCorreo(correoId: string): Promise<ResultadoDelEnvio>
   const correo = await prisma.correoDigital.findUnique({
     where: { id: correoId },
     select: {
-      id: true, storeId: true, productId: true, asunto: true, cuerpo: true, enlace: true, botonTexto: true, cursor: true, estado: true,
+      id: true, storeId: true, productId: true, sinProductoId: true, asunto: true, cuerpo: true, enlace: true, botonTexto: true, cursor: true, estado: true,
       product: { select: { name: true } },
       store: { select: { owner: { select: { name: true, email: true } } } },
     },
@@ -145,7 +184,7 @@ export async function enviarCorreo(correoId: string): Promise<ResultadoDelEnvio>
   };
 
   for (;;) {
-    const pagina = await compradoresDe(correo.storeId, correo.productId, cursor);
+    const pagina = await compradoresDe(correo.storeId, { productId: correo.productId, sinProductoId: correo.sinProductoId }, cursor);
     if (pagina.length === 0) {
       await prisma.correoDigital.update({ where: { id: correo.id }, data: { estado: "LISTO" } });
       return { enviados, fallidos, falta: false };
