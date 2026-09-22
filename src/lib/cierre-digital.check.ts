@@ -87,7 +87,7 @@ async function main() {
   const layout = leer("src/app/digitales/layout.tsx");
   const puerta = layout.indexOf("if (cuenta?.closedAt)");
   check("CIE-I", puerta > 0 && puerta < layout.indexOf("estadoDelRecibimiento(user.id)") && puerta > layout.indexOf('user.role !== "DIGITAL"')
-    && /<CuentaCerrada cerradaEl=\{cuenta\.closedAt\.toISOString\(\)\} vuelven=\{await pausadosPorCierreDe\(prisma, cuenta\.id\)\}/.test(layout)
+    && /<CuentaCerrada cerradaEl=\{cuenta\.closedAt\.toISOString\(\)\} vuelven=\{await pausadosPorCierreDe\(prisma, cuenta\.id\)\} exportar=/.test(layout)
     && /<PWAManager[^>]*disableNotifPrompt \/>\s*<PanelSplash[^>]*\/>\s*<CuentaCerrada/.test(layout),
     "con la cuenta cerrada el panel no existe: sólo la puerta de reabrir, después del rol y antes del recibimiento, sin pedir permiso de avisos");
   const gate = leer("src/app/digitales/CuentaCerrada.tsx");
@@ -98,7 +98,7 @@ async function main() {
   /* ── La zona de peligro ──────────────────────────────────────────────── */
   const zona = leer("src/app/digitales/configuracion/ZonaDePeligro.tsx");
   const tab = leer("src/app/digitales/configuracion/TabGeneral.tsx");
-  check("CIE-K", /<ZonaDePeligro nombre=\{p\.nombreOriginal\} publicados=\{p\.publicados\} \/>/.test(tab)
+  check("CIE-K", /<ZonaDePeligro nombre=\{p\.nombreOriginal\} publicados=\{p\.publicados\} exportar=\{p\.exportar\} \/>/.test(tab)
     && !/NotaPendiente|Se prende cuando esté resuelto/.test(tab),
     "la zona confirma contra el nombre GUARDADO (no lo que esté escribiendo arriba), y ya no queda ningún botón apagado");
   check("CIE-L", /fetch\("\/api\/digitales\/cerrar"/.test(zona) && /confirmacion\.trim\(\) === nombre/.test(zona) && /motivo !== ""/.test(zona)
