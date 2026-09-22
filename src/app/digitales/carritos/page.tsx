@@ -79,7 +79,11 @@ export default async function CarritosPage() {
             un clic de hacerlo. */}
         <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-900 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-          <span>
+          {/* `min-w-0`: es hijo de un flex en fila, y sin eso la caja se estira
+              al ancho de la palabra más larga antes de cortar. Acá el texto es
+              nuestro y no tiene palabras largas, pero la regla es la misma en
+              todo el panel y no se hace una excepción por suerte. */}
+          <span className="min-w-0">
             Estos datos son para recuperar <strong>esa</strong> compra. No los sumes a una lista
             para mandar promociones: te los dejaron para comprarte, no para eso.
           </span>
