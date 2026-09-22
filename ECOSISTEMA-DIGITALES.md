@@ -8423,3 +8423,32 @@ Dos cosas encontradas releyendo el diff entero (20 commits, 72 archivos):
 Deploy: push a main; las tres migraciones del día ya estaban aplicadas a
 mano (`migrate status`: al día), así que el `migrate deploy` del build no
 tiene nada que hacer.
+
+### Tus clientes, y el orden del menú — 21/09/26
+
+Faltaba una pantalla de la gente que compró: los compradores sólo se veían
+adentro de Ventas y en "Mail a tus compradores". `/digitales/clientes`:
+
+- **Un cliente es alguien que PAGÓ.** Quien abrió el pago y se fue es un
+  carrito. Se traen las cobradas y las devueltas (CANCELLED + pago
+  REFUNDED, como Estadísticas); nunca las pendientes.
+- **Una fila por persona**: nombre, mail, cuántas compras, lo que te quedó
+  (la MISMA `comisionCongelada` que Ventas), devoluciones, última compra;
+  con las marcas "Repite", "Sin bajar" (archivo pago sin bajar y vigente) y
+  "Sin mails" (pidió la baja a esa vendedora). Abierta: botones de escribirle
+  (el mismo mensaje que Ventas: "¿te llegó?" si tiene algo sin bajar),
+  WhatsApp, "Ver sus ventas" (Ventas filtrada por su mail), y su historial.
+  A quien pidió la baja no se le ofrece el mail.
+- **Arriba, sobre todos**: cuántos clientes, cuántos repiten, cuántos no
+  bajaron; y el aviso de "hay N personas que no bajaron" si corresponde.
+- Búsqueda por mail o nombre y paginación en el servidor, en la dirección,
+  como Ventas. Todo con techo.
+- **El menú**: Productos · Ventas · Clientes · Carritos · Estadísticas ·
+  Marketing. Ventas, Clientes y Carritos son la misma cosa vista de tres
+  lados (la plata, quién la puso, la que se escapó); Estadísticas después,
+  porque se mira cuando ya se vio qué pasó; Marketing último, porque es lo
+  que se hace para que pase más.
+
+Chequeos CLI-A…J (`clientes-digitales.check.ts`).
+
+🔲 Mirar Clientes a 360/768/1280 con una cuenta con ventas (necesita sesión).

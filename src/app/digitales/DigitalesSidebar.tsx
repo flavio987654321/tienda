@@ -9,7 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone, BarChart3,
+  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone, BarChart3, Users,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
@@ -67,9 +67,11 @@ const GRUPOS: { titulo: string | null; links: LinkDelPanel[] }[] = [
      alguien entra al panel —¿vendí?—. Enterrada abajo obligaría a pasar por
      Configuración para llegar a lo que más se mira. */
   { href: "/digitales/ventas", label: "Ventas", Icon: Receipt },
-  /* Los carritos van pegados a Ventas porque son la otra cara de lo mismo: una
-     es la plata que entró y la otra la que quedó en la puerta. Y va DESPUÉS,
-     no antes: lo primero que alguien quiere ver es lo que sí vendió. */
+  /* Ventas, Clientes y Carritos son la misma cosa vista de tres lados: la plata
+     que entró, quién la puso, y la que quedó en la puerta. Van juntas y en ese
+     orden: lo primero que alguien quiere ver es lo que sí vendió; después a
+     quién; y al final lo que se le escapó. (Clientes, 21/09/26.) */
+  { href: "/digitales/clientes", label: "Clientes", Icon: Users },
   { href: "/digitales/carritos", label: "Carritos", Icon: ShoppingCart },
   /* Estadísticas va DESPUÉS de la plata y antes de Marketing: contesta "¿la
      página sirve?", que es lo que se mira cuando ya se vio si vendió, y antes
