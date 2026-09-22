@@ -1,0 +1,12 @@
+-- La oferta del upsell: en el checkout, los upsells de este producto salen su
+-- precio de oferta mientras corre un reloj, y su precio de lista
+-- ("comparePrice") cuando el reloj llega a cero. El plazo lo firma el servidor
+-- y lo vuelve a verificar al cobrar: ver "lib/oferta-upsell".
+--
+-- Cuelga del producto PRINCIPAL y no de cada upsell: el reloj es uno para toda
+-- la caja "Suma a tu compra", porque los upsells de un mismo producto empiezan
+-- a contar todos juntos, cuando la persona abre el pago.
+--
+-- Una columna opcional: no toca ninguna fila, y con la columna vacia la oferta
+-- queda apagada en todos los productos que ya existen. Idempotente.
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "ofertaUpsell" TEXT;

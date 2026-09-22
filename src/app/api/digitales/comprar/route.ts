@@ -14,6 +14,9 @@ import { clasificarOrigen } from "@/lib/origen-visita";
 import { campaniaDe } from "@/lib/utm-digital";
 import { normalizarCodigo, porQueNoAplica, descuentoDe, type CuponDigitalPuro } from "@/lib/cupones-digitales";
 import { porQueNoValeElAutomatico } from "@/lib/cupones-automaticos";
+import { SUB_STATUS_SELECT } from "@/lib/subscription";
+import { ofertaUpsellDeLaVisita } from "@/lib/oferta-upsell-servidor";
+import { entraEnLaOferta } from "@/lib/oferta-upsell";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
@@ -219,16 +222,20 @@ export async function POST(req: NextRequest) {
     select: {
       id: true, name: true, price: true, archivoPath: true, rolDigital: true,
       /* Sólo para saber si promete garantía. Ver el bloque del consentimiento. */
-      paginaVenta: true, ofertaSalida: true, bienvenida: true,
+      paginaVenta: true, ofertaSalida: true, bienvenida: true, ofertaUpsell: true,
       store: {
         select: {
           id: true, ownerId: true, mpAccessToken: true, isPublished: true,
-          owner: { select: { role: true, subscription: { select: { tier: true, plan: true } } } },
+          /* ⚠️ `SUB_STATUS_SELECT` y no `{ tier, plan }`: la oferta del upsell
+             sólo vale con el plan AL DÍA, y eso lo decide `isSubscriptionActive`,
+             que necesita el estado y las fechas. La comisión sigue leyendo
+             `tier` crudo, a propósito — ver el bloque de la comisión. */
+          owner: { select: { role: true, subscription: { select: { ...SUB_STATUS_SELECT, plan: true } } } },
         },
       },
       hijos: {
         where: { deletedAt: null, isActive: true },
-        select: { id: true, name: true, price: true, rolDigital: true, padreId: true, archivoPath: true },
+        select: { id: true, name: true, price: true, comparePrice: true, rolDigital: true, padreId: true, archivoPath: true },
       },
     },
   });
@@ -303,7 +310,61 @@ export async function POST(req: NextRequest) {
     .filter((h) => h.rolDigital === "BONO")
     .map((h) => ({ id: h.id, name: h.name, price: h.price, rolDigital: h.rolDigital }));
 
-  const upsells = upsellsQueValen(cuerpo.upsells, producto.hijos, producto.id);
+  /* ── La oferta del upsell: ¿sigue viva el plazo que dice tener? ──────────
+   *
+   * Es la MISMA función que dibujó el checkout, con dos diferencias que son
+   * las que hacen que el reloj no sea un adorno:
+   *
+   *   1. `firmarSiNoHay: false`. Acá no se regala un plazo nuevo: sin token
+   *      válido, la oferta no corre. Si no, bastaría con no mandarlo.
+   *   2. Los candidatos son SÓLO lo que mandó el navegador. El token está
+   *      firmado con `NEXTAUTH_SECRET` y con el id de este producto adentro,
+   *      así que uno inventado, uno de otro producto o uno de otra de las
+   *      ofertas con reloj no pasa.
+   *
+   * ⚠️ El agregado de después de pagar (`ordenPrevia`) queda AFUERA a
+   * propósito: ésa es otra oferta, en otra pantalla, sin reloj. Meterlo acá
+   * haría que a quien se le venció el reloj en el checkout tampoco le
+   * sirviera el upsell de la pantalla de gracias, que nunca se lo prometió.
+   */
+  const hayUpsellEnOferta = producto.hijos.some(
+    (h) => h.rolDigital === "UPSELL" && entraEnLaOferta({ price: h.price, comparePrice: h.comparePrice }),
+  );
+  const ofertaDelUpsell = ordenPrevia
+    ? null
+    : ofertaUpsellDeLaVisita(
+        producto,
+        [typeof cuerpo.upsell === "string" ? cuerpo.upsell : undefined],
+        hayUpsellEnOferta,
+        Date.now(),
+        { firmarSiNoHay: false },
+      );
+  /* Sin oferta configurada (`null`), todo sigue como siempre: precio de
+     siempre. Configurada y viva, precio de oferta. Vencida, precio de lista. */
+  const ofertaDelUpsellViva = ofertaDelUpsell === null || ofertaDelUpsell.estado === "viva";
+
+  const upsells = upsellsQueValen(cuerpo.upsells, producto.hijos, producto.id, ofertaDelUpsellViva);
+
+  /* ⚠️ NO SE COBRA DE MÁS A ESCONDIDAS. Si el reloj se terminó entre el clic
+     y el pago, la pantalla decía un número y acá sale otro más alto: eso no
+     se manda a Mercado Pago. Se corta, la pantalla acomoda los precios
+     (`upsellVencido`) y la persona decide de nuevo viendo lo que va a pagar.
+     Es la misma regla que `cuponRechazado`, y vale por la misma razón: el
+     único error imperdonable en esta ruta es cobrar algo distinto de lo que
+     decía el botón. */
+  const eligioUnoConReloj = upsells.some((u) => {
+    const h = producto.hijos.find((x) => x.id === u.id);
+    return !!h && entraEnLaOferta({ price: h.price, comparePrice: h.comparePrice });
+  });
+  if (!ofertaDelUpsellViva && eligioUnoConReloj) {
+    return NextResponse.json(
+      {
+        error: "La oferta del extra se terminó mientras completabas tus datos. Fijate el precio nuevo y confirmá de nuevo.",
+        upsellVencido: true,
+      },
+      { status: 400 },
+    );
+  }
 
   /* ── Si es un agregado, de quién y sobre qué ───────────────────────────── */
 

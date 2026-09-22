@@ -18,6 +18,9 @@ import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { direccionBase } from "@/lib/enlaces-compartir";
 import type { OfertaEnElCheckout, BienvenidaEnElCheckout } from "./CheckoutClient";
 import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie } from "@/lib/bienvenida-servidor";
+import { ofertaUpsellDeLaVisita, tokenDeUpsellDeLaCookie } from "@/lib/oferta-upsell-servidor";
+import { entraEnLaOferta } from "@/lib/oferta-upsell";
+import type { OfertaDeUpsellEnElCheckout } from "./CheckoutClient";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -58,7 +61,7 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, price: true, comparePrice: true, archivoPath: true,
-      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true, ofertaSalida: true, bienvenida: true,
+      rolDigital: true, paginaVenta: true, images: true, isActive: true, medicion: true, ofertaSalida: true, bienvenida: true, ofertaUpsell: true,
       store: {
         select: {
           id: true, isPublished: true, mpAccessToken: true, ownerId: true, storeConfig: true,
@@ -146,11 +149,38 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
      pueda venir en el link. Viva: el cupón se aplica solo en la pantalla.
      Y mientras corre, la oferta de salida no sale: sería un descuento
      arriba de otro. Vencida o nada: el checkout de siempre. */
+  const tokenDeUpsellCookie = seLePuedeVender ? await tokenDeUpsellDeLaCookie(fila.id) : undefined;
   const b = seLePuedeVender ? await bienvenidaDeLaVisita(fila, [await tokenDeBienvenidaDeLaCookie(fila.id), tokenDeBienvenidaPedido]) : null;
   const bienvenida: BienvenidaEnElCheckout | null = b?.estado === "viva"
     ? { productId: fila.id, codigo: b.codigo, porcentaje: b.porcentaje, token: b.token, texto: b.texto }
     : null;
   const oferta = bienvenida ? null : await armarOferta(fila, seLePuedeVender, tokenPedido);
+
+  /* ── La oferta del upsell ─────────────────────────────────────────────────
+     El reloj de la caja "Sumá a tu compra". Manda sobre los upsells y sobre
+     nada más: el principal vale lo mismo antes, durante y después.
+
+     ⚠️ Convive con el precio de bienvenida sin pisarlo —no es un descuento
+     arriba de otro, son dos productos distintos—, pero sólo uno de los dos
+     relojes se dibuja: el de bienvenida está arriba, en el resumen, y éste
+     adentro de la caja del upsell. Ver `lib/oferta-upsell`.
+
+     El plazo se firma ACÁ y viaja a la pantalla, que lo guarda: recargar o
+     volver desde Mercado Pago no lo reinicia. */
+  const ofertaUpsell = ((): OfertaDeUpsellEnElCheckout | null => {
+    if (!seLePuedeVender) return null;
+    const hayAlguno = upsells.some((u) => entraEnLaOferta({ price: u.price, comparePrice: u.comparePrice }));
+    const o = ofertaUpsellDeLaVisita(fila, [tokenDeUpsellCookie], hayAlguno);
+    if (!o) return null;
+    /* ⚠️ "Vencida" viaja, no se convierte en `null`. Son cosas distintas:
+       sin oferta el upsell se muestra como siempre —su precio, y al lado el
+       de lista tachado—, y vencida se muestra al precio de lista, que es el
+       que se va a cobrar. Devolver `null` en los dos casos le mostraría el
+       precio de oferta a quien ya lo perdió. */
+    return o.estado === "viva"
+      ? { estado: "viva", productoId: fila.id, token: o.token, texto: o.texto }
+      : { estado: "vencida" };
+  })();
 
   return (
     <div className={CLASES_FUENTES}>
@@ -190,6 +220,10 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
             precio: u.price,
             regular: u.comparePrice && u.comparePrice > u.price ? u.comparePrice : null,
             imagen: primeraImagen(u.images),
+            /* Si ESTE upsell entra en la oferta del reloj. El que no tiene
+               precio de lista no entra: se muestra como siempre, aunque la
+               oferta esté prendida para sus hermanos. Ver `entraEnLaOferta`. */
+            conReloj: entraEnLaOferta({ price: u.price, comparePrice: u.comparePrice }),
           }))}
           /* El total de arranque, calculado por la misma función que cobra. */
           totalBase={totalDeLaCompra(principal, [])}
@@ -205,6 +239,7 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
           tarjeta={estilo.tarjeta}
           oferta={oferta}
           bienvenida={bienvenida}
+          ofertaUpsell={ofertaUpsell}
         />
       </div>
     </div>

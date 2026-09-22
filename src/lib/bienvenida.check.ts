@@ -107,6 +107,9 @@ const pagina = leer("src/app/p/[id]/page.tsx");
 const pago = leer("src/app/p/[id]/pagar/page.tsx");
 const checkout = leer("src/app/p/[id]/pagar/CheckoutClient.tsx");
 const barra = leer("src/components/digitales/BarraDeBienvenida.tsx");
+/* La cocina de guardar el plazo se comparte con la oferta del upsell: vive
+   en `plazo-en-el-navegador`, y estos chequeos la miran ahí. */
+const plazo = leer("src/lib/plazo-en-el-navegador.ts");
 const dibujante = leer("src/components/digitales/PaginaDeVenta.tsx");
 const landing = leer("src/lib/landing-propia.ts");
 const efectos = leer("src/lib/landing-efectos.ts");
@@ -121,8 +124,8 @@ const migracion = leer("prisma/migrations/20260921120000_precio_de_bienvenida/mi
 const instrucciones = leer("src/lib/landing-instrucciones.ts");
 
 const firma = leer("src/lib/oferta-salida-firma.ts");
-check("LIB-A", !/node:crypto/.test(leer("src/lib/bienvenida.ts")) && /type Clase = "oferta-salida" \| "bienvenida";/.test(firma) && /update\(`\$\{clase\}:\$\{productId\}:\$\{ts\}`\)/.test(firma),
-  "lo que importa el navegador no trae crypto; las dos firmas llevan su nombre adentro del HMAC");
+check("LIB-A", !/node:crypto/.test(leer("src/lib/bienvenida.ts")) && /type Clase = "oferta-salida" \| "bienvenida" \| "upsell";/.test(firma) && /update\(`\$\{clase\}:\$\{productId\}:\$\{ts\}`\)/.test(firma),
+  "lo que importa el navegador no trae crypto; las tres firmas llevan su nombre adentro del HMAC");
 check("RUTA-A", /porQueNoValeElAutomatico\(cupon\.codigo, producto, \{ oferta: cuerpo\.oferta, bienvenida: cuerpo\.bienvenida \}\)/.test(comprar) && /bienvenida: true/.test(comprar),
   "la compra pasa el token del precio de bienvenida por la regla compartida");
 check("RUTA-B", /porQueNoValeElAutomatico\(cupon\.codigo, producto, \{ oferta: cuerpo\?\.oferta, bienvenida: cuerpo\?\.bienvenida \}\)/.test(publica) && /bienvenida: true/.test(publica),
@@ -160,12 +163,13 @@ check("CHK-B", /if \(guardarTokenDeBienvenida\(bienvenida\.productId, bienvenida
 check("CHK-C", /useAhora\(bienvenidaVenceEn\)/.test(checkout) && !/setInterval/.test(checkout),
   "el reloj del checkout es el compartido, sin intervalos propios");
 
-check("BAR-A", /elTokenMasViejo\(\[enLaCookie, deLocal, tokenDeLaPagina\]\)/.test(barra) && /document\.cookie = `\$\{clave\}=\$\{t\}; Max-Age=2592000; Path=\$\{caminoDeLaCookie\(\)\}; SameSite=Lax/.test(barra) && /localStorage\.setItem\(clave, t\)/.test(barra)
-  && /location\.pathname\.match\(\/\^\\\/p\\\/\[A-Za-z0-9_-\]\{1,64\}\/\)\?\.\[0\] \?\? "\/"/.test(barra),
-  "la barra guarda el token más viejo en la cookie Y en localStorage, y la cookie va sólo al camino de ESTE producto (con Path=/ se acumulan hasta romper la cabecera)");
+check("BAR-A", /masViejo\(\[enLaCookie, deLocal, tokenDeLaPagina\]\)/.test(plazo) && /document\.cookie = `\$\{clave\}=\$\{t\}; Max-Age=2592000; Path=\$\{caminoDeLaCookie\(\)\}; SameSite=Lax/.test(plazo) && /localStorage\.setItem\(clave, t\)/.test(plazo)
+  && /location\.pathname\.match\(\/\^\\\/p\\\/\[A-Za-z0-9_-\]\{1,64\}\/\)\?\.\[0\] \?\? "\/"/.test(plazo)
+  && /return guardarPlazo\(claveDeBienvenida\(productId\), tokenDeLaPagina, elTokenMasViejo\);/.test(barra),
+  "el token más viejo se guarda en la cookie Y en localStorage, y la cookie va sólo al camino de ESTE producto (con Path=/ se acumulan hasta romper la cabecera); la barra pone su clave y su lector");
 check("BAR-B", /if \(guardarTokenDeBienvenida\(productId, token\)\.pedirDeNuevo\) router\.refresh\(\);/.test(barra) && /if \(vencida\) router\.refresh\(\);/.test(barra) && !/useState|setInterval/.test(barra)
-  && /pedirDeNuevo: elegido !== tokenDeLaPagina && leerCookie\(\) === elegido/.test(barra)
-  && /if \(elegido !== tokenDeLaPagina && enLaCookie === elegido\) \{\n\s+guardar\(tokenDeLaPagina\);\n\s+return \{ token: tokenDeLaPagina, pedirDeNuevo: false \};/.test(barra),
+  && /pedirDeNuevo: elegido !== tokenDeLaPagina && leerCookie\(\) === elegido/.test(plazo)
+  && /if \(elegido !== tokenDeLaPagina && enLaCookie === elegido\) \{\n\s+guardar\(tokenDeLaPagina\);\n\s+return \{ token: tokenDeLaPagina, pedirDeNuevo: false \};/.test(plazo),
   "con un plazo más viejo o vencido, la barra le pide la página al servidor (ningún precio se cambia desde el navegador); sólo si la cookie quedó escrita; y si el servidor ya vio esa cookie y eligió otra cosa, manda el servidor: sin bucles");
 check("BAR-D", /useAhora\(venceEn: number \| null\)/.test(leer("src/lib/reloj-compartido.ts")) && /const venceEn = demo \? null :/.test(barra) && /\? venceEnDelTokenDeBienvenida\(bienvenida\.token\) \?\? 0 : null;/.test(checkout),
   "sin oferta (o en demo) el reloj no late: el checkout y la barra no se redibujan cada segundo por nada");

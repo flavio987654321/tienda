@@ -8,10 +8,12 @@ import { celularArgentino } from "@/lib/ventas-digitales";
 import { descuentoDe, normalizarCodigo, textoDelDescuento, type TipoDeCupon } from "@/lib/cupones-digitales";
 import { venceEnDelToken, cuentaRegresiva } from "@/lib/oferta-salida";
 import { venceEnDelTokenDeBienvenida } from "@/lib/bienvenida";
+import { precioDelUpsell, venceEnDelTokenDeUpsell, elTokenDeUpsellMasViejo, claveDeOfertaUpsell } from "@/lib/oferta-upsell";
+import { guardarPlazo } from "@/lib/plazo-en-el-navegador";
 import { useAhora } from "@/lib/reloj-compartido";
 import CartelDeSalida from "@/components/digitales/CartelDeSalida";
 import { guardarTokenDeBienvenida } from "@/components/digitales/BarraDeBienvenida";
-import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket } from "lucide-react";
+import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle, Ticket, Clock } from "lucide-react";
 
 /**
  * El formulario de pago.
@@ -62,10 +64,25 @@ export type OfertaEnElCheckout = {
  */
 export type BienvenidaEnElCheckout = { productId: string; codigo: string; porcentaje: number; token: string; texto: string };
 
+/**
+ * La oferta del upsell de ESTA visita, ya decidida por el servidor
+ * (`ofertaUpsellDeLaVisita`).
+ *
+ * `null` = no hay (apagada, sin plan, o ningún upsell tiene precio de lista);
+ * la caja se dibuja como siempre. `"vencida"` = esta persona ya tuvo su plazo:
+ * sin reloj y al precio de lista, que es el que se va a cobrar. Son dos cosas
+ * distintas y por eso no se juntan en `null`.
+ */
+export type OfertaDeUpsellEnElCheckout =
+  | { estado: "viva"; productoId: string; token: string; texto: string }
+  | { estado: "vencida" };
+
 type Bono = { id: string; nombre: string; vale: number };
 type Upsell = {
   id: string; nombre: string; descripcion: string | null;
   precio: number; regular: number | null; imagen: string | null;
+  /** Si entra en la oferta del reloj: tiene precio de lista al que volver. */
+  conReloj: boolean;
 };
 
 type Props = {
@@ -95,6 +112,8 @@ type Props = {
   oferta: OfertaEnElCheckout | null;
   /** Null = sin precio de bienvenida para esta visita. Ver `lib/bienvenida`. */
   bienvenida: BienvenidaEnElCheckout | null;
+  /** Null = sin oferta del upsell para esta visita. Ver `lib/oferta-upsell`. */
+  ofertaUpsell: OfertaDeUpsellEnElCheckout | null;
 };
 
 const plata = (n: number) =>
@@ -157,6 +176,42 @@ export default function CheckoutClient(p: Props) {
     ? { codigo: bienvenida.codigo, tipo: "PORCENTAJE" as const, valor: bienvenida.porcentaje, texto: textoDelDescuento({ tipo: "PORCENTAJE", valor: bienvenida.porcentaje }) }
     : null), [cupon, bienvenida, bienvenidaViva]);
   const esElDeBienvenida = !!bienvenida && cuponVigente?.codigo === bienvenida.codigo;
+  /* ── La oferta del upsell ─────────────────────────────────────────────
+     El reloj de la caja "Sumá a tu compra". El plazo lo firmó el servidor;
+     acá se guarda —cookie y localStorage— y se usa el más viejo que haya a
+     mano: recargar, o volver desde Mercado Pago, no lo reinicia.
+
+     ⚠️ Al llegar a cero NO se pide la página de nuevo, al revés que la barra
+     de bienvenida. La pantalla ya tiene los dos precios y los cambia con
+     `precioDelUpsell`, la misma función con la que la ruta cobra. Un
+     `router.refresh()` acá sería redibujar el formulario donde la persona
+     está escribiendo su correo. */
+  const ofertaUpsell = p.ofertaUpsell;
+  /* El token sale de las props, no de un estado: el servidor ya eligió, y
+     si el navegador tenía uno más viejo el efecto de abajo pide la página
+     de nuevo en vez de corregirlo acá. Un estado propio sería una segunda
+     verdad sobre el mismo plazo. */
+  const tokenDeUpsell = ofertaUpsell?.estado === "viva" ? ofertaUpsell.token : null;
+  /* El servidor dijo que el plazo ya no vale al intentar pagar. Late lo
+     mismo que `bienvenidaRechazada`: se acomodan los precios y se cobra lo
+     que corresponde, sin cobrar de más a escondidas. */
+  const [upsellRechazado, setUpsellRechazado] = useState(false);
+  const upsellVenceEn = tokenDeUpsell ? venceEnDelTokenDeUpsell(tokenDeUpsell) : null;
+  const ahoraUpsell = useAhora(upsellVenceEn);
+  const hayOfertaDeUpsell = ofertaUpsell !== null;
+  const upsellVivo =
+    ofertaUpsell?.estado === "viva" && !upsellRechazado && upsellVenceEn !== null &&
+    /* `ahoraUpsell === 0` es el servidor dibujando: ahí manda lo que el
+       servidor ya decidió, y no se dibuja un reloj vencido por un segundo. */
+    (ahoraUpsell === 0 || ahoraUpsell < upsellVenceEn);
+
+  /**
+   * Lo que sale este upsell AHORA. Sin oferta configurada, su precio de
+   * siempre; con el reloj corriendo, el de oferta; vencido, el de lista.
+   * La cuenta la hace `precioDelUpsell`, la misma función que la ruta.
+   */
+  const precioAhora = (u: Upsell) =>
+    precioDelUpsell({ price: u.precio, comparePrice: u.regular }, !hayOfertaDeUpsell || upsellVivo);
   /* ⚠️ El freno del doble click. `useState` no alcanza: dos clics seguidos leen
      el mismo `false` antes de que React vuelva a dibujar, y salen los dos. Con
      un `ref` el segundo ve el `true` en el mismo instante. Es el mismo patrón
@@ -166,7 +221,7 @@ export default function CheckoutClient(p: Props) {
   const cuenta = useMemo(() => {
     const sumaUpsells = p.upsells
       .filter((u) => elegidos.includes(u.id))
-      .reduce((s, u) => s + u.precio, 0);
+      .reduce((s, u) => s + precioDelUpsell({ price: u.precio, comparePrice: u.regular }, !hayOfertaDeUpsell || upsellVivo), 0);
     const valorBonos = p.bonos.reduce((s, b) => s + b.vale, 0);
     const regularUpsells = p.upsells
       .filter((u) => elegidos.includes(u.id))
@@ -177,7 +232,7 @@ export default function CheckoutClient(p: Props) {
     const pagas = sinCupon - descuento;
     const valorTotal = p.regular + valorBonos + regularUpsells;
     return { sinCupon, descuento, pagas, valorTotal, ahorro: valorTotal > pagas ? valorTotal - pagas : 0 };
-  }, [elegidos, p, cuponVigente]);
+  }, [elegidos, p, cuponVigente, hayOfertaDeUpsell, upsellVivo]);
 
   /**
    * Verifica un cupón contra el servidor y lo deja puesto. `plazos` son los
@@ -222,6 +277,30 @@ export default function CheckoutClient(p: Props) {
     if (!bienvenida || !p.puedeCobrar) return;
     if (guardarTokenDeBienvenida(bienvenida.productId, bienvenida.token).pedirDeNuevo) router.refresh();
   }, [bienvenida, p.puedeCobrar, router]);
+
+  /* ── El plazo del upsell, guardado ────────────────────────────────────
+     Se elige el que vence ANTES entre la cookie, el localStorage y el que
+     trajo la página, y se guarda en los dos lados. Así abrir el pago por
+     segunda vez sigue el reloj de la primera en vez de regalar otros diez
+     minutos — que es exactamente lo que hace el reloj de la competencia.
+
+     No hace falta pedir la página de nuevo como en bienvenida: acá el
+     precio lo decide la pantalla con los dos números que ya tiene, y el
+     servidor lo vuelve a verificar al cobrar. */
+  useEffect(() => {
+    if (ofertaUpsell?.estado !== "viva" || !p.puedeCobrar) return;
+    const { pedirDeNuevo } = guardarPlazo(
+      claveDeOfertaUpsell(ofertaUpsell.productoId),
+      ofertaUpsell.token,
+      elTokenDeUpsellMasViejo,
+    );
+    /* Si el navegador tenía uno más viejo, esta pantalla está dibujada con
+       un plazo que no es el suyo: se le pide al servidor que la vuelva a
+       dibujar, ya con la cookie puesta. Igual que la barra de bienvenida, y
+       por el mismo motivo: el precio lo decide el servidor, no la pantalla.
+       `router.refresh` no borra lo que la persona escribió. */
+    if (pedirDeNuevo) router.refresh();
+  }, [ofertaUpsell, p.puedeCobrar, router]);
 
   /* ── Cuándo aparece el cartel ─────────────────────────────────────────
      En computadora, cuando el mouse sale por arriba (va a cerrar la pestaña
@@ -320,6 +399,9 @@ export default function CheckoutClient(p: Props) {
           oferta: tokenDeOferta ?? undefined,
           /* Y el del precio de bienvenida, para el cupón BIENVENIDA-…. */
           bienvenida: esElDeBienvenida && bienvenidaViva ? bienvenida.token : undefined,
+          /* El plazo de la oferta del upsell. Sin él —o vencido— el servidor
+             cobra el precio de lista, así que no mandarlo no abarata nada. */
+          upsell: tokenDeUpsell ?? undefined,
           /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
              servidor. Una prueba que la escribe el navegador no prueba nada. */
           acepto: true,
@@ -341,6 +423,12 @@ export default function CheckoutClient(p: Props) {
           setCodigo("");
           if (esElDeBienvenida) setBienvenidaRechazada(true);
         }
+        /* La oferta del upsell se terminó entre el clic y el pago. NO se
+           cobra el precio de lista sin avisar: se acomodan los números en
+           pantalla y la persona decide de nuevo, viendo lo que va a pagar.
+           Cobrar más de lo que decía el botón es lo único que no se puede
+           hacer acá. */
+        if (datos.upsellVencido) setUpsellRechazado(true);
         enVuelo.current = false;
         setYendo(false);
         return;
@@ -557,39 +645,81 @@ export default function CheckoutClient(p: Props) {
             <Renglon key={u.id} nombre={u.nombre} valor={plata(u.regular ?? u.precio)} />
           ))}
 
-          {/* El upsell antes de pagar y con un click: es la mejor ubicación que
-              tiene, y es lo único que se copió de la competencia. Sin reloj al
-              lado — el de ellos reinicia. */}
-          {p.upsells.map((u) => {
-            const puesto = elegidos.includes(u.id);
-            return (
-              <div key={u.id} className={`mt-4 border-2 border-dashed border-[color:var(--pv-acento)] p-3.5 ${p.tarjeta} ${puesto ? "bg-[color:var(--pv-fuerte)] border-solid" : "bg-[color:var(--pv-tarjeta)]"}`}>
-                <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-[color:var(--pv-acento)]">
+          {/* ── La caja del upsell ───────────────────────────────────────
+              El upsell antes de pagar y con un click: es la mejor ubicación
+              que tiene, y es lo único que se copió de la competencia.
+
+              ⚠️ UN SOLO RELOJ PARA TODA LA CAJA, y un solo título. Un
+              producto puede tener hasta tres upsells, y los tres empiezan a
+              contar cuando la persona abre el pago: tres relojes marcarían
+              el mismo número tres veces, y tres veces "Sumá a tu compra" es
+              ruido. Ver `lib/oferta-upsell`.
+
+              Y el reloj es de verdad: al llegar a cero el precio sube al de
+              lista, acá y al cobrar. El de la competencia reinicia con F5 y
+              al terminar no cambia nada. */}
+          {p.upsells.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-[color:var(--pv-acento)]">
                   Sumá a tu compra
                 </p>
-                <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
-                {u.descripcion && (
-                  <p className="mt-1 text-[12.5px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
+                {/* `ahoraUpsell > 0` es "ya está en el navegador": en el
+                    servidor no hay reloj que leer, y dibujar uno ahí haría
+                    que el primer segundo no coincida con lo hidratado. */}
+                {upsellVivo && upsellVenceEn !== null && ahoraUpsell > 0 && ofertaUpsell?.estado === "viva" && (
+                  <p role="status" className="inline-flex min-w-0 items-center gap-1.5 text-[11.5px] font-bold text-[color:var(--pv-acento)]">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0">{ofertaUpsell.texto}</span>
+                    <span className="shrink-0 tabular-nums">{cuentaRegresiva(upsellVenceEn, ahoraUpsell) ?? "0:00"}</span>
+                  </p>
                 )}
-                <p className="mt-2 text-sm font-bold text-[color:var(--pv-tinta)]">
-                  {u.regular && <s className="mr-2 font-normal opacity-55">{plata(u.regular)}</s>}
-                  {plata(u.precio)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setElegidos((v) => puesto ? v.filter((x) => x !== u.id) : [...v, u.id])}
-                  aria-pressed={puesto}
-                  className={`mt-2.5 flex w-full items-center justify-center gap-1.5 border-2 border-[color:var(--pv-acento)] px-3 py-2 text-[13px] font-bold transition ${p.botonRedondo} ${
-                    puesto
-                      ? "bg-[color:var(--pv-acento)] text-[color:var(--pv-sobre)]"
-                      : "text-[color:var(--pv-acento)] hover:bg-[color:var(--pv-acento)] hover:text-[color:var(--pv-sobre)]"
-                  }`}
-                >
-                  {puesto ? <><Check className="h-3.5 w-3.5" /> Agregado — sacar</> : "+ Agregar a tu compra"}
-                </button>
               </div>
-            );
-          })}
+
+              {/* Se dice, no se esconde: la persona vio un precio y ahora ve
+                  otro. Sin esta línea parece un error nuestro. Es la misma
+                  regla que la del precio de bienvenida vencido. */}
+              {hayOfertaDeUpsell && !upsellVivo && (
+                <p role="status" className="mb-2 text-[12px] text-[color:var(--pv-tenue)]">
+                  La oferta se terminó: queda el precio de siempre.
+                </p>
+              )}
+
+              {p.upsells.map((u) => {
+                const puesto = elegidos.includes(u.id);
+                const sale = precioAhora(u);
+                return (
+                  <div key={u.id} className={`mt-2.5 border-2 border-dashed border-[color:var(--pv-acento)] p-3.5 ${p.tarjeta} ${puesto ? "bg-[color:var(--pv-fuerte)] border-solid" : "bg-[color:var(--pv-tarjeta)]"}`}>
+                    <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
+                    {u.descripcion && (
+                      <p className="mt-1 text-[12.5px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
+                    )}
+                    {/* El tachado sale sólo si de verdad se está pagando menos.
+                        Con la oferta vencida, `sale` YA ES el precio de lista:
+                        tacharlo al lado de sí mismo sería un descuento inventado. */}
+                    <p className="mt-2 text-sm font-bold text-[color:var(--pv-tinta)]">
+                      {u.regular !== null && sale < u.regular && (
+                        <s className="mr-2 font-normal opacity-55">{plata(u.regular)}</s>
+                      )}
+                      {plata(sale)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setElegidos((v) => puesto ? v.filter((x) => x !== u.id) : [...v, u.id])}
+                      aria-pressed={puesto}
+                      className={`mt-2.5 flex w-full items-center justify-center gap-1.5 border-2 border-[color:var(--pv-acento)] px-3 py-2 text-[13px] font-bold transition ${p.botonRedondo} ${
+                        puesto
+                          ? "bg-[color:var(--pv-acento)] text-[color:var(--pv-sobre)]"
+                          : "text-[color:var(--pv-acento)] hover:bg-[color:var(--pv-acento)] hover:text-[color:var(--pv-sobre)]"
+                      }`}
+                    >
+                      {puesto ? <><Check className="h-3.5 w-3.5" /> Agregado — sacar</> : "+ Agregar a tu compra"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* ── El cupón ─────────────────────────────────────────────────
               Chico y abajo del detalle: quien tiene uno lo busca; quien no,

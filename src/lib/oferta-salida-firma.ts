@@ -1,11 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { HORAS_MAXIMAS } from "@/lib/oferta-salida";
 import { MINUTOS_MAXIMOS } from "@/lib/bienvenida";
+import { MINUTOS_MAXIMOS_UPSELL } from "@/lib/oferta-upsell";
 
 /**
- * Los plazos firmados: el de la oferta de salida y el del precio de
- * bienvenida. Sólo servidor: usa `crypto`. Lo puro (las reglas, el texto
- * del plazo, la cuenta regresiva) está en `oferta-salida` y `bienvenida`.
+ * Los plazos firmados: el de la oferta de salida, el del precio de
+ * bienvenida y el de la oferta del upsell. Sólo servidor: usa `crypto`. Lo
+ * puro (las reglas, el texto del plazo, la cuenta regresiva) está en
+ * `oferta-salida`, `bienvenida` y `oferta-upsell`.
  *
  * El token lleva la hora en que VENCE, no la de vista. Así el checkout firma
  * "ahora + 15 minutos" y el mail de carrito "ahora + 24 horas" con el mismo
@@ -13,17 +15,17 @@ import { MINUTOS_MAXIMOS } from "@/lib/bienvenida";
  * cuando se mostró: mira la hora, y listo. Si la dueña acorta el plazo
  * después, lo que ya se prometió se cumple igual.
  *
- * ── Dos ofertas, dos firmas ─────────────────────────────────────────────────
+ * ── Tres ofertas, tres firmas ───────────────────────────────────────────────
  *
- * Cada una firma con su propio nombre adentro (`oferta-salida:` y
- * `bienvenida:`), y por eso un token de una NO vale para la otra: la de
- * salida puede prometer hasta 48 horas y la de bienvenida hasta una; si
- * compartieran firma, un token de salida de dos días le daría a alguien dos
- * días de precio de bienvenida. Con el nombre adentro del HMAC, no hay
- * forma de cruzarlos.
+ * Cada una firma con su propio nombre adentro (`oferta-salida:`,
+ * `bienvenida:` y `upsell:`), y por eso un token de una NO vale para otra:
+ * la de salida puede prometer hasta 48 horas, la de bienvenida hasta una y
+ * la del upsell media; si compartieran firma, un token de salida de dos días
+ * le daría a alguien dos días de precio de bienvenida —o de oferta del
+ * upsell—. Con el nombre adentro del HMAC, no hay forma de cruzarlos.
  */
 
-type Clase = "oferta-salida" | "bienvenida";
+type Clase = "oferta-salida" | "bienvenida" | "upsell";
 
 /**
  * Si hay con qué firmar. Las páginas que ofrecen un plazo lo preguntan
@@ -102,6 +104,25 @@ export function firmarBienvenida(productId: string, venceEn: number): string {
  */
 export function leerTokenDeBienvenida(token: unknown, productId: string, ahora = Date.now()): { venceEn: number; vivo: boolean } | null {
   const venceEn = leerFirma("bienvenida", token, productId, ahora, MINUTOS_MAXIMOS * 60_000);
+  if (venceEn === null) return null;
+  return { venceEn, vivo: venceEn > ahora };
+}
+
+/* ── La oferta del upsell ───────────────────────────────────────────────── */
+
+export function firmarUpsell(productId: string, venceEn: number): string {
+  return firmar("upsell", productId, venceEn);
+}
+
+/**
+ * Un token de la oferta del upsell de ESTE producto, leído. Null si está
+ * tocado, es de otro producto, es de alguna de las otras dos ofertas, o
+ * promete más de media hora. Si es nuestro, dice hasta cuándo vale y si
+ * sigue vivo: la pantalla necesita las dos cosas, igual que en bienvenida
+ * —"vencido" es distinto de "no tiene"— (ver `leerFirma`).
+ */
+export function leerTokenDeUpsell(token: unknown, productId: string, ahora = Date.now()): { venceEn: number; vivo: boolean } | null {
+  const venceEn = leerFirma("upsell", token, productId, ahora, MINUTOS_MAXIMOS_UPSELL * 60_000);
   if (venceEn === null) return null;
   return { venceEn, vivo: venceEn > ahora };
 }

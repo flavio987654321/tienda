@@ -18,6 +18,7 @@
 
 import { COMISION_DIGITAL } from "./planLimits";
 import type { TierDigital } from "./planes-digitales";
+import { precioDelUpsell } from "./oferta-upsell";
 
 /**
  * Un importe usable: finito y mayor que cero. Cualquier otra cosa vale 0.
@@ -177,11 +178,21 @@ export function armarItems(
  *
  * Los repetidos se descartan: mandar el mismo id diez veces no compra diez
  * copias de un PDF, que además no significaría nada.
+ *
+ * ── El precio, y el reloj ───────────────────────────────────────────────────
+ *
+ * `ofertaViva` es el plazo firmado de la oferta del upsell, ya verificado por
+ * quien llama (`ofertaUpsellDeLaVisita`). Con el reloj corriendo se cobra el
+ * precio de oferta; vencido, el de lista. El precio lo pone `precioDelUpsell`,
+ * la MISMA función con la que el checkout dibuja: un solo lugar donde está la
+ * cuenta, así la pantalla no puede prometer un número y la orden salir con
+ * otro. Sin oferta configurada, `true` y todo sigue como siempre.
  */
 export function upsellsQueValen(
   pedidos: unknown,
-  hijosDelProducto: Array<ItemDeCompra & { padreId: string | null }>,
+  hijosDelProducto: Array<ItemDeCompra & { padreId: string | null; comparePrice?: number | null }>,
   productoId: string,
+  ofertaViva = true,
 ): ItemDeCompra[] {
   if (!Array.isArray(pedidos)) return [];
   const vistos = new Set<string>();
@@ -197,7 +208,8 @@ export function upsellsQueValen(
        el bono. Cobrarlo a cero ensucia la orden sin darle nada a nadie. */
     if (pesos(hijo.price) === 0) continue;
     vistos.add(id);
-    salida.push({ id: hijo.id, name: hijo.name, price: hijo.price, rolDigital: hijo.rolDigital });
+    const price = precioDelUpsell({ price: hijo.price, comparePrice: hijo.comparePrice ?? null }, ofertaViva);
+    salida.push({ id: hijo.id, name: hijo.name, price, rolDigital: hijo.rolDigital });
   }
   return salida;
 }

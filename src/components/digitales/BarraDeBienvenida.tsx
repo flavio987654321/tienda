@@ -5,65 +5,21 @@ import { useRouter } from "next/navigation";
 import { claveDeBienvenida, elTokenMasViejo, venceEnDelTokenDeBienvenida } from "@/lib/bienvenida";
 import { cuentaRegresiva } from "@/lib/oferta-salida";
 import { useAhora } from "@/lib/reloj-compartido";
+import { guardarPlazo } from "@/lib/plazo-en-el-navegador";
+
 
 /**
- * A qué camino se ata la cookie: SÓLO al de este producto.
+ * Guardar el token del precio de bienvenida en el navegador, y decir si hay
+ * que pedir la página de nuevo. Lo usan la barra y el checkout.
  *
- * En el dominio de la plataforma todos los productos viven bajo el mismo
- * host (`www.tiendaapps.com/p/<id>`). Con `Path=/`, quien recorre muchos
- * productos —o un bot que recorre cientos— acumula una cookie por cada uno
- * hasta pasar el límite de cabecera del navegador (~4 KB) y el sitio
- * entero le contesta "Request Header Too Large", panel incluido. Y viajaría
- * a todas las rutas `/api/*` sin motivo. Con `Path=/p/<id>` cada cookie va
- * sólo a su página y a su pago. En un subdominio o dominio propio la página
- * es la raíz y el host ya es de un solo producto: ahí es `/`.
- */
-export function caminoDeLaCookie(): string {
-  try { return location.pathname.match(/^\/p\/[A-Za-z0-9_-]{1,64}/)?.[0] ?? "/"; } catch { return "/"; }
-}
-
-/**
- * Guardar el token en el navegador, y decir si hay que pedir la página de
- * nuevo. Lo comparten la barra y el checkout.
- *
- * Se queda con el que vence ANTES de los que hay a mano (la cookie, el
- * localStorage y el que trajo la página) y lo guarda en los dos lados: así
- * recargar, cerrar o volver no reinicia nada. No verifica firmas —el
- * navegador no puede—: un token inventado sólo puede acortarle el plazo a
- * quien lo inventa; alargarlo no, porque al cobrar la ruta lo firma de
- * nuevo y no coincide. Ver `lib/bienvenida`.
- *
- * `pedirDeNuevo` es true sólo si el elegido NO es el de la página Y la
- * cookie quedó escrita de verdad (se lee después de escribirla). Dos
- * bucles que esto evita:
- *
- *   - Cookies bloqueadas: el servidor nunca vería el token viejo, daría
- *     otro nuevo, otro desajuste, y otra vez la página. Se sigue con el
- *     plazo que dibujó el servidor, que es lo más que se puede hacer.
- *   - Un token guardado con buena forma pero firma inválida (el secreto se
- *     rotó, o alguien lo tocó): el navegador lo elige por ser más viejo, el
- *     servidor lo rechaza y firma otro, y así para siempre. Si la cookie
- *     que el servidor YA VIO es la que elegiríamos y aun así dibujó con
- *     otra, es que la nuestra no vale: manda el servidor, y lo guardado se
- *     reemplaza por lo suyo.
+ * La cocina está en `lib/plazo-en-el-navegador`, compartida con la oferta
+ * del upsell: es la parte que hace que recargar no reinicie el reloj, y
+ * copiarla una vez por oferta es garantizar que la próxima salga mintiendo.
+ * Acá queda sólo QUÉ oferta es —su clave y su lector de tokens—, que es lo
+ * que impide que el plazo de una valga como el de la otra.
  */
 export function guardarTokenDeBienvenida(productId: string, tokenDeLaPagina: string): { token: string; pedirDeNuevo: boolean } {
-  const clave = claveDeBienvenida(productId);
-  const leerCookie = () => { try { return document.cookie.match(new RegExp(`(?:^|; )${clave}=([^;]*)`))?.[1] ?? null; } catch { return null; } };
-  const guardar = (t: string) => {
-    try { document.cookie = `${clave}=${t}; Max-Age=2592000; Path=${caminoDeLaCookie()}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`; } catch { /* sin cookies se sigue con lo que hay */ }
-    try { window.localStorage.setItem(clave, t); } catch { /* ídem */ }
-  };
-  const enLaCookie = leerCookie();
-  let deLocal: string | null = null;
-  try { deLocal = window.localStorage.getItem(clave); } catch { /* ídem */ }
-  const elegido = elTokenMasViejo([enLaCookie, deLocal, tokenDeLaPagina]) ?? tokenDeLaPagina;
-  if (elegido !== tokenDeLaPagina && enLaCookie === elegido) {
-    guardar(tokenDeLaPagina);
-    return { token: tokenDeLaPagina, pedirDeNuevo: false };
-  }
-  guardar(elegido);
-  return { token: elegido, pedirDeNuevo: elegido !== tokenDeLaPagina && leerCookie() === elegido };
+  return guardarPlazo(claveDeBienvenida(productId), tokenDeLaPagina, elTokenMasViejo);
 }
 
 /**

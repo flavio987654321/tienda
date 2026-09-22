@@ -697,6 +697,15 @@ model Product {
   /// el plazo lo firma el servidor y lo hace cumplir al cobrar). JSON; la
   /// forma la declara `lib/bienvenida`; el cupón que crea vive en `CuponDigital`.
   bienvenida    String?
+  /// La oferta del upsell: mientras corre un reloj en el checkout, los
+  /// upsells de este producto salen su precio de oferta; pasado, salen su
+  /// precio de lista (`comparePrice`). JSON; la forma la declara
+  /// `lib/oferta-upsell`. Null = apagada.
+  ///
+  /// ⚠️ Cuelga del PRINCIPAL, no del upsell: el reloj es uno para toda la
+  /// caja "Sumá a tu compra" porque los upsells de un mismo producto
+  /// empiezan a contar todos juntos, cuando la persona abre el pago.
+  ofertaUpsell  String?
   /// Estaba publicado cuando la dueña cerró su cuenta digital (`Store.closedAt`):
   /// al reabrir, éstos y sólo éstos vuelven a publicarse. Mismo molde que
   /// `Affiliate.pausedByClosure`. Ver `lib/cierre-digital`.
