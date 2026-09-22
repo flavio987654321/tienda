@@ -20,6 +20,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { PLANES, TOPES_DIGITALES, COMISION_DIGITAL } from "./planLimits";
 import { TIERS_DIGITALES, featuresDigital, esElPlanMasAlto } from "./planes-digitales";
+import { sinChatDeSoporte } from "@/components/CrispWidget";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -651,6 +652,16 @@ chequear("la cookie del flujo se borra también cuando falla",
    razonable que puede hacer alguien que recién entra. */
 chequear("conectar el cobro funciona aunque todavía no haya ningún producto",
   /espacioDigital\(user\.id\)/.test(mpConnect));
+
+/* El chat de soporte de TiendaApps NO va adentro del panel: el globito
+   flotante tapa botones —en el celular queda encima del de guardar— y el
+   soporte del panel se pide desde su propia ayuda. Tampoco va en lo que es de
+   la vendedora (su página de venta y su checkout): un chat con NUESTRA marca
+   ahí hace creer a quien compra que le escribe a quien le vende.
+   Se olvidó una vez, desde que el panel digital existe. */
+chequear("el chat de soporte no aparece en el panel digital ni en las páginas de venta",
+  ["/digitales", "/p/", "/dashboard", "/afiliados"].every((r) => sinChatDeSoporte(r + "x"))
+  && !sinChatDeSoporte("/") && !sinChatDeSoporte("/precios") && !sinChatDeSoporte("/ayuda"));
 
 /* ── 14. Moverse adentro del panel ─────────────────────────────────────────── */
 console.log("\n14) Los enlaces de adentro del panel");
