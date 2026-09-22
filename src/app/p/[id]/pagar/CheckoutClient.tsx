@@ -403,20 +403,28 @@ export default function CheckoutClient(p: Props) {
             <p className="mb-2 text-[10.5px] font-extrabold uppercase tracking-widest text-[color:var(--pv-tenue)] opacity-75">
               Opcional
             </p>
+            {/* ⚠️ NOMBRE Y APELLIDO EN UN SOLO CAMPO, y sigue siendo opcional.
+                Un campo aparte para el apellido no agrega nada: donde hace
+                falta partido —la lista para Meta Ads— se parte solo (primera
+                palabra el nombre, el resto el apellido), y donde se saluda se
+                usa el de pila. Lo que sí cambia es lo que se PIDE: con
+                "Tu nombre" y "para saludarte por tu nombre" la gente escribe
+                "Ana" y el apellido nunca llega. `autoComplete="name"` —y no
+                "given-name"— para que el navegador ofrezca el nombre entero. */}
             <label className="block">
-              <span className="sr-only">Tu nombre</span>
+              <span className="sr-only">Nombre y apellido</span>
               <input
                 type="text"
-                autoComplete="given-name"
+                autoComplete="name"
                 maxLength={80}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                placeholder="Tu nombre"
+                placeholder="Nombre y apellido"
                 disabled={!p.puedeCobrar}
                 className={`${campo} border py-2.5 text-sm`}
               />
             </label>
-            <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">Para saludarte por tu nombre en el mail.</p>
+            <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">Para saludarte en el mail y que quien vende sepa quién le compró.</p>
           </div>
 
           {/* ── La casilla del art. 1116 ──────────────────────────────────

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { inicioDiaArgentino, sumarDiasCalendario } from "@/lib/fechas-comerciales";
+import { primerNombre } from "@/lib/texto";
 
 /* ══════════════════════════════════════════════════════════════════════════
    TUS VENTAS: LO QUE NO TOCA LA BASE
@@ -146,7 +147,9 @@ export function dondeVentas(storeId: string, c: ConsultaDeVentas, elegido: strin
  * en su correo y lo cambia antes de mandar.
  */
 export function mensajeParaElComprador(v: { nombre: string | null; producto: string; sinBajar: boolean }): { asunto: string; cuerpo: string } {
-  const pila = v.nombre?.trim().split(/\s+/)[0];
+  /* El de pila, con la misma función que los mails y las opiniones: se guarda
+     nombre y apellido, y se saluda con el primero. */
+  const pila = primerNombre(v.nombre);
   const hola = pila ? `Hola ${pila},` : "Hola,";
   if (v.sinBajar) {
     return {

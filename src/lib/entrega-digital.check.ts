@@ -250,6 +250,14 @@ check("MAIL-A", !cuerpoDelMail.includes("/api/digitales/descargar"),
 check("MAIL-B", cobro.includes("/gracias?orden="),
   "linkea a la pantalla de gracias, que tiene los botones y abrirla no cuesta nada");
 
+/* En el checkout se pide NOMBRE Y APELLIDO —hace falta entero para la lista de
+   clientes y para la de Meta— así que el saludo tiene que tomar el de pila: un
+   mail que arranca con "Hola Ana María Pérez" suena a carta del banco. La
+   regla es una sola y vive en `lib/texto`, para que no se separen. */
+check("MAIL-B2", /const pila = primerNombre\(nombre\);/.test(cuerpoDelMail)
+  && /Hola\$\{pila \?/.test(cuerpoDelMail) && !/escapeHtml\(nombre\)/.test(cuerpoDelMail),
+  "el mail de entrega saluda con el nombre de pila, no con el nombre completo");
+
 /* Todo lo que llega de afuera —el nombre de quien compró, el del producto, el
    del vendedor— se dibuja adentro de un HTML que se manda por mail. */
 check("MAIL-C", (cuerpoDelMail.match(/escapeHtml\(/g) ?? []).length >= 4,

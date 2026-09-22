@@ -20,6 +20,8 @@
    Puro: sin base ni React. La firma en `opinion-firma`; lo que toca la base
    en las rutas. Probado en `opiniones-digitales.check.ts`. */
 
+import { primerNombre } from "@/lib/texto";
+
 export const OPINION_MIN = 20;
 export const OPINION_MAX = 600;
 export const NOMBRE_OPINION_MAX = 40;
@@ -50,7 +52,10 @@ export function validarOpinion(body: unknown, nombreSugerido: string | null): { 
 
 /** Cómo aparece por defecto: el nombre de pila. "Ana" de "Ana María Pérez"; "" si no dejó nombre. */
 export function nombrePublico(nombre: string | null | undefined): string {
-  return (nombre ?? "").trim().split(/\s+/)[0] ?? "";
+  /* La misma regla que usan los mails para saludar (`lib/texto`): una sola,
+     porque si un día cambia tiene que cambiar en los dos lados. Acá además
+     protege la privacidad de quien opina: en la página no va su apellido. */
+  return primerNombre(nombre);
 }
 
 /** La dirección pública para opinar, sobre la base del sitio. */

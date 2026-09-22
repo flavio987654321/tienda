@@ -220,6 +220,19 @@ check("PAN-A", pantalla.includes("variablesDePagina") && dibujante.includes("var
 check("PAN-B", !/--pv-acento":/.test(pantalla) && !/--pv-acento":/.test(formulario),
   "ninguna de las dos arma las variables por su cuenta");
 
+/* ⚠️ UN SOLO CAMPO OBLIGATORIO: el mail, que es a donde va el archivo. Cada
+   campo de más entre el botón y el pago es gente que se va, y para entregar
+   un PDF no hace falta ninguno de los otros. El nombre es opcional y se pide
+   ENTERO —nombre y apellido— porque así se completa la lista de clientes y la
+   de Meta Ads, que lo parte sola. Un campo aparte para el apellido no agrega
+   nada y sí resta. */
+check("PAN-B2", /placeholder="Nombre y apellido"/.test(formulario) && /autoComplete="name"/.test(formulario)
+  && !/autoComplete="family-name"/.test(formulario) && !/placeholder="Apellido"/i.test(formulario)
+  /* Y ninguno es obligatorio salvo el mail, que lo pide el `type="email"` con
+     su propia validación: acá no puede aparecer un `required` nuevo. */
+  && (formulario.match(/\brequired\b/g) ?? []).length === 0,
+  "el nombre se pide entero y sigue siendo opcional; no hay un campo aparte para el apellido");
+
 /* El botón de comprar dejó de no llevar a ningún lado. */
 check("PAN-C", dibujante.includes("/pagar"),
   "el botón de comprar lleva al checkout");

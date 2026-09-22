@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { PRO_MAX_PRODUCTS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+import { primerNombre } from "@/lib/texto";
 import { dominioDeLaPlataforma, DIAS_DE_DOMINIO_EN_FREE } from "@/lib/configuracion-digital";
 
 const clienteResend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
@@ -1362,6 +1363,11 @@ export async function sendEntregaDigitalEmail({
     return { error: { message: "RESEND_API_KEY no configurada" } };
   }
 
+  /* El de pila. En el checkout se pide nombre Y apellido —hace falta entero
+     para la lista de clientes y para la de Meta— pero un mail que arranca con
+     "Hola Ana María Pérez" suena a carta del banco. */
+  const pila = primerNombre(nombre);
+
   const lista = archivos
     .map(
       (a) => `
@@ -1386,7 +1392,7 @@ export async function sendEntregaDigitalEmail({
         </div>
 
         <p style="font-size:15px;color:#374151;margin-bottom:6px;">
-          Hola${nombre ? ` <strong>${escapeHtml(nombre)}</strong>` : ""},
+          Hola${pila ? ` <strong>${escapeHtml(pila)}</strong>` : ""},
         </p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">
           Se acreditó tu pago. Ya podés descargar todo lo que compraste.
@@ -1482,7 +1488,10 @@ export async function sendCarritoAbandonadoDigitalEmail({
   }
 
   const quien = vendedor?.trim() || "la tienda";
-  const hola = nombre?.trim() ? `Hola ${escapeHtml(nombre.trim())}` : "Hola";
+  /* Con el nombre de pila, igual que el de entrega: se guarda completo y se
+     saluda con el primero. */
+  const pila = primerNombre(nombre);
+  const hola = pila ? `Hola ${escapeHtml(pila)}` : "Hola";
 
   const r = await resend.emails.send({
     from: FROM,

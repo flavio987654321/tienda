@@ -40,3 +40,16 @@ export function recortar(texto: string, max: number): string {
   const partes = grafemas(texto);
   return partes.length <= max ? texto : partes.slice(0, max).join("");
 }
+
+/**
+ * El nombre de pila: "Ana" de "Ana María Pérez", "" si no dejó nombre.
+ *
+ * Vive acá y no en un módulo de digitales porque lo usan los dos lados: los
+ * mails que se le mandan a quien compró y las pantallas que lo muestran. En
+ * el checkout se pide NOMBRE Y APELLIDO —hace falta entero para la lista de
+ * clientes y para Meta—, pero un mail que dice "Hola Ana María Pérez" suena a
+ * carta del banco. Se guarda completo y se saluda con el primero.
+ */
+export function primerNombre(nombre: string | null | undefined): string {
+  return (nombre ?? "").trim().split(/\s+/)[0] ?? "";
+}
