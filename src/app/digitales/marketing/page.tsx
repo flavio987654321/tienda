@@ -97,11 +97,11 @@ export default async function MarketingPage() {
       accion: "Buscar videos",
     },
     {
-      href: "/digitales/productos",
+      href: "/digitales/marketing/upsells",
       Icon: TrendingUp,
       titulo: "Upsells",
-      que: "Un producto más, con su propio precio, que se ofrece dos veces: antes de pagar, con un click (\"Sumá a tu compra\"), y si no lo tomó, otra vez después de pagar. Ya está andando: se carga en cada producto, abajo de los bonos.",
-      accion: "Ir a Productos",
+      que: "Un producto más, con su propio precio, que se ofrece dos veces: antes de pagar, con un click (\"Sumá a tu compra\"), y si no lo tomó, otra vez después de pagar. Acá le ponés el reloj: sale más barato un rato y después vuelve a su precio. Se carga en Productos, abajo de los bonos.",
+      accion: "Armar la oferta",
     },
   ];
 

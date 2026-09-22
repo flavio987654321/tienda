@@ -2184,6 +2184,20 @@ export default function ProductosClient({
                       placeholder="84950"
                       className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                     />
+                    {/* ⚠️ EN UN UPSELL ESTE NÚMERO PUEDE SER PLATA QUE SE COBRA.
+                        En un producto y en un bono es un anclaje: se tacha y nada
+                        más. Pero si este upsell tiene la oferta con reloj prendida
+                        (Marketing › Upsells), es lo que paga quien llega después
+                        de que el reloj llegó a cero. Sin este aviso, alguien pone
+                        un número inflado "para que se vea más barato" y termina
+                        cobrándolo. Ver `lib/oferta-upsell`. */}
+                    {borrador.rol === "UPSELL" && (
+                      <p className="mt-1.5 text-[11.5px] leading-relaxed text-amber-700 panel-oscuro:text-amber-300">
+                        Si le prendés la oferta con reloj en{" "}
+                        <Link href="/digitales/marketing/upsells" className="font-bold underline underline-offset-2">Marketing › Upsells</Link>,
+                        este número deja de ser sólo un tachado: es lo que se cobra cuando el reloj termina.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
