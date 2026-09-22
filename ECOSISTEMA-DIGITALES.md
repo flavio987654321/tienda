@@ -8318,3 +8318,44 @@ automáticos; el 409 de la IA sale antes de gastar cupo; el mail a quien
 vende escapa lo que escribe la gente; el casillero del mail por venta
 vuelve atrás si el servidor dice que no; el checkbox y el toggle tienen
 freno de doble click.
+
+### Auditoría de seguridad: bots y gente con malas intenciones — 21/09/26
+
+Se repasó qué rutas son públicas y con qué freno, y lo de hoy con ojos de
+atacante. Lo que ya estaba bien, para no volver a mirarlo:
+
+- Todo `/api/*` rechaza un `Origin` ajeno en el middleware (CSRF); las
+  rutas del panel piden sesión y rol; las públicas (`comprar`, `cupon`,
+  `descargar`, `estado-compra`, `visita`) tienen tope por IP; el webhook
+  de cobro verifica la firma de Mercado Pago antes de tocar nada.
+- Los plazos firmados (salida y bienvenida) llevan el nombre adentro del
+  HMAC y no se cruzan; un token inventado sólo acorta el plazo de quien lo
+  inventa; la cookie va sólo al camino de su producto (sin bomba de
+  cookies). Sin `NEXTAUTH_SECRET` la página sale sin oferta, no 500.
+- La landing propia: lista blanca de etiquetas, sin `data:`, sin
+  `javascript:`, sin `@import` ni `url()` externo, sin `</` en el CSS, y
+  el script nuestro filtra la clave antes de armar una RegExp. Los ids
+  adentro del Shadow DOM no pisan nada del documento.
+- La página de legales sólo acepta los `tipo` de la lista.
+
+Lo que estaba mal y se arregló de raíz:
+
+- **El mail de carrito abandonado era una forma de mandarle mails a
+  cualquiera.** El checkout es público: un bot escribe el mail de otra
+  persona, abre una compra, y a las 3 horas esa persona recibe "quedó
+  pendiente tu compra" con el nombre de la vendedora. Con el freno de
+  órdenes repetidas (30 minutos), una orden nueva cada media hora, por
+  producto, por tienda, durante días. Y ese mail no traía baja: la persona
+  no tenía cómo pararlo, y la baja que ya había pedido a esa vendedora
+  (`BajaCorreoDigital`) no valía para este mail. Ahora: (1) la baja vale
+  también acá; (2) a una misma persona una misma tienda le escribe por un
+  carrito como mucho una vez cada 7 días —la marca se pone salga o no
+  salga, así que las órdenes inventadas también cuentan—; (3) el mail
+  trae el link de baja y la cabecera `List-Unsubscribe` de un clic, con el
+  mismo token firmado de los correos a compradores. CAR-AG/AH/AI.
+
+Lo que queda anotado y no se tocó: un bot puede seguir llenando órdenes
+`PENDING` (15 por minuto por IP) y comerse los 30 recordatorios diarios del
+cron con basura, aunque ya no salga ningún mail; la limpieza de pendientes
+vieja las borra. Si algún día aparece, el freno va en `comprar`: un tope
+por correo, no sólo por IP.

@@ -35,6 +35,9 @@ import { sendCarritoAbandonadoDigitalEmail } from "@/lib/resend";
 import { PAGO_EN_CAMINO } from "@/lib/carritos-digitales";
 import { ofertaParaElMail } from "@/lib/oferta-salida-db";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
+import { tokenDeBaja } from "@/lib/correos-compradores-firma";
+import { urlBajaCorreo, urlBajaCorreoUnClic } from "@/lib/correos-compradores";
+import { baseDeLosMails } from "@/lib/correos-compradores-db";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -157,8 +160,20 @@ export async function GET(req: NextRequest) {
   //      mail. El webhook anota esos estados justamente para esto.
   //   4. **Ni muy nueva ni muy vieja.** Menos de 3 horas puede ser alguien que
   //      está pagando; más de 7 días, escribirle es raro.
+  //   5. **Ni a quien pidió la baja, ni dos veces por semana a la misma
+  //      persona.** (Auditoría de seguridad del 21/09/26.) El checkout es
+  //      público: cualquiera escribe el mail de OTRO y abre una compra, y
+  //      cada compra abandonada era un mail con el nombre de la vendedora a
+  //      esa persona. Con un bot: un mail cada media hora (el freno de
+  //      órdenes repetidas), por producto, por tienda, durante días; y la
+  //      persona no tenía cómo pararlo, porque este mail no traía baja.
+  //      Ahora la baja de la vendedora (`BajaCorreoDigital`, la misma de
+  //      los correos a compradores) vale acá también, el mail trae el link
+  //      y la cabecera de un clic, y a una misma persona una misma tienda le
+  //      escribe por un carrito como mucho una vez cada 7 días.
   const desdeCarritoD = new Date(now.getTime() - 3 * 60 * 60 * 1000);
   const hastaCarritoD = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const baseCarritoD = baseDeLosMails();
 
   const carritosDigitales = await prisma.order.findMany({
     where: {
@@ -181,10 +196,13 @@ export async function GET(req: NextRequest) {
     // Un tope: el cron entero tiene 60 segundos y esto no puede comerse el
     // presupuesto de todo lo que viene abajo. Lo que no entre sale mañana — el
     // `recordatorioAt` sigue en null, así que no se pierde ninguno.
+    // ⚠️ Y a quien ya se le escribió esta semana, o pidió la baja, se lo
+    // marca sin mandar nada (ver el punto 5): una orden inventada por un bot
+    // no puede convertirse en un mail.
     take: 30,
     orderBy: { createdAt: "asc" },
     select: {
-      id: true, total: true,
+      id: true, total: true, buyerId: true, storeId: true,
       buyer: { select: { email: true, name: true } },
       store: { select: { name: true, checkoutName: true } },
       items: {
@@ -208,7 +226,17 @@ export async function GET(req: NextRequest) {
     // Sin producto principal, sin correo, o con el producto despublicado no hay
     // nada que mandar: el link llevaría a una página que no abre. Se marca igual
     // para no volver a mirarlo todos los días.
-    const sePuede = Boolean(principal && principal.isActive && correo);
+    // Tampoco a quien pidió no recibir más mails de esta vendedora, ni a quien
+    // esta misma tienda ya le escribió por un carrito en los últimos 7 días
+    // (la marca se pone salga o no salga, así que una orden inventada también
+    // cuenta: es lo que queremos).
+    const [pidioLaBaja, yaLeEscribimos] = correo
+      ? await Promise.all([
+          prisma.bajaCorreoDigital.findUnique({ where: { storeId_email: { storeId: orden.storeId, email: correo } }, select: { id: true } }),
+          prisma.order.count({ where: { buyerId: orden.buyerId, storeId: orden.storeId, id: { not: orden.id }, recordatorioAt: { gte: hastaCarritoD } } }),
+        ])
+      : [null, 0];
+    const sePuede = Boolean(principal && principal.isActive && correo && !pidioLaBaja && yaLeEscribimos === 0);
 
     if (sePuede && principal && correo) {
       // Su propia dirección si la tiene, que es la que la persona vio. El dominio
@@ -223,6 +251,9 @@ export async function GET(req: NextRequest) {
       // con el plazo firmado desde AHORA. Ver `lib/oferta-salida`. Si falla,
       // el recordatorio sale igual, sin oferta.
       const oferta = await ofertaParaElMail(principal, enlace, now).catch((e) => { console.error("[cron] oferta de salida:", e); return null; });
+      // La baja es la MISMA que la de los correos a compradores: firmada por
+      // tienda y mail, y vale para los dos tipos de mail de esa vendedora.
+      const tokenBaja = tokenDeBaja(orden.storeId, correo);
       enviosCarritosD.push(
         sendCarritoAbandonadoDigitalEmail({
           to: correo,
@@ -234,6 +265,8 @@ export async function GET(req: NextRequest) {
           // tienda es de puertas adentro y no lo reconocería.
           vendedor: orden.store.checkoutName || orden.store.name,
           oferta,
+          bajaUrl: urlBajaCorreo(baseCarritoD, tokenBaja),
+          bajaPostUrl: urlBajaCorreoUnClic(baseCarritoD, tokenBaja),
         })
           .then((r) => {
             if (r.error) console.error("[cron] carrito digital:", r.error.message);

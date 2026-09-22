@@ -1451,6 +1451,8 @@ export async function sendCarritoAbandonadoDigitalEmail({
   enlace,
   vendedor,
   oferta = null,
+  bajaUrl,
+  bajaPostUrl,
 }: {
   to: string;
   nombre: string | null;
@@ -1459,6 +1461,15 @@ export async function sendCarritoAbandonadoDigitalEmail({
   /** La página de venta del producto. Nunca un link de pago viejo. */
   enlace: string;
   vendedor: string | null;
+  /**
+   * La baja de los mails de ESTA vendedora, firmada por tienda y correo (la
+   * misma que los correos a compradores). Quien escribió su mail en un
+   * checkout no pidió que le escriban, y el mail de "quedó pendiente" lo
+   * recibe alguien que quizás ni fue: sin esto no tenía cómo pararlo, y
+   * Gmail lo cuenta como correo no deseado. Auditoría del 21/09/26.
+   */
+  bajaUrl: string;
+  bajaPostUrl: string;
   /**
    * La oferta de salida, si la vendedora la tiene prendida. El plazo es
    * cierto: el link lleva la firma con la hora de este envío y el servidor
@@ -1479,6 +1490,10 @@ export async function sendCarritoAbandonadoDigitalEmail({
     /* Sin signos de admiración ni emojis: es un recordatorio, no una promoción,
        y en la bandeja tiene que parecer lo que es. */
     subject: `Quedó pendiente tu compra de ${producto}`,
+    headers: {
+      "List-Unsubscribe": `<${bajaPostUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
         <p style="font-size:13px;color:#6b7280;margin:0 0 6px;font-weight:600;">${escapeHtml(quien)}</p>
@@ -1495,7 +1510,7 @@ export async function sendCarritoAbandonadoDigitalEmail({
         </div>
 
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${enlace}"
+          <a href="${escapeHtml(enlace)}"
              style="display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
             Terminar la compra
           </a>
@@ -1517,6 +1532,8 @@ export async function sendCarritoAbandonadoDigitalEmail({
         <p style="font-size:12.5px;line-height:1.6;color:#9ca3af;margin:0;">
           Si ya no te interesa, no hace falta que hagas nada: este es el único recordatorio que te
           vamos a mandar por esta compra.
+          Si no fuiste vos, o no querés recibir más mails de ${escapeHtml(quien)}:
+          <a href="${escapeHtml(bajaUrl)}" style="color:#6b7280;text-decoration:underline;">no quiero recibir más mails</a>.
         </p>
       </div>
     `,

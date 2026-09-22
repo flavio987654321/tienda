@@ -143,7 +143,7 @@ check("MAIL-C", /Math\.max\(o\.horas, HORAS_MINIMAS_DEL_MAIL\)/.test(leer("src/l
   "en el mail el plazo es de al menos un día, y el token firma esa misma hora");
 check("EDIT-A", /validarOfertaSalida\(o\)/.test(editor) && /key=\{elegido\?\.id/.test(editorPage) && /variablesDePagina\(pagina\)/.test(editorPage),
   "el editor valida con la misma función que la ruta, arranca de cero por producto y la vista previa lleva el estilo de SU página");
-check("MAIL-A", /ofertaParaElMail\(principal, enlace, now\)/.test(cron) && /oferta,\n\s+\}\)/.test(cron) && /oferta \? `/.test(resend.slice(resend.indexOf("sendCarritoAbandonadoDigitalEmail"))),
+check("MAIL-A", /ofertaParaElMail\(principal, enlace, now\)/.test(cron) && /oferta,\r?\n\s+bajaUrl: urlBajaCorreo\(baseCarritoD, tokenBaja\),\r?\n\s+bajaPostUrl: urlBajaCorreoUnClic\(baseCarritoD, tokenBaja\),\r?\n\s+\}\)/.test(cron) && /oferta \? `/.test(resend.slice(resend.indexOf("sendCarritoAbandonadoDigitalEmail"))),
   "el mail de carrito lleva la oferta, con el plazo firmado desde el envío");
 check("MAIL-B", /pagar\?oferta=\$\{encodeURIComponent\(token\)\}/.test(leer("src/lib/oferta-salida-db.ts")), "el link del mail lleva el token al checkout");
 check("LIST-A", /esCodigoDeOferta\(c\.codigo\)/.test(cupones) && /de la oferta de salida/.test(cupones) && /\{!esCodigoDeOferta\(c\.codigo\) && !esCodigoDeBienvenida\(c\.codigo\) && <button/.test(cupones),

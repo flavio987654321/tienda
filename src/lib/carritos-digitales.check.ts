@@ -248,6 +248,29 @@ check("CAR-AF",
   /Si era la compra de un producto digital/.test(privacidad),
   "quien compra también lo lee en la solapa que le corresponde");
 
+/* ══════════════════════════════════════════════════════════════════════════
+   NO ES UNA FORMA DE MANDARLE MAILS A CUALQUIERA — auditoría del 21/09/26
+   ══════════════════════════════════════════════════════════════════════════
+
+   El checkout es público: cualquiera escribe el mail de OTRO y abre una
+   compra, y cada compra abandonada era un mail con el nombre de la vendedora.
+   Con un bot: uno cada media hora, por producto, por tienda, durante días, y
+   la persona no tenía cómo pararlo porque el mail no traía baja. */
+const bloqueCarritoD = cron.slice(cron.indexOf("CARRITOS ABANDONADOS DE PRODUCTOS DIGITALES"), cron.indexOf("RECORDATORIOS DE RETIROS PENDIENTES"));
+check("CAR-AG",
+  /prisma\.bajaCorreoDigital\.findUnique\(\{ where: \{ storeId_email: \{ storeId: orden\.storeId, email: correo \} \}/.test(bloqueCarritoD)
+  && /!pidioLaBaja && yaLeEscribimos === 0/.test(bloqueCarritoD),
+  "la baja que pidió a esa vendedora vale también para el mail de carrito");
+check("CAR-AH",
+  /prisma\.order\.count\(\{ where: \{ buyerId: orden\.buyerId, storeId: orden\.storeId, id: \{ not: orden\.id \}, recordatorioAt: \{ gte: hastaCarritoD \} \} \}\)/.test(bloqueCarritoD),
+  "a la misma persona una misma tienda le escribe por un carrito como mucho una vez cada 7 días, aunque un bot le abra compras cada media hora");
+const mailCarrito = mail.slice(mail.indexOf("export async function sendCarritoAbandonadoDigitalEmail"), mail.indexOf("export async function", mail.indexOf("export async function sendCarritoAbandonadoDigitalEmail") + 10));
+check("CAR-AI",
+  /"List-Unsubscribe": `<\$\{bajaPostUrl\}>`/.test(mailCarrito) && /"List-Unsubscribe-Post": "List-Unsubscribe=One-Click"/.test(mailCarrito)
+  && /href="\$\{escapeHtml\(bajaUrl\)\}"[^>]*>no quiero recibir más mails<\/a>/.test(mailCarrito) && /href="\$\{escapeHtml\(enlace\)\}"/.test(mailCarrito)
+  && /tokenDeBaja\(orden\.storeId, correo\)/.test(bloqueCarritoD) && /bajaPostUrl: urlBajaCorreoUnClic\(baseCarritoD, tokenBaja\)/.test(bloqueCarritoD),
+  "el mail de carrito trae la baja de un clic y el link, con el mismo token firmado que los correos a compradores");
+
 console.log(fallos === 0
   ? "\nok — no se le escribe a quien está por pagar, y se escribe una sola vez"
   : `\nFALLA — ${fallos} chequeo(s) de los carritos abandonados`);
