@@ -117,8 +117,12 @@ export default function Sasha() {
       if (!r.ok || !r.body) {
         const d = (await r.json().catch(() => null)) as { error?: string; motivo?: string } | null;
         setError(d?.error ?? "No pudimos hablar con Sasha. Probá de nuevo.");
-        /* 429 es el cupo del día: no tiene sentido dejar escribir otra vez. */
-        if (r.status === 429 || r.status === 402) setCortado(true);
+        /* Sólo se apaga el cuadro cuando no hay nada que reintentar hoy: el
+           cupo del día, o un plan que no la incluye. Un "mandaste muchos
+           seguidos" se va en un rato y una demanda alta también, así que ahí
+           se muestra el aviso y se deja volver a probar — apagarlo hasta
+           recargar por algo que dura diez minutos es peor que el problema. */
+        if (d?.motivo === "diario" || d?.motivo === "plan") setCortado(true);
         setMensajes(conmigo);
         return;
       }

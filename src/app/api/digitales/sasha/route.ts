@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { getUserSubscription, getSubscriptionStatus } from "@/lib/subscription";
 import { getArgentinaDayKey, getArgentinaAhora } from "@/lib/fechas-comerciales";
-import { permitirMensajeSasha, DIARIO_POR_PLAN } from "@/lib/sasha-digital-limites";
+import { permitirMensajeSasha, DIARIO_POR_PLAN, charlaParaElModelo, MAX_MENSAJES_CONTEXTO, MAX_CHARS_POR_MENSAJE } from "@/lib/sasha-digital-limites";
 import { snapshotDigital } from "@/lib/sasha-digital-datos";
 import { armarPromptDigital } from "@/lib/sasha-digital-prompt";
 import type { TierDigital } from "@/lib/planes-digitales";
@@ -26,39 +26,17 @@ export const dynamic = "force-dynamic";
  * rechazado no tiene que costar ni una consulta.
  */
 
-const MAX_MENSAJES_CONTEXTO = 12;
-const MAX_CHARS_POR_MENSAJE = 2_000;
-const MAX_CHARS_TOTAL = 8_000;
 /** La respuesta es corta a propósito: se paga por token de salida, y Sasha contesta en tres frases. */
 const MAX_TOKENS_RESPUESTA = 500;
 /** Lecturas del historial por minuto. No cuesta plata: es leer lo propio. */
 const LECTURAS_POR_MINUTO = 60;
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
-
-/**
- * La charla de hoy, ARMADA EN EL SERVIDOR.
- *
- * ⚠️ El navegador manda SÓLO el mensaje nuevo. Lo anterior sale de la base,
- * que es lo único que sabe qué se dijo de verdad. Antes viajaba la charla
- * entera desde el navegador y se usaba tal cual: cualquiera podía inventar
- * mensajes "de Sasha" que ella nunca dijo y meterlos en su propio contexto
- * —para torcerla, o para hacerle repetir algo como si lo hubiera dicho el
- * panel—. Además, lo que viaja se paga: mandar la charla dos veces (ida y
- * contexto) era pagar por algo que ya teníamos guardado.
- *
- * Se recorta por los más viejos hasta entrar en el presupuesto, así una
- * charla larga sigue andando en vez de rechazarse.
- */
-function charlaDeHoy(previos: ChatMessage[], nuevo: string): ChatMessage[] {
-  let recientes = [...previos, { role: "user" as const, content: nuevo }].slice(-MAX_MENSAJES_CONTEXTO);
-  let chars = recientes.reduce((n, m) => n + m.content.length, 0);
-  while (chars > MAX_CHARS_TOTAL && recientes.length > 1) {
-    chars -= recientes[0].content.length;
-    recientes = recientes.slice(1);
-  }
-  return recientes;
-}
+/* La charla que se le manda al modelo la arma `charlaParaElModelo`, con los
+   topes. ⚠️ El navegador manda SÓLO el mensaje nuevo: lo anterior sale de la
+   base, que es lo único que sabe qué se dijo de verdad. Antes viajaba la
+   charla entera desde el navegador y se usaba tal cual, así que cualquiera
+   podía inventar mensajes "de Sasha" que ella nunca dijo y meterlos en su
+   propio contexto. Y de paso: lo que viaja se paga, y ya lo teníamos. */
 
 /** El texto que escribió la persona, o `null` si el pedido no sirve. */
 function leerMensaje(body: unknown): string | null {
@@ -169,7 +147,7 @@ export async function POST(req: NextRequest) {
     select: { role: true, content: true },
     take: MAX_MENSAJES_CONTEXTO,
   });
-  const historial = charlaDeHoy(
+  const historial = charlaParaElModelo(
     previos.reverse().map((m) => ({ role: m.role === "assistant" ? "assistant" as const : "user" as const, content: m.content })),
     mensaje,
   );

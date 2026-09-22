@@ -14,7 +14,8 @@
 import { readFileSync } from "node:fs";
 import {
   permitirMensajeSasha, DIARIO_POR_PLAN, RAFAGA_SASHA, GLOBAL_SASHA_DIARIO,
-  mensajeDeTope, horasHastaManana, costoEnDolares, type Contador,
+  mensajeDeTope, horasHastaManana, costoEnDolares, charlaParaElModelo, MAX_MENSAJES_CONTEXTO,
+  type Contador, type MensajeDeCharla,
 } from "./sasha-digital-limites";
 import { buscarArticulos, ARTICULOS, LO_BASICO, normalizar } from "./sasha-digital-saber";
 import { armarPromptDigital, PROMPT_ESTATICO } from "./sasha-digital-prompt";
@@ -250,9 +251,9 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
 
   /* Cuando el cupo del día cortó, el cuadro se apaga: mandar otra vez sólo
      suma un rechazo más al contador. */
-  check("SAS-AC", /if \(r\.status === 429 \|\| r\.status === 402\) setCortado\(true\)/.test(burbuja)
+  check("SAS-AC", /if \(d\?\.motivo === "diario" \|\| d\?\.motivo === "plan"\) setCortado\(true\)/.test(burbuja)
     && /disabled=\{enviando \|\| cortado\}/.test(burbuja) && /Volvé mañana/.test(burbuja),
-    "con el cupo agotado el cuadro de escribir se apaga hasta mañana");
+    "con el cupo del día agotado el cuadro se apaga hasta mañana — pero una ráfaga o un pico de demanda dejan volver a probar");
 
   check("SAS-AD", /Te quedan \$\{quedan\} mensaje/.test(burbuja),
     "cuando quedan pocos mensajes del día se avisa antes de que se acaben");
@@ -294,7 +295,7 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
      sólo el texto nuevo y lo anterior sale de la base. */
   check("SAS-Y5", /const mensaje = leerMensaje\(body\);/.test(ruta) && !/messages: unknown/.test(ruta)
     && /where: \{ userId: user\.id, day \},[\s\S]{0,200}take: MAX_MENSAJES_CONTEXTO/.test(ruta)
-    && /charlaDeHoy\(/.test(ruta)
+    && /charlaParaElModelo\(/.test(ruta)
     && ruta.indexOf("findMany") < ruta.indexOf('role: "user", content: mensaje')
     && /body: JSON\.stringify\(\{ mensaje: texto\.trim\(\) \}\)/.test(burbuja)
     && !/messages: conmigo/.test(burbuja),
@@ -306,6 +307,26 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
   check("SAS-Y6", /checkRateLimit\(`sasha-digital-leer:\$\{user\.id\}`, LECTURAS_POR_MINUTO, 60_000\)/.test(ruta)
     && /se deja pasar \(no cuesta plata\)/.test(ruta),
     "leer el historial tiene tope, y si el contador se cae igual te deja ver lo tuyo");
+
+  /* ⚠️ LA CHARLA TIENE QUE EMPEZAR CON UN MENSAJE DE LA PERSONA: es una regla
+     de la API, y recortar por los más viejos deja una respuesta de Sasha al
+     frente una de cada dos veces. Sin esto el chat se rompía a partir del
+     séptimo mensaje del día — el día que alguien charla en serio. */
+  const alterna = (n: number): MensajeDeCharla[] =>
+    Array.from({ length: n }, (_, i) => ({ role: i % 2 === 0 ? "user" as const : "assistant" as const, content: `m${i}` }));
+  const largas = [0, 1, 2, 11, 12, 13, 40].map((n) => charlaParaElModelo(alterna(n), "nueva"));
+  check("SAS-Y7", largas.every((c) => c.length > 0 && c[0].role === "user" && c[c.length - 1].content === "nueva" && c.length <= MAX_MENSAJES_CONTEXTO),
+    "la charla que va al modelo siempre empieza con un mensaje de la persona, termina en el nuevo, y no pasa el tope",
+    largas.map((c) => `${c.length}:${c[0]?.role}`));
+
+  const gordas: MensajeDeCharla[] = [
+    { role: "user", content: "x".repeat(5_000) },
+    { role: "assistant", content: "y".repeat(5_000) },
+  ];
+  const recortada = charlaParaElModelo(gordas, "nueva");
+  check("SAS-Y8", recortada.length === 1 && recortada[0].content === "nueva"
+    && charlaParaElModelo([], "sola").length === 1,
+    "si lo viejo no entra en el presupuesto se manda sólo lo nuevo, nunca una charla que arranque mal", recortada.map((m) => m.role));
 
   check("SAS-AH", distintos.length === 0,
     "Sasha se ve igual que en el panel de tiendas: mismo personaje, mismo cajón, mismas burbujas",

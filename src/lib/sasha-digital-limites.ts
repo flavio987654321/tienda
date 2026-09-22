@@ -147,3 +147,37 @@ export function costoEnDolares(t: TokensDeRespuesta): number {
   const p = PRECIO_HAIKU_USD_POR_MILLON;
   return (t.tokensEntrada * p.entrada + t.tokensSalida * p.salida + t.tokensCacheLeido * p.cacheLeido + t.tokensCacheEscrito * p.cacheEscrito) / 1_000_000;
 }
+
+/* ── Cuánto se le manda al modelo ──────────────────────────────────────────
+ *
+ * Vive con los topes y no con el prompt porque es lo mismo que ellos: lo que
+ * viaja se paga. Doce mensajes y ocho mil caracteres alcanzan para que Sasha
+ * siga el hilo de una charla y no para pagar la charla entera de un día.
+ */
+export const MAX_MENSAJES_CONTEXTO = 12;
+export const MAX_CHARS_POR_MENSAJE = 2_000;
+export const MAX_CHARS_TOTAL = 8_000;
+
+export type MensajeDeCharla = { role: "user" | "assistant"; content: string };
+
+/**
+ * La charla que se le manda al modelo: lo anterior (de la base) más el
+ * mensaje nuevo, recortado por los más viejos hasta entrar en el
+ * presupuesto. Una charla larga sigue andando en vez de rechazarse.
+ *
+ * ⚠️ TIENE QUE EMPEZAR CON UN MENSAJE DE LA PERSONA. Es una regla de la API:
+ * si el primero es una respuesta de Sasha, rechaza el pedido entero. Y
+ * recortar de a uno deja una respuesta al frente una de cada dos veces
+ * —la charla alterna persona/Sasha—, así que sin el último paso el chat se
+ * rompía a partir del séptimo mensaje del día.
+ */
+export function charlaParaElModelo(previos: MensajeDeCharla[], nuevo: string): MensajeDeCharla[] {
+  let recientes: MensajeDeCharla[] = [...previos, { role: "user" as const, content: nuevo }].slice(-MAX_MENSAJES_CONTEXTO);
+  let chars = recientes.reduce((n, m) => n + m.content.length, 0);
+  while (chars > MAX_CHARS_TOTAL && recientes.length > 1) {
+    chars -= recientes[0].content.length;
+    recientes = recientes.slice(1);
+  }
+  while (recientes.length > 1 && recientes[0].role === "assistant") recientes = recientes.slice(1);
+  return recientes;
+}
