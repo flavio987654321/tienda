@@ -1118,8 +1118,8 @@ export default function EbookIA({
                           : <span className="block h-3.5 w-3.5 rounded-full border border-gray-200 panel-oscuro:border-gray-700" />}
                     </span>
                     <span className={c.listo
-                      ? "text-gray-500 panel-oscuro:text-gray-500 line-through"
-                      : "text-gray-800 panel-oscuro:text-gray-200"}>
+                      ? "min-w-0 text-gray-500 panel-oscuro:text-gray-500 line-through"
+                      : "min-w-0 text-gray-800 panel-oscuro:text-gray-200"}>
                       {c.titulo}
                     </span>
                   </li>

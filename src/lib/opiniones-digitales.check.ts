@@ -52,8 +52,13 @@ check("OPI-G", porQueNoSeDibuja(apagada, { hayBonos: false }) === "Está apagada
   && porQueNoSeDibuja({ ...apagada, clave: "beneficios" }, { hayBonos: false, hayOpinionesVerificadas: true }) === "Está apagada",
   "con verificadas publicadas la sección de opiniones se dibuja aunque esté apagada; ninguna otra sección se prende así");
 const html = htmlDeOpiniones([{ nombre: "Ana <b>", texto: "Bien & \"bien\"", fecha: "septiembre de 2026" }]);
-check("OPI-H", !!html && /Ana &lt;b&gt;/.test(html) && /Bien &amp; &quot;bien&quot;/.test(html) && /Compra verificada/.test(html) && htmlDeOpiniones([]) === undefined,
-  "el bloque para la landing propia escapa lo que escribió la gente y lleva la marca; sin opiniones no hay bloque");
+check("OPI-H", !!html && /Ana &lt;b&gt;/.test(html) && /Bien &amp; &quot;bien&quot;/.test(html) && /Compra verificada/.test(html) && htmlDeOpiniones([]) === undefined
+  && /white-space:pre-line;overflow-wrap:anywhere/.test(html),
+  "el bloque para la landing propia escapa lo que escribió la gente, respeta sus renglones y corta una palabra sin espacios, y lleva la marca; sin opiniones no hay bloque");
+const panelOpiniones = leer("src/app/digitales/clientes/opiniones/OpinionesClient.tsx");
+const dibujanteOpiniones = leer("src/components/digitales/PaginaDeVenta.tsx");
+check("OPI-H2", /whitespace-pre-line break-words[^"]*">\{o\.texto\}/.test(panelOpiniones) && /whitespace-pre-line break-words[^"]*">\s*\{i\.texto\}/.test(dibujanteOpiniones),
+  "en el panel y en la página, lo que escribió la gente respeta sus renglones y no se va para el costado");
 
 /* ── Las rutas y las pantallas ─────────────────────────────────────────── */
 const firma = leer("src/lib/opinion-firma.ts");

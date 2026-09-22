@@ -583,7 +583,7 @@ function EmbudoDibujado({ visitas, checkouts, ventas, pctCheckout, pctVenta }: {
       {filas.map((f, i) => (
         <div key={f.nombre}>
           <div className="flex items-baseline justify-between gap-3 mb-1">
-            <p className="text-sm text-gray-700 panel-oscuro:text-gray-300">{f.nombre}</p>
+            <p className="min-w-0 break-words text-sm text-gray-700 panel-oscuro:text-gray-300">{f.nombre}</p>
             <p className="text-sm font-bold tabular-nums text-gray-900 panel-oscuro:text-gray-100 shrink-0 text-right">
               {entero(f.valor)}
               {/* En el celular el porcentaje baja de renglón; al lado no entra. */}

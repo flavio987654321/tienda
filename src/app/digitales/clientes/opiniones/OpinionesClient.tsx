@@ -82,8 +82,11 @@ export default function OpinionesClient({ opiniones }: { opiniones: OpinionEnPan
           <ul className="space-y-2">
             {g.items.map((o) => (
               <li key={o.id} className={`rounded-2xl border bg-white panel-oscuro:bg-gray-900 px-4 py-3.5 ${o.estado === "PENDIENTE" ? "border-orange-200 panel-oscuro:border-orange-500/30" : "border-gray-100 panel-oscuro:border-gray-800"}`}>
-                <blockquote className="text-[14px] leading-relaxed text-gray-800 panel-oscuro:text-gray-200">{o.texto}</blockquote>
-                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
+                {/* Lo escribió otra persona: se respetan sus renglones y una
+                    palabra sin espacios (un link pegado, un "jajaja…") se corta
+                    en vez de irse para el costado. */}
+                <blockquote className="whitespace-pre-line break-words text-[14px] leading-relaxed text-gray-800 panel-oscuro:text-gray-200">{o.texto}</blockquote>
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
                   <strong className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{o.nombre}</strong>
                   <span className="inline-flex items-center gap-1 text-green-700 panel-oscuro:text-green-300"><BadgeCheck className="h-3.5 w-3.5" /> compra verificada</span>
                   <span>· {o.producto} · {o.cuando}</span>

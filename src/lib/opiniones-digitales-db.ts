@@ -34,8 +34,8 @@ export function htmlDeOpiniones(opiniones: OpinionPublicada[]): string | undefin
     const inicial = [...o.nombre.trim()][0]?.toUpperCase() ?? "";
     return `<figure style="display:flex;gap:14px;margin:0;padding:18px;border:1px solid rgba(0,0,0,.08);border-radius:14px;background:rgba(255,255,255,.6)">`
       + (inicial ? `<span aria-hidden="true" style="flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:rgba(0,0,0,.06)">${esc(inicial)}</span>` : "")
-      + `<div style="min-width:0;flex:1"><blockquote style="margin:0;line-height:1.55">${esc(o.texto)}</blockquote>`
-      + `<figcaption style="margin-top:10px;font-size:14px;opacity:.75">${esc(o.nombre)} · <b>✓ Compra verificada</b> · ${esc(o.fecha)}</figcaption></div></figure>`;
+      + `<div style="min-width:0;flex:1"><blockquote style="margin:0;line-height:1.55;white-space:pre-line;overflow-wrap:anywhere">${esc(o.texto)}</blockquote>`
+      + `<figcaption style="margin-top:10px;font-size:14px;opacity:.75;overflow-wrap:anywhere">${esc(o.nombre)} · <b>✓ Compra verificada</b> · ${esc(o.fecha)}</figcaption></div></figure>`;
   });
   return `<div data-tienda-opiniones="" style="display:grid;gap:14px">${items.join("")}</div>`;
 }

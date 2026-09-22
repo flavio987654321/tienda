@@ -893,7 +893,9 @@ function Contenido({ clave, campos, tono, datos }: {
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
-                    <blockquote className="text-pretty leading-relaxed text-[color:var(--pv-tinta)]">
+                    {/* Renglones como los escribieron, y una palabra sin
+                        espacios se corta en vez de romper el ancho en el celu. */}
+                    <blockquote className="whitespace-pre-line break-words text-pretty leading-relaxed text-[color:var(--pv-tinta)]">
                       {i.texto}
                     </blockquote>
                     {(i.nombre || i.verificada) && (
@@ -1007,7 +1009,7 @@ function Contenido({ clave, campos, tono, datos }: {
               >
                 <summary className="cursor-pointer list-none font-medium text-[color:var(--pv-tinta)] marker:content-none">
                   <span className="flex items-start justify-between gap-4">
-                    <span className="text-pretty">{i.pregunta}</span>
+                    <span className="min-w-0 text-pretty">{i.pregunta}</span>
                     <span aria-hidden="true" className="mt-0.5 shrink-0 text-[color:var(--pv-tenue)] transition group-open:rotate-45">
                       +
                     </span>

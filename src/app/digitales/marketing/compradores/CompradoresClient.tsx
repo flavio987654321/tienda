@@ -293,7 +293,7 @@ export default function CompradoresClient({ esPro, productos, cuantos, correos, 
                   <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
                     <Mail className="h-4 w-4 shrink-0 text-orange-500" /> <span className="truncate">{c.asunto}</span>
                   </p>
-                  <p className="mt-1 text-[12.5px] text-gray-600 panel-oscuro:text-gray-400">
+                  <p className="mt-1 break-words text-[12.5px] text-gray-600 panel-oscuro:text-gray-400">
                     {c.cuando} · {c.segmento} · {c.resumen}
                   </p>
                 </div>

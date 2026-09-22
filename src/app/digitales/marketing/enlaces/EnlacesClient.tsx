@@ -52,7 +52,7 @@ export default function EnlacesClient({ productos, dominioPlataforma, appUrl }: 
       {!producto.isActive && (
         <p className="flex items-start gap-2 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/25 px-3.5 py-2.5 text-[12.5px] text-amber-900 panel-oscuro:text-amber-200">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
+          <span className="min-w-0">
             <strong>{producto.name}</strong> todavía no está publicado: quien abra estos links no va a ver nada.
             Publicá la página antes de repartirlos.
           </span>

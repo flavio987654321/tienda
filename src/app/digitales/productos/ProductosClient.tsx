@@ -1679,7 +1679,7 @@ export default function ProductosClient({
       {lanzamiento && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 px-5 py-4">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">🚀 Publicaste «{lanzamiento.nombre}»</p>
+            <p className="break-words text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">🚀 Publicaste «{lanzamiento.nombre}»</p>
             <p className="mt-0.5 text-[13px] text-gray-600 panel-oscuro:text-gray-300">
               {lanzamiento.clientes === 1 ? "Tenés 1 cliente que todavía no lo tiene" : `Tenés ${lanzamiento.clientes} clientes que todavía no lo tienen`}.
               Avisarles no cuesta un peso de publicidad: el mail ya está escrito, con el botón a la página.
