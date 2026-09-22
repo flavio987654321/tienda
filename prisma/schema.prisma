@@ -97,6 +97,14 @@ model AsistenteMensaje {
   clave     String?
   /// null = sin leer. Es lo que cuenta el globito.
   leidoAt   DateTime?
+  /// Cuánto costó ESTA respuesta (sólo en las de Sasha): lo que se le mandó,
+  /// lo que contestó y lo que pegó en caché. Con esto, cuánto sale un plan
+  /// por mes es una consulta y no una estimación. Nulos en los del dueño y en
+  /// los avisos del cron, que no pasan por el modelo.
+  tokensEntrada      Int?
+  tokensSalida       Int?
+  tokensCacheLeido   Int?
+  tokensCacheEscrito Int?
   createdAt DateTime  @default(now())
 
   @@index([userId, day])
