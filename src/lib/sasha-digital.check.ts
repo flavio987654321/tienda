@@ -19,6 +19,8 @@ import {
 import { buscarArticulos, ARTICULOS, LO_BASICO, normalizar } from "./sasha-digital-saber";
 import { armarPromptDigital, PROMPT_ESTATICO } from "./sasha-digital-prompt";
 import { textoDelSnapshot, type SnapshotDigital } from "./sasha-digital-datos";
+import { PANTALLAS_DEL_PANEL } from "./sasha-digital-saber";
+import { leerMarcaDeIr } from "@/app/digitales/Sasha";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string, detalle?: unknown) => {
@@ -208,6 +210,67 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
   const migracion = leer("prisma/migrations/20260922120000_asistente_tokens/migration.sql");
   check("SAS-Z", /tokensEntrada\s+Int\?/.test(esquema) && /ADD COLUMN IF NOT EXISTS "tokensCacheLeido"/.test(migracion),
     "las columnas existen en el esquema y la migración es idempotente");
+
+  /* ── 5. La burbuja ───────────────────────────────────────────────────── */
+
+  const burbuja = leer("src/app/digitales/Sasha.tsx");
+  const layout = leer("src/app/digitales/layout.tsx");
+
+  /* El saludo es texto NUESTRO. En el panel de tiendas el "hola" de cada día
+     es una llamada al modelo: un mensaje entero por persona por día para
+     decir algo que ya sabemos escribir. */
+  check("SAS-AA", /const SALUDO = "/.test(burbuja) && !/greet/.test(burbuja),
+    "el saludo de cada día no gasta un mensaje: es texto nuestro");
+
+  /* Free ni siquiera puede mandar: la burbuja le muestra qué es Sasha y con
+     qué plan viene, y no hay pedido que contar ni que pagar. */
+  check("SAS-AB", /const esFree = estado !== null && estado\.tope === 0;/.test(burbuja)
+    && /Sasha viene con Starter y Pro/.test(burbuja) && /esFree \? \(/.test(burbuja),
+    "en Free la burbuja explica y ofrece el plan, sin caja para escribir");
+
+  /* Cuando el cupo del día cortó, el cuadro se apaga: mandar otra vez sólo
+     suma un rechazo más al contador. */
+  check("SAS-AC", /if \(r\.status === 429 \|\| r\.status === 402\) setCortado\(true\)/.test(burbuja)
+    && /disabled=\{enviando \|\| cortado\}/.test(burbuja) && /Volvé mañana/.test(burbuja),
+    "con el cupo agotado el cuadro de escribir se apaga hasta mañana");
+
+  check("SAS-AD", /Te quedan \$\{quedan\} mensaje/.test(burbuja),
+    "cuando quedan pocos mensajes del día se avisa antes de que se acaben");
+
+  /* El botón de "ir a" sale de una lista blanca compartida con el prompt: el
+     texto lo escribe un modelo y puede inventar una dirección que suene bien. */
+  check("SAS-AE", leerMarcaDeIr("Andá a Productos. [[IR:/digitales/productos]]").ir?.href === "/digitales/productos"
+    && leerMarcaDeIr("Probá esto [[IR:/digitales/inventada]]").ir === null
+    && leerMarcaDeIr("Probá esto [[IR:/dashboard]]").ir === null
+    && leerMarcaDeIr("Sin marca").ir === null
+    && leerMarcaDeIr("Hola [[IR:/digitales/ventas]]").texto === "Hola",
+    "una dirección que el modelo inventó no se dibuja, y la marca no queda a la vista");
+
+  check("SAS-AF", Object.keys(PANTALLAS_DEL_PANEL).every((r) => PROMPT_ESTATICO.includes(r)),
+    "el prompt le dice exactamente qué pantallas existen, desde la misma lista que dibuja el botón");
+
+  check("SAS-AG", /<Sasha \/>/.test(layout) && layout.indexOf("<Sasha />") > layout.indexOf("cuenta?.closedAt"),
+    "la burbuja se monta en el panel, y no con la cuenta cerrada");
+
+  /* SASHA ES LA MISMA EN LOS DOS PANELES. Adentro sabe de otra cosa —acá de
+     embudos y descargas, allá de stock y envíos— pero la cara, el cajón que
+     entra desde la derecha y la escala de las burbujas son las mismas: si se
+     dibujan distinto, parecen dos productos. Se compara contra la del panel
+     de tiendas, que es el molde. */
+  const deTiendas = leer("src/components/dashboard/AsistenteIA.tsx");
+  const mismoAspecto = [
+    /AsistentePersonaje estado=\{[^}]*\} size=\{56\}/,               // el personaje ES el botón, sin círculo
+    /fixed right-0 top-0 z-\[60\] flex h-full w-full flex-col/,       // el cajón desde la derecha
+    /md:w-\[380px\] md:rounded-l-2xl/,
+    /fixed inset-0 z-\[60\] bg-black\/30 md:hidden print:hidden/,     // el fondo del celular
+    /AsistentePersonaje estado=\{enviando \? "pensando" : "sonriente"\} size=\{36\}/,
+    /max-w-\[85%\][^"]*rounded-2xl px-4 py-2\.5 text-sm/,             // la burbuja
+    /rounded-xl bg-orange-500 p-2\.5 text-white/,                     // el botón de enviar
+  ];
+  const distintos = mismoAspecto.filter((re) => !(re.test(burbuja) && re.test(deTiendas)));
+  check("SAS-AH", distintos.length === 0,
+    "Sasha se ve igual que en el panel de tiendas: mismo personaje, mismo cajón, mismas burbujas",
+    distintos.map(String));
 
   console.log(fallos === 0 ? "\nok — Sasha digital: los topes cortan, no cuenta lo que el plan no compró, y sabe explicar desde cero" : `\nFALLA — ${fallos} chequeo(s) de Sasha digital`);
   process.exit(fallos === 0 ? 0 : 1);

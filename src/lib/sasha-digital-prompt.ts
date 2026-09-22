@@ -1,4 +1,4 @@
-import { LO_BASICO, buscarArticulos, type Articulo } from "@/lib/sasha-digital-saber";
+import { LO_BASICO, buscarArticulos, PANTALLAS_DEL_PANEL, type Articulo } from "@/lib/sasha-digital-saber";
 import { textoDelSnapshot, type SnapshotDigital } from "@/lib/sasha-digital-datos";
 
 /**
@@ -44,7 +44,8 @@ LO QUE NO HACÉS NUNCA
 const COMO_MANDA = `CÓMO MANDÁS A UNA PANTALLA
 Si la respuesta termina en "andá a tal lado", cerrá el mensaje con una marca en una línea aparte, al final de todo:
 [[IR:/digitales/productos]]
-Sólo direcciones que empiecen con /digitales/ y que estén en la lista de arriba. Una sola marca por mensaje, y sólo cuando de verdad ayuda. El texto del mensaje no tiene que repetir el link.`;
+Una sola marca por mensaje, al final, y sólo cuando de verdad ayuda; el texto no tiene que repetir el link. Las únicas direcciones que existen son éstas — cualquier otra no se dibuja:
+${Object.keys(PANTALLAS_DEL_PANEL).join("\n")}`;
 
 /** El bloque que es igual para todas las cuentas. Es el que se cachea. */
 export const PROMPT_ESTATICO = [COMO_HABLA, LO_BASICO, SECCIONES_DEL_PANEL, COMO_MANDA].join("\n\n");

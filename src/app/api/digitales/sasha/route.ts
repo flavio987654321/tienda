@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { getUserSubscription, getSubscriptionStatus } from "@/lib/subscription";
 import { getArgentinaDayKey, getArgentinaAhora } from "@/lib/fechas-comerciales";
-import { permitirMensajeSasha } from "@/lib/sasha-digital-limites";
+import { permitirMensajeSasha, DIARIO_POR_PLAN } from "@/lib/sasha-digital-limites";
 import { snapshotDigital } from "@/lib/sasha-digital-datos";
 import { armarPromptDigital } from "@/lib/sasha-digital-prompt";
 import type { TierDigital } from "@/lib/planes-digitales";
@@ -55,6 +55,38 @@ function validarMensajes(body: unknown): ChatMessage[] | null {
     recientes = recientes.slice(1);
   }
   return recientes;
+}
+
+/**
+ * GET /api/digitales/sasha — la charla de hoy y cuántos mensajes quedan.
+ *
+ * Los que quedan salen de contar las respuestas guardadas de hoy y no del
+ * contador de Redis: mirar Redis sin sumar necesitaría otra clave, y este
+ * número es para mostrar, no para frenar. El que frena es el de `permitir…`.
+ */
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (user.role !== "DIGITAL") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
+  const sub = await getUserSubscription(user.id);
+  const tier = (sub?.tier ?? "FREE") as TierDigital;
+  const tope = DIARIO_POR_PLAN[tier] ?? 0;
+  const day = getArgentinaDayKey();
+
+  /* Free no tiene chat: no se trae ninguna charla. */
+  if (tope <= 0) return NextResponse.json({ tier, tope: 0, usados: 0, mensajes: [] });
+
+  const [mensajes, usados] = await Promise.all([
+    prisma.asistenteMensaje.findMany({
+      where: { userId: user.id, day },
+      orderBy: { createdAt: "asc" },
+      select: { role: true, content: true },
+      take: 200,
+    }),
+    prisma.asistenteMensaje.count({ where: { userId: user.id, day, role: "assistant" } }),
+  ]);
+  return NextResponse.json({ tier, tope, usados: Math.min(usados, tope), mensajes });
 }
 
 export async function POST(req: NextRequest) {

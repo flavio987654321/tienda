@@ -159,3 +159,27 @@ export function buscarArticulos(pregunta: string, maximo = 2): Articulo[] {
     .slice(0, maximo)
     .map((x) => x.a);
 }
+
+/* ── A dónde puede mandar ──────────────────────────────────────────────────
+ *
+ * Lista blanca, y vive acá —en el saber, que no importa nada del servidor—
+ * porque la usan LOS DOS lados: el prompt, para decirle al modelo qué
+ * direcciones existen, y la burbuja, para decidir si pinta el botón. En dos
+ * archivos se desincronizan, y el síntoma es un botón nuestro que lleva a un
+ * 404 porque el modelo escribió una dirección que suena bien.
+ */
+export const PANTALLAS_DEL_PANEL: Record<string, string> = {
+  "/digitales": "Ir al panel",
+  "/digitales/productos": "Ir a Productos",
+  "/digitales/ventas": "Ir a Ventas",
+  "/digitales/clientes": "Ir a Clientes",
+  "/digitales/clientes/opiniones": "Ver las opiniones",
+  "/digitales/carritos": "Ver los carritos",
+  "/digitales/estadisticas": "Ver las estadísticas",
+  "/digitales/marketing": "Ir a Marketing",
+  "/digitales/marketing/enlaces": "Ver los enlaces",
+  "/digitales/marketing/cupones": "Ir a Cupones",
+  "/digitales/marketing/compradores": "Escribirles a tus compradores",
+  "/digitales/configuracion": "Ir a Configuración",
+  "/digitales/mi-cuenta": "Ir a Mi cuenta",
+};

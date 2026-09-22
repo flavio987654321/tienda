@@ -16,6 +16,7 @@ import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
 import Cierre from "./Cierre";
 import CuentaCerrada from "./CuentaCerrada";
+import Sasha from "./Sasha";
 import { pausadosPorCierreDe } from "@/lib/cierre-digital";
 import { puedeVer } from "@/lib/estadisticas-digitales";
 /* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
@@ -261,6 +262,11 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           </div>
           {children}
         </main>
+        {/* Sasha. Va afuera del `main` porque es `fixed` y no tiene que
+            moverse con el scroll de la pantalla, y adentro del armazón del
+            panel para que la agarre el tema oscuro. No se dibuja con la
+            cuenta cerrada: ahí arriba se corta antes de llegar acá. */}
+        <Sasha />
       </ProveedorDeSalida>
     </div>
   );
