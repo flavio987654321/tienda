@@ -129,6 +129,15 @@ export async function POST(req: NextRequest) {
   if (ultima.role !== "user") return NextResponse.json({ error: "No entendimos el pedido." }, { status: 400 });
 
   const snapshot = await snapshotDigital(user.id, tier);
+  /* Una cuenta que la dueña cerró no tiene panel, pero la ruta sí sigue
+     existiendo, y cerrar NO cancela la suscripción: el plan queda en Pro. Sin
+     esto, una cuenta cerrada podía seguir gastando mensajes desde afuera del
+     panel. Va acá y no antes porque el dato viene con el resumen, sin pagar
+     una consulta de más, y todavía estamos ANTES de llamar al modelo. */
+  if (snapshot.cerrada) {
+    return NextResponse.json({ error: "Tu cuenta está cerrada. Reabrila para volver a usar el panel." }, { status: 403 });
+  }
+
   const prompt = armarPromptDigital({
     snapshot,
     nombreDeQuienVende: user.name?.split(" ")[0] ?? null,
@@ -155,7 +164,21 @@ export async function POST(req: NextRequest) {
           messages: historial,
         });
 
-        salida.on("text", (delta) => controller.enqueue(encoder.encode(delta)));
+        /* Si quien pregunta cierra el chat a mitad de la respuesta, el canal
+           ya no acepta nada y `enqueue` tira. Se ignora a propósito: el
+           pedido a Anthropic ya se pagó, así que lo que importa es seguir
+           hasta el final para GUARDAR la respuesta y sus tokens. Sin este
+           try, esa excepción se llevaba puesto el guardado y el gasto
+           quedaba sin medir. */
+        let cerrado = false;
+        salida.on("text", (delta) => {
+          if (cerrado) return;
+          try {
+            controller.enqueue(encoder.encode(delta));
+          } catch {
+            cerrado = true;
+          }
+        });
 
         const final = await salida.finalMessage();
         const texto = final.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
@@ -175,9 +198,11 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         console.error("[sasha-digital] error llamando a Anthropic", err);
-        controller.enqueue(encoder.encode("\n\nSasha no está disponible en este momento, probá de nuevo en un minuto."));
+        try {
+          controller.enqueue(encoder.encode("\n\nSasha no está disponible en este momento, probá de nuevo en un minuto."));
+        } catch { /* el canal ya estaba cerrado: no hay a quién avisarle */ }
       } finally {
-        controller.close();
+        try { controller.close(); } catch { /* ya estaba cerrado */ }
       }
     },
   });

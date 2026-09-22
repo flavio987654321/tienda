@@ -43,6 +43,8 @@ export type SnapshotDigital = {
   mpConectado: boolean;
   /** Si no creó su espacio todavía: no guardó ningún producto. */
   sinEspacio: boolean;
+  /** La dueña cerró la cuenta: no hay panel, y no se le gasta un mensaje. */
+  cerrada: boolean;
   productos: ProductoEnSnapshot[];
   ventasDelMes: number;
   netoDelMes: number;
@@ -56,11 +58,15 @@ export type SnapshotDigital = {
 export async function snapshotDigital(userId: string, tier: TierDigital): Promise<SnapshotDigital> {
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
-    select: { id: true, name: true, mpConnectedAt: true },
+    /* `closedAt`: una cuenta que la dueña cerró no tiene panel, pero la ruta
+       sí sigue existiendo. Cerrar NO cancela la suscripción —el plan queda
+       en Pro—, así que sin este dato una cuenta cerrada podría seguir
+       gastando mensajes. Viaja acá para no pagar una consulta más. */
+    select: { id: true, name: true, mpConnectedAt: true, closedAt: true },
   });
   if (!store) {
     return {
-      tier, nombre: null, mpConectado: false, sinEspacio: true, productos: [],
+      tier, nombre: null, mpConectado: false, sinEspacio: true, cerrada: false, productos: [],
       ventasDelMes: 0, netoDelMes: 0, clientes: 0, repiten: 0, sinBajar: 0,
       carritos: 0, opinionesPendientes: 0,
     };
@@ -165,6 +171,7 @@ export async function snapshotDigital(userId: string, tier: TierDigital): Promis
     nombre: store.name,
     mpConectado: !!store.mpConnectedAt,
     sinEspacio: false,
+    cerrada: !!store.closedAt,
     productos: enPantalla,
     ventasDelMes: delMes._count._all,
     netoDelMes: Math.round(delMes._sum.total ?? 0),
