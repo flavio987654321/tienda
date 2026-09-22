@@ -15,6 +15,8 @@ import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
 import Cierre from "./Cierre";
+import CuentaCerrada from "./CuentaCerrada";
+import { pausadosPorCierreDe } from "@/lib/cierre-digital";
 /* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
 import SondaDePantalla from "./SondaDePantalla";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
@@ -113,6 +115,24 @@ export default async function DigitalesLayout({ children }: { children: React.Re
     select: { tier: true },
   });
   const tier = (sub?.tier ?? "FREE") as TierDigital;
+
+  /* ── La cuenta cerrada ──────────────────────────────────────────────────
+     Antes del recibimiento y de la barra: una cuenta que ella misma cerró
+     (Configuración → Zona de peligro) no tiene panel que mostrar, sólo la
+     puerta de reabrir. Se lee acá y no en cada pantalla por lo mismo que el
+     recibimiento: cubre todas de una. Ver `lib/cierre-digital`. */
+  const cuenta = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, closedAt: true } });
+  if (cuenta?.closedAt) {
+    return (
+      <>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+        <TemaDelPanel />
+        <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" disableNotifPrompt />
+        <PanelSplash nombre="TiendaApps Digitales" />
+        <CuentaCerrada cerradaEl={cuenta.closedAt.toISOString()} vuelven={await pausadosPorCierreDe(prisma, cuenta.id)} />
+      </>
+    );
+  }
 
   /* ══════════════════════════════════════════════════════════════════════════
      EL RECIBIMIENTO: HASTA QUE LA CUENTA NO ESTÁ ARMADA, EL PANEL NO EXISTE

@@ -107,9 +107,11 @@ check("AVI-G",
   !/<PWAManager[^>]*disableNotifPrompt[^>]*>/.test(bloqueDelPanel),
   "el panel pide permiso de notificaciones, ahora que hay algo que mandar");
 
+/* Y desde el 21/09/26, tampoco la puerta de "tu cuenta está cerrada": a quien
+   cerró no le va a llegar ninguna venta que avisar. */
 check("AVI-G2",
-  (layout.match(/<PWAManager[^>]*disableNotifPrompt/g) ?? []).length === 2,
-  "la pantalla de login y la de rol ajeno siguen sin pedirlo");
+  (layout.match(/<PWAManager[^>]*disableNotifPrompt/g) ?? []).length === 3,
+  "la pantalla de login, la de rol ajeno y la de cuenta cerrada siguen sin pedirlo");
 
 /* ⚠️ UNO SOLO. Ni la devolución, ni la entrega fallida, ni la caída a Free. */
 check("AVI-H",

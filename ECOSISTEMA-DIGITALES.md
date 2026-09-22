@@ -8359,3 +8359,42 @@ Lo que queda anotado y no se tocó: un bot puede seguir llenando órdenes
 cron con basura, aunque ya no salga ningún mail; la limpieza de pendientes
 vieja las borra. Si algún día aparece, el freno va en `comprar`: un tope
 por correo, no sólo por IP.
+
+### Zona de peligro: cerrar y eliminar, como en tiendas — 21/09/26
+
+Estaba apagada ("falta decidir qué pasa con lo que ya se vendió"). Quedó
+decidido y hecho, con las dos puertas del panel de tiendas:
+
+- **Cerrar mi cuenta** (se deshace). `POST /api/digitales/cerrar`: lo
+  publicado se despublica y se marca (`Product.pausadoPorCierre`, mismo
+  molde que `Affiliate.pausedByClosure`), la cuenta queda `Store.closedAt`,
+  se escribe el `StoreClosure` con el motivo (el admin lo ve en
+  /admin/cierres) y sale un mail de comprobante. NADA se borra. La
+  suscripción no se toca: acá el plan se paga por período, a mano, y no se
+  renueva solo; si vence mientras está cerrada, el cron la baja a Free como
+  a cualquiera. Confirma escribiendo el nombre de la cuenta, y lo valida el
+  servidor. Sin bloqueos: una orden PENDING es un carrito, no una deuda.
+- **La puerta del panel** (`CuentaCerrada`, en el layout, después del rol y
+  antes del recibimiento): dice desde cuándo, qué se conserva, y reabre.
+  `POST /api/digitales/reabrir`: vuelve a publicar lo que el cierre apagó
+  —y sólo eso— y DESPUÉS hace cumplir el tope del plan de hoy con
+  `despublicarLasDeMas` (la misma regla que la caída a Free). A diferencia
+  de tiendas, vuelve publicado: una página digital es un archivo y un
+  precio, no un stock que se desactualiza.
+- **Eliminar mis datos permanentemente** (no se deshace). Va por
+  `/api/cuenta` DELETE, la ruta común: la persona se anonimiza, nada queda
+  publicado, se sueltan los dominios, las ventas quedan cinco años (AFIP).
+  Confirma con el mail. El modal recomienda cerrar antes.
+- **Lo que ya se vendió sigue siendo de quien lo pagó**, en las dos
+  puertas: `/api/digitales/descargar` no mira si el producto está
+  publicado ni si la cuenta está abierta, y eliminar la cuenta no borra los
+  archivos vendidos (sí las imágenes). El link del mail de entrega sigue
+  andando hasta que venza por su cuenta.
+
+Chequeos CIE-A…M; panel-digitales y AVI-G2 actualizados.
+
+🔲 Correr la migración: `npx dotenv -e .env.local -- npx prisma migrate deploy`
+  (agrega `Product.pausadoPorCierre`). Hasta entonces, en local, Productos y
+  Configuración van a fallar por la columna que falta.
+🔲 Mirar la zona, los dos modales y la puerta de "cuenta cerrada" a
+  360/768/1280 (necesita sesión).

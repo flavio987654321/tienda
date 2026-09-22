@@ -5,9 +5,10 @@ import {
   Trash2, Loader2,
 } from "lucide-react";
 import {
-  Seccion, BotonGuardar, Etiqueta, Ayuda, NotaPendiente, CLASE_INPUT,
+  Seccion, BotonGuardar, Etiqueta, Ayuda, CLASE_INPUT,
 } from "./piezas";
 import AvisosDeVenta from "./AvisosDeVenta";
+import ZonaDePeligro from "./ZonaDePeligro";
 import {
   LARGO_NOMBRE, LARGO_CHECKOUT, LARGO_EMAIL, LARGO_IA_PRODUCTO, LARGO_IA_DESCRIPCION,
   SLUG_MAXIMO,
@@ -58,9 +59,9 @@ type Props = {
  * menos Idioma: nosotros vendemos en Argentina, así que un selector con una sola
  * opción sería un campo puesto por estar.
  *
- * Las cuatro últimas se dibujan apagadas a propósito. Ver `EtiquetaPendiente`:
- * lo que no está dibujado se olvida, pero lo que parece que anda y no anda es
- * peor que no tenerlo.
+ * Hasta el 21/09/26 las últimas secciones se dibujaban apagadas ("viene
+ * después"). Ya no queda ninguna: los avisos de venta andan y la zona de
+ * peligro cierra y elimina de verdad.
  */
 export default function TabGeneral(p: Props) {
   const dirCambia = p.dirLimpia !== p.slugOriginal && p.dirLimpia.length > 0;
@@ -425,41 +426,11 @@ export default function TabGeneral(p: Props) {
       </Seccion>
 
       {/* ── 5. Zona de peligro ─────────────────────────────────────────────── */}
-      <section className="rounded-3xl border border-red-200 panel-oscuro:border-red-500/30 bg-white panel-oscuro:bg-gray-900 p-5 sm:p-6 shadow-sm">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-10 h-10 shrink-0 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 flex items-center justify-center">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-black text-red-600">Zona de peligro</h2>
-            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-0.5 leading-relaxed">
-              Cerrar tu cuenta y borrar todo lo que cargaste.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 min-w-0">
-            Se borran tus productos, tus archivos y tu configuración.
-          </p>
-          <button
-            disabled
-            className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-red-200 panel-oscuro:border-red-500/30 text-sm font-bold text-red-300 cursor-not-allowed"
-          >
-            <Trash2 className="h-4 w-4" /> Cerrar mi cuenta
-          </button>
-        </div>
-
-        {/* ⚠️ Esta es la que MENOS se puede apurar. De la cuenta cuelgan pedidos
-            y permisos de descarga de gente que ya pagó: un borrado hecho de
-            cualquier manera le saca a esa gente el acceso a lo que compró, y eso
-            no se puede deshacer ni explicar. */}
-        <NotaPendiente>
-          Falta decidir qué pasa con lo que ya se vendió. De tu cuenta cuelgan pedidos y permisos de
-          descarga de gente que te pagó: si se borra todo de una, esas personas pierden el acceso a
-          lo que compraron. Se prende cuando esté resuelto.
-        </NotaPendiente>
-      </section>
+      {/* Dos puertas, como en tiendas: cerrar (se deshace) y eliminar (no).
+          Lo que tenía frenada esta zona —qué pasa con lo que ya se vendió—
+          quedó decidido: quien compró conserva sus descargas, pase lo que
+          pase con la cuenta. Ver `lib/cierre-digital`. */}
+      <ZonaDePeligro nombre={p.nombreOriginal} publicados={p.publicados} />
     </div>
   );
 }

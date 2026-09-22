@@ -688,6 +688,10 @@ model Product {
   /// el plazo lo firma el servidor y lo hace cumplir al cobrar). JSON; la
   /// forma la declara `lib/bienvenida`; el cupón que crea vive en `CuponDigital`.
   bienvenida    String?
+  /// Estaba publicado cuando la dueña cerró su cuenta digital (`Store.closedAt`):
+  /// al reabrir, éstos y sólo éstos vuelven a publicarse. Mismo molde que
+  /// `Affiliate.pausedByClosure`. Ver `lib/cierre-digital`.
+  pausadoPorCierre Boolean @default(false)
   /// La landing propia (el HTML que diseñó con Claude): si está prendida,
   /// qué versión se muestra, las fotos por nombre de hueco y los links del
   /// pie. JSON; la forma la declara `lib/landing-estado`. Las versiones del

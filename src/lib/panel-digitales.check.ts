@@ -57,6 +57,7 @@ const pantallaProductos = soloCodigo(readFileSync("src/app/digitales/productos/P
 const config = soloCodigo(readFileSync("src/app/api/digitales/configuracion/route.ts", "utf8"));
 const pantallaConfig = soloCodigo(readFileSync("src/app/digitales/configuracion/ConfiguracionClient.tsx", "utf8"));
 const tabGeneral = soloCodigo(readFileSync("src/app/digitales/configuracion/TabGeneral.tsx", "utf8"));
+const zonaDePeligro = soloCodigo(readFileSync("src/app/digitales/configuracion/ZonaDePeligro.tsx", "utf8"));
 const piezasConfig = soloCodigo(readFileSync("src/app/digitales/configuracion/piezas.tsx", "utf8"));
 const paginaConfig = soloCodigo(readFileSync("src/app/digitales/configuracion/page.tsx", "utf8"));
 const mpConnect = soloCodigo(readFileSync("src/app/api/mp/oauth/connect/route.ts", "utf8"));
@@ -503,29 +504,24 @@ chequear("la pantalla y el servidor comparten las validaciones",
 /* ⚠️ Lo que se dibuja pero todavía no anda.
  *
  * Se dibuja a propósito —lo que no está dibujado se olvida— pero una sección que
- * PARECE que anda y no anda es peor que no tenerla: la persona la configura, se
- * queda tranquila y se entera de que no pasó nada cuando ya es tarde. Los
- * controles apagados y el aviso son lo único que separa "esto viene después" de
- * "esto está roto". */
+ * PARECE que anda y no anda es peor que no tenerla. Las piezas para avisarlo
+ * siguen existiendo (`EtiquetaPendiente`, `NotaPendiente`) para la próxima
+ * vez que haga falta; en General ya no queda ninguna sección apagada: el
+ * 21/09/26 los avisos de venta pasaron a andar, y la zona de peligro cierra y
+ * elimina de verdad. */
 chequear("las secciones que todavía no andan se avisan",
   /EtiquetaPendiente/.test(piezasConfig) && /Todavía no/.test(piezasConfig));
 chequear("y dicen QUÉ falta, no 'próximamente'",
-  !/próximamente/i.test(tabGeneral) && /NotaPendiente/.test(tabGeneral));
+  !/próximamente/i.test(tabGeneral) && !/Se prende cuando esté resuelto/.test(tabGeneral));
+chequear("en General no queda ningún control apagado 'para después'",
+  !/<button\s+disabled/.test(tabGeneral) && !/todavía no le llega ningún\s+aviso/.test(tabGeneral));
 
-/* Cada control de una sección apagada va deshabilitado de verdad. Un cartel que
-   dice "todavía no" arriba de un campo que se puede escribir es un cartel que
-   nadie lee. */
-/* Contaba `disabled` a secas (≥ 5) y bajó a 4 el 21/09/26 cuando "Activar
-   avisos" pasó a andar de verdad: el push de la venta existe. Ahora mira lo
-   único que sigue pendiente: cerrar la cuenta. */
-chequear("y sus controles están apagados de verdad",
-  /<button\s+disabled[\s\S]{0,400}Cerrar mi cuenta/.test(tabGeneral) && !/todavía no le llega ningún\s+aviso/.test(tabGeneral));
-
-/* ⚠️ La zona de peligro es la que MENOS se puede apurar: de la cuenta cuelgan
-   pedidos y permisos de descarga de gente que ya pagó. Un borrado hecho de
-   cualquier manera les saca el acceso a lo que compraron. */
-chequear("borrar la cuenta sigue apagado",
-  /Zona de peligro/.test(tabGeneral) && /Cerrar mi cuenta/.test(tabGeneral));
+/* ⚠️ La zona de peligro tiene las dos puertas de tiendas: cerrar (se deshace) y
+   eliminar (no). Lo que la tenía frenada —qué pasa con lo que ya se vendió— se
+   decidió: quien compró conserva sus descargas. Ver cierre-digital.check.ts. */
+chequear("la zona de peligro cierra y elimina de verdad",
+  /<ZonaDePeligro nombre=\{p\.nombreOriginal\}/.test(tabGeneral)
+  && /Cerrar mi cuenta/.test(zonaDePeligro) && /Eliminar mis datos permanentemente/.test(zonaDePeligro));
 
 /* El nombre del checkout es opcional y vacío quiere decir "usá el de la marca".
    Un campo vacío no dice eso solo, así que la pantalla muestra siempre cuál va

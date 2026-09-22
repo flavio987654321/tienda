@@ -1922,3 +1922,75 @@ export async function sendVentaDigitalVendedorEmail({
 
   return { error: r.error ? { message: r.error.message } : null };
 }
+
+/**
+ * A quien cerró su cuenta de Productos Digitales: el comprobante de que
+ * cerró, y de que nada se borró. Es el par de `sendStoreClosedOwnerEmail`
+ * con lo que este ecosistema tiene de distinto: no se le deja de cobrar nada
+ * (el plan no se renueva solo), lo que vendió sigue descargable para quien lo
+ * pagó, y el botón lleva al panel de digitales. Ver `lib/cierre-digital`.
+ */
+export async function sendCuentaDigitalCerradaEmail({
+  to,
+  userName,
+  storeName,
+  paginas,
+  reason,
+}: {
+  to: string;
+  userName: string;
+  storeName: string;
+  /** Cuántas páginas se apagaron: las que vuelven al reabrir. */
+  paginas: number;
+  reason: string;
+}): Promise<ResultadoDeEnvio> {
+  if (!process.env.RESEND_API_KEY) {
+    return { error: { message: "RESEND_API_KEY no configurada" } };
+  }
+  const r = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Cerraste tu cuenta de ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#374151;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#d1d5db;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps Digitales</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Tu cuenta está cerrada</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;line-height:1.6;">
+          Cerramos <strong>${escapeHtml(storeName)}</strong> como pediste. ${paginas === 1 ? "Tu página de venta salió" : `Tus ${paginas} páginas de venta salieron`} de línea y nadie puede comprar hasta que la reabras.
+        </p>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#166534;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Nada se borró</p>
+          <p style="font-size:15px;color:#374151;margin:0;line-height:1.6;">
+            Tus productos, tus archivos, tus páginas, tus dominios y tus ventas quedaron guardados tal cual. Cuando quieras volver, entrás a tu panel y la reabrís: lo que estaba publicado vuelve a estar en línea.
+          </p>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:14px;color:#374151;margin:0 0 10px;line-height:1.6;">
+            <strong>Quien ya te compró no pierde nada:</strong> sus descargas siguen andando, con el mismo link del mail de entrega.
+          </p>
+          <p style="font-size:14px;color:#374151;margin:0;line-height:1.6;">
+            <strong>No te cobramos nada:</strong> el plan no se renueva solo. Si te quedaban días pagos, siguen siendo tuyos.
+          </p>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:12px;color:#6b7280;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Motivo que nos dejaste</p>
+          <p style="font-size:14px;color:#374151;margin:0;">${escapeHtml(reason)}</p>
+        </div>
+        ${APP_URL ? `
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/digitales" style="display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Reabrir mi cuenta</a>
+        </div>` : ""}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          Si cerraste por algo que podamos resolver, contanos: respondé este mail y lo vemos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          TiendaApps Digitales
+        </p>
+      </div>
+    `,
+  });
+  return { error: r.error ? { message: r.error.message } : null };
+}
