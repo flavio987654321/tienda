@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Power, Loader2, Check } from "lucide-react";
+import { Power, Loader2, Check, Download } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useIsPwa } from "@/hooks/useIsPwa";
 
@@ -15,10 +15,12 @@ import { useIsPwa } from "@/hooks/useIsPwa";
  * Va en el layout ANTES del recibimiento y de la barra: una cuenta cerrada
  * no tiene panel que mostrar. Ver `lib/cierre-digital`.
  */
-export default function CuentaCerrada({ cerradaEl, vuelven }: {
+export default function CuentaCerrada({ cerradaEl, vuelven, exportar }: {
   cerradaEl: string;
   /** Cuántas páginas vuelven a publicarse al reabrir. */
   vuelven: number;
+  /** Si su plan deja bajar las ventas en .csv: el historial sin reabrir. */
+  exportar: boolean;
 }) {
   const [yendo, setYendo] = useState(false);
   const [error, setError] = useState("");
@@ -75,6 +77,22 @@ export default function CuentaCerrada({ cerradaEl, vuelven }: {
             </li>
           ))}
         </ul>
+
+        {/* El historial no se pierde ni hace falta reabrir para tenerlo: la
+            competencia lo llama "tiendas archivadas"; acá es la misma cuenta,
+            entera. Con plan pago se baja desde acá; en Free se ve al reabrir. */}
+        <p className="text-[12.5px] text-gray-500 mb-5 leading-relaxed">
+          Tu historial de ventas está guardado: lo ves en Ventas al reabrir
+          {exportar ? (
+            <>
+              , o{" "}
+              <a href="/api/digitales/ventas/exportar" className="inline-flex items-center gap-1 font-semibold text-orange-700 underline underline-offset-2 hover:text-orange-600">
+                <Download className="h-3.5 w-3.5" /> descargalo ahora (.csv)
+              </a>
+              .
+            </>
+          ) : "."}
+        </p>
 
         {error && (
           <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-4">{error}</p>

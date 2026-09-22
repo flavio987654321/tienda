@@ -8398,3 +8398,10 @@ Chequeos CIE-A…M; panel-digitales y AVI-G2 actualizados.
   Configuración van a fallar por la columna que falta.
 🔲 Mirar la zona, los dos modales y la puerta de "cuenta cerrada" a
   360/768/1280 (necesita sesión).
+
+**El historial sin reabrir** (21/09/26, después de mirar cómo lo hace la
+competencia con sus "tiendas archivadas"): acá no hay copia archivada, es la
+misma cuenta entera. La puerta de "cuenta cerrada" lo dice y, con Starter o
+Pro, ofrece bajar las ventas en .csv sin reabrir; el modal de eliminar
+ofrece lo mismo ANTES de borrar, porque después no hay forma. En Free se
+ven al reabrir, que es gratis. CIE-N.

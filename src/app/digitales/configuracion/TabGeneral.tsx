@@ -43,6 +43,8 @@ type Props = {
   slugOriginal: string;
   dirLimpia: string;
   publicados: number;
+  /** Si el plan deja bajar las ventas en .csv (para ofrecerlo antes de eliminar). */
+  exportar: boolean;
   base: string;
   // Problemas, calculados con las mismas funciones que aplica el servidor
   problemaNombre: string | null;
@@ -430,7 +432,7 @@ export default function TabGeneral(p: Props) {
           Lo que tenía frenada esta zona —qué pasa con lo que ya se vendió—
           quedó decidido: quien compró conserva sus descargas, pase lo que
           pase con la cuenta. Ver `lib/cierre-digital`. */}
-      <ZonaDePeligro nombre={p.nombreOriginal} publicados={p.publicados} />
+      <ZonaDePeligro nombre={p.nombreOriginal} publicados={p.publicados} exportar={p.exportar} />
     </div>
   );
 }

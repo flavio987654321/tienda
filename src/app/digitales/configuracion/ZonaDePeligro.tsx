@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Power, Trash2, X, Loader2, Check, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Power, Trash2, X, Loader2, Check, ShieldAlert, Download } from "lucide-react";
 import { CLOSURE_REASONS, CLOSURE_COMMENT_MAX, type ClosureReason } from "@/lib/store-closure";
 import { CLASE_INPUT } from "./piezas";
 
@@ -20,11 +20,13 @@ import { CLASE_INPUT } from "./piezas";
  * Las dos piden escribir algo para confirmar —el nombre de la cuenta para
  * cerrar, el mail para eliminar— y lo valida el servidor, no sólo la pantalla.
  */
-export default function ZonaDePeligro({ nombre, publicados }: {
+export default function ZonaDePeligro({ nombre, publicados, exportar }: {
   /** El nombre de la cuenta guardado (no lo que esté escribiendo en el formulario de arriba). */
   nombre: string;
   /** Cuántas páginas hay publicadas: es lo que cerrar apaga. */
   publicados: number;
+  /** Si el plan deja bajar las ventas en .csv: se ofrece antes de eliminar, que no tiene vuelta. */
+  exportar: boolean;
 }) {
   const [abierto, setAbierto] = useState<"cerrar" | "eliminar" | null>(null);
   return (
@@ -71,7 +73,7 @@ export default function ZonaDePeligro({ nombre, publicados }: {
       </div>
 
       {abierto === "cerrar" && <ModalCerrar nombre={nombre} publicados={publicados} onClose={() => setAbierto(null)} />}
-      {abierto === "eliminar" && <ModalEliminar onClose={() => setAbierto(null)} />}
+      {abierto === "eliminar" && <ModalEliminar exportar={exportar} onClose={() => setAbierto(null)} />}
     </section>
   );
 }
@@ -231,7 +233,7 @@ function ModalCerrar({ nombre, publicados, onClose }: { nombre: string; publicad
 
 /* ── 2. Eliminar ────────────────────────────────────────────────────────── */
 
-function ModalEliminar({ onClose }: { onClose: () => void }) {
+function ModalEliminar({ exportar, onClose }: { exportar: boolean; onClose: () => void }) {
   const [email, setEmail] = useState<string | null>(null);
   const [confirmacion, setConfirmacion] = useState("");
   const [yendo, setYendo] = useState(false);
@@ -304,6 +306,17 @@ function ModalEliminar({ onClose }: { onClose: () => void }) {
       <p className="text-[13px] leading-relaxed text-amber-800 panel-oscuro:text-amber-200 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/25 rounded-2xl px-3.5 py-3">
         Si lo que querés es dejar de tener tus páginas a la vista sin perder el trabajo, mejor <strong>cerrá tu cuenta</strong>: se conserva todo y la reabrís cuando quieras.
       </p>
+      {/* Después de eliminar no hay forma de volver a ver las ventas: si su
+          plan deja bajarlas, se lo dice ANTES, acá, y no en un mail de después. */}
+      {exportar && (
+        <p className="text-[13px] leading-relaxed text-gray-700 panel-oscuro:text-gray-300">
+          Después no vas a poder ver tu historial de ventas. Si lo querés,{" "}
+          <a href="/api/digitales/ventas/exportar" className="inline-flex items-center gap-1 font-semibold text-orange-700 panel-oscuro:text-orange-300 underline underline-offset-2">
+            <Download className="h-3.5 w-3.5" /> descargalo ahora (.csv)
+          </a>
+          , antes de eliminar.
+        </p>
+      )}
       <div>
         <label htmlFor="eliminar-confirmar" className={CLASE_ETIQUETA}>
           Escribí tu mail para confirmar: <strong className="text-gray-900 panel-oscuro:text-gray-100">{email ?? "…"}</strong>

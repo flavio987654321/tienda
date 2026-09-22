@@ -17,6 +17,7 @@ import TemaDelPanel from "./TemaDelPanel";
 import Cierre from "./Cierre";
 import CuentaCerrada from "./CuentaCerrada";
 import { pausadosPorCierreDe } from "@/lib/cierre-digital";
+import { puedeVer } from "@/lib/estadisticas-digitales";
 /* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
 import SondaDePantalla from "./SondaDePantalla";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
@@ -129,7 +130,10 @@ export default async function DigitalesLayout({ children }: { children: React.Re
         <TemaDelPanel />
         <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" disableNotifPrompt />
         <PanelSplash nombre="TiendaApps Digitales" />
-        <CuentaCerrada cerradaEl={cuenta.closedAt.toISOString()} vuelven={await pausadosPorCierreDe(prisma, cuenta.id)} />
+        {/* `exportar`: el historial de ventas se puede bajar sin reabrir, si el
+            plan lo incluye (Starter y Pro, como en la pantalla de Ventas). Free
+            lo ve en pantalla al reabrir, que es gratis. */}
+        <CuentaCerrada cerradaEl={cuenta.closedAt.toISOString()} vuelven={await pausadosPorCierreDe(prisma, cuenta.id)} exportar={puedeVer(tier, "exportar")} />
       </>
     );
   }

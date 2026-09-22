@@ -107,6 +107,17 @@ async function main() {
     && /mejor <strong>cerrá tu cuenta<\/strong>/.test(zona),
     "cerrar pide motivo y nombre; eliminar pide el mail y va por la ruta común de todas las cuentas; las dos con freno de doble click, y eliminar recomienda cerrar");
 
+  /* ── El historial, sin reabrir ────────────────────────────────────────── */
+  /* La competencia lo llama "tiendas archivadas": después de cerrar se puede
+     consultar el historial. Acá es la misma cuenta, entera, y con plan pago
+     se baja en .csv desde la puerta cerrada y antes de eliminar. */
+  const cliente = leer("src/app/digitales/configuracion/ConfiguracionClient.tsx");
+  check("CIE-N", /exportar=\{puedeVer\(tier, "exportar"\)\}/.test(layout)
+    && /href="\/api\/digitales\/ventas\/exportar"/.test(gate) && /descargalo ahora \(\.csv\)/.test(gate) && /lo ves en Ventas al reabrir/.test(gate)
+    && /exportar=\{puedeVer\(p\.tier, "exportar"\)\}/.test(cliente) && /exportar=\{p\.exportar\}/.test(tab)
+    && /\{exportar && \(/.test(zona) && /href="\/api\/digitales\/ventas\/exportar"/.test(zona) && /antes de eliminar/.test(zona),
+    "el historial de ventas se baja en .csv desde la puerta de cuenta cerrada y desde el modal de eliminar, si el plan lo incluye; en Free se ve al reabrir");
+
   /* ── El mail ─────────────────────────────────────────────────────────── */
   const resend = leer("src/lib/resend.ts");
   const mail = resend.slice(resend.indexOf("export async function sendCuentaDigitalCerradaEmail"));

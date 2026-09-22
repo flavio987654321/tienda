@@ -9,6 +9,7 @@ import {
   validarContextoIA,
 } from "@/lib/configuracion-digital";
 import { validarGaId, validarPixelId, validarClarityId } from "@/lib/tracking-ids";
+import { puedeVer } from "@/lib/estadisticas-digitales";
 import { Seccion } from "./piezas";
 import TabGeneral, { MAX_LOGO_MB } from "./TabGeneral";
 import TabPagos from "./TabPagos";
@@ -305,6 +306,7 @@ export default function ConfiguracionClient(p: Props) {
           slugOriginal={p.slug}
           dirLimpia={dirLimpia}
           publicados={p.publicados}
+          exportar={puedeVer(p.tier, "exportar")}
           base={p.base}
           problemaNombre={problemaNombre}
           problemaCheckout={problemaCheckout}
