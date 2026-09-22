@@ -18,7 +18,7 @@
  * chequeos.
  */
 
-import type { Document } from "domhandler";
+import type { Document, Element } from "domhandler";
 import { findAll, textContent } from "domutils";
 import { CLAVE_ARREPENTIMIENTO, type ClaveDigital } from "@/lib/politicas-tienda";
 
@@ -42,6 +42,27 @@ export function legalDelLink(texto: string): ClaveLegalDelPie | null {
   if (!t || t.length > 80) return null;
   for (const [clave, re] of PATRONES) if (re.test(t)) return clave;
   return null;
+}
+
+/**
+ * Qué documento legal es este `<a>` del archivo, o null si no es un link
+ * legal. Mira el texto (`legalDelLink`) y descarta dos cosas que dicen
+ * "garantía" sin ser el link de la política:
+ *
+ *   - un hueco nuestro (`data-tienda`): el botón de comprar suele decir
+ *     «Quiero mi guía — garantía de 7 días»;
+ *   - un ancla a una sección de la misma página (`#garantia`): lleva al
+ *     bloque de la garantía, no a la política.
+ *
+ * Sin esto, la auditoría del 21/09/26 encontró que con un botón así la
+ * política de devoluciones no se agregaba nunca, y que los legales que
+ * faltaban se metían al lado del ancla, en la barra de navegación, en vez
+ * del pie.
+ */
+export function legalDelElemento(el: Element): ClaveLegalDelPie | null {
+  if (el.name !== "a" || el.attribs["data-tienda"] !== undefined) return null;
+  if (/^#./.test((el.attribs.href ?? "").trim())) return null;
+  return legalDelLink(textContent(el));
 }
 
 /** La dirección de la página legal de ESE producto. Relativa: vale en el dominio de la plataforma y en el propio. */
@@ -73,7 +94,7 @@ const ORDEN: readonly ClaveLegalDelPie[] = ["terminos", "privacidad", "devolucio
 export function legalesQueFaltan(doc: Document, cargados: readonly string[]): ClaveLegalDelPie[] {
   const tiene = new Set<ClaveLegalDelPie>();
   for (const a of findAll((e) => e.name === "a", doc.children)) {
-    const l = legalDelLink(textContent(a));
+    const l = legalDelElemento(a);
     if (l) tiene.add(l);
   }
   return ORDEN.filter((c) => !tiene.has(c) && !faltaElDocumento(c, cargados));

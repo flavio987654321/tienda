@@ -47,6 +47,14 @@ check("LEG-D", /<a class="pie" href="\/p\/clx1\/legales\?tipo=terminos">Término
   && /<p data-tienda-legales=""><a href="\/p\/clx1\/legales\?tipo=arrepentimiento">Botón de arrepentimiento<\/a><\/p>$/.test(sinCargados),
   "los legales cargados que faltan y el arrepentimiento se agregan al lado del último legal del pie, con su clase y en orden; sin ningún legal, un renglón al final; un documento no cargado no se agrega");
 
+/* ⚠️ 21/09/26, auditoría: el botón de comprar decía "garantía de 7 días" y
+   contaba como el link de devoluciones (no se agregaba nunca), y un ancla
+   "Garantía" (#garantia) de la barra de navegación quedaba como "último
+   legal": términos y arrepentimiento se metían ahí arriba, no en el pie. */
+const conBoton = armarLanding(`<a data-tienda="comprar" href="#">Quiero mi guía — garantía de 7 días</a><nav><a href="#garantia">Garantía</a><a href="#">Instagram</a></nav>`, { ...base, enlaces: {}, productId: "clx1", legalesCargados: ["devoluciones", "terminos"] });
+check("LEG-G", conBoton.endsWith(`<a data-tienda="comprar" href="/pagar">Quiero mi guía — garantía de 7 días</a><nav><a href="#garantia">Garantía</a><a href="#">Instagram</a></nav><p data-tienda-legales=""><a href="/p/clx1/legales?tipo=terminos">Términos y condiciones</a> · <a href="/p/clx1/legales?tipo=devoluciones">Política de devoluciones</a> · <a href="/p/clx1/legales?tipo=arrepentimiento">Botón de arrepentimiento</a></p>`),
+  "un botón de comprar que dice «garantía» y un ancla a la sección de la garantía no son links legales: devoluciones se agrega igual, y al final, no en la barra de navegación");
+
 const sinId = armarLanding(pie, { ...base, enlaces: {} });
 check("LEG-E", /<a href="#">Términos y condiciones<\/a>/.test(sinId) && !/data-tienda-legales|legales[?]tipo=/.test(sinId),
   "sin productId (chequeos viejos, previa sin producto) no se inventa ninguna dirección");

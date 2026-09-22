@@ -180,7 +180,6 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
      marcado "Ejemplo", esté configurado o no, para que se vea dónde va. */
   const bienvenida = previa || previaDeLanding ? null : await bienvenidaDeLaVisita(fila, [await tokenDeBienvenidaDeLaCookie(fila.id)]);
   const viva = bienvenida?.estado === "viva" ? bienvenida : null;
-  const landing = await laLanding(fila, previaDeLanding, bienvenida);
 
   const datos = {
     pagina: normalizarContenido(fila.paginaVenta),
@@ -206,6 +205,10 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
       </div>
     );
   }
+  /* Después de la previa del editor, a propósito: esa previa es SIEMPRE la
+     página de secciones, y armar la landing (leer la versión, parsearla)
+     para descartarla era trabajo de gorra en cada carga del iframe. */
+  const landing = await laLanding(fila, previaDeLanding, bienvenida);
 
   return (
     <div className={CLASES_FUENTES}>

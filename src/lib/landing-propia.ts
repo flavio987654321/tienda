@@ -64,7 +64,7 @@ import { loQueNoSePuedeVer, losQueEstanPegados, cuantoCuestaRevisar, TOPE_DE_REV
 import { MARCA_BARRA, CLASE_DE_LA_FOTO, MARCA_FOTO, MARCA_HUECO, MARCA_FLECHA, MARCA_RELOJ, MARCA_DESPUES, MARCA_CUENTA, MARCA_DEMO } from "@/lib/landing-efectos";
 import { claveDeBienvenida } from "@/lib/bienvenida";
 import { cuentaRegresiva } from "@/lib/oferta-salida";
-import { legalDelLink, urlDeLegal, legalesQueFaltan, TEXTO_DE_LEGAL } from "@/lib/landing-legales";
+import { legalDelLink, legalDelElemento, urlDeLegal, legalesQueFaltan, TEXTO_DE_LEGAL } from "@/lib/landing-legales";
 import { CLAVE_ARREPENTIMIENTO } from "@/lib/politicas-tienda";
 
 export { LANDING_MAX_BYTES, LANDING_VERSIONES, nombreDeFoto, claveDeLink, type InventarioDeLanding, type QuitadoDeLanding } from "@/lib/landing-estado";
@@ -770,7 +770,9 @@ export function armarLanding(htmlLimpio: string, d: DatosParaArmar): string {
   if (d.productId) {
     const faltan = legalesQueFaltan(doc, d.legalesCargados ?? []);
     if (faltan.length) {
-      const legales = findAll((e) => e.name === "a" && legalDelLink(textContent(e)) !== null, doc.children);
+      /* `legalDelElemento` y no el texto a secas: un botón de comprar que dice
+         "garantía" o un ancla a la sección de la garantía no son el pie. */
+      const legales = findAll((e) => legalDelElemento(e) !== null, doc.children);
       let ultimo: Element | null = legales[legales.length - 1] ?? null;
       const renglon = ultimo ? null : new Element("p", { "data-tienda-legales": "" });
       for (const clave of faltan) {

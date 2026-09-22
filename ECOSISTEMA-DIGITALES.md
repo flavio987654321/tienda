@@ -8288,3 +8288,33 @@ Chequeos AVI-O/P/Q.
 🔲 Pedirle a Flavio el archivo de la amiga y sumarlo a los chequeos.
 🔲 Lo que sigue de los bloques vivos: el aviso de ventas (con demo en las
   previas) y las opiniones verificadas.
+
+### Auditoría de todo el día — 21/09/26
+
+Se releyó el diff entero de los 14 commits del día (62 archivos), con foco
+en lo que toca plata y datos: las rutas de cobro, comprar, cupón,
+bienvenida y configuración; la firma de los plazos; `armarLanding` y los
+rescates sobre HTML ajeno; los checkouts. 111 chequeos, tsc y eslint (0
+errores) verdes. Dos cosas encontradas y corregidas de raíz:
+
+- **El pie legal se confundía con el botón de comprar.** `legalDelLink`
+  mira el texto, y un botón «Quiero mi guía — garantía de 7 días» decía
+  "garantía": contaba como el link de devoluciones, así que la política
+  de devoluciones no se agregaba nunca. Y un ancla «Garantía»
+  (`#garantia`) de la barra de navegación quedaba como "último legal":
+  términos y arrepentimiento se metían ahí arriba, no en el pie. Ahora
+  `legalDelElemento` descarta los huecos nuestros (`data-tienda`) y las
+  anclas a secciones de la misma página. LEG-G.
+- **La previa del editor armaba la landing de gorra.** `/p/<id>?previa=1`
+  es siempre la página de secciones, pero leía la versión y parseaba la
+  landing propia antes de descartarla, en cada carga del iframe. Se movió
+  después del corte.
+
+Lo que se miró y quedó bien, para no volver a mirarlo: los tokens de
+bienvenida y de salida firman con nombres distintos y no se cruzan; la
+firma de la oferta de salida no cambió (los tokens viejos siguen valiendo);
+`/comprar` y `/cupon` comparten una sola regla para los cupones
+automáticos; el 409 de la IA sale antes de gastar cupo; el mail a quien
+vende escapa lo que escribe la gente; el casillero del mail por venta
+vuelve atrás si el servidor dice que no; el checkbox y el toggle tienen
+freno de doble click.
