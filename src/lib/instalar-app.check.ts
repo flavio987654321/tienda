@@ -32,7 +32,18 @@ async function main() {
 
   const pwa = readFileSync("src/components/PWAManager.tsx", "utf8");
   const avisos = readFileSync("src/app/digitales/configuracion/AvisosDeVenta.tsx", "utf8");
-  check("INST-F", /useEffect\(\(\) => \{ escucharInstalacion\(\); \}, \[\]\);/.test(pwa)
+  const layoutDigitales = readFileSync("src/app/digitales/layout.tsx", "utf8");
+  const layoutDashboard = readFileSync("src/app/dashboard/layout.tsx", "utf8");
+  const layoutAfiliados = readFileSync("src/app/afiliados/layout.tsx", "utf8");
+  /* ⚠️ Opt-in por panel. `preventDefault` del beforeinstallprompt apaga el
+     cartel automático de Chrome, y /dashboard y /afiliados no tienen botón
+     propio: dependen de ese cartel. Silenciárselo a todos (como quedó en el
+     primer commit) los dejaba sin forma de instalar. */
+  check("INST-G", !/botonDeInstalar/.test(layoutDashboard) && !/botonDeInstalar/.test(layoutAfiliados)
+    && /<PWAManager[^>]*scope="\/digitales" botonDeInstalar \/>/.test(layoutDigitales)
+    && (layoutDigitales.match(/botonDeInstalar/g) ?? []).length >= 2,
+    "sólo el panel que tiene el botón silencia el cartel del navegador; tiendas y afiliados siguen con el de Chrome");
+  check("INST-F", /useEffect\(\(\) => \{ if \(botonDeInstalar\) escucharInstalacion\(\); \}, \[botonDeInstalar\]\);/.test(pwa)
     && /useSePuedeInstalar\(\)/.test(avisos) && /Instalar la app/.test(avisos) && /!instalada && sePuedeInstalar/.test(avisos) && /Agregar a inicio/.test(avisos),
     "el layout guarda el evento, y la sección de avisos muestra el botón sólo si el navegador lo ofreció y no está instalada; en iPhone, las instrucciones");
 

@@ -103,7 +103,7 @@ check("AVI-F",
    se ponía en rojo por dos usos correctos. */
 const bloqueDelPanel = layout.slice(layout.indexOf("<ProveedorDeSalida>") - 2000);
 check("AVI-G",
-  /<PWAManager[^>]*scope="\/digitales" \/>/.test(bloqueDelPanel) &&
+  /<PWAManager[^>]*scope="\/digitales" botonDeInstalar \/>/.test(bloqueDelPanel) &&
   !/<PWAManager[^>]*disableNotifPrompt[^>]*>/.test(bloqueDelPanel),
   "el panel pide permiso de notificaciones, ahora que hay algo que mandar");
 

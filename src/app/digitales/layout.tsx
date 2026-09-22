@@ -214,7 +214,9 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           para no dejárselo puesto al resto del sitio. */}
       <TemaDelPanel />
       {process.env.NODE_ENV === "development" && <SondaDePantalla />}
-      <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" />
+      {/* `botonDeInstalar`: Configuración → Avisos tiene el botón "Instalar la
+          app", así que acá se guarda el aviso del navegador. */}
+      <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" botonDeInstalar />
       <PanelSplash nombre="TiendaApps Digitales" />
       {/* Envuelve la barra Y la pantalla, y en ese orden importa: la pantalla es
           la que dice "tengo cambios sin guardar" y los links que se los llevan

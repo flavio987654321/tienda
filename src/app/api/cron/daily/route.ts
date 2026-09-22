@@ -253,8 +253,11 @@ export async function GET(req: NextRequest) {
       const oferta = await ofertaParaElMail(principal, enlace, now).catch((e) => { console.error("[cron] oferta de salida:", e); return null; });
       // La baja es la MISMA que la de los correos a compradores: firmada por
       // tienda y mail, y vale para los dos tipos de mail de esa vendedora.
-      const tokenBaja = tokenDeBaja(orden.storeId, correo);
-      enviosCarritosD.push(
+      // ⚠️ Sin clave para firmar NO sale el mail (un mail sin baja es lo que
+      // esto vino a arreglar) y el cron sigue: un `throw` acá se llevaba
+      // puesto todo lo que viene abajo (retiros, vencimientos, cierres).
+      const tokenBaja = (() => { try { return tokenDeBaja(orden.storeId, correo); } catch (e) { console.error("[cron] carrito digital, sin clave de firma:", e); return null; } })();
+      if (tokenBaja) enviosCarritosD.push(
         sendCarritoAbandonadoDigitalEmail({
           to: correo,
           nombre: orden.buyer.name,

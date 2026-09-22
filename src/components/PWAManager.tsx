@@ -55,9 +55,15 @@ interface Props {
      Sin este dato se registra en la raíz, que es lo que necesita la web
      comercial para su pantalla de sin conexión. */
   scope?: string;
+  /* Este panel tiene su propio botón "Instalar la app" (`lib/instalar-app`):
+     se guarda el aviso del navegador y se le pide que NO muestre su cartel
+     automático. Sólo digitales por ahora. Los otros paneles no tienen botón y
+     dependen de ese cartel de Chrome para instalarse: silenciárselo era
+     dejarlos sin ninguna forma de instalar (auditoría del 21/09/26). */
+  botonDeInstalar?: boolean;
 }
 
-export default function PWAManager({ appVersion, versionKey, disableNotifPrompt = false, scope }: Props) {
+export default function PWAManager({ appVersion, versionKey, disableNotifPrompt = false, scope, botonDeInstalar = false }: Props) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updating, setUpdating] = useState(false);
@@ -87,8 +93,8 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
   // de "actualizá" para algo que acababas de recibir.
   /* Guarda el "se puede instalar" del navegador para el botón de las
      pantallas (`lib/instalar-app`). Acá porque el layout monta primero y el
-     evento llega una sola vez. */
-  useEffect(() => { escucharInstalacion(); }, []);
+     evento llega una sola vez. Sólo si este panel tiene el botón. */
+  useEffect(() => { if (botonDeInstalar) escucharInstalacion(); }, [botonDeInstalar]);
 
   useEffect(() => {
     if (!appVersion) return;

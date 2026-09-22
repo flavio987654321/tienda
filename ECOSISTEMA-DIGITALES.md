@@ -8405,3 +8405,21 @@ misma cuenta entera. La puerta de "cuenta cerrada" lo dice y, con Starter o
 Pro, ofrece bajar las ventas en .csv sin reabrir; el modal de eliminar
 ofrece lo mismo ANTES de borrar, porque después no hay forma. En Free se
 ven al reabrir, que es gratis. CIE-N.
+
+### Repaso antes del deploy — 21/09/26
+
+Dos cosas encontradas releyendo el diff entero (20 commits, 72 archivos):
+
+- **El botón de instalar apagaba el cartel de Chrome en TODOS los paneles.**
+  `escucharInstalacion` hacía `preventDefault` del `beforeinstallprompt`
+  desde `PWAManager`, que monta también en /dashboard y /afiliados, y esos
+  paneles no tienen botón propio: dependen del cartel automático. Ahora es
+  opt-in por panel (`botonDeInstalar`), y sólo digitales lo pasa. INST-G.
+- **Sin clave de firma, el mail de carrito tiraba abajo el cron entero.**
+  `tokenDeBaja` lanza si falta `NEXTAUTH_SECRET`; adentro del bucle, eso
+  cortaba retiros, vencimientos y cierres. Ahora se loguea, ese mail no
+  sale (sin baja no sale), y el cron sigue.
+
+Deploy: push a main; las tres migraciones del día ya estaban aplicadas a
+mano (`migrate status`: al día), así que el `migrate deploy` del build no
+tiene nada que hacer.
