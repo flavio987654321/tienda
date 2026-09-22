@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
 import { exchangeOAuthCode, encryptToken } from "@/lib/mp";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -22,7 +23,7 @@ const VUELTA_POR_DEFECTO = "/dashboard/pagos";
 
 // GET /api/mp/oauth/callback
 // MercadoPago redirige acá después de que el dueño autoriza.
-// Recibe ?code=...&state={nonce} — el storeId viene de la cookie firmada, no del parámetro público.
+// Recibe ?code=...&state={nonce} — el storeId viene de la cookie, no del parámetro público.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code  = searchParams.get("code");
@@ -37,10 +38,36 @@ export async function GET(req: NextRequest) {
      que aterriza en /dashboard/pagos ve el panel que no le corresponde. */
   const destino = VUELTAS[vueltaCruda ?? ""] ?? VUELTA_POR_DEFECTO;
 
+  /* La cookie del flujo se borra en TODAS las salidas, no sólo cuando anduvo:
+     un nonce que quedó vivo después de un error es un nonce que todavía sirve. */
+  const volver = (resultado: "connected" | "error") => {
+    const res = NextResponse.redirect(`${APP_URL}${destino}?mp=${resultado}`);
+    res.cookies.delete("mp_oauth_state");
+    return res;
+  };
+
   // Verificar que el nonce coincide (protección CSRF)
   if (!code || !state || !cookieNonce || !storeId || state !== cookieNonce) {
     console.warn("MP OAuth callback: nonce inválido o faltante", { state, cookieNonce });
-    return NextResponse.redirect(`${APP_URL}${destino}?mp=error`);
+    return volver("error");
+  }
+
+  /* La cookie sola no alcanza: dice QUÉ tienda, pero no prueba QUIÉN volvió.
+     Una cookie no está firmada, y cualquiera que logre escribir una en este
+     dominio podría hacer que la cuenta de Mercado Pago de otro quede conectada
+     a una tienda ajena —y los cobros de esa tienda, yendo a esa cuenta—. Por
+     eso acá se exige la sesión y que la tienda de la cookie sea SUYA: la
+     sesión de Supabase viaja en esta vuelta (es una navegación de primer nivel
+     y la cookie es `lax`), así que no le cuesta nada a quien conecta de verdad. */
+  const user = await getCurrentUser();
+  if (!user) {
+    console.warn("MP OAuth callback: sin sesión al volver de Mercado Pago");
+    return volver("error");
+  }
+  const propia = await prisma.store.findFirst({ where: { id: storeId, ownerId: user.id }, select: { id: true } });
+  if (!propia) {
+    console.warn("MP OAuth callback: la tienda de la cookie no es de quien volvió", { storeId, userId: user.id });
+    return volver("error");
   }
 
   try {
@@ -49,7 +76,7 @@ export async function GET(req: NextRequest) {
     if (!token.access_token) throw new Error("Sin access token");
 
     await prisma.store.update({
-      where: { id: storeId },
+      where: { id: propia.id },
       data: {
         mpAccessToken:  encryptToken(token.access_token) ?? token.access_token,
         mpRefreshToken: token.refresh_token ? (encryptToken(token.refresh_token) ?? token.refresh_token) : null,
@@ -58,12 +85,9 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const res = NextResponse.redirect(`${APP_URL}${destino}?mp=connected`);
-    // Borrar la cookie de estado una vez usada
-    res.cookies.delete("mp_oauth_state");
-    return res;
+    return volver("connected");
   } catch (err) {
     console.error("MP OAuth callback error:", err);
-    return NextResponse.redirect(`${APP_URL}${destino}?mp=error`);
+    return volver("error");
   }
 }

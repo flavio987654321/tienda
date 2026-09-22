@@ -632,7 +632,19 @@ chequear("de qué panel salió lo decide el rol, no el pedido",
 /* Si algo falla, la persona tiene que volver al panel del que salió. Una cuenta
    digital que aterriza en /dashboard/pagos ve el panel que no le corresponde. */
 chequear("hasta el error vuelve al panel correcto",
-  (mpCallback.match(/\$\{destino\}\?mp=error/g) ?? []).length >= 2);
+  (mpCallback.match(/volver\("error"\)/g) ?? []).length >= 4 && /\$\{destino\}\?mp=\$\{resultado\}/.test(mpCallback));
+
+/* La cookie del flujo dice QUÉ tienda pero no prueba QUIÉN volvió: no está
+   firmada, y quien logre escribir una en este dominio podría dejar la cuenta
+   de Mercado Pago de otro conectada a una tienda ajena. Por eso el callback
+   exige la sesión y que la tienda de la cookie sea de esa persona; y la
+   cookie se borra en todas las salidas, no sólo cuando anduvo. */
+chequear("al volver de Mercado Pago se exige la sesión y que la tienda sea suya",
+  /const user = await getCurrentUser\(\);/.test(mpCallback)
+  && /findFirst\(\{ where: \{ id: storeId, ownerId: user\.id \}/.test(mpCallback)
+  && /where: \{ id: propia\.id \}/.test(mpCallback));
+chequear("la cookie del flujo se borra también cuando falla",
+  /res\.cookies\.delete\("mp_oauth_state"\)/.test(mpCallback) && !/NextResponse\.redirect\(`\$\{APP_URL\}\$\{destino\}\?mp=error`\)/.test(mpCallback));
 
 /* Una cuenta digital puede no tener su espacio creado todavía: se crea con el
    primer producto, y conectar el cobro antes de cargar nada es de lo más
