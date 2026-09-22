@@ -349,6 +349,7 @@ model Store {
   cuponesDigital      CuponDigital[]
   correosDigital      CorreoDigital[]
   bajasDeCorreo       BajaCorreoDigital[]
+  opinionesDigital    OpinionDigital[]
   affiliateGoals      AffiliateGoal[]
   leads               Lead[]
   publicReviews       PublicReview[]
@@ -720,6 +721,7 @@ model Product {
   campaniasDigital DigitalVisitaCampania[]
   cuponesDigital  CuponDigital[]
   correosDigital  CorreoDigital[]
+  opinionesDigital OpinionDigital[]
   landingsDigital LandingDigital[]
 
   @@index([deletedAt])
@@ -890,6 +892,7 @@ model Order {
 
   /// Cada mail de entrega que salió por esta venta. Ver `DigitalEnvioLog`.
   enviosDigitales DigitalEnvioLog[]
+  opinionDigital  OpinionDigital?
 
   @@index([storeId, status, createdAt(sort: Desc)])
 }
@@ -1269,6 +1272,31 @@ model DigitalVisitaCampania {
 /// compradores confirmados del producto, o de la cuenta, menos las bajas),
 /// no se guarda una lista. `cursor` es el último correo al que salió, para
 /// retomar si el envío se corta: la lista va ordenada por correo.
+/// Una opinión VERIFICADA de un producto digital: la escribió quien lo pagó,
+/// desde el link firmado de su compra (una por compra: `orderId` único). Nace
+/// PENDIENTE; la vendedora la publica o la esconde. Es lo que separa esta
+/// sección de la de la competencia, que la llena con gente inventada: acá
+/// sólo puede opinar quien compró. Ver `lib/opiniones-digitales`.
+model OpinionDigital {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Cómo quiere aparecer (por defecto, su nombre de pila).
+  nombre    String
+  texto     String
+  /// PENDIENTE | PUBLICADA | OCULTA
+  estado    String   @default("PENDIENTE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, estado, createdAt])
+  @@index([storeId, estado, createdAt])
+}
+
 model CorreoDigital {
   id            String   @id @default(cuid())
   storeId       String

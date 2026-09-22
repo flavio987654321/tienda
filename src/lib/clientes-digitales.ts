@@ -1,4 +1,5 @@
 import { comisionCongelada } from "@/lib/compra-digital";
+import type { EstadoDeOpinion } from "@/lib/opiniones-digitales";
 
 /**
  * Tus clientes: quién te compró, cuántas veces, cuánto, y si tiene lo suyo.
@@ -148,6 +149,12 @@ export type ClienteEnPantalla = {
   /** Para el mensaje: el último producto que compró. */
   ultimoProducto: string;
   historial: CompraDelCliente[];
+  /**
+   * Pedirle una opinión: el link firmado de su última compra cobrada (lo
+   * arma la base, que tiene la clave), y si ya opinó, en qué estado está.
+   * Ver `lib/opiniones-digitales`.
+   */
+  opinar?: { enlace: string; estado: EstadoDeOpinion | null };
 };
 
 const AR_TZ = "America/Argentina/Buenos_Aires";

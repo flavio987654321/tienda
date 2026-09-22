@@ -4,6 +4,9 @@ import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 import { getUserSubscription } from "@/lib/subscription";
 import type { TierDigital } from "@/lib/planes-digitales";
 import { leerConsultaDeClientes, armarCliente, TECHO_DE_CLIENTES, type ConsultaDeClientes, type FiltroDeClientes, type ClienteEnPantalla } from "@/lib/clientes-digitales";
+import { tokenParaOpinar } from "@/lib/opinion-firma";
+import { urlParaOpinar, type EstadoDeOpinion } from "@/lib/opiniones-digitales";
+import { baseDeLosMails } from "@/lib/correos-compradores-db";
 
 /**
  * Lo de Tus clientes que toca la base y comparten la pantalla y la
@@ -104,7 +107,7 @@ export async function armarClientes(ctx: ContextoDeClientes & { store: { id: str
       take: TECHO_DE_COMPRAS,
       select: {
         id: true, status: true, total: true, lockedCommissionRate: true, createdAt: true, buyerId: true,
-        items: { select: { product: { select: { name: true, rolDigital: true } }, descargas: { select: { descargas: true, expiresAt: true } } } },
+        items: { select: { productId: true, product: { select: { name: true, rolDigital: true } }, descargas: { select: { descargas: true, expiresAt: true } } } },
       },
     }),
   ]);
@@ -114,11 +117,36 @@ export async function armarClientes(ctx: ContextoDeClientes & { store: { id: str
     select: { email: true },
     take,
   })).map((b) => b.email));
+  /* Para pedir la opinión: su última compra cobrada, y si ya opinó por
+     ella. El link va firmado con esa compra (`opinion-firma`); sin clave de
+     firma no se ofrece, y la lista sale igual. */
+  const ultimaCobradaDe = new Map<string, { id: string; productId: string }>();
+  for (const c of compras) {
+    if (c.status !== "CONFIRMED" || ultimaCobradaDe.has(c.buyerId)) continue;
+    const principal = c.items.find((i) => i.product.rolDigital === "PRINCIPAL");
+    if (principal) ultimaCobradaDe.set(c.buyerId, { id: c.id, productId: principal.productId });
+  }
+  const ordenesConOpinion = ultimaCobradaDe.size
+    ? await prisma.opinionDigital.findMany({ where: { orderId: { in: [...ultimaCobradaDe.values()].map((o) => o.id) } }, select: { orderId: true, estado: true }, take })
+    : [];
+  const estadoDe = new Map(ordenesConOpinion.map((o) => [o.orderId, o.estado as EstadoDeOpinion]));
+  const base = baseDeLosMails();
+  const opinarDe = (buyerId: string): ClienteEnPantalla["opinar"] => {
+    const ultima = ultimaCobradaDe.get(buyerId);
+    if (!ultima || !ultima.productId) return undefined;
+    try {
+      return { enlace: urlParaOpinar(base, ultima.productId, tokenParaOpinar(ultima.id)), estado: estadoDe.get(ultima.id) ?? null };
+    } catch (e) {
+      console.error("[clientes] sin clave para firmar el link de opinión:", e);
+      return undefined;
+    }
+  };
+
   const personaDe = new Map(personas.map((x) => [x.id, x]));
   return ids.flatMap((id) => {
     const persona = personaDe.get(id);
     if (!persona) return [];
-    return [armarCliente(persona, compras.filter((c) => c.buyerId === id), ctx.ahora, bajas.has(persona.email.toLowerCase()))];
+    return [{ ...armarCliente(persona, compras.filter((c) => c.buyerId === id), ctx.ahora, bajas.has(persona.email.toLowerCase())), opinar: opinarDe(id) }];
   });
 }
 

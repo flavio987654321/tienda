@@ -955,6 +955,13 @@ export type ContextoDePagina = {
    * lo único que le faltaba era publicarlos.
    */
   bonosSinPublicar?: number;
+  /**
+   * Hay opiniones VERIFICADAS publicadas (las escribió quien pagó y la
+   * vendedora las publicó una por una). Con eso la sección se dibuja aunque
+   * esté apagada y aunque no tenga ninguna escrita a mano: publicarlas es
+   * prenderla. Ver `lib/opiniones-digitales`.
+   */
+  hayOpinionesVerificadas?: boolean;
 };
 
 /**
@@ -964,7 +971,9 @@ export type ContextoDePagina = {
  * cual: "no se dibuja" sin decir por qué se lee como un error nuestro.
  */
 export function porQueNoSeDibuja(s: SeccionGuardada, ctx: ContextoDePagina): string | null {
-  if (!s.visible) return "Está apagada";
+  /* La única sección que se prende sola: con opiniones verificadas
+     publicadas, "apagada" no aplica —las publicó ella—. */
+  if (!s.visible) return s.clave === "opiniones" && ctx.hayOpinionesVerificadas ? null : "Está apagada";
 
   switch (s.clave) {
     case "bonos":
@@ -981,7 +990,7 @@ export function porQueNoSeDibuja(s: SeccionGuardada, ctx: ContextoDePagina): str
     case "comoFunciona":
       return conAlgo(s.campos.pasos) ? null : "Todavía no escribiste ningún paso";
     case "opiniones":
-      return conAlgo(s.campos.items) ? null : "Todavía no cargaste ninguna opinión";
+      return conAlgo(s.campos.items) || ctx.hayOpinionesVerificadas ? null : "Todavía no cargaste ninguna opinión";
     case "preguntas":
       return conAlgo(s.campos.items) ? null : "Todavía no escribiste ninguna pregunta";
     case "garantia":

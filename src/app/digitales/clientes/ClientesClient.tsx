@@ -4,8 +4,9 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Search, X, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Mail, MessageCircle, Receipt, Repeat, AlertTriangle, BellOff, Users, Send, FileDown, Lock, Megaphone,
+  Search, X, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Mail, MessageCircle, Receipt, Repeat, AlertTriangle, BellOff, Users, Send, FileDown, Lock, Megaphone, MessageSquareQuote, BadgeCheck,
 } from "lucide-react";
+import { mensajeParaPedirOpinion } from "@/lib/opiniones-digitales";
 import { COPY_DIGITAL } from "@/lib/planes-digitales";
 import { DESDE_QUE_PLAN } from "@/lib/estadisticas-digitales";
 import {
@@ -26,7 +27,7 @@ import { mensajeParaElComprador, enlaceDeMail, enlaceDeWhatsApp } from "@/lib/ve
  * mail?"; si no, el de "¿cómo te fue?". A quien pidió la baja no se le
  * ofrece el mail: se marca, y punto.
  */
-export default function ClientesClient({ clientes, resumen, q, p, sin, f, productos, puedeExportar, pagina, paginas }: {
+export default function ClientesClient({ clientes, resumen, q, p, sin, f, productos, puedeExportar, opinionesPendientes, pagina, paginas }: {
   clientes: ClienteEnPantalla[];
   resumen: ResumenDeClientes;
   q: string;
@@ -37,6 +38,8 @@ export default function ClientesClient({ clientes, resumen, q, p, sin, f, produc
   productos: { id: string; name: string }[];
   /** Starter y Pro: bajar la lista (planilla o para Meta). */
   puedeExportar: boolean;
+  /** Opiniones verificadas que llegaron y nadie revisó. */
+  opinionesPendientes: number;
   pagina: number;
   paginas: number;
 }) {
@@ -71,6 +74,25 @@ export default function ClientesClient({ clientes, resumen, q, p, sin, f, produc
         <Dato titulo="Repiten" valor={String(resumen.repiten)} pie={resumen.repiten === 1 ? "compró más de una vez" : "compraron más de una vez"} />
         <Dato titulo="Sin bajar" valor={String(resumen.sinBajar)} pie={resumen.sinBajar === 1 ? "no bajó lo que pagó" : "no bajaron lo que pagaron"} />
       </div>
+
+      {/* Las opiniones verificadas: la puerta a la pantalla que las revisa,
+          con cuántas esperan. Es lo que alimenta la sección de opiniones de
+          la página con gente que de verdad compró. */}
+      <Link
+        href="/digitales/clientes/opiniones"
+        className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-[13px] transition-colors ${opinionesPendientes > 0
+          ? "border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-900 panel-oscuro:text-orange-200 hover:bg-orange-100"
+          : "border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-300 hover:border-orange-300"}`}
+      >
+        <span className="flex items-center gap-2">
+          <MessageSquareQuote className="h-4 w-4 shrink-0" />
+          <span>
+            <strong className="font-bold">Opiniones verificadas</strong>
+            {opinionesPendientes > 0 ? ` · ${opinionesPendientes === 1 ? "1 para revisar" : `${opinionesPendientes} para revisar`}` : " · las que dejó quien compró, para publicar en tu página"}
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0" />
+      </Link>
 
       {resumen.sinBajar > 0 && (
         <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/25 px-3.5 py-2.5 text-[12.5px] text-amber-900 panel-oscuro:text-amber-200">
@@ -236,6 +258,10 @@ function Chip({ href, activo, children }: { href: string; activo: boolean; child
 function Fila({ c, abierta, alTocar }: { c: ClienteEnPantalla; abierta: boolean; alTocar: () => void }) {
   const mensaje = mensajeParaElComprador({ nombre: c.nombre, producto: c.ultimoProducto, sinBajar: c.sinBajar > 0 });
   const whatsapp = enlaceDeWhatsApp(c.telefono, mensaje);
+  /* Pedirle la opinión: el link es de SU compra (firmado), en el mail o por
+     WhatsApp. Si ya opinó, se dice en qué estado está y se lleva a revisarla. */
+  const pedido = c.opinar && !c.opinar.estado ? mensajeParaPedirOpinion({ nombre: c.nombre, producto: c.ultimoProducto, enlace: c.opinar.enlace }) : null;
+  const whatsappOpinion = pedido ? enlaceDeWhatsApp(c.telefono, pedido) : null;
   return (
     <li className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900">
       <button
@@ -296,6 +322,28 @@ function Fila({ c, abierta, alTocar }: { c: ClienteEnPantalla; abierta: boolean;
               <Receipt className="h-3.5 w-3.5" /> Ver sus ventas
             </Link>
           </div>
+          {pedido && (c.sinBajar === 0) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {!c.dioDeBaja && (
+                <a href={enlaceDeMail(c.email, pedido)} className={BOTON}>
+                  <MessageSquareQuote className="h-3.5 w-3.5" /> Pedirle una opinión
+                </a>
+              )}
+              {whatsappOpinion && (
+                <a href={whatsappOpinion} target="_blank" rel="noopener noreferrer" className={BOTON}>
+                  <MessageCircle className="h-3.5 w-3.5" /> Pedírsela por WhatsApp
+                </a>
+              )}
+              <span className="text-[12px] text-gray-500 panel-oscuro:text-gray-400">El link es sólo de su compra: lo que escriba va con la marca de compra verificada.</span>
+            </div>
+          )}
+          {c.opinar?.estado && (
+            <p className="mt-2 text-[12.5px] text-gray-600 panel-oscuro:text-gray-300">
+              <BadgeCheck className="mr-1 inline h-3.5 w-3.5 text-green-600" />
+              {c.opinar.estado === "PENDIENTE" ? "Dejó una opinión que todavía no revisaste" : c.opinar.estado === "PUBLICADA" ? "Su opinión está publicada en tu página" : "Su opinión está guardada sin publicar"}
+              {" · "}<Link href="/digitales/clientes/opiniones" className="font-semibold text-orange-700 panel-oscuro:text-orange-300 underline underline-offset-2">verla</Link>
+            </p>
+          )}
           {c.dioDeBaja && (
             <p className="mt-2 text-[12px] text-gray-500 panel-oscuro:text-gray-400">
               Pidió no recibir más mails tuyos: no va a recibir tus correos a compradores ni recordatorios. Lo de su compra le llega igual.

@@ -46,6 +46,8 @@ type Props = {
   cuantosBonos: number;
   /** Cargados pero sin publicar, para poder decir el motivo real. */
   bonosSinPublicar: number;
+  /** Opiniones verificadas publicadas: con ellas la sección se dibuja aunque esté apagada. */
+  opinionesVerificadas: number;
   /** Cuántas generaciones de IA le quedan a la cuenta. */
   cupoIA: EstadoDelCupo;
   /** La dirección está mostrando su propio diseño: esta página está apagada. */
@@ -379,7 +381,7 @@ function CasillaLista({
 /* ── La pantalla ────────────────────────────────────────────────────────────*/
 
 export default function EditorDePagina({
-  productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar,
+  productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar, opinionesVerificadas,
   cupoIA, landingPrendida,
 }: Props) {
   const [pagina, setPagina] = useState<PaginaVenta>(inicial);
@@ -914,7 +916,7 @@ export default function EditorDePagina({
               /* ⚠️ El motivo sale de la MISMA función que usa la página pública
                  para decidir qué pinta. Si acá se escribiera aparte, el panel
                  diría una cosa y la página haría otra. */
-              const porQueNo = porQueNoSeDibuja(s, { hayBonos: cuantosBonos > 0, bonosSinPublicar });
+              const porQueNo = porQueNoSeDibuja(s, { hayBonos: cuantosBonos > 0, bonosSinPublicar, hayOpinionesVerificadas: opinionesVerificadas > 0 });
 
               return (
                 <div

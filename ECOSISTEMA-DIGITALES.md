@@ -8452,3 +8452,42 @@ adentro de Ventas y en "Mail a tus compradores". `/digitales/clientes`:
 Chequeos CLI-A…J (`clientes-digitales.check.ts`).
 
 🔲 Mirar Clientes a 360/768/1280 con una cuenta con ventas (necesita sesión).
+
+### Lo que se le saca a Tus clientes — 22/09/26
+
+Cuatro cosas, en cuatro commits:
+
+1. **El segundo producto a quien ya tiene el primero.** Mail a tus
+   compradores tiene el segundo selector "y que no compraron", con la cuenta
+   de cada combinación; el filtro se guarda con el mail
+   (`CorreoDigital.sinProductoId`) y el envío excluye con el mismo criterio.
+   Tus clientes tiene los filtros Repiten / Sin bajar / compraron X / no
+   compraron Y, y "Escribirles a estos" lleva al mail con el segmento
+   puesto. Una sola cuenta (`cuantosDelSegmento` sobre quién compró qué)
+   para pantalla, ruta y Clientes. SEG-A…E, CLI-K…M.
+2. **Bajar la lista.** Planilla, y la lista que Meta Ads acepta para un
+   público personalizado (`email,phone,fn,ln,country`, teléfono con 549):
+   para excluir a quien ya compró de los anuncios, o pedir gente parecida.
+   Con los mismos filtros que la pantalla (`clientes-digitales-db`, que
+   comparten). Starter y Pro. META/PLAN/FMT/RUTA/PANT.
+3. **Opiniones verificadas.** Sólo puede opinar quien pagó: el link va
+   firmado con la compra (`opinion-firma`, `/p/<id>/opinar?t=`), una por
+   compra (`OpinionDigital.orderId` único). Nace PENDIENTE; en Clientes →
+   Opiniones verificadas la vendedora publica o esconde, nunca edita. La
+   página de secciones y la landing propia dibujan las publicadas con la
+   marca "✓ Compra verificada", y la sección de opiniones se prende sola
+   con ellas (el editor lo sabe). Se pide desde la fila del cliente (mail o
+   WhatsApp, con su link), sólo a quien ya bajó lo suyo. Aviso en la
+   campanita al llegar. OPI-A…N.
+4. **Avisar al lanzar.** Al publicar un principal, si hay clientes que no
+   lo tienen: aviso en la campanita y cartel en Productos con "Avisales por
+   mail", que lleva al mail ya armado (`?nuevo=`: a todos los que no tienen
+   éste, plantilla "salió el siguiente" y botón). LAN-A/B.
+
+🔲 Correr las dos migraciones: `npx dotenv -e .env.local -- npx prisma migrate deploy`
+  (`CorreoDigital.sinProductoId` y la tabla `OpinionDigital`).
+🔲 Mirar con sesión: filtros y botones de Clientes, el segundo selector del
+  mail, la página pública de opinar (con un link real), la pantalla de
+  opiniones, y el cartel de lanzamiento. 360/768/1280.
+🔲 Anotado, no hecho: el link para opinar también en el mail de entrega o en
+  la pantalla de gracias (hoy sólo se pide a mano desde Clientes).

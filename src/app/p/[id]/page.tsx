@@ -16,6 +16,8 @@ import LandingPropia from "@/components/digitales/LandingPropia";
 import { isSubscriptionActive } from "@/lib/subscription";
 import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie, type BienvenidaDeLaVisita } from "@/lib/bienvenida-servidor";
 import { BIENVENIDA_DE_FABRICA, leerBienvenida } from "@/lib/bienvenida";
+import { opinionesPublicadasDe, htmlDeOpiniones } from "@/lib/opiniones-digitales-db";
+import type { OpinionPublicada } from "@/lib/opiniones-digitales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -180,6 +182,9 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
      marcado "Ejemplo", esté configurado o no, para que se vea dónde va. */
   const bienvenida = previa || previaDeLanding ? null : await bienvenidaDeLaVisita(fila, [await tokenDeBienvenidaDeLaCookie(fila.id)]);
   const viva = bienvenida?.estado === "viva" ? bienvenida : null;
+  /* Las opiniones verificadas publicadas: las mismas para la página de
+     secciones y para la landing propia. Ver `lib/opiniones-digitales`. */
+  const opiniones = await opinionesPublicadasDe(fila.id);
 
   const datos = {
     pagina: normalizarContenido(fila.paginaVenta),
@@ -192,6 +197,7 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
     bienvenida: viva
       ? { productId: fila.id, token: viva.token, venceEn: viva.venceEn, texto: viva.texto }
       : previa ? { productId: fila.id, token: "", venceEn: 0, texto: leerTextoDeBienvenida(fila.bienvenida), demo: true } : undefined,
+    opiniones,
   };
   /* ⚠️ Las dos letras se declaran acá y no adentro del dibujante, y van las
      DOS aunque se use una. El dibujante lo comparten la página pública y la
@@ -208,7 +214,7 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
   /* Después de la previa del editor, a propósito: esa previa es SIEMPRE la
      página de secciones, y armar la landing (leer la versión, parsearla)
      para descartarla era trabajo de gorra en cada carga del iframe. */
-  const landing = await laLanding(fila, previaDeLanding, bienvenida);
+  const landing = await laLanding(fila, previaDeLanding, bienvenida, opiniones);
 
   return (
     <div className={CLASES_FUENTES}>
@@ -247,7 +253,7 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
 async function laLanding(fila: {
   id: string; name: string; price: number; comparePrice: number | null; landingPropia: string | null; bienvenida: string | null;
   store: FilaPoliticas & { owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
-}, previa: boolean, bienvenida: BienvenidaDeLaVisita): Promise<{ html: string; fuentes: string[] } | null> {
+}, previa: boolean, bienvenida: BienvenidaDeLaVisita, opiniones: OpinionPublicada[]): Promise<{ html: string; fuentes: string[] } | null> {
   const estado = leerEstadoDeLanding(fila.landingPropia);
   if ((!estado.activa && !previa) || !estado.versionId) return null;
   const sub = fila.store.owner.subscription;
@@ -276,10 +282,10 @@ async function laLanding(fila: {
        arrepentimiento se garantiza. Ver `lib/landing-legales`. */
     productId: fila.id,
     legalesCargados: documentosPublicados(fila.store),
-    /* Los otros bloques vivos (opiniones, aviso de ventas) llegan en el paso
-       siguiente. Hasta entonces sus huecos se sacan, que es lo que hace
-       `armarLanding` sin HTML: mejor nada que un cuadro vacío. */
-    bloques: {},
+    /* Las opiniones verificadas van en su hueco (`data-tienda="opiniones"`);
+       sin ninguna publicada, el hueco se saca —mejor nada que un cuadro
+       vacío—. El aviso de ventas llega en el paso siguiente. */
+    bloques: { opiniones: htmlDeOpiniones(opiniones) },
     bienvenida: viva
       ? { productId: fila.id, token: viva.token, venceEn: viva.venceEn, texto: viva.texto, despues: { precio: fila.price, precioAnterior: fila.comparePrice } }
       : previa ? { productId: fila.id, token: "", venceEn: 0, texto: leerTextoDeBienvenida(fila.bienvenida), despues: { precio: fila.price, precioAnterior: fila.comparePrice }, demo: true } : undefined,

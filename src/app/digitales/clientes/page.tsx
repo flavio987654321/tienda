@@ -28,12 +28,14 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
 
   const ctx = await contextoDeClientes(user.id, await searchParams);
   const comunes = { q: ctx.consulta.q, p: ctx.p, sin: ctx.sin, f: ctx.f, productos: ctx.productos, puedeExportar: puedeVer(ctx.tier, "exportar") };
-  if (!ctx.store) return <Pantalla clientes={[]} resumen={VACIO} pagina={1} paginas={1} {...comunes} />;
+  if (!ctx.store) return <Pantalla clientes={[]} resumen={VACIO} opinionesPendientes={0} pagina={1} paginas={1} {...comunes} />;
 
-  const [ids, cuantas, resumen] = await Promise.all([
+  const [ids, cuantas, resumen, opinionesPendientes] = await Promise.all([
     idsDeClientes(ctx, (ctx.consulta.pagina - 1) * CLIENTES_POR_PAGINA, CLIENTES_POR_PAGINA),
     cuantosClientes(ctx),
     resumenDeTodos(ctx.store.id, ctx.ahora),
+    /* Opiniones verificadas por revisar: el link de arriba lo dice. */
+    prisma.opinionDigital.count({ where: { storeId: ctx.store.id, estado: "PENDIENTE" } }),
   ]);
   const clientes = await armarClientes({ ...ctx, store: ctx.store }, ids, CLIENTES_POR_PAGINA);
 
@@ -41,6 +43,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     <Pantalla
       clientes={clientes}
       resumen={resumen}
+      opinionesPendientes={opinionesPendientes}
       pagina={ctx.consulta.pagina}
       paginas={Math.max(1, Math.ceil(cuantas / CLIENTES_POR_PAGINA))}
       {...comunes}

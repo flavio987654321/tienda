@@ -28,6 +28,7 @@ import {
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
 import BarraDeBienvenida from "./BarraDeBienvenida";
+import { unirOpiniones, type OpinionPublicada } from "@/lib/opiniones-digitales";
 
 export type ProductoParaPagina = {
   id: string;
@@ -57,6 +58,12 @@ export type DatosDePagina = {
    * `lib/bienvenida`.
    */
   bienvenida?: { productId: string; token: string; venceEn: number; texto: string; demo?: boolean };
+  /**
+   * Las opiniones VERIFICADAS publicadas de este producto: las escribió
+   * quien pagó, desde el link de su compra, y la vendedora las publicó. Van
+   * primero, con la marca. Ver `lib/opiniones-digitales`.
+   */
+  opiniones?: OpinionPublicada[];
   /**
    * Sólo en la previa del panel: al pasar el mouse marca cada sección y muestra
    * su nombre, y al tocarla avisa cuál fue.
@@ -457,7 +464,7 @@ function Sellos({ dias }: { dias?: number | null }) {
  */
 function seVeSeccion(datos: DatosDePagina, clave: string): boolean {
   const s = datos.pagina.secciones.find((x) => x.clave === clave);
-  return !!s && seDibuja(s, { hayBonos: datos.bonos.length > 0 });
+  return !!s && seDibuja(s, { hayBonos: datos.bonos.length > 0, hayOpinionesVerificadas: (datos.opiniones?.length ?? 0) > 0 });
 }
 
 /** Los días de garantía, o `null` si esa sección no se va a ver. */
@@ -838,14 +845,18 @@ function Contenido({ clave, campos, tono, datos }: {
     }
 
     case "opiniones": {
-      const items = lista(campos, "items").filter((i) => i.texto);
+      /* Primero las verificadas (las escribió quien pagó), después las que
+         cargó a mano. Con verificadas y sin título escrito, uno de fábrica:
+         la sección puede estar apagada y dibujarse igual por ellas. */
+      const items = unirOpiniones(datos.opiniones ?? [], lista(campos, "items"));
+      const titulo = texto(campos, "titulo") || ((datos.opiniones?.length ?? 0) > 0 ? "Lo que dicen quienes lo compraron" : "");
       return (
         <Seccion tono={tono} estilo={estilo}>
-          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+          <Titulo estilo={estilo}>{titulo}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           <div
             className={`${aire(
-              !!texto(campos, "titulo") || !!texto(campos, "subtitulo"),
+              !!titulo || !!texto(campos, "subtitulo"),
               "mt-8",
             )} grid gap-4 sm:grid-cols-2`}
           >
@@ -885,9 +896,16 @@ function Contenido({ clave, campos, tono, datos }: {
                     <blockquote className="text-pretty leading-relaxed text-[color:var(--pv-tinta)]">
                       {i.texto}
                     </blockquote>
-                    {i.nombre && (
-                      <figcaption className="mt-3 text-sm font-medium text-[color:var(--pv-tenue)]">
+                    {(i.nombre || i.verificada) && (
+                      <figcaption className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-[color:var(--pv-tenue)]">
                         {i.nombre}
+                        {/* La marca que la competencia no puede poner: sólo
+                            existe si la escribió alguien que pagó. */}
+                        {i.verificada && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--pv-suave)] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-tinta)]">
+                            ✓ Compra verificada
+                          </span>
+                        )}
                       </figcaption>
                     )}
                   </div>
@@ -1174,7 +1192,7 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
      sección no se va a ver, y por qué". Si la regla viviera acá adentro, el
      panel diría una cosa y la página haría otra — que es la peor forma de
      enterarse de que tu página salió a medias. */
-  const ctx = { hayBonos: datos.bonos.length > 0 };
+  const ctx = { hayBonos: datos.bonos.length > 0, hayOpinionesVerificadas: (datos.opiniones?.length ?? 0) > 0 };
   /* La barra está fija arriba de todo, así que tapa el final de la página. Sin
      este colchón, el último renglón del pie queda abajo del botón y no se lee. */
   const conBarra = datos.pagina.secciones.some((s) => s.clave === "barra" && seDibuja(s, ctx));

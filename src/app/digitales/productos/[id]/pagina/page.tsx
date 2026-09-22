@@ -107,6 +107,9 @@ export default async function EditorPaginaPage({ params }: Props) {
            no la dibujaría. */
         cuantosBonos={fila.hijos.filter((h) => h.isActive).length}
         bonosSinPublicar={fila.hijos.filter((h) => !h.isActive).length}
+        /* Con verificadas publicadas, la sección de opiniones se dibuja aunque
+           esté apagada: el editor tiene que decir lo mismo que la página. */
+        opinionesVerificadas={await prisma.opinionDigital.count({ where: { productId: fila.id, estado: "PUBLICADA" } })}
         cupoIA={cupoIA}
         /* Con el diseño propio prendido, la previa lo dice encima y el botón
            de abrir muestra ESTA página, no la dirección (que muestra el otro). */
