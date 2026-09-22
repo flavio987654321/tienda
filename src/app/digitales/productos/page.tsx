@@ -7,6 +7,7 @@ import { estadoDelCupo } from "@/lib/cupo-ia";
 import { estadoDelBorrador } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus } from "@/lib/subscription";
 import { leerEstadoDeLanding } from "@/lib/landing-estado";
+import { cuantosDe } from "@/lib/correos-compradores-db";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
 
 /**
@@ -70,6 +71,10 @@ export default async function ProductosPage({
      donde el compilador borra el bloque— y esto es un candado más, no el
      candado. Ver el comentario largo allá. */
   const conEjemplo = consulta.ejemplo === "1";
+  /* Recién publicado (`?lanzado=`): el cartel de "avisales". Se verifica que
+     sea un principal propio y publicado, y se cuenta con la misma función que
+     el mail. Sin clientes que no lo tengan, no hay cartel. */
+  const lanzadoId = typeof consulta.lanzado === "string" ? consulta.lanzado : null;
 
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
@@ -213,6 +218,7 @@ export default async function ProductosPage({
       </div>
 
       <ProductosClient
+        lanzamiento={await lanzamientoDe(lanzadoId, filas, store?.id ?? null)}
         tier={tier}
         paginaInicial={paginaInicial}
         productos={productos}
@@ -223,4 +229,13 @@ export default async function ProductosPage({
       />
     </div>
   );
+}
+
+/** El cartel de lanzamiento, o null: sólo un principal propio, publicado, con clientes que no lo tienen. */
+async function lanzamientoDe(id: string | null, filas: { id: string; name: string; rolDigital: string | null; isActive: boolean }[], storeId: string | null) {
+  if (!id || !storeId) return null;
+  const p = filas.find((x) => x.id === id && x.rolDigital === "PRINCIPAL" && x.isActive);
+  if (!p) return null;
+  const clientes = await cuantosDe(storeId, { productId: null, sinProductoId: p.id });
+  return clientes > 0 ? { id: p.id, nombre: p.name, clientes } : null;
 }

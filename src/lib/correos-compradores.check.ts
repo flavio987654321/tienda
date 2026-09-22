@@ -170,5 +170,23 @@ check("BASE-A", /^model CorreoDigital \{/m.test(schema) && /^model BajaCorreoDig
   && /CREATE TABLE IF NOT EXISTS "CorreoDigital"/.test(migracion) && /CREATE TABLE IF NOT EXISTS "BajaCorreoDigital"/.test(migracion) && /"botonTexto"    TEXT/.test(migracion),
   "los dos modelos, la baja única por (cuenta, correo) y la migración idempotente");
 
+/* ── 21/09/26: avisar al lanzar ──────────────────────────────────────────
+   Al publicar un principal, si hay clientes que no lo tienen: el aviso en la
+   campanita y el cartel en Productos, los dos con el link al mail ya armado
+   (?nuevo=). Se cuenta con la MISMA función que el mail. */
+const patchProducto = leer("src/app/api/digitales/productos/[id]/route.ts");
+const productosPage = leer("src/app/digitales/productos/page.tsx");
+const productosCliente = leer("src/app/digitales/productos/ProductosClient.tsx");
+const campanita = leer("src/components/NotificationBell.tsx");
+check("LAN-A", /const seLanza = publicado === true && !actual\.isActive && rol === "PRINCIPAL";/.test(patchProducto)
+  && /despues\(async \(\) => \{\s*const clientes = await cuantosDe\(actual\.storeId, \{ productId: null, sinProductoId: id \}\);\s*if \(clientes === 0\) return;/.test(patchProducto)
+  && /type: "DIGITAL_LANZAMIENTO"/.test(patchProducto) && /link: `\/digitales\/marketing\/compradores\?nuevo=\$\{id\}`/.test(patchProducto)
+  && /lanzado: seLanza/.test(patchProducto) && /DIGITAL_LANZAMIENTO: "/.test(campanita),
+  "al publicar un principal, si hay clientes que no lo tienen, se anota el aviso en la campanita (sin frenar la publicación) con el link al mail armado");
+check("LAN-B", /window\.location\.assign\(`\/digitales\/productos\?lanzado=\$\{p\.id\}`\)/.test(productosCliente)
+  && /cuantosDe\(storeId, \{ productId: null, sinProductoId: p\.id \}\)/.test(productosPage) && /x\.rolDigital === "PRINCIPAL" && x\.isActive/.test(productosPage)
+  && /compradores\?nuevo=\$\{lanzamiento\.id\}/.test(productosCliente) && /Avisales por mail/.test(productosCliente) && /Mandarlo es de Pro/.test(productosCliente),
+  "la pantalla vuelve con el cartel, que sólo sale para un principal propio publicado con clientes que no lo tienen, y dice que mandarlo es de Pro");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);

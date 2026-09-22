@@ -6,7 +6,7 @@ import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   RotateCcw,
   Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
-  FileText, Download, CircleDashed,
+  FileText, Download, CircleDashed, Send,
 } from "lucide-react";
 import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -1242,6 +1242,7 @@ export default function ProductosClient({
   cupoEbook,
   cobroConectado,
   conEjemplo,
+  lanzamiento,
 }: {
   tier: TierDigital;
   /**
@@ -1258,6 +1259,11 @@ export default function ProductosClient({
   cobroConectado: boolean;
   /** Si la dirección trae `?ejemplo=1`. Ver la tarjeta de ejemplo, más abajo. */
   conEjemplo: boolean;
+  /**
+   * Recién publicó este principal y tiene clientes que no lo tienen
+   * (`?lanzado=`): el cartel de "avisales". Null si no hay nada que avisar.
+   */
+  lanzamiento: { id: string; nombre: string; clientes: number } | null;
 }) {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   /** Si está abierta la ventana de armar el embudo con IA. */
@@ -1612,6 +1618,9 @@ export default function ProductosClient({
         setTrabajando(null);
         return;
       }
+      /* Recién publicado un principal: la pantalla vuelve con el cartel de
+         "avisales a tus clientes" (lo arma el servidor, que es quien cuenta). */
+      if (data.lanzado) { window.location.assign(`/digitales/productos?lanzado=${p.id}`); return; }
       window.location.reload();
     } catch {
       setError("No pudimos conectarnos.");
@@ -1662,6 +1671,29 @@ export default function ProductosClient({
        cinco de Pro uno abajo del otro, sin esa diferencia se leen como una sola
        lista larga de tarjetas sueltas. */
     <div className="space-y-8">
+      {/* ── El lanzamiento ──────────────────────────────────────────────────
+          Recién publicado, con gente que ya compró otra cosa: la venta más
+          barata que existe es avisarles. El botón lleva al mail ya armado
+          (a todos los que no tienen éste, con la plantilla y el botón). Es de
+          Pro; en Free y Starter el mail muestra el candado, y acá se dice. */}
+      {lanzamiento && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">🚀 Publicaste «{lanzamiento.nombre}»</p>
+            <p className="mt-0.5 text-[13px] text-gray-600 panel-oscuro:text-gray-300">
+              {lanzamiento.clientes === 1 ? "Tenés 1 cliente que todavía no lo tiene" : `Tenés ${lanzamiento.clientes} clientes que todavía no lo tienen`}.
+              Avisarles no cuesta un peso de publicidad: el mail ya está escrito, con el botón a la página.
+              {tier !== "PRO" && " Mandarlo es de Pro."}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href="/digitales/productos" className="rounded-xl px-3 py-2 text-[13px] font-semibold text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700">Ahora no</Link>
+            <Link href={`/digitales/marketing/compradores?nuevo=${lanzamiento.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-2 text-[13px] font-bold text-white hover:bg-orange-500 transition-colors">
+              <Send className="h-3.5 w-3.5" /> Avisales por mail
+            </Link>
+          </div>
+        </div>
+      )}
       {/* Cuánto usaste de tu plan. Se dice "páginas de venta" y nunca "tiendas":
           la competencia vende tiendas y nosotros no. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 px-5 py-4 shadow-sm">

@@ -8,6 +8,9 @@ import {
 import type { TierDigital } from "@/lib/planes-digitales";
 import { limpiarTexto } from "@/lib/texto-limpio";
 import { desconectarDominio } from "@/lib/dominio-digital";
+import { cuantosDe } from "@/lib/correos-compradores-db";
+import { createNotification } from "@/lib/notifications";
+import { despues } from "@/lib/despues";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,6 +117,17 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (sinLugar) return NextResponse.json({ error: sinLugar }, { status: 409 });
   }
 
+  /* ── El lanzamiento ──────────────────────────────────────────────────────
+     Al publicar un principal, la gente que ya compró OTRO es la audiencia
+     más barata que existe. Si hay alguien, se anota en la campanita con el
+     link al mail ya armado (`?nuevo=`: a todos los que no tienen éste, con la
+     plantilla y el botón). Se cuenta con la MISMA función que ese mail, y
+     con `despues`: publicar no puede esperar por un aviso. Sólo al pasar de
+     borrador a publicado, no cada vez que se despublica y se vuelve a
+     publicar el mismo día… salvo que sí: si lo apaga y lo prende, vuelve a
+     aparecer, y está bien —es un aviso, no un mail—. */
+  const seLanza = publicado === true && !actual.isActive && rol === "PRINCIPAL";
+
   await prisma.product.update({
     where: { id },
     data: {
@@ -133,7 +147,21 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     },
   });
 
-  return NextResponse.json({ ok: true });
+  if (seLanza) {
+    despues(async () => {
+      const clientes = await cuantosDe(actual.storeId, { productId: null, sinProductoId: id });
+      if (clientes === 0) return;
+      await createNotification({
+        userId: user.id,
+        type: "DIGITAL_LANZAMIENTO",
+        title: `Publicaste «${actual.name}»`,
+        body: `${clientes === 1 ? "Tenés 1 cliente que todavía no lo tiene" : `Tenés ${clientes} clientes que todavía no lo tienen`}: avisales por mail, con el texto ya armado.`,
+        link: `/digitales/marketing/compradores?nuevo=${id}`,
+      });
+    }, "[digitales] aviso de lanzamiento");
+  }
+
+  return NextResponse.json({ ok: true, lanzado: seLanza });
 }
 
 /**

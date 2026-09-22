@@ -59,6 +59,9 @@ const ICONS: Record<string, string> = {
   DIGITAL_DEVOLUCION: "↩️",
   DIGITAL_ENTREGA_FALLIDA: "⚠️",
   DIGITAL_DOWNGRADE: "📋",
+  /* Publicó un principal y tiene clientes que no lo tienen: el mail de
+     lanzamiento, a un clic. */
+  DIGITAL_LANZAMIENTO: "🚀",
   /* El dominio propio de quien lleva mucho en Free: el aviso de que se va a
      soltar, y la confirmación de que se soltó. Ver `dominio-digital`. */
   DIGITAL_DOMINIO_AVISO: "🌐",
