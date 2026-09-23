@@ -335,7 +335,7 @@ export default function UpsellsClient({ esPago, productos, elegidoId }: {
             </p>
             <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-950 p-4">
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-orange-600">Sumá a tu compra</p>
+                <p className="shrink-0 text-[10px] font-extrabold uppercase tracking-widest text-orange-600">Sumá a tu compra</p>
                 {o.activa && (
                   <p className="inline-flex min-w-0 items-center gap-1.5 text-[11.5px] font-bold text-orange-600">
                     <Clock className="h-3.5 w-3.5 shrink-0" />

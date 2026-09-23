@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { validarOfertaUpsell } from "@/lib/oferta-upsell";
+import { validarCampos } from "@/lib/productos-digitales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,12 +79,20 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!Number.isFinite(n) || n <= 0) {
       return NextResponse.json({ error: "El precio de después tiene que ser un número." }, { status: 400 });
     }
-    /* ⚠️ Mayor que el de oferta, sí o sí. Uno igual o menor haría un reloj
-       que al llegar a cero no cambia nada —o que ABARATA—, que es justo el
-       reloj de mentira que esto no quiere ser. Ver `entraEnLaOferta`. */
-    if (n <= hijo.price) {
+    /* ⚠️ LA MISMA FUNCIÓN QUE VALIDA EN PRODUCTOS, no una copia. Es el MISMO
+       campo (`comparePrice`) y ahora se escribe desde dos pantallas: con
+       reglas propias acá, esta ruta aceptaría un precio que aquélla rechaza
+       —el tope, por ejemplo— y el número entraría por la puerta de al lado.
+       `validarCampos` ya exige además que sea mayor que el precio de venta,
+       que es justo lo que hace que el reloj cambie algo al terminar. */
+    const mal = validarCampos({ price: hijo.price, comparePrice: n }, "UPSELL");
+    if (mal) {
       return NextResponse.json(
-        { error: "El precio de después tiene que ser mayor que el de la oferta: si no, el reloj no cambia nada al terminar." },
+        {
+          error: n <= hijo.price
+            ? "El precio de después tiene que ser mayor que el de la oferta: si no, el reloj no cambia nada al terminar."
+            : mal,
+        },
         { status: 400 },
       );
     }

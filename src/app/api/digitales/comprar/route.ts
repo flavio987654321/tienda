@@ -351,12 +351,20 @@ export async function POST(req: NextRequest) {
      (`upsellVencido`) y la persona decide de nuevo viendo lo que va a pagar.
      Es la misma regla que `cuponRechazado`, y vale por la misma razón: el
      único error imperdonable en esta ruta es cobrar algo distinto de lo que
-     decía el botón. */
+     decía el botón.
+     ⚠️ Y SE CORTA UNA SOLA VEZ. El corte existe para que nadie pague más de
+     lo que vio, no para prohibir la compra: cuando la pantalla ya está
+     mostrando el precio de lista lo dice (`upsellVencido: true` en el
+     pedido) y entonces se cobra ese precio, que es justo el que se ve.
+     Sin esta condición el segundo intento manda el mismo token vencido,
+     vuelve a chocar contra el mismo corte, y la persona no puede comprar el
+     upsell nunca más —sólo sacándolo—. */
   const eligioUnoConReloj = upsells.some((u) => {
     const h = producto.hijos.find((x) => x.id === u.id);
     return !!h && entraEnLaOferta({ price: h.price, comparePrice: h.comparePrice });
   });
-  if (!ofertaDelUpsellViva && eligioUnoConReloj) {
+  const yaVioElPrecioDeLista = cuerpo.upsellVencido === true;
+  if (!ofertaDelUpsellViva && eligioUnoConReloj && !yaVioElPrecioDeLista) {
     return NextResponse.json(
       {
         error: "La oferta del extra se terminó mientras completabas tus datos. Fijate el precio nuevo y confirmá de nuevo.",

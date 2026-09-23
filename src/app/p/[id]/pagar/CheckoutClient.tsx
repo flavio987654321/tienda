@@ -80,9 +80,14 @@ export type OfertaDeUpsellEnElCheckout =
 type Bono = { id: string; nombre: string; vale: number };
 type Upsell = {
   id: string; nombre: string; descripcion: string | null;
+  /**
+   * `precio` es lo que sale con la oferta puesta y `regular` el precio de
+   * lista, o null si no tiene. Y esos dos son TODO lo que hace falta para
+   * saber si entra en la oferta del reloj: `regular !== null` ya significa
+   * "tiene a qué precio volver". Una tercera bandera diciendo lo mismo es
+   * un dato de más que algún día va a decir otra cosa.
+   */
   precio: number; regular: number | null; imagen: string | null;
-  /** Si entra en la oferta del reloj: tiene precio de lista al que volver. */
-  conReloj: boolean;
 };
 
 type Props = {
@@ -402,6 +407,12 @@ export default function CheckoutClient(p: Props) {
           /* El plazo de la oferta del upsell. Sin él —o vencido— el servidor
              cobra el precio de lista, así que no mandarlo no abarata nada. */
           upsell: tokenDeUpsell ?? undefined,
+          /* "Esta pantalla YA está mostrando el precio de después." Con esto
+             el servidor cobra ese precio en vez de cortar: cortar tiene
+             sentido una vez, para que nadie pague más de lo que vio, y
+             ninguna para trabar la compra. Sin esto el segundo intento
+             chocaba contra el mismo corte para siempre. */
+          upsellVencido: hayOfertaDeUpsell && !upsellVivo ? true : undefined,
           /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
              servidor. Una prueba que la escribe el navegador no prueba nada. */
           acepto: true,
@@ -661,7 +672,10 @@ export default function CheckoutClient(p: Props) {
           {p.upsells.length > 0 && (
             <div className="mt-4">
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-[color:var(--pv-acento)]">
+                {/* `shrink-0`: es hijo de un flex en fila y no tiene por qué
+                    achicarse para hacerle lugar al reloj. Si no entran los
+                    dos, el `flex-wrap` los pone uno abajo del otro. */}
+                <p className="shrink-0 text-[10px] font-extrabold uppercase tracking-widest text-[color:var(--pv-acento)]">
                   Sumá a tu compra
                 </p>
                 {/* `ahoraUpsell > 0` es "ya está en el navegador": en el

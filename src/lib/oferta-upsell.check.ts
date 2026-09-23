@@ -163,7 +163,7 @@ check("UPS-Q", /firmarSiNoHay: false/.test(comprar) && /ofertaUpsellDeLaVisita\(
   && /upsellsQueValen\(cuerpo\.upsells, producto\.hijos, producto\.id, ofertaDelUpsellViva\)/.test(comprar),
   "la ruta que cobra verifica el plazo con la misma función, sin firmar uno nuevo, y con eso pone el precio");
 
-check("UPS-R", /if \(!ofertaDelUpsellViva && eligioUnoConReloj\) \{/.test(comprar) && /upsellVencido: true/.test(comprar)
+check("UPS-R", /if \(!ofertaDelUpsellViva && eligioUnoConReloj && !yaVioElPrecioDeLista\) \{/.test(comprar) && /upsellVencido: true,/.test(comprar)
   && /if \(datos\.upsellVencido\) setUpsellRechazado\(true\);/.test(cliente),
   "si el reloj se termina entre el clic y el pago se corta y la pantalla acomoda los precios: NUNCA se cobra de más a escondidas");
 
@@ -197,7 +197,7 @@ check("UPS-Y", /rolDigital: "PRINCIPAL", store: \{ ownerId: user\.id \}/.test(ru
   && /if \(!hijo\) continue;/.test(ruta),
   "guardar pide ser la dueña del producto y sólo toca upsells que son hijos de ÉL: un id ajeno no cambia ningún precio");
 
-check("UPS-Z", /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)/.test(ruta) && /if \(n <= hijo\.price\)/.test(ruta),
+check("UPS-Z", /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)/.test(ruta) && /tiene que ser mayor que el de la oferta/.test(ruta),
   "Starter y Pro al día, y el precio de después tiene que ser mayor que el de la oferta");
 
 check("UPS-AA", /El precio de después <strong>se cobra de verdad<\/strong>/.test(pantalla)
@@ -228,6 +228,29 @@ check("UPS-AF", /const ofertaDelUpsell = ordenPrevia\n\s+\? null/.test(comprar),
 
 check("UPS-AG", /if \(!elegido && !firmarSiNoHay\) return \{ estado: "vencida" \};/.test(servidor),
   "el corte está escrito en una línea sola y se ve: sin token y sin permiso de firmar, no hay oferta");
+
+/* ⚠️ EL BUCLE. El corte por reloj vencido existe para que nadie pague más de
+   lo que vio, y para NADA más. Sin levantarlo cuando la pantalla ya está
+   mostrando el precio de lista, el segundo intento manda el mismo token
+   vencido, choca contra el mismo corte, y la persona no puede comprar ese
+   upsell nunca más: sólo sacándolo del pedido. Encontrado auditando. */
+check("UPS-AI", /const yaVioElPrecioDeLista = cuerpo\.upsellVencido === true;/.test(comprar)
+  && /if \(!ofertaDelUpsellViva && eligioUnoConReloj && !yaVioElPrecioDeLista\) \{/.test(comprar)
+  && /upsellVencido: hayOfertaDeUpsell && !upsellVivo \? true : undefined,/.test(cliente),
+  "el corte se levanta cuando la pantalla YA muestra el precio de lista: corta una vez, no traba la compra");
+
+/* ⚠️ `venceEn > leerAhora()`. Un plazo vencido sigue cumpliendo "le queda
+   menos de una hora" —le queda menos que cero—, así que sin esto el latido
+   no se apagaba nunca y la pantalla de pago se redibujaba entera cada
+   segundo, para siempre, mientras la persona escribe su correo. */
+check("UPS-AJ", /const late = venceEn !== null && venceEn > leerAhora\(\) && mostrarReloj\(venceEn, leerAhora\(\)\);/.test(leer("src/lib/reloj-compartido.ts")),
+  "el reloj compartido deja de latir cuando el plazo pasó: sin eso late para siempre");
+
+check("UPS-AK", !/conReloj/.test(cliente) && !/conReloj/.test(pago),
+  "el upsell del checkout no lleva una bandera de más diciendo lo que `regular !== null` ya dice");
+
+check("UPS-AL", /validarCampos\(\{ price: hijo\.price, comparePrice: n \}, "UPSELL"\)/.test(ruta),
+  "el precio de después se valida con la MISMA función que Productos: es el mismo campo y ahora se escribe desde dos pantallas");
 
 /* ⚠️ El mismo campo se carga en dos pantallas con dos nombres, y en una de
    las dos ("Precio original") nadie piensa que sea plata. Ahí hay que

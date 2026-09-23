@@ -220,10 +220,6 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
             precio: u.price,
             regular: u.comparePrice && u.comparePrice > u.price ? u.comparePrice : null,
             imagen: primeraImagen(u.images),
-            /* Si ESTE upsell entra en la oferta del reloj. El que no tiene
-               precio de lista no entra: se muestra como siempre, aunque la
-               oferta esté prendida para sus hermanos. Ver `entraEnLaOferta`. */
-            conReloj: entraEnLaOferta({ price: u.price, comparePrice: u.comparePrice }),
           }))}
           /* El total de arranque, calculado por la misma función que cobra. */
           totalBase={totalDeLaCompra(principal, [])}

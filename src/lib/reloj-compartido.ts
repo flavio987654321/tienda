@@ -38,10 +38,20 @@ function leerAhora(): number {
 const enElServidor = () => 0;
 
 /**
- * La hora, latiendo sólo si a `venceEn` le queda menos de una hora. 0 en el
- * servidor. Con `null` no hay nada que contar y no se suscribe: sin esto,
- * un checkout sin oferta se redibujaba entero cada segundo.
+ * La hora, latiendo sólo si a `venceEn` le queda menos de una hora y TODAVÍA
+ * NO PASÓ. 0 en el servidor. Con `null` no hay nada que contar y no se
+ * suscribe: sin esto, un checkout sin oferta se redibujaba entero cada
+ * segundo.
+ *
+ * ⚠️ `venceEn > leerAhora()` no es una optimización de más: sin eso, un plazo
+ * ya vencido sigue cumpliendo "le queda menos de una hora" —le queda menos
+ * que cero— y el latido no se apaga NUNCA. La pantalla de pago se redibujaba
+ * entera cada segundo, para siempre, mientras la persona escribe su correo.
+ * El último latido, el que cruza el cero, sí ocurre: en ese dibujo la hora
+ * ya es la de después del vencimiento, así que quien mira el reloj se entera
+ * y recién ahí se corta la suscripción.
  */
 export function useAhora(venceEn: number | null): number {
-  return useSyncExternalStore(venceEn !== null && mostrarReloj(venceEn, leerAhora()) ? suscribir : sinSuscribir, leerAhora, enElServidor);
+  const late = venceEn !== null && venceEn > leerAhora() && mostrarReloj(venceEn, leerAhora());
+  return useSyncExternalStore(late ? suscribir : sinSuscribir, leerAhora, enElServidor);
 }
