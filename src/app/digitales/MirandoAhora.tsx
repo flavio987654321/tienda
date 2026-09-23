@@ -225,23 +225,31 @@ export default function MirandoAhora({ permiso, inicial, detalleInicial, product
       </button>
 
       {abierto && (
-        <div
-          className="absolute right-0 top-full z-30 mt-1.5 w-60 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-2 shadow-lg"
-          role="group"
-        >
-          <p className="px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-            En qué página
-          </p>
-          <ul className="space-y-0.5">
-            {filas.map((f) => (
-              <li key={f.id} className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-[12px]">
-                <span className="truncate text-gray-700 panel-oscuro:text-gray-300">{nombres.get(f.id)}</span>
-                <span className="shrink-0 tabular-nums font-bold text-emerald-700 panel-oscuro:text-emerald-400">
-                  {f.n}
-                </span>
-              </li>
-            ))}
-          </ul>
+        /* ⚠️ Los seis pixeles de separación van como RELLENO de esta caja
+           invisible, no como margen de la de abajo. Con margen, ese huequito
+           no es parte de nada: al mover el mouse del cartelito hacia la lista
+           se pasa por ahí, el navegador avisa que el puntero se fue, y la
+           lista desaparece justo cuando uno la iba a leer. Con relleno, el
+           huequito es parte de la lista y el puntero nunca sale. */
+        <div className="absolute right-0 top-full z-30 pt-1.5">
+          <div
+            className="w-60 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-2 shadow-lg"
+            role="group"
+          >
+            <p className="px-1.5 pb-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+              En qué página
+            </p>
+            <ul className="space-y-0.5">
+              {filas.map((f) => (
+                <li key={f.id} className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-[12px]">
+                  <span className="truncate text-gray-700 panel-oscuro:text-gray-300">{nombres.get(f.id)}</span>
+                  <span className="shrink-0 tabular-nums font-bold text-emerald-700 panel-oscuro:text-emerald-400">
+                    {f.n}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>

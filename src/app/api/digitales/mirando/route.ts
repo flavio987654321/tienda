@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getClientIp } from "@/lib/request-ip";
 import { mirandoAhora, productosDelPermiso } from "@/lib/mirando-ahora-servidor";
 
 export const runtime = "nodejs";
@@ -8,12 +7,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Cuántas preguntas por IP y por minuto.
+ * Cuántas preguntas por cuenta y por minuto.
  *
  * El panel pregunta cada 20 segundos, o sea 3 por minuto. El techo deja lugar
- * a varias pestañas del panel abiertas y a una oficina entera detrás de la
- * misma IP, sin darle a nadie una forma gratis de hacernos hablar con Redis
- * todo el día.
+ * a diez pantallas del panel abiertas a la vez —la dueña en la compu y en el
+ * celular, más la socia— sin que una pantalla olvidada abierta nos haga
+ * contar claves todo el día.
  */
 const PREGUNTAS_POR_MINUTO = 30;
 
@@ -49,9 +48,17 @@ export async function GET(req: NextRequest) {
   const ids = productosDelPermiso(req.headers.get("x-mirando"));
   if (!ids) return sinSaber(401);
 
-  const ip = getClientIp(req);
+  /* ⚠️ EL TOPE VA POR CUENTA Y NO POR IP. Por IP, dos dueñas distintas atrás
+     del mismo CGNAT del celular —que en Argentina son muchísimas— se comerían
+     el cupo entre ellas, y una de las dos vería el cartelito congelado sin
+     tener la culpa de nada.
+     Y acá la IP no hace falta para cuidarse de nadie: un permiso inventado se
+     rechaza ARRIBA, sin tocar Redis, así que lo único que puede gastar este
+     cupo es el navegador de la dueña del permiso. El tope existe para que una
+     pantalla olvidada abierta no nos haga contar claves todo el día, y eso se
+     mide por cuenta. */
   try {
-    if (!(await checkRateLimit(`mirando-panel:${ip}`, PREGUNTAS_POR_MINUTO, 60_000))) return sinSaber(429);
+    if (!(await checkRateLimit(`mirando-panel:${ids[0]}`, PREGUNTAS_POR_MINUTO, 60_000))) return sinSaber(429);
   } catch {
     /* Sin Redis tampoco hay contador que leer. */
     return sinSaber(503);

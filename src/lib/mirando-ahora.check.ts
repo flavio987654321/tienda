@@ -202,9 +202,14 @@ check("MIR-M", !/digitalVisita/.test(ruta) && /checkRateLimit\(`mirando:\$\{ip\}
 /* La ruta que pregunta tiene su propio tope, aparte del latido: son dos
    caudales distintos y uno no puede dejar sin cupo al otro. Y verifica el
    permiso ANTES de hablar con Redis. */
-check("MIR-M2", /checkRateLimit\(`mirando-panel:\$\{ip\}`/.test(rutaPanel)
+/* ⚠️ El tope de preguntar va por CUENTA y no por IP: atrás del CGNAT del
+   celular hay muchísimas dueñas distintas, y por IP se comerían el cupo entre
+   ellas. La IP no hace falta para cuidarse de nadie, porque un permiso
+   inventado se rechaza antes de tocar Redis —de ahí el orden—. */
+check("MIR-M2", /checkRateLimit\(`mirando-panel:\$\{ids\[0\]\}`/.test(rutaPanel)
+  && !/getClientIp/.test(rutaPanel)
   && rutaPanel.indexOf("productosDelPermiso(") < rutaPanel.indexOf("checkRateLimit("),
-  "preguntar tiene su propio tope por IP, y sin permiso válido no se llega ni a Redis");
+  "preguntar tiene su propio tope por cuenta, y sin permiso válido no se llega ni a Redis");
 
 /* ⚠️ EL TOPE POR IP TIENE QUE SEGUIR AL LATIDO. En el celular media ciudad
    comparte IP por CGNAT: si el tope no alcanza, la persona número catorce
