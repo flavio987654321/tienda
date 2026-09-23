@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search, Trash2, AlertTriangle } from "lucide-react";
+import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search, Trash2, AlertTriangle, BookOpen } from "lucide-react";
+import { PLANES, planDeSuscripcion, ecosistemaDeRol, planesDelEcosistema } from "@/lib/planLimits";
 
 type Sub = {
   status: string;       // crudo de la base — lo usa el modal para las acciones
@@ -13,8 +14,34 @@ type Sub = {
   trialEndsAt: string;
 };
 
+/**
+ * Cómo se llama este plan.
+ *
+ * ⚠️ Sale del registro de planes y NO de mirar el tier. Antes decía
+ * `tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro"`, o sea que TODO lo que
+ * no fuera Premium era "Tienda Pro": una cuenta de Productos Digitales en Free
+ * figuraba acá como "Tienda Pro · Activo · Mensual". Tres cosas y las tres
+ * falsas, en la pantalla donde se decide qué hacer con esa cuenta.
+ *
+ * Si el par rol+tier no es ningún plan conocido se muestra el tier crudo: feo,
+ * pero es lo que hay guardado. Inventarle un nombre es lo que hacía el de antes.
+ */
 function getTierLabel(sub: Sub): string {
-  return sub.tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro";
+  const clave = planDeSuscripcion(sub);
+  return clave ? PLANES[clave].label : sub.tier;
+}
+
+/**
+ * El ecosistema cuya suscripción se puede gestionar desde este modal, o `null`.
+ *
+ * Los afiliados quedan afuera porque su cuenta es gratis y no hay nada que
+ * tocar —el backend también lo rechaza—, y un rol desconocido también: antes de
+ * dibujarle botones de plan a una fila que no sabemos qué es, mejor no dibujar
+ * nada. Es la misma pregunta que hace el endpoint, con la misma función.
+ */
+function ecoGestionable(sub: Sub | null | undefined): "TIENDA" | "DIGITAL" | null {
+  const eco = ecosistemaDeRol(sub?.role);
+  return eco === "TIENDA" || eco === "DIGITAL" ? eco : null;
 }
 
 export type User = {
@@ -29,11 +56,17 @@ export type User = {
   _count: { orders: number };
 };
 
+/* ⚠️ `DIGITAL` tiene que estar. La fila cae en `ROLE_LABELS[u.role] ??
+   ROLE_LABELS.BUYER`, así que mientras no estuvo, toda cuenta de Productos
+   Digitales —incluida una Pro que paga $89.000 por mes— se mostraba como
+   "Cliente", con el carrito y todo. No era un detalle de color: era la única
+   columna que dice qué es esa persona. */
 const ROLE_LABELS: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  OWNER:  { label: "Dueño",    color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20", icon: Store },
-  SELLER: { label: "Afiliado", color: "text-purple-400 bg-purple-500/10 border-purple-500/20", icon: Zap },
-  BUYER:  { label: "Cliente",  color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", icon: ShoppingCart },
-  ADMIN:  { label: "Admin",    color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20", icon: Shield },
+  OWNER:   { label: "Dueño",    color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20", icon: Store },
+  SELLER:  { label: "Afiliado", color: "text-purple-400 bg-purple-500/10 border-purple-500/20", icon: Zap },
+  BUYER:   { label: "Cliente",  color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", icon: ShoppingCart },
+  DIGITAL: { label: "Digital",  color: "text-orange-400 bg-orange-500/10 border-orange-500/20", icon: BookOpen },
+  ADMIN:   { label: "Admin",    color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20", icon: Shield },
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -48,6 +81,7 @@ const USER_FILTERS = [
   { value: "",          label: "Todos",     color: "text-gray-300" },
   { value: "activos",   label: "Activos",   color: "text-emerald-400" },
   { value: "duenos",    label: "Dueños",    color: "text-indigo-400" },
+  { value: "digitales", label: "Digitales", color: "text-orange-400" },
   { value: "afiliados", label: "Afiliados", color: "text-purple-400" },
   { value: "clientes",  label: "Clientes",  color: "text-teal-400" },
   { value: "baneados",  label: "Baneados",  color: "text-red-400" },
@@ -60,6 +94,7 @@ function applyUserFilter(users: User[], filter: string): User[] {
   switch (filter) {
     case "activos":    return users.filter(isActive);
     case "duenos":     return users.filter(u => u.role === "OWNER"  && isActive(u));
+    case "digitales":  return users.filter(u => u.role === "DIGITAL" && isActive(u));
     case "afiliados":  return users.filter(u => u.role === "SELLER" && isActive(u));
     case "clientes":   return users.filter(u => u.role === "BUYER"  && isActive(u));
     case "baneados":   return users.filter(u => u.banned && !isDeleted(u));
@@ -251,6 +286,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
   const activeOnly = useMemo(() => initial.filter(u => !u.banned && !u.email.endsWith(".invalid")), [initial]);
   const totals = {
     OWNER:    activeOnly.filter(u => u.role === "OWNER").length,
+    DIGITAL:  activeOnly.filter(u => u.role === "DIGITAL").length,
     SELLER:   activeOnly.filter(u => u.role === "SELLER").length,
     BUYER:    activeOnly.filter(u => u.role === "BUYER").length,
     baneados: initial.filter(u => u.banned && !u.email.endsWith(".invalid")).length,
@@ -260,14 +296,20 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
   return (
     <>
       {/* Resumen clicable */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
+      {/* Seis tarjetas desde que Productos Digitales es un ecosistema más. Con
+          `sm:grid-cols-5` la sexta caía sola a un renglón nuevo y parecía rota,
+          así que la grilla pasó a 2 / 3 / 6. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {([
-          { role: "OWNER",  href: "/admin/usuarios?f=duenos",    count: totals.OWNER },
-          { role: "SELLER", href: "/admin/usuarios?f=afiliados", count: totals.SELLER },
-          { role: "BUYER",  href: "/admin/usuarios?f=clientes",  count: totals.BUYER },
-        ] as const).map(({ role, href, count }) => {
-          const { label, color, icon: Icon } = ROLE_LABELS[role];
-          const isActive = activeFilter === (role === "OWNER" ? "duenos" : role === "SELLER" ? "afiliados" : "clientes");
+          /* El plural va escrito y no con una "s" pegada al final: "Digital" +
+             "s" daba "Digitals". */
+          { role: "OWNER",   href: "/admin/usuarios?f=duenos",    filtro: "duenos",    plural: "Dueños",    count: totals.OWNER },
+          { role: "DIGITAL", href: "/admin/usuarios?f=digitales", filtro: "digitales", plural: "Digitales", count: totals.DIGITAL },
+          { role: "SELLER",  href: "/admin/usuarios?f=afiliados", filtro: "afiliados", plural: "Afiliados", count: totals.SELLER },
+          { role: "BUYER",   href: "/admin/usuarios?f=clientes",  filtro: "clientes",  plural: "Clientes",  count: totals.BUYER },
+        ] as const).map(({ role, href, filtro, plural, count }) => {
+          const { color, icon: Icon } = ROLE_LABELS[role];
+          const isActive = activeFilter === filtro;
           return (
             <Link key={role} href={href} className={`rounded-2xl border p-4 flex items-center gap-3 transition-all hover:opacity-80 ${color} ${isActive ? "ring-2 ring-white/20" : ""}`}>
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center border flex-shrink-0 ${color}`}>
@@ -275,7 +317,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
               </div>
               <div>
                 <p className="text-xl font-black text-white">{count}</p>
-                <p className="text-xs font-medium opacity-80">{label}s</p>
+                <p className="text-xs font-medium opacity-80">{plural}</p>
               </div>
             </Link>
           );
@@ -561,8 +603,24 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
       )}
 
       {/* Modal suscripción */}
-      {subModal && subModal.subscription && subModal.role === "OWNER" && (() => {
+      {/* ⚠️ La puerta la abre el ECOSISTEMA DE LA SUSCRIPCIÓN, no `u.role`.
+          Antes pedía `subModal.role === "OWNER"`: una cuenta digital tiene
+          `role: "DIGITAL"`, así que el botón de la fila abría… nada. Se podía
+          hacer clic todo el día y no pasaba nada, sin error y sin explicación.
+          Gestionar la suscripción de una cuenta digital era, literalmente,
+          imposible desde el panel. */}
+      {subModal && subModal.subscription && ecoGestionable(subModal.subscription) && (() => {
         const s = subModal.subscription;
+        const eco = ecoGestionable(s)!;
+        const esDigital = eco === "DIGITAL";
+        /* Los planes que existen en ESTE ecosistema, en orden. Dibujar dos
+           botones fijos era lo que hacía que a una cuenta digital se le
+           ofreciera "Tienda Premium". */
+        const planes = planesDelEcosistema(eco);
+        /* En digitales, Free no es una suscripción: es dónde queda la cuenta
+           cuando no paga. No tiene período ni vencimiento, así que renovarla o
+           vencerla no significa nada. */
+        const freeDigital = esDigital && s.tier === "FREE";
         const isLoading = loadingId === subModal.id + "-sub";
         // statusReal: getSubscriptionStatus ya devuelve TRIAL solo si sigue vigente,
         // así que esto es equivalente a mirar la fecha, pero coherente con el resto.
@@ -570,7 +628,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
 
         const willActivate = s.statusReal === "TRIAL" && pendingPlan !== null;
         const pendingLabel = pendingPlan?.tier
-          ? (pendingPlan.tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro")
+          ? (planes.find((p) => p.tier === pendingPlan.tier)?.label ?? pendingPlan.tier)
           : pendingPlan?.plan === "ANNUAL" ? "facturación Anual" : pendingPlan?.plan === "MONTHLY" ? "facturación Mensual" : "";
 
         const statusActions: { label: string; body: object; color: string; disabled?: boolean; disabledReason?: string }[] = [];
@@ -629,10 +687,16 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                   <span className="text-gray-400 text-sm">Tipo</span>
                   <span className="text-white text-sm font-semibold">{getTierLabel(s)}</span>
                 </div>
-                <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
-                  <span className="text-gray-400 text-sm">Facturación</span>
-                  <span className="text-white text-sm font-semibold">{s.plan === "ANNUAL" ? "Anual" : "Mensual"}</span>
-                </div>
+                {/* En Free digital el ciclo es una etiqueta que quedó guardada y
+                    no significa nada: no se cobra. Mostrarlo ahí arriba y dos
+                    renglones más abajo decir que no tiene facturación es
+                    contradecirse en la misma tarjeta. */}
+                {!freeDigital && (
+                  <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
+                    <span className="text-gray-400 text-sm">Facturación</span>
+                    <span className="text-white text-sm font-semibold">{s.plan === "ANNUAL" ? "Anual" : "Mensual"}</span>
+                  </div>
+                )}
                 {s.statusReal === "TRIAL" && (
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-gray-400 text-sm">Trial vence</span>
@@ -680,13 +744,11 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                   );
                 })()}
 
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "Tienda Pro",     body: { tier: "BASIC" } },
-                    { label: "Tienda Premium", body: { tier: "PREMIUM" } },
-                  ].map(({ label, body }) => {
-                    const isCurrent = body.tier === "BASIC" ? s.tier === "BASIC" : s.tier === "PREMIUM";
-                    const isPending = pendingPlan?.tier === body.tier;
+                <div className={`grid gap-2 ${planes.length > 2 ? "grid-cols-3" : "grid-cols-2"}`}>
+                  {planes.map(({ label, tier }) => {
+                    const body = { tier };
+                    const isCurrent = s.tier === tier;
+                    const isPending = pendingPlan?.tier === tier;
                     return (
                       <button
                         key={label}
@@ -708,6 +770,18 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 {pendingPlan?.tier && <ConfirmacionPlan etiqueta={pendingLabel} activa={willActivate} guardando={isLoading} onCancelar={() => setPendingPlan(null)} onConfirmar={() => { const body = willActivate ? { ...pendingPlan, status: "ACTIVE" } : pendingPlan; changeSub(subModal.id, body!); setPendingPlan(null); }} />}
               </div>
 
+              {/* ⚠️ En Free digital no hay facturación ni estado que tocar, y
+                  los botones no son inofensivos: "Renovar 1 mes" le escribiría
+                  un vencimiento a una cuenta que por definición no tiene
+                  ninguno, y "Vencer ahora" la dejaría vencida en un plan que es
+                  gratis. Dos estados que después nadie sabe leer. */}
+              {freeDigital ? (
+                <p className="rounded-xl border border-white/5 bg-gray-800/40 px-4 py-3 text-xs text-gray-400">
+                  En Free no hay suscripción que gestionar: no se cobra, no vence y no tiene facturación.
+                  Para darle un plan pago, elegilo acá arriba.
+                </p>
+              ) : (
+                <>
               {/* Cambiar facturación */}
               <div className="mb-4">
                 <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Facturación</p>
@@ -754,6 +828,8 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                   </button>
                 ))}
               </div>
+                </>
+              )}
             </div>
           </div>
         );

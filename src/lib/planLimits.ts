@@ -523,6 +523,49 @@ export function ecosistemaDeRol(role: string | null | undefined): Ecosistema | n
   return Object.values(PLANES).find((def) => def.role === role)?.ecosistema ?? null;
 }
 
+/**
+ * Los planes de un ecosistema, **del más chico al más grande**.
+ *
+ * El orden es el de `PLANES` y no es casual: es el que usa el panel de admin
+ * para dibujar los botones, y el que dice si un cambio fue subir o bajar de
+ * plan (que es lo que decide qué aviso le llega a la persona). Si algún día se
+ * agrega un plan en el medio, va en su lugar de la tabla, no al final.
+ */
+export function planesDelEcosistema(eco: Ecosistema): DefinicionPlan[] {
+  return Object.values(PLANES).filter((def) => def.ecosistema === eco);
+}
+
+/**
+ * El plan que corresponde a un tier **dentro del ecosistema de esta
+ * suscripción**, o `null` si ese tier no es de este ecosistema.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ES EL CANDADO QUE IMPIDE CONVERTIR UNA CUENTA EN OTRA COSA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `Subscription.userId` es único: una persona tiene UNA suscripción. Entonces
+ * escribirle un tier de otro ecosistema no le agrega nada, **le reemplaza lo
+ * que tenía**. Una cuenta de Productos Digitales a la que se le guarda el tier
+ * de una tienda deja de ser digital: cambia de panel, pierde su plan, y el
+ * cron empieza a tratarla con las reglas del otro producto.
+ *
+ * No hay ningún caso legítimo de mudar una cuenta de ecosistema tocando el
+ * tier. El que quiera cambiar de producto abre la cuenta del otro producto.
+ * Por eso esto falla cerrado: lo que no está en la tabla, no existe.
+ *
+ * Es el mismo candado que ya tienen la preferencia de pago y el webhook
+ * (`ecosistemaDeRol`), escrito una vez para que el panel de admin no tenga que
+ * volver a acordarse.
+ */
+export function tierDelMismoEcosistema(
+  sub: { role: string } | null | undefined,
+  tier: unknown,
+): DefinicionPlan | null {
+  const eco = ecosistemaDeRol(sub?.role);
+  if (!eco || typeof tier !== "string") return null;
+  return planesDelEcosistema(eco).find((def) => def.tier === tier) ?? null;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    EL INTERRUPTOR DE PRODUCTOS DIGITALES
    ══════════════════════════════════════════════════════════════════════════ */

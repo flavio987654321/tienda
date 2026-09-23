@@ -19,7 +19,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { PLANES, planDe, ecosistemaDeRol } from "./planLimits";
+import { PLANES, planDe, ecosistemaDeRol, tierDelMismoEcosistema, planesDelEcosistema } from "./planLimits";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -52,6 +52,10 @@ function soloCodigo(fuente: string): string {
 const preferencia = soloCodigo(readFileSync("src/app/api/suscripcion/preferencia/route.ts", "utf8"));
 const webhook = soloCodigo(readFileSync("src/app/api/suscripcion/webhook/route.ts", "utf8"));
 const cotizar = soloCodigo(readFileSync("src/app/api/suscripcion/cotizar/route.ts", "utf8"));
+/* La cuarta puerta que escribe una suscripción, y la última en aparecer: el
+   panel de admin. No cobra, pero escribe lo mismo que el webhook. */
+const adminSub = soloCodigo(readFileSync("src/app/api/admin/suscripciones/[userId]/route.ts", "utf8"));
+const adminPantalla = soloCodigo(readFileSync("src/app/admin/usuarios/UsuariosAdmin.tsx", "utf8"));
 
 /* ── 1. El monto lo decide el servidor ─────────────────────────────────────── */
 console.log("\n1) El importe nunca lo manda el navegador");
@@ -153,6 +157,75 @@ chequear("el webhook también lo rechaza antes de escribir",
   /if \(planCerrado\(defPlan\)\)/.test(webhook));
 chequear("la cotización no publica los precios de un producto cerrado",
   /!planCerrado\(def\)/.test(cotizar));
+
+/* ── 8. El panel de admin no muda cuentas de un producto a otro ────────────── */
+console.log("\n8) Cambiar el plan a mano no puede convertir una cuenta en otra cosa");
+
+/* ⚠️ ES LA MISMA PUERTA QUE LA DEL PAGO, CON OTRA LLAVE. Hay UNA suscripción
+   por persona, así que escribirle el tier de otro ecosistema no le agrega nada:
+   le reemplaza lo que tenía. El admin le tocaba el plan a una cuenta de
+   Productos Digitales y la cuenta pasaba a ser una tienda —otro panel, sin su
+   plan, y el cron tratándola con las reglas del otro producto—. La ruta de pago
+   ya tenía este candado desde el día uno; ésta no, porque se escribió cuando el
+   único producto con planes era la tienda. */
+chequear("el tier sale del ecosistema de la cuenta y no de una lista escrita en la ruta",
+  /tierDelMismoEcosistema\(sub, tier\)/.test(adminSub) &&
+  !/tier === "BASIC" \|\| tier === "PREMIUM"/.test(adminSub) &&
+  !/data\.role = "OWNER"/.test(adminSub));
+
+/* Y falla cerrado: un tier que no es de este ecosistema corta con 400 en vez de
+   guardarse igual o de ignorarse en silencio. */
+chequear("un tier de otro ecosistema corta el pedido",
+  /if \(!destino\)/.test(adminSub) && /status: 400/.test(adminSub));
+
+/* La regla, ejecutada de verdad (lo de arriba es leer texto). */
+const subTienda = { role: "OWNER" };
+const subDigital = { role: "DIGITAL" };
+
+chequear("una cuenta digital no acepta los tiers de tienda",
+  tierDelMismoEcosistema(subDigital, "PREMIUM") === null &&
+  tierDelMismoEcosistema(subDigital, "BASIC") === null);
+
+chequear("una tienda no acepta los tiers de digitales",
+  ["FREE", "STARTER", "PRO"].every((t) => tierDelMismoEcosistema(subTienda, t) === null));
+
+chequear("cada una sí acepta los suyos, y devuelve el plan entero",
+  tierDelMismoEcosistema(subTienda, "PREMIUM")?.label === "Tienda Premium" &&
+  tierDelMismoEcosistema(subDigital, "PRO")?.ecosistema === "DIGITAL" &&
+  tierDelMismoEcosistema(subDigital, "FREE")?.tier === "FREE");
+
+chequear("un rol desconocido o una clave del prototipo no abren nada",
+  tierDelMismoEcosistema({ role: "LO_QUE_SEA" }, "PREMIUM") === null &&
+  tierDelMismoEcosistema(null, "PREMIUM") === null &&
+  ["__proto__", "constructor", "valueOf"].every((t) => tierDelMismoEcosistema(subDigital, t) === null));
+
+/* El orden de la escalera decide si el aviso dice "subiste" o "bajaste", y es
+   el orden de la tabla. Si alguien reordena `PLANES`, un ascenso a Pro se le
+   avisa a la persona como una bajada. */
+chequear("los planes de cada ecosistema vienen del más chico al más grande",
+  planesDelEcosistema("DIGITAL").map((p) => p.tier).join() === "FREE,STARTER,PRO" &&
+  planesDelEcosistema("TIENDA").map((p) => p.tier).join() === "BASIC,PREMIUM");
+
+/* Free digital no tiene período: es donde queda la cuenta cuando no paga. Sin
+   `caidaAFree` acá, bajar a Free a mano dejaba la fecha de la caída en null y el
+   cron nunca soltaba el dominio propio de esa cuenta. */
+chequear("bajar a Free digital usa la misma caída que el cron",
+  /destino\?\.ecosistema === "DIGITAL"/.test(adminSub) &&
+  /Object\.assign\(data, caidaAFree\(\)\)/.test(adminSub) &&
+  /data\.freeDesde = null/.test(adminSub));
+
+/* Y la pantalla, que es de donde salen esos pedidos: los botones se dibujan con
+   los planes del ecosistema de la cuenta. Escritos a mano, a una cuenta digital
+   se le ofrecía "Tienda Premium" —y el botón de su fila no abría nada—. */
+chequear("el panel dibuja los planes del ecosistema de la cuenta",
+  /planesDelEcosistema\(eco\)/.test(adminPantalla) &&
+  /ecoGestionable\(subModal\.subscription\)/.test(adminPantalla) &&
+  !/label: "Tienda Premium", body/.test(adminPantalla));
+
+chequear("la etiqueta del plan sale del registro y no de adivinar el tier",
+  /planDeSuscripcion\(sub\)/.test(adminPantalla) &&
+  !/tier === "PREMIUM" \? "Tienda Premium" : "Tienda Pro"/.test(adminPantalla) &&
+  /DIGITAL: \{ label: "Digital"/.test(adminPantalla));
 
 console.log(fallos === 0
   ? "\nok — los frenos de las rutas de pago siguen en su lugar"
