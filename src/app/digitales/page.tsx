@@ -250,7 +250,9 @@ export default async function DigitalesPage({
               Y `null` —no se pudo averiguar— tampoco dibuja nada: no es cero. */}
           {mirando !== null && mirando > 0 && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 panel-oscuro:bg-emerald-500/15 px-2.5 py-1.5 text-[12px] font-bold text-emerald-700 panel-oscuro:text-emerald-400">
-              <span aria-hidden className="h-2 w-2 rounded-full bg-emerald-500" />
+              {/* `shrink-0`: es un punto y tiene que seguir siendo redondo.
+                  Sin eso, en un flex apretado se achica a un óvalo. */}
+              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
               {/* "mirando ahora" sirve para uno y para muchos, así que no
                   lleva plural: "1 mirando ahora" y "3 mirando ahora". */}
               <span className="tabular-nums">{mirando}</span> mirando ahora

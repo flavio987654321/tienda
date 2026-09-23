@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { comisionCongelada } from "@/lib/compra-digital";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
+import { MADURACION_MS } from "@/lib/carritos-digitales";
 import { getArgentinaDayKey, inicioDiaArgentino } from "@/lib/fechas-comerciales";
 
 /**
@@ -290,7 +291,18 @@ export async function fotoDelPanel(
       _count: { _all: true },
     }),
 
-    prisma.order.count({ where: { storeId, status: "PENDING" } }),
+    /* ⚠️ MADURAS, igual que en Carritos — y la MISMA constante, no un número
+       copiado. El aviso que sale de acá lleva a Carritos, y allá una compra
+       aparece recién una hora después de empezada: contarlas todas hacía que
+       el panel dijera "1 compra empezada sin pagar", la persona fuera a
+       Carritos y no encontrara nada. Un aviso que lleva a una pantalla vacía
+       es peor que no avisar.
+
+       Y el plazo tiene su motivo allá: quien empezó hace dos minutos puede
+       estar pagando EN ESTE MOMENTO, y tratarlo de abandonado es un error. */
+    prisma.order.count({
+      where: { storeId, status: "PENDING", createdAt: { lt: new Date(ahora.getTime() - MADURACION_MS) } },
+    }),
 
     /* Los vencidos no cuentan: ahí ya no hay nada que hacer desde el panel. */
     prisma.digitalDownload.count({

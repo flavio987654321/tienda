@@ -188,6 +188,16 @@ check("VIS-B",
 /* ⚠️ LOS DOS NÚMEROS QUE SE DIVIDEN MIDEN EL MISMO MES. Estuvo con las ventas
    de SIEMPRE arriba y las visitas de los últimos 30 días abajo: una cuenta con
    un año vendido y diez visitas este mes mostraba 1200 % de conversión. */
+/* ⚠️ EL AVISO Y SU DESTINO TIENEN QUE COINCIDIR. El panel contaba TODAS las
+   compras pendientes y mandaba a Carritos, donde una compra aparece recién una
+   hora después de empezada: se decía "1 compra empezada sin pagar", la persona
+   iba, y no encontraba nada. Un aviso que lleva a una pantalla vacía es peor
+   que no avisar. Y la constante se importa, no se copia. */
+check("PAN-T",
+  /import \{ MADURACION_MS \} from "@\/lib\/carritos-digitales";/.test(lib) &&
+  /status: "PENDING", createdAt: \{ lt: new Date\(ahora\.getTime\(\) - MADURACION_MS\) \}/.test(lib),
+  "las compras que el panel avisa son las mismas que Carritos muestra: el mismo plazo, de la misma constante");
+
 /* ══════════════════════════════════════════════════════════════════════════
    GENERAL Y POR PRODUCTO NO SE MEZCLAN
    ══════════════════════════════════════════════════════════════════════════

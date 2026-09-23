@@ -53,6 +53,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const vacio = new NextResponse(null, { status: 204 });
   if (!ID_RE.test(id)) return vacio;
 
+  /* ⚠️ QUIEN TIENE SESIÓN NO SE CUENTA, y esto es lo que evita que la dueña
+     se vea a sí misma. Abrir la propia página para revisarla es lo más común
+     del mundo, y verse como "1 mirando ahora" en el propio panel convierte el
+     cartelito en una broma.
+
+     Se mira la COOKIE y nada más: preguntarle a Supabase quién es costaría un
+     viaje cada 45 segundos por cada persona mirando, que es justo lo que esta
+     ruta existe para evitar. Y alcanza, porque quien COMPRA no tiene cuenta:
+     una cookie de sesión en esta página es, casi siempre, su dueña.
+
+     Es el mismo atajo que usa `/api/digitales/visita/[id]` para no contarse
+     las visitas propias, y por el mismo motivo. */
+  const conSesion = req.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+  if (conSesion) return vacio;
+
   const ip = getClientIp(req);
   try {
     if (!(await checkRateLimit(`mirando:${ip}`, LATIDOS_POR_MINUTO, 60_000))) return vacio;
