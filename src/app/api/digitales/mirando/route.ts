@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
 const PREGUNTAS_POR_MINUTO = 30;
 
 /**
- * GET /api/digitales/mirando?t=<permiso> — "¿cuántos están mirando ahora?".
+ * GET /api/digitales/mirando — "¿cuántos están mirando ahora?".
+ * El permiso viaja en la cabecera `x-mirando`.
  *
  * ══════════════════════════════════════════════════════════════════════════
  * NO TOCA LA BASE Y NO PIDE LA SESIÓN.
@@ -42,7 +43,10 @@ export async function GET(req: NextRequest) {
     NextResponse.json({ mirando: null }, { status, headers: { "Cache-Control": "no-store" } });
   const noGuardar = { headers: { "Cache-Control": "no-store" } };
 
-  const ids = productosDelPermiso(req.nextUrl.searchParams.get("t"));
+  /* En una cabecera y no en la dirección: una llave escrita en la dirección
+     queda en los registros del servidor, y una cabecera inventada obliga al
+     navegador a pedir permiso antes de mandarla desde otro sitio. */
+  const ids = productosDelPermiso(req.headers.get("x-mirando"));
   if (!ids) return sinSaber(401);
 
   const ip = getClientIp(req);

@@ -132,6 +132,24 @@ check("MIR-U", permisoDelPanel([ID]) === null && productosDelPermiso(permiso) ==
   "sin secreto no hay permiso: antes que uno sin firma, ninguno");
 process.env.NEXTAUTH_SECRET = conSecreto;
 
+/* ⚠️ EL QUE EVITA UNA RECARGA ATRÁS DE OTRA. El panel, cuando le rechazan el
+   permiso, recarga la pantalla para pedir otro. Si se pudiera firmar uno que
+   del otro lado se rechaza siempre —la lista vacía, un id con otro formato—,
+   el otro sería igual de malo y la pantalla se recargaría para siempre. Que
+   no se dibuje el cartelito es infinitamente mejor. */
+check("MIR-U2", permisoDelPanel([]) === null
+  && permisoDelPanel(["no-es-un-id"]) === null
+  && permisoDelPanel([ID, "no-es-un-id"]) === null,
+  "no se firma un permiso que no se va a poder leer: sin eso, el panel se recargaría en círculo");
+
+/* Y del lado del navegador, el cinturón: aunque un 401 no se arregle nunca
+   —una clave que cambió en el medio—, se recarga como mucho una vez cada
+   tanto. El reloj vive AFUERA del componente porque la recarga lo vuelve a
+   armar de cero y uno guardado adentro se perdería en cada vuelta. */
+check("MIR-U3", /^let ultimaRecarga = 0;$/m.test(leer("src/app/digitales/MirandoAhora.tsx"))
+  && /cuando - ultimaRecarga > ESPERA_ENTRE_RECARGAS_MS/.test(leer("src/app/digitales/MirandoAhora.tsx")),
+  "el permiso rechazado no puede encadenar recargas: como mucho una cada cinco minutos");
+
 /* Un permiso inventado con mil productos nos haría pedirle a Redis dos mil
    claves de una sola vez. */
 check("MIR-V", productosDelPermiso(`${Date.now() + 60_000}.${Array(200).fill(ID).join("~")}.x`) === null
@@ -188,6 +206,23 @@ check("MIR-M2", /checkRateLimit\(`mirando-panel:\$\{ip\}`/.test(rutaPanel)
   && rutaPanel.indexOf("productosDelPermiso(") < rutaPanel.indexOf("checkRateLimit("),
   "preguntar tiene su propio tope por IP, y sin permiso válido no se llega ni a Redis");
 
+/* ⚠️ EL TOPE POR IP TIENE QUE SEGUIR AL LATIDO. En el celular media ciudad
+   comparte IP por CGNAT: si el tope no alcanza, la persona número catorce
+   deja de contarse y nadie se entera. Cuando el latido se hizo más rápido,
+   el mismo tope pasó a dar para menos gente —y eso fue un error de verdad—.
+   Que falle acá la próxima vez. */
+const topePorIp = Number(/const LATIDOS_POR_MINUTO = (\d+)/.exec(ruta)?.[1]);
+check("MIR-M3", topePorIp / (60_000 / LATIDO_MS) >= 30,
+  "el tope por IP deja lugar a por lo menos 30 personas mirando detrás de la misma IP");
+
+/* El permiso viaja en una cabecera, no en la dirección: en la dirección
+   quedaría escrito en los registros del servidor, y una cabecera inventada
+   obliga al navegador a pedir permiso antes de mandarla desde otro sitio. */
+check("MIR-M4", /req\.headers\.get\("x-mirando"\)/.test(rutaPanel)
+  && !/searchParams/.test(rutaPanel)
+  && /"x-mirando": permiso/.test(cartel),
+  "el permiso va en una cabecera y no en la dirección: no queda en los registros ni lo manda otro sitio");
+
 check("MIR-N", /veVisitas && foto \? await mirandoAhora\(/.test(panel),
   "el puntito lleva el MISMO candado que las visitas: en Free no se pregunta");
 
@@ -230,6 +265,17 @@ check("MIR-X", /nadie mirando ahora/.test(cartel) && /bg-gray-400/.test(cartel)
 check("MIR-Y", /porProducto\.reduce\(\(suma, x\) => suma \+ x\.n, 0\)/.test(servidor)
   && /productos\.length > 1/.test(cartel),
   "el total es la suma del detalle, y el detalle sólo aparece cuando hay más de un producto");
+
+/* ⚠️ En el celular el navegador finge un mouse: con `onMouseEnter` el toque
+   abría el detalle y el clic que venía atrás lo cerraba, así que tocarlo no
+   hacía NADA. Éste es un panel que se mira desde el teléfono. */
+/* (El `=\{` es para no chocar con el comentario que explica por qué no se usa
+   `onMouseEnter`: se busca el atributo de verdad, no la palabra.) */
+check("MIR-Z", /pointerType === "mouse"/.test(cartel) && !/onMouseEnter=\{/.test(cartel)
+  /* Y una vez abierto de un toque, se cierra tocando afuera o con Escape: en
+     el celular no existe "sacar el mouse de encima". */
+  && /pointerdown/.test(cartel) && /"Escape"/.test(cartel),
+  "en el celular se abre tocándolo y se cierra tocando afuera: el toque no es un mouse");
 
 /* El panel pregunta sólo por SUS productos: el elegido, o los de la cuenta. */
 check("MIR-P", /\(foto\.elegido \? \[foto\.elegido\] : foto\.productos\)\.map\(\(x\) => x\.id\)/.test(panel),

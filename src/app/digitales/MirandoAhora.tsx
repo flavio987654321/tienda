@@ -41,6 +41,23 @@ import { REFRESCO_DEL_PANEL_MS } from "@/lib/mirando-ahora";
 
 type Fila = { id: string; n: number };
 
+/**
+ * Cuándo fue la última vez que se recargó la pantalla para pedir un permiso
+ * nuevo, y cuánto hay que esperar antes de volver a hacerlo.
+ *
+ * ⚠️ VIVE AFUERA DEL COMPONENTE A PROPÓSITO. Cuando el panel se recarga, el
+ * cartelito se vuelve a armar de cero —le llega un permiso nuevo, que es toda
+ * la gracia—, así que cualquier "ya recargué una vez" guardado adentro se
+ * perdería en el camino. Si el permiso nuevo también fuera rechazado, sería
+ * una recarga atrás de otra para siempre. Acá afuera el reloj sobrevive a esa
+ * vuelta y el peor caso pasa a ser una recarga cada cinco minutos, que no le
+ * hace mal a nadie.
+ *
+ * (Se borra solo al recargar la página de verdad, que es lo que uno quiere.)
+ */
+let ultimaRecarga = 0;
+const ESPERA_ENTRE_RECARGAS_MS = 5 * 60_000;
+
 export default function MirandoAhora({ permiso, inicial, detalleInicial, productos }: {
   permiso: string;
   inicial: number;
@@ -54,7 +71,6 @@ export default function MirandoAhora({ permiso, inicial, detalleInicial, product
 
   useEffect(() => {
     let vivo = true;
-    let recargado = false;
 
     const preguntar = async () => {
       /* Con la pestaña escondida no se pregunta: el panel puede quedar abierto
@@ -62,13 +78,26 @@ export default function MirandoAhora({ permiso, inicial, detalleInicial, product
          número. Al volver se pregunta enseguida. */
       if (!vivo || document.visibilityState !== "visible") return;
       try {
-        const r = await fetch(`/api/digitales/mirando?t=${encodeURIComponent(permiso)}`, { cache: "no-store" });
+        /* ⚠️ El permiso va en una CABECERA y no en la dirección. Dos motivos:
+           en la dirección quedaría escrito en los registros del servidor —es
+           una llave, aunque sea chica—, y una cabecera inventada obliga al
+           navegador a pedir permiso antes (preflight), que es lo que impide
+           que otra página le haga esta pregunta al pasar por acá. */
+        const r = await fetch("/api/digitales/mirando", {
+          cache: "no-store",
+          headers: { "x-mirando": permiso },
+        });
         if (!vivo) return;
-        /* El permiso venció (o la sesión cambió de manos): se recarga la
-           pantalla UNA vez para llevarse uno nuevo. Una sola, o un 401 que no
-           se arregla se convierte en un bucle de recargas. */
+        /* El permiso venció: se recarga la pantalla para llevarse uno nuevo,
+           pero como mucho una vez cada tanto. Un 401 que no se arregla solo
+           —y los hay: una clave que cambió en el medio— se convertiría si no
+           en una recarga atrás de otra. Ver `ultimaRecarga`. */
         if (r.status === 401) {
-          if (!recargado) { recargado = true; router.refresh(); }
+          const cuando = Date.now();
+          if (cuando - ultimaRecarga > ESPERA_ENTRE_RECARGAS_MS) {
+            ultimaRecarga = cuando;
+            router.refresh();
+          }
           return;
         }
         if (!r.ok) return;
@@ -80,6 +109,11 @@ export default function MirandoAhora({ permiso, inicial, detalleInicial, product
         if (typeof mirando !== "number" || !Number.isFinite(mirando)) return;
         setTotal(mirando);
         setDetalle(Array.isArray(porProducto) ? (porProducto as Fila[]) : []);
+        /* Si se fueron todos, el detalle se queda sin renglones y deja de
+           dibujarse. Sin esto quedaría marcado como "abierto" por dentro y
+           volvería a aparecer solo —sin que nadie pase el mouse— en cuanto
+           entrara la próxima persona. */
+        if (mirando === 0) setAbierto(false);
       } catch {
         /* Sin internet no hay número nuevo. Se deja el viejo y se calla: es un
            cartelito y no puede ensuciar la consola del panel. */
@@ -173,8 +207,13 @@ export default function MirandoAhora({ permiso, inicial, detalleInicial, product
     <div
       ref={caja}
       className="relative"
-      onMouseEnter={() => setAbierto(true)}
-      onMouseLeave={() => setAbierto(false)}
+      /* ⚠️ `pointerType === "mouse"` Y NO `onMouseEnter`. En el celular el
+         navegador finge un mouse: al tocar dispara primero el "entró el
+         mouse" —que abría el detalle— y enseguida el clic, que lo volvía a
+         cerrar. Resultado: tocarlo no hacía nada. Con el tipo de puntero, el
+         dedo sólo dispara el clic y el mouse sólo el pasar por encima. */
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") setAbierto(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse") setAbierto(false); }}
     >
       <button
         type="button"

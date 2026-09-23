@@ -100,6 +100,12 @@ function firmaDelPermiso(vence: number, ids: string[]): string | null {
  */
 export function permisoDelPanel(productIds: string[], ahora = Date.now()): string | null {
   const ids = productIds.slice(0, TOPE_DE_PRODUCTOS);
+  /* ⚠️ NUNCA SE FIRMA UN PERMISO QUE NO SE VA A PODER LEER. Si acá saliera uno
+     que del otro lado se rechaza —la lista vacía, o un id con otro formato—,
+     el panel recibiría 401, recargaría la pantalla para pedir otro, y el otro
+     sería igual de malo: una recarga atrás de otra para siempre. Que no se
+     dibuje el cartelito es infinitamente mejor que eso. */
+  if (ids.length === 0 || !ids.every((x) => ID_RE.test(x))) return null;
   const vence = ahora + VIDA_DEL_PERMISO_MS;
   const firma = firmaDelPermiso(vence, ids);
   if (!firma) return null;

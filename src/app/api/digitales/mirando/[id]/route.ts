@@ -13,13 +13,22 @@ const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 /**
  * Cuántos latidos por IP y por minuto se aceptan.
  *
- * El latido va cada 20 segundos, así que uno solo manda 3 por minuto. El
- * techo deja lugar a una casa con varios teléfonos detrás de la misma IP —y
- * en el celular, a cientos que comparten IP por CGNAT— sin darle a nadie una
- * forma gratis de inflar el cartelito ni de hacernos escribir en Redis todo
- * el día.
+ * El latido va cada 20 segundos, así que una sola persona manda 3 por minuto.
+ * Con 120 entran unas 40 personas mirando detrás de la misma IP, que es lo que
+ * pasa de verdad en el celular: media ciudad comparte IP por CGNAT, y un aviso
+ * que anda mete a mucha gente junta en la misma página.
+ *
+ * ⚠️ Subió de 40 a 120 CUANDO EL LATIDO SE HIZO MÁS RÁPIDO. Antes latía cada
+ * 45 segundos y 40 alcanzaban para 20 personas; con el latido cada 20, esos
+ * mismos 40 daban para 13, y el número 14 dejaba de contarse sin que nadie se
+ * enterara. Si el latido vuelve a cambiar, este número cambia con él.
+ *
+ * El techo sigue existiendo para que nadie tenga una forma gratis de hacernos
+ * escribir en Redis todo el día. Inflar el cartelito con latidos inventados
+ * sólo ensuciaría el panel del propio dueño: este número no se le muestra a
+ * ningún comprador.
  */
-const LATIDOS_POR_MINUTO = 40;
+const LATIDOS_POR_MINUTO = 120;
 
 /**
  * POST /api/digitales/mirando/[id] — "sigo mirando esta página".
