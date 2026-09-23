@@ -2,11 +2,14 @@ import Link from "next/link";
 import {
   UserRound, Package, Receipt, ArrowRight, Globe, Pencil, Settings, Plus,
   AlertTriangle, Clock, CircleDot, ExternalLink, Sparkles, ShoppingCart,
+  Lock, Megaphone, BarChart3, Mail,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { primerosPasos, terminado } from "@/lib/primeros-pasos";
-import { fotoDelPanel, type NumerosDelPanel, type ProductoDelPanel } from "@/lib/panel-inicio";
+import { fotoDelPanel, DIAS_DE_VISITAS, type NumerosDelPanel, type ProductoDelPanel, type VentaReciente } from "@/lib/panel-inicio";
+import { puedeVer } from "@/lib/estadisticas-digitales";
+import { haceCuanto } from "@/lib/carritos-digitales";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import PrimerosPasos from "./PrimerosPasos";
@@ -67,6 +70,21 @@ export const dynamic = "force-dynamic";
 const plata = (n: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
+/**
+ * Qué parte de las visitas terminó comprando.
+ *
+ * Con un decimal y no redondeada a entero: en este rubro una página buena
+ * convierte al 2 %, así que redondeando, "1,8 %" y "2,4 %" —que son negocios
+ * distintos— se dibujan los dos como "2 %".
+ *
+ * Quien llama se encarga de que `visitas` no sea cero: no hay conversión de
+ * cero visitas, y dibujar "0 %" ahí es inventar un dato.
+ */
+function conversion(ventas: number, visitas: number): string {
+  const p = (ventas / visitas) * 100;
+  return `${p.toLocaleString("es-AR", { maximumFractionDigits: 1 })} %`;
+}
+
 export default async function DigitalesPage({
   searchParams,
 }: {
@@ -81,11 +99,22 @@ export default async function DigitalesPage({
   ]);
 
   const { p } = await searchParams;
+  const tier = (sub?.tier ?? "FREE") as TierDigital;
+
+  /* ⚠️ EL CANDADO DE LAS VISITAS, DECIDIDO ACÁ Y CON LA MISMA FUNCIÓN QUE
+     ESTADÍSTICAS. `puedeVer(tier, "visitas")` es Starter para arriba, y con
+     `false` la consulta de visitas NI SE HACE: el panel de una cuenta Free no
+     paga ese viaje a la base ni deja el número en el HTML.
+
+     Se decidió NO abrirlas en Free. Lo que Free ve es el bloque con candado,
+     que dice qué son y lleva a los planes — el mismo criterio que Carritos:
+     se ve que la función existe, y usarla se cobra. */
+  const veVisitas = puedeVer(tier, "visitas");
 
   /* Sin `Store` no hay nada cargado todavía, y eso no es un error: el espacio se
      crea recién al guardar el primer producto. Entrar a mirar no tiene por qué
      dejar una tienda vacía colgando. */
-  const foto = store ? await fotoDelPanel(store.id, p ?? null) : null;
+  const foto = store ? await fotoDelPanel(store.id, p ?? null, veVisitas) : null;
 
   /* ⚠️ Un `?p=` que no es de esta persona no existe para `fotoDelPanel` —sólo
      mira los productos de su tienda—, así que cae solo en la vista de todos.
@@ -107,7 +136,15 @@ export default async function DigitalesPage({
 
   const numeros: NumerosDelPanel | null = elegido ? foto!.numerosDelElegido : foto?.total ?? null;
   const dominioBase = dominioDeLaPlataforma();
-  const tier = (sub?.tier ?? "FREE") as TierDigital;
+  /* ⚠️ "Ahora" se calcula ACÁ, en el servidor, y viaja a los renglones ya
+     resuelto. Hecho en el navegador da distinto —el servidor corre en UTC— y
+     React avisa que el texto no coincide. Es la misma decisión que en
+     Carritos, y por el mismo motivo. */
+  const ahora = new Date();
+  /* El que se muestra arriba, para copiar: el elegido, o —con uno solo— ese.
+     Con varios y sin elegir no hay UNA dirección, así que no se muestra
+     ninguna y las direcciones viven en las tarjetas de cada producto. */
+  const paraElLink = elegido ?? (productos.length === 1 ? productos[0] : null);
 
   /* ── La primera vez ──────────────────────────────────────────────────────
      Sin un solo producto no hay panel que mostrar: mostrar tres ceros y una
@@ -230,6 +267,42 @@ export default async function DigitalesPage({
 
               Y la objeción original que los sacó de acá sigue respetada: el que
               ya vendió cuarenta veces terminó los cinco, así que no ve nada. */}
+          {/* ══════════════════════════════════════════════════════════════════
+              EL LINK, ARRIBA Y SIEMPRE
+              ══════════════════════════════════════════════════════════════════
+
+              ⚠️ Antes la dirección se veía SÓLO en la vista de un producto — y
+              esa vista se llega por el selector, que con un producto ni siquiera
+              se dibuja. O sea que quien tiene un producto, que es el caso de
+              casi todo el mundo al empezar, **no veía su link en ningún lado**
+              del panel. Y el link es la operación real de esta pantalla: se
+              copia y se pega en un anuncio, en un mensaje, en una historia. */}
+          {paraElLink && (paraElLink.slugDigital || paraElLink.dominioPropio) && (
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4 shadow-sm">
+              <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+                <Globe className="h-3.5 w-3.5" />
+                {elegido ? "Su dirección" : "Tu dirección, para compartir"}
+              </p>
+              <div className="mt-3">
+                <Direcciones
+                  slug={paraElLink.slugDigital}
+                  dominioBase={dominioBase}
+                  dominioPropio={paraElLink.dominioPropio}
+                  conPago
+                />
+              </div>
+              {!paraElLink.publicado && (
+                /* Que no esté publicado explica por qué no hay visitas ni
+                   ventas, y eso hay que decirlo acá y no dejar que se deduzca
+                   de un cero. */
+                <p className="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 panel-oscuro:bg-gray-950/50 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+                  <CircleDot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  Está sin publicar: por ahora esa dirección no abre para nadie más que vos.
+                </p>
+              )}
+            </div>
+          )}
+
           {!terminado(pasos) && <PrimerosPasos pasos={pasos} />}
 
           {numeros && (
@@ -243,6 +316,40 @@ export default async function DigitalesPage({
                 valor={plata(numeros.netoDelMes)}
                 pie={`${numeros.ventasDelMes} ${numeros.ventasDelMes === 1 ? "venta" : "ventas"}`}
               />
+
+              {/* ── Las visitas ─────────────────────────────────────────────
+                  `null` es "tu plan no las ve" y se dibuja con candado; un cero
+                  es un dato y se dibuja como número. No son lo mismo y no se
+                  pueden mezclar: un candado donde hay un cero esconde algo que
+                  ya se sabe, y un cero donde hay candado promete algo que no se
+                  midió. */}
+              {numeros.visitas === null ? (
+                <Link
+                  href="/digitales/mi-cuenta"
+                  className="rounded-2xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 p-4 transition-colors hover:border-orange-400"
+                >
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+                    <Lock className="h-3 w-3" /> Visitas
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
+                    Cuántas personas entraron y cuántas compraron.
+                  </p>
+                  <p className="mt-1 text-[12px] font-bold text-orange-600">Con Starter →</p>
+                </Link>
+              ) : (
+                <Numero
+                  titulo={`Visitas · ${DIAS_DE_VISITAS} días`}
+                  valor={String(numeros.visitas)}
+                  /* La conversión sólo cuando hay de qué: "0 % de 0 visitas" no
+                     es una conversión, es una división imposible dibujada. */
+                  pie={numeros.visitas > 0 ? `${conversion(numeros.ventas, numeros.visitas)} compró` : undefined}
+                />
+              )}
+
+              {/* El ticket sólo con ventas. Un "promedio $0" no es un promedio. */}
+              {numeros.ventas > 0 && (
+                <Numero titulo="Cada venta, promedio" valor={plata(numeros.ticket)} />
+              )}
             </div>
           )}
 
@@ -285,44 +392,46 @@ export default async function DigitalesPage({
             </div>
           )}
 
-          {/* ── Un producto: dónde vive ──────────────────────────────────────── */}
-          {elegido && (
-            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm">
-              <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
-                <Globe className="h-3.5 w-3.5" /> Su dirección
-              </p>
+          {/* ⚠️ Sin dirección no se puede repartir nada, así que no alcanza con
+              dejar el hueco vacío: hay que decir qué falta y dónde. Va aparte
+              del bloque de arriba porque aquél muestra una dirección y éste
+              dice que no hay ninguna. */}
+          {paraElLink && !paraElLink.slugDigital && !paraElLink.dominioPropio && (
+            <Link
+              href={`/digitales/productos/${paraElLink.id}/direccion`}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 px-4 py-3.5 hover:border-orange-400 transition-colors"
+            >
+              <span className="min-w-0 text-[12.5px] font-bold text-orange-800 panel-oscuro:text-orange-300">
+                Todavía no tiene dirección. Elegila para poder repartirla.
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-orange-500" />
+            </Link>
+          )}
 
-              <div className="mt-3">
-                {elegido.slugDigital || elegido.dominioPropio ? (
-                  <Direcciones
-                    slug={elegido.slugDigital}
-                    dominioBase={dominioBase}
-                    dominioPropio={elegido.dominioPropio}
-                    conPago
-                  />
-                ) : (
-                  /* Sin dirección no se puede repartir nada, así que no alcanza
-                     con dejar el hueco vacío: hay que decir qué falta y dónde. */
-                  <Link
-                    href={`/digitales/productos/${elegido.id}/direccion`}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 px-3.5 py-3 hover:border-orange-400 transition-colors"
-                  >
-                    <span className="min-w-0 text-[12.5px] font-bold text-orange-800 panel-oscuro:text-orange-300">
-                      Todavía no tiene dirección. Elegila para poder repartirla.
-                    </span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-orange-500" />
-                  </Link>
-                )}
-              </div>
-
-              {!elegido.publicado && (
-                /* Que no esté publicado explica por qué no hay ventas, y eso hay
-                   que decirlo acá y no dejar que se deduzca de un cero. */
-                <p className="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 panel-oscuro:bg-gray-950/50 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
-                  <CircleDot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                  Está sin publicar: por ahora la dirección no abre para nadie más que vos.
+          {/* ── Lo último que pasó ──────────────────────────────────────────
+              ⚠️ Sólo con ventas. Un "todavía no hay actividad" es un cartel
+              triste sobre algo que ya dicen los tres ceros de arriba, y llena
+              la pantalla justo cuando está más vacía — que es lo contrario de
+              lo que hay que hacer. Con la cuenta nueva, lo que ocupa ese lugar
+              son los pasos. */}
+          {!elegido && foto && foto.ultimas.length > 0 && (
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4 shadow-sm">
+              {/* `shrink-0` en los dos: son hijos de un flex en fila y ninguno
+                  tiene por qué achicarse para hacerle lugar al otro. Si no
+                  entran, el `flex-wrap` los pone uno abajo del otro. */}
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <p className="shrink-0 text-[11px] font-bold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
+                  Lo último que pasó
                 </p>
-              )}
+                <Link href="/digitales/ventas" className="shrink-0 text-[12px] font-bold text-orange-600 hover:text-orange-500">
+                  Ver todas
+                </Link>
+              </div>
+              <ul className="mt-2 divide-y divide-gray-100 panel-oscuro:divide-gray-800">
+                {foto.ultimas.map((v) => (
+                  <Reciente key={v.ordenId} v={v} ahora={ahora} />
+                ))}
+              </ul>
             </div>
           )}
 
@@ -364,12 +473,30 @@ export default async function DigitalesPage({
                 </>
               ) : (
                 <>
-                  <Rapido href="/digitales/productos" Icon={Plus} texto="Cargar un producto" fuerte />
+                  {/* ⚠️ El primero cambia según dónde está parada la cuenta.
+                      "Cargar un producto" arriba de todo le sirve al que no
+                      tiene ninguno; al que ya vendió, lo que le sirve es
+                      vender más — y eso vive en Marketing, que hasta ahora no
+                      figuraba acá. */}
+                  {productos.length === 0
+                    ? <Rapido href="/digitales/productos" Icon={Plus} texto="Cargar un producto" fuerte />
+                    : <Rapido href="/digitales/marketing" Icon={Megaphone} texto="Vender más" fuerte />}
                   <Rapido href="/digitales/productos" Icon={Package} texto="Tus productos" />
                   <Rapido href="/digitales/ventas" Icon={Receipt} texto="Tus ventas" />
                   <Rapido href="/digitales/carritos" Icon={ShoppingCart} texto="Carritos abandonados" />
+                  <Rapido href="/digitales/estadisticas" Icon={BarChart3} texto="Estadísticas" />
                 </>
               )}
+              {/* Marketing y Estadísticas también en la vista de un producto:
+                  son las dos pantallas que se usan DESPUÉS de publicar, que es
+                  justo el momento en que alguien mira un producto en particular. */}
+              {elegido && (
+                <>
+                  <Rapido href={`/digitales/marketing/upsells?p=${elegido.id}`} Icon={Megaphone} texto="Sus ofertas" />
+                  <Rapido href="/digitales/estadisticas" Icon={BarChart3} texto="Estadísticas" />
+                </>
+              )}
+              <Rapido href="/digitales/marketing/compradores" Icon={Mail} texto="Escribirles a tus compradores" />
               <Rapido href="/digitales/configuracion" Icon={Settings} texto="Configuración" />
               <Rapido href="/digitales/mi-cuenta" Icon={UserRound} texto="Mi cuenta" />
             </div>
@@ -387,6 +514,31 @@ export default async function DigitalesPage({
 }
 
 /* ── Las piezas ───────────────────────────────────────────────────────────── */
+
+/**
+ * Un renglón de "lo último que pasó".
+ *
+ * El correo entero, no recortado: es lo único que identifica a un comprador
+ * digital, y medio correo no sirve para buscarlo ni para reconocerlo. Por eso
+ * `min-w-0` + `break-all`: corta donde haga falta en vez de estirar la fila.
+ */
+function Reciente({ v, ahora }: { v: VentaReciente; ahora: Date }) {
+  return (
+    <li className="flex items-start justify-between gap-3 py-2.5">
+      <div className="min-w-0">
+        <p className="min-w-0 break-all text-[13px] font-semibold text-gray-900 panel-oscuro:text-gray-100">
+          {v.email}
+        </p>
+        <p className="mt-0.5 text-[11.5px] text-gray-500 panel-oscuro:text-gray-400">
+          {v.producto ? `${v.producto} · ` : ""}{haceCuanto(v.cuando, ahora)}
+        </p>
+      </div>
+      <p className="shrink-0 whitespace-nowrap text-[13px] font-black tabular-nums text-gray-900 panel-oscuro:text-gray-100">
+        {plata(v.total)}
+      </p>
+    </li>
+  );
+}
 
 function Chip({ href, activo, children }: { href: string; activo: boolean; children: React.ReactNode }) {
   return (

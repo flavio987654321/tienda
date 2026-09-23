@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, ChevronDown } from "lucide-react";
 import { type Paso, cuantosHechos, elQueSigue } from "@/lib/primeros-pasos";
 
 /**
@@ -11,7 +11,28 @@ import { type Paso, cuantosHechos, elQueSigue } from "@/lib/primeros-pasos";
  * vez parecen más útiles y llaman a ninguno — y además el orden importa de
  * verdad: subir el archivo antes de tener producto no se puede.
  *
- * ── Por qué no se puede cerrar ─────────────────────────────────────────────
+ * ── Los hechos se PLIEGAN, y la tarjeta encoge ─────────────────────────────
+ *
+ * Antes los cinco renglones ocupaban lo mismo el primer día que el cuarto, y
+ * la lista sólo desaparecía —entera, de golpe— al terminar el quinto. O sea
+ * que avanzar no se notaba: la pantalla se veía igual con 1 hecho que con 4.
+ *
+ * Ahora los hechos se juntan en un renglón que se puede abrir, y abajo quedan
+ * sólo los que faltan. Con cuatro hechos, la tarjeta es un renglón gris y un
+ * paso. Avanzar se VE.
+ *
+ * ⚠️ Plegar NO es esconder, y la diferencia importa porque acá ya hubo un
+ * error de ese tipo: los pasos supieron desaparecer al cargar el primer
+ * producto, o sea justo cuando faltaban cuatro. El hecho sigue contándose
+ * arriba ("2 de 5"), sigue en la barra, y está a un clic de leerse.
+ *
+ * ── Sin una línea de JavaScript ────────────────────────────────────────────
+ *
+ * Es un `<details>`, que abre y cierra solo. El panel entero anda sin JS —es
+ * una decisión tomada, ver el comentario del selector en `page.tsx`— y un
+ * acordeón con estado sería la primera pieza que lo rompa, para nada.
+ *
+ * ── Por qué no se puede cerrar del todo ────────────────────────────────────
  *
  * Porque no se calcula de una bandera guardada sino del estado real, así que no
  * puede mentir: se va sola cuando los cinco están hechos, y si algo se rompe
@@ -27,6 +48,12 @@ import { type Paso, cuantosHechos, elQueSigue } from "@/lib/primeros-pasos";
 export default function PrimerosPasos({ pasos }: { pasos: Paso[] }) {
   const hechos = cuantosHechos(pasos);
   const sigue = elQueSigue(pasos);
+  /* El número original de cada paso se guarda ANTES de separarlos: es su
+     posición en el orden, y eso es información —no se puede hacer el 4 sin el
+     1—. Renumerar los que faltan diría que "Publicá" es el paso 3. */
+  const conNumero = pasos.map((p, i) => ({ ...p, numero: i + 1 }));
+  const losHechos = conNumero.filter((p) => p.hecho);
+  const losQueFaltan = conNumero.filter((p) => !p.hecho);
 
   return (
     <section className="rounded-3xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-white panel-oscuro:bg-gray-900 p-5 sm:p-6 shadow-sm">
@@ -55,8 +82,43 @@ export default function PrimerosPasos({ pasos }: { pasos: Paso[] }) {
         />
       </div>
 
-      <ol className="mt-4 space-y-1">
-        {pasos.map((p, i) => {
+      {/* ── Los hechos, plegados ────────────────────────────────────────── */}
+      {losHechos.length > 0 && (
+        <details className="group mt-4">
+          <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-2xl px-3 py-2 text-[12.5px] text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/60 [&::-webkit-details-marker]:hidden">
+            <span aria-hidden className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 panel-oscuro:bg-green-500/20 text-green-700 panel-oscuro:text-green-400">
+              <Check className="h-3 w-3" />
+            </span>
+            <span className="min-w-0 flex-1 truncate font-semibold">
+              {losHechos.length === 1 ? "1 paso hecho" : `${losHechos.length} pasos hechos`}
+              <span className="ml-1.5 font-normal opacity-80">
+                {losHechos.map((p) => p.titulo).join(" · ")}
+              </span>
+            </span>
+            <ChevronDown aria-hidden className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+          </summary>
+
+          <ol className="mt-1 space-y-0.5 pl-3">
+            {losHechos.map((p) => (
+              <li key={p.clave} className="flex gap-3 px-3 py-1.5">
+                <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 panel-oscuro:bg-green-500/20 text-[11px] font-black text-green-700 panel-oscuro:text-green-400">
+                  {p.numero}
+                </span>
+                <p className="min-w-0 text-[13.5px] font-bold text-gray-400 panel-oscuro:text-gray-500 line-through">
+                  {p.titulo}
+                  {/* Lo hecho se dice también con palabras: el tachado y el color
+                      no llegan a quien no distingue verde de gris. */}
+                  <span className="sr-only"> — hecho</span>
+                </p>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
+      {/* ── Los que faltan ──────────────────────────────────────────────── */}
+      <ol className={`space-y-1 ${losHechos.length > 0 ? "mt-1" : "mt-4"}`}>
+        {losQueFaltan.map((p) => {
           const esElQueSigue = sigue?.clave === p.clave;
           return (
             <li
@@ -65,39 +127,28 @@ export default function PrimerosPasos({ pasos }: { pasos: Paso[] }) {
                 esElQueSigue ? "bg-orange-50 panel-oscuro:bg-orange-500/10" : ""
               }`}
             >
-              {/* Un tilde cuando está hecho, el número cuando no. El número dice
-                  el orden, que es información: no se puede hacer el 3 sin el 1. */}
+              {/* El número dice el orden, que es información: no se puede hacer
+                  el 4 sin el 1. Por eso es el de la lista entera y no el de la
+                  lista de pendientes. */}
               <span
                 aria-hidden
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                  p.hecho
-                    ? "bg-green-100 panel-oscuro:bg-green-500/20 text-green-700 panel-oscuro:text-green-400"
-                    : esElQueSigue
-                      ? "bg-orange-600 text-white"
-                      : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400"
+                  esElQueSigue
+                    ? "bg-orange-600 text-white"
+                    : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400"
                 }`}
               >
-                {p.hecho ? <Check className="h-3 w-3" /> : i + 1}
+                {p.numero}
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className={`text-[13.5px] font-bold ${
-                  p.hecho
-                    ? "text-gray-400 panel-oscuro:text-gray-500 line-through"
-                    : "text-gray-900 panel-oscuro:text-gray-100"
-                }`}>
+                <p className="text-[13.5px] font-bold text-gray-900 panel-oscuro:text-gray-100">
                   {p.titulo}
-                  {/* Lo hecho se dice también con palabras: el tachado y el color
-                      no llegan a quien no distingue verde de gris. */}
-                  {p.hecho && <span className="sr-only"> — hecho</span>}
                 </p>
 
-                {/* El porqué sólo en los que faltan. En los hechos es ruido. */}
-                {!p.hecho && (
-                  <p className="mt-0.5 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                    {p.porque}
-                  </p>
-                )}
+                <p className="mt-0.5 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                  {p.porque}
+                </p>
 
                 {esElQueSigue && (
                   <Link

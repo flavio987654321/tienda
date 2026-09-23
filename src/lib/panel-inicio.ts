@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { comisionCongelada } from "@/lib/compra-digital";
-import { getArgentinaDayKey, inicioDiaArgentino } from "@/lib/fechas-comerciales";
+import { TOPES_DIGITALES } from "@/lib/planLimits";
+import { getArgentinaDayKey, inicioDiaArgentino, sumarDiasCalendario } from "@/lib/fechas-comerciales";
+
+/**
+ * Lo más que puede tener una orden de un embudo, con el doble de margen: el
+ * principal, sus bonos y sus upsells del plan más alto. Sale de los topes y no
+ * de un número escrito acá, igual que en la pantalla de gracias.
+ */
+const TECHO_DE_LINEAS = (1 + TOPES_DIGITALES.PRO.bonos + TOPES_DIGITALES.PRO.upsells) * 2;
 
 /**
  * Los números del panel de Productos Digitales.
@@ -51,7 +59,42 @@ export type NumerosDelPanel = {
   esperando: number;
   /** Archivos pagos que nadie bajó todavía y que TODAVÍA se pueden bajar. */
   sinBajar: number;
+  /**
+   * Cuánto salió en promedio cada venta, sobre lo que pagó la gente (no sobre
+   * el neto). Es el número que dice si el upsell está funcionando: sube cuando
+   * alguien agrega el extra, y no se mueve con la comisión.
+   *
+   * Sin ventas es 0, y la pantalla no lo muestra: un "ticket promedio $0" no
+   * es un promedio, es una división que no se puede hacer.
+   */
+  ticket: number;
+  /**
+   * Visitas a la página de venta en los últimos {@link DIAS_DE_VISITAS} días.
+   *
+   * ⚠️ `null` cuando el plan no las ve (Free). Y con `null` **no se consultan
+   * siquiera**: el candado se aplica antes de la consulta, no después. Un
+   * candado que sólo tapa el número en pantalla sigue pagando el viaje a la
+   * base y deja el dato al alcance de cualquiera que mire el HTML.
+   */
+  visitas: number | null;
 };
+
+/** Una venta reciente, para el renglón de actividad. */
+export type VentaReciente = {
+  ordenId: string;
+  /** El correo de quien compró. Es lo único que identifica a un comprador digital. */
+  email: string;
+  total: number;
+  /** El nombre del producto principal de esa compra, o null si ya no está. */
+  producto: string | null;
+  cuando: Date;
+};
+
+/** Sobre cuántos días se cuentan las visitas del panel. */
+export const DIAS_DE_VISITAS = 30;
+
+/** Cuántas ventas recientes se muestran. Suficiente para "algo está pasando". */
+export const CUANTAS_RECIENTES = 5;
 
 export type ProductoDelPanel = {
   id: string;
@@ -64,6 +107,8 @@ export type ProductoDelPanel = {
   paginaArmada: boolean;
   ventas: number;
   neto: number;
+  /** Visitas de los últimos 30 días. `null` si el plan no las ve. */
+  visitas: number | null;
 };
 
 export type FotoDelPanel = {
@@ -73,11 +118,22 @@ export type FotoDelPanel = {
   elegido: ProductoDelPanel | null;
   numerosDelElegido: NumerosDelPanel | null;
   cobroConectado: boolean;
+  /** Las últimas ventas, de toda la cuenta y de la más nueva a la más vieja. */
+  ultimas: VentaReciente[];
 };
 
 const VACIO: NumerosDelPanel = {
   ventas: 0, bruto: 0, neto: 0, ventasDelMes: 0, netoDelMes: 0, esperando: 0, sinBajar: 0,
+  ticket: 0, visitas: null,
 };
+
+/**
+ * El promedio de cada venta, redondeado. Cero ventas da cero y no infinito:
+ * es una división que no se puede hacer, y la pantalla no lo muestra.
+ */
+export function ticketPromedio(bruto: number, ventas: number): number {
+  return ventas > 0 ? Math.round(bruto / ventas) : 0;
+}
 
 /** Una línea vendida, agrupada por producto y por el porcentaje de esa orden. */
 export type FilaCruda = {
@@ -164,11 +220,22 @@ export function sumarPorTasa(
 export async function fotoDelPanel(
   storeId: string,
   productoElegido: string | null,
+  /**
+   * Si el plan de esta cuenta ve las visitas (Starter y Pro). Con `false` la
+   * consulta NI SE HACE y todos los `visitas` quedan en `null`.
+   *
+   * ⚠️ Es un parámetro y no una lectura de la suscripción acá adentro a
+   * propósito: esta función es de datos, no una puerta. Quien la llama ya
+   * sabe el plan, y así el candado se decide en un solo lugar
+   * (`puedeVer(tier, "visitas")`, el mismo que usa Estadísticas).
+   */
+  conVisitas = false,
 ): Promise<FotoDelPanel> {
   const ahora = new Date();
   const primeroDelMes = inicioDiaArgentino(`${getArgentinaDayKey().slice(0, 7)}-01`);
+  const desdeVisitas = sumarDiasCalendario(getArgentinaDayKey(), -DIAS_DE_VISITAS);
 
-  const [productos, crudas, porTasa, porTasaDelMes, esperando, sinBajar, tienda] = await Promise.all([
+  const [productos, crudas, porTasa, porTasaDelMes, esperando, sinBajar, tienda, visitas, recientes] = await Promise.all([
     /* ⚠️ TODOS los productos, borrados incluidos. Los hijos hacen falta para
        saber a qué principal suma cada línea, y los borrados también: una venta
        vieja de un producto que ya no está sigue siendo plata que entró. Se
@@ -227,6 +294,40 @@ export async function fotoDelPanel(
     }),
 
     prisma.store.findUnique({ where: { id: storeId }, select: { mpAccessToken: true } }),
+
+    /* ── Las visitas ────────────────────────────────────────────────────
+       Sólo el paso "pagina": es cuánta gente entró a la página de venta.
+       El paso "pagar" es el escalón siguiente del embudo y ése vive en
+       Estadísticas, que es lo que se cobra.
+
+       ⚠️ En Free esta consulta NO se hace. El candado va antes del viaje a
+       la base, no después de traer el dato: tapar el número en pantalla
+       sigue pagando la consulta y deja el dato en el HTML. */
+    conVisitas
+      ? prisma.digitalVisita.groupBy({
+          by: ["productId"],
+          where: { product: { storeId }, paso: "pagina", date: { gte: desdeVisitas } },
+          _sum: { count: true },
+        })
+      : Promise.resolve([]),
+
+    /* ── Las últimas ventas ─────────────────────────────────────────────
+       Para que el panel diga "algo está pasando" en vez de tres números.
+       Acotada a CUANTAS_RECIENTES: es un renglón de actividad, no la
+       pantalla de Ventas — para eso está Ventas, que sí pagina. */
+    prisma.order.findMany({
+      where: { storeId, status: "CONFIRMED" },
+      orderBy: { createdAt: "desc" },
+      take: CUANTAS_RECIENTES,
+      select: {
+        id: true, total: true, createdAt: true,
+        buyer: { select: { email: true } },
+        /* Las líneas, para poder nombrar el producto. El techo sale del
+           embudo más grande que permite un plan, con margen: una orden no
+           puede tener más líneas que eso. */
+        items: { select: { productId: true }, take: TECHO_DE_LINEAS },
+      },
+    }),
   ]);
 
   /* De cada producto al principal del que cuelga. Un principal se apunta a sí
@@ -242,6 +343,14 @@ export async function fotoDelPanel(
 
   const principales = productos.filter((p) => p.rolDigital === "PRINCIPAL" && p.deletedAt === null);
 
+  /* Las visitas de cada PRINCIPAL. Los hijos no tienen página propia —un bono
+     no es una dirección que alguien visite— así que no hay nada que sumarles. */
+  const visitasDe = new Map<string, number>();
+  for (const v of visitas) visitasDe.set(v.productId, v._sum.count ?? 0);
+  const visitasTotales = conVisitas
+    ? [...visitasDe.values()].reduce((s, n) => s + n, 0)
+    : null;
+
   const enPantalla: ProductoDelPanel[] = principales.map((p) => {
     const c = porProducto.get(p.id);
     return {
@@ -255,6 +364,26 @@ export async function fotoDelPanel(
       paginaArmada: p.paginaVenta != null,
       ventas: c?.ventas ?? 0,
       neto: c ? c.bruto - c.comision : 0,
+      /* ⚠️ `?? 0` y no `undefined`: sin filas la respuesta es CERO visitas, que
+         es un dato. `null` significa otra cosa —"tu plan no las ve"— y las dos
+         se dibujan distinto. */
+      visitas: conVisitas ? visitasDe.get(p.id) ?? 0 : null,
+    };
+  });
+
+  /* El nombre del producto de cada venta reciente: la línea cuyo producto es
+     un PRINCIPAL. Se busca por el mapa que ya está armado en vez de pedirle
+     los nombres a la base otra vez. */
+  const nombreDe = new Map(productos.map((p) => [p.id, p.name]));
+  const esPrincipal = new Set(principales.map((p) => p.id));
+  const ultimas: VentaReciente[] = recientes.map((o) => {
+    const linea = o.items.find((i) => esPrincipal.has(i.productId)) ?? o.items[0];
+    return {
+      ordenId: o.id,
+      email: o.buyer.email,
+      total: o.total,
+      producto: linea ? nombreDe.get(linea.productId) ?? null : null,
+      cuando: o.createdAt,
     };
   });
 
@@ -277,6 +406,8 @@ export async function fotoDelPanel(
           netoDelMes: m.bruto - m.comision,
           esperando: 0,
           sinBajar: 0,
+          ticket: ticketPromedio(c.bruto, c.ventas),
+          visitas: elegido.visitas,
         };
       })()
     : null;
@@ -291,10 +422,13 @@ export async function fotoDelPanel(
       netoDelMes: totalDelMes.bruto - totalDelMes.comision,
       esperando,
       sinBajar,
+      ticket: ticketPromedio(totalGeneral.bruto, totalGeneral.ventas),
+      visitas: visitasTotales,
     },
     productos: enPantalla,
     elegido,
     numerosDelElegido,
     cobroConectado: tienda?.mpAccessToken != null,
+    ultimas,
   };
 }

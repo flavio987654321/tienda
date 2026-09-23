@@ -152,11 +152,37 @@ check("PAN-M",
   "los productos borrados cuentan para la plata y no para las tarjetas");
 
 /* Una consulta por producto en una cuenta con cinco productos son cinco viajes a
-   la base por cada visita al panel. */
+   la base por cada visita al panel.
+
+   ⚠️ El techo se subió de 7 a 9 el 22/09/26, al agregar las visitas y las
+   últimas ventas. Lo que este chequeo cuida NO es el número —ese va a seguir
+   subiendo cada vez que el panel muestre algo más— sino que las consultas sean
+   una cantidad FIJA y en paralelo: todas adentro del mismo `Promise.all`, y
+   ninguna adentro de un bucle. Con cinco productos tienen que ser las mismas
+   nueve que con uno. */
 check("PAN-N",
-  (lib.match(/prisma\.\w+\.(findMany|groupBy|count|findUnique)/g) ?? []).length <= 7 &&
-  !/for \(const p of productos\)[\s\S]{0,200}await prisma/.test(lib),
-  "no hay una consulta por producto");
+  (lib.match(/prisma\.\w+\.(findMany|groupBy|count|findUnique)/g) ?? []).length <= 9 &&
+  !/for \(const p of productos\)[\s\S]{0,200}await prisma/.test(lib) &&
+  !/\.map\([\s\S]{0,120}await prisma/.test(lib),
+  "no hay una consulta por producto: son una cantidad fija y en paralelo");
+
+/* ⚠️ EL CANDADO DE LAS VISITAS VA ANTES DE LA CONSULTA, no después. Tapar el
+   número en pantalla igual paga el viaje a la base y deja el dato en el HTML
+   de una cuenta que no lo compró. Es el mismo patrón que usa Sasha para no
+   mirar lo que el plan no ve. */
+check("VIS-A",
+  /conVisitas[\s\S]{0,80}\? prisma\.digitalVisita\.groupBy/.test(lib) &&
+  /: Promise\.resolve\(\[\]\)/.test(lib) &&
+  /puedeVer\(tier, "visitas"\)/.test(pagina) &&
+  /fotoDelPanel\(store\.id, p \?\? null, veVisitas\)/.test(pagina),
+  "en Free las visitas ni se consultan, y quien decide es la misma función que Estadísticas");
+
+/* `null` es "tu plan no las ve" y un cero es un dato. Dibujarlos igual esconde
+   algo que ya se sabe, o promete algo que no se midió. */
+check("VIS-B",
+  /numeros\.visitas === null \?/.test(pagina) && /Con Starter →/.test(pagina) &&
+  /numeros\.visitas > 0 \?/.test(pagina),
+  "sin plan va el candado, con plan va el número, y la conversión sólo si hubo visitas");
 
 /* ⚠️ Es una función de datos, no una puerta: quien la llama tiene que traer el
    `storeId` ya verificado. Queda escrito para que nadie la use de otra forma. */
