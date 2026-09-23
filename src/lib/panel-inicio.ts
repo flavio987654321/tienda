@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { comisionCongelada } from "@/lib/compra-digital";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
-import { getArgentinaDayKey, inicioDiaArgentino, sumarDiasCalendario } from "@/lib/fechas-comerciales";
+import { getArgentinaDayKey, inicioDiaArgentino } from "@/lib/fechas-comerciales";
 
 /**
  * Lo más que puede tener una orden de un embudo, con el doble de margen: el
@@ -69,7 +69,14 @@ export type NumerosDelPanel = {
    */
   ticket: number;
   /**
-   * Visitas a la página de venta en los últimos {@link DIAS_DE_VISITAS} días.
+   * Visitas a la página de venta **en el mes en curso**.
+   *
+   * ⚠️ EL MISMO MES QUE `ventasDelMes`, y eso no es una preferencia: la
+   * pantalla divide una por la otra para sacar la conversión. Estuvo un rato
+   * contra los últimos 30 días mientras las ventas eran las de SIEMPRE, y esa
+   * división da cualquier cosa — una cuenta con un año de ventas y diez
+   * visitas este mes mostraba 1200 %. Dos números que se dividen tienen que
+   * medir el mismo período.
    *
    * ⚠️ `null` cuando el plan no las ve (Free). Y con `null` **no se consultan
    * siquiera**: el candado se aplica antes de la consulta, no después. Un
@@ -90,9 +97,6 @@ export type VentaReciente = {
   cuando: Date;
 };
 
-/** Sobre cuántos días se cuentan las visitas del panel. */
-export const DIAS_DE_VISITAS = 30;
-
 /** Cuántas ventas recientes se muestran. Suficiente para "algo está pasando". */
 export const CUANTAS_RECIENTES = 5;
 
@@ -107,7 +111,7 @@ export type ProductoDelPanel = {
   paginaArmada: boolean;
   ventas: number;
   neto: number;
-  /** Visitas de los últimos 30 días. `null` si el plan no las ve. */
+  /** Visitas del mes en curso, el mismo que `ventasDelMes`. `null` sin plan. */
   visitas: number | null;
 };
 
@@ -232,8 +236,12 @@ export async function fotoDelPanel(
   conVisitas = false,
 ): Promise<FotoDelPanel> {
   const ahora = new Date();
-  const primeroDelMes = inicioDiaArgentino(`${getArgentinaDayKey().slice(0, 7)}-01`);
-  const desdeVisitas = sumarDiasCalendario(getArgentinaDayKey(), -DIAS_DE_VISITAS);
+  /* El mismo mes, en los dos formatos que hacen falta: las órdenes se filtran
+     por fecha y las visitas por su clave de día ("2026-09-01"). Sale de la
+     MISMA cuenta para que "ventas del mes" y "visitas del mes" no puedan
+     medir períodos distintos — que es justo lo que se divide en pantalla. */
+  const mesEnCurso = `${getArgentinaDayKey().slice(0, 7)}-01`;
+  const primeroDelMes = inicioDiaArgentino(mesEnCurso);
 
   const [productos, crudas, porTasa, porTasaDelMes, esperando, sinBajar, tienda, visitas, recientes] = await Promise.all([
     /* ⚠️ TODOS los productos, borrados incluidos. Los hijos hacen falta para
@@ -306,7 +314,7 @@ export async function fotoDelPanel(
     conVisitas
       ? prisma.digitalVisita.groupBy({
           by: ["productId"],
-          where: { product: { storeId }, paso: "pagina", date: { gte: desdeVisitas } },
+          where: { product: { storeId }, paso: "pagina", date: { gte: mesEnCurso } },
           _sum: { count: true },
         })
       : Promise.resolve([]),

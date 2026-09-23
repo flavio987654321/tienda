@@ -7,7 +7,7 @@ import {
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { primerosPasos, terminado } from "@/lib/primeros-pasos";
-import { fotoDelPanel, DIAS_DE_VISITAS, type NumerosDelPanel, type ProductoDelPanel, type VentaReciente } from "@/lib/panel-inicio";
+import { fotoDelPanel, type NumerosDelPanel, type ProductoDelPanel, type VentaReciente } from "@/lib/panel-inicio";
 import { puedeVer } from "@/lib/estadisticas-digitales";
 import { haceCuanto } from "@/lib/carritos-digitales";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
@@ -27,15 +27,27 @@ import Direcciones from "./Direcciones";
  * anda**. Por eso arriba hay un selector —Todos, o un producto— y todo lo de
  * abajo cambia con él.
  *
- * Y en la vista de un producto está lo que esta pantalla venía a resolver de
- * verdad: **su dirección y su dominio, para copiar**. Esa es la operación real —
- * se pega en un anuncio, en un mensaje, en una historia.
+ * ── La dirección, arriba y para todos ─────────────────────────────────────
+ *
+ * Es lo que esta pantalla venía a resolver de verdad: **la dirección y el
+ * dominio, para copiar**. Esa es la operación real — se pega en un anuncio, en
+ * un mensaje, en una historia.
+ *
+ * ⚠️ Estuvo sólo en la vista de un producto, y eso la dejaba escondida justo
+ * para quien más la necesita: a esa vista se llega por el selector, que con UN
+ * producto ni se dibuja. O sea que quien recién empieza no veía su link en
+ * ninguna parte del panel. Ahora está arriba de la columna principal siempre
+ * que haya una sola dirección posible —el producto elegido, o el único que
+ * hay—; con varios productos y sin elegir no existe "la" dirección, así que
+ * cada una vive en la tarjeta de su producto.
  *
  * ── Los pasos se van al TERMINARLOS, no al empezarlos ──────────────────────
  *
  * Con la cuenta vacía son la pantalla entera. Con productos siguen arriba de la
- * columna principal, enteros, **hasta que los cinco estén hechos**. Ahí
- * desaparecen para siempre.
+ * columna principal **hasta que los cinco estén hechos**. Ahí desaparecen para
+ * siempre. Los que ya se hicieron se pliegan en un renglón —ver
+ * `PrimerosPasos`—, así la tarjeta encoge a medida que la persona avanza en
+ * vez de ocupar lo mismo el primer día que el cuarto.
  *
  * ⚠️ Acá hubo un error y conviene que quede escrito. La objeción original era
  * correcta —el que ya vendió cuarenta veces no tiene por qué seguir viendo una
@@ -338,11 +350,22 @@ export default async function DigitalesPage({
                 </Link>
               ) : (
                 <Numero
-                  titulo={`Visitas · ${DIAS_DE_VISITAS} días`}
+                  titulo="Visitas este mes"
                   valor={String(numeros.visitas)}
-                  /* La conversión sólo cuando hay de qué: "0 % de 0 visitas" no
-                     es una conversión, es una división imposible dibujada. */
-                  pie={numeros.visitas > 0 ? `${conversion(numeros.ventas, numeros.visitas)} compró` : undefined}
+                  /* ⚠️ `ventasDelMes` contra visitas DEL MISMO MES. Con las
+                     ventas de siempre arriba, una cuenta con un año vendido y
+                     diez visitas este mes mostraba 1200 %.
+
+                     Y sólo cuando el número significa algo: sin visitas no hay
+                     conversión que calcular, y con más ventas que visitas
+                     tampoco —eso pasa cuando alguien compra por el link
+                     directo al pago sin pasar por la página, y dibujar 300 %
+                     parecería un error nuestro—. */
+                  pie={
+                    numeros.visitas > 0 && numeros.ventasDelMes <= numeros.visitas
+                      ? `${conversion(numeros.ventasDelMes, numeros.visitas)} compró`
+                      : undefined
+                  }
                 />
               )}
 

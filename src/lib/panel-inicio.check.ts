@@ -181,8 +181,19 @@ check("VIS-A",
    algo que ya se sabe, o promete algo que no se midió. */
 check("VIS-B",
   /numeros\.visitas === null \?/.test(pagina) && /Con Starter →/.test(pagina) &&
-  /numeros\.visitas > 0 \?/.test(pagina),
-  "sin plan va el candado, con plan va el número, y la conversión sólo si hubo visitas");
+  /numeros\.visitas > 0 && numeros\.ventasDelMes <= numeros\.visitas/.test(pagina) &&
+  /conversion\(numeros\.ventasDelMes, numeros\.visitas\)/.test(pagina),
+  "sin plan va el candado, con plan va el número, y la conversión sólo si el número significa algo");
+
+/* ⚠️ LOS DOS NÚMEROS QUE SE DIVIDEN MIDEN EL MISMO MES. Estuvo con las ventas
+   de SIEMPRE arriba y las visitas de los últimos 30 días abajo: una cuenta con
+   un año vendido y diez visitas este mes mostraba 1200 % de conversión. */
+check("VIS-C",
+  /const mesEnCurso = `\$\{getArgentinaDayKey\(\)\.slice\(0, 7\)\}-01`;/.test(lib) &&
+  /const primeroDelMes = inicioDiaArgentino\(mesEnCurso\);/.test(lib) &&
+  /date: \{ gte: mesEnCurso \}/.test(lib) &&
+  !/sumarDiasCalendario/.test(lib),
+  "las visitas y las ventas del mes salen de la MISMA fecha: lo que se divide tiene que medir el mismo período");
 
 /* ⚠️ Es una función de datos, no una puerta: quien la llama tiene que traer el
    `storeId` ya verificado. Queda escrito para que nadie la use de otra forma. */
