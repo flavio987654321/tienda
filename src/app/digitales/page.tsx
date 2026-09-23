@@ -9,12 +9,13 @@ import { prisma } from "@/lib/prisma";
 import { primerosPasos, terminado } from "@/lib/primeros-pasos";
 import { fotoDelPanel, type NumerosDelPanel, type ProductoDelPanel, type VentaReciente } from "@/lib/panel-inicio";
 import { puedeVer } from "@/lib/estadisticas-digitales";
-import { cuantosMirando } from "@/lib/mirando-ahora-servidor";
+import { mirandoAhora, permisoDelPanel } from "@/lib/mirando-ahora-servidor";
 import { haceCuanto } from "@/lib/carritos-digitales";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import PrimerosPasos from "./PrimerosPasos";
 import Direcciones from "./Direcciones";
+import MirandoAhora from "./MirandoAhora";
 
 /**
  * El panel.
@@ -137,11 +138,8 @@ export default async function DigitalesPage({
      `null` es "no se pudo averiguar" (Redis caído o sin configurar) y
      entonces no se dibuja nada: un cero inventado diría "no hay nadie", que
      es una afirmación distinta de "no sé". Ver `lib/mirando-ahora`. */
-  const mirando = veVisitas && foto
-    ? await cuantosMirando(
-        (foto.elegido ? [foto.elegido] : foto.productos).map((x) => x.id),
-      )
-    : null;
+  const idsQueMira = foto ? (foto.elegido ? [foto.elegido] : foto.productos).map((x) => x.id) : [];
+  const mirando = veVisitas && foto ? await mirandoAhora(idsQueMira) : null;
 
   /* ⚠️ Un `?p=` que no es de esta persona no existe para `fotoDelPanel` —sólo
      mira los productos de su tienda—, así que cae solo en la vista de todos.
@@ -168,6 +166,12 @@ export default async function DigitalesPage({
      React avisa que el texto no coincide. Es la misma decisión que en
      Carritos, y por el mismo motivo. */
   const ahora = new Date();
+  /* El permiso firmado con el que el cartelito vuelve a preguntar solo cada
+     veinte segundos, sin pedir la sesión ni tocar la base en cada pregunta
+     (ver `mirando-ahora-servidor`). Sin secreto no hay permiso, y entonces no
+     se dibuja: un número congelado que dice "ahora" es peor que ninguno —y
+     sin secreto tampoco se cuenta a nadie, así que siempre sería cero—. */
+  const permisoDeMirando = mirando ? permisoDelPanel(idsQueMira, ahora.getTime()) : null;
   /* El que se muestra arriba, para copiar: el elegido, o —con uno solo— ese.
      Con varios y sin elegir no hay UNA dirección, así que no se muestra
      ninguna y las direcciones viven en las tarjetas de cada producto. */
@@ -240,23 +244,29 @@ export default async function DigitalesPage({
 
         <div className="flex shrink-0 items-center gap-2">
           {/* ── El puntito verde ──────────────────────────────────────────
-              ⚠️ Sólo cuando hay ALGUIEN. Un "0 mirando ahora" fijo en una
-              cuenta nueva es un cartel triste sobre algo que ya se sabe, y
-              además no es información: nadie necesita que le confirmen cada
-              vez que entra al panel que su página está vacía. Cuando hay
-              alguien, en cambio, es la única cosa de esta pantalla que pasa
-              en este momento.
+              Se dibuja SIEMPRE que se haya podido averiguar, con gente o sin
+              gente: con gente verde y latiendo, sin gente gris y quieto.
+              (Antes, sin gente no se dibujaba nada; un cartelito que aparece
+              y desaparece solo se lee como una falla.)
 
-              Y `null` —no se pudo averiguar— tampoco dibuja nada: no es cero. */}
-          {mirando !== null && mirando > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 panel-oscuro:bg-emerald-500/15 px-2.5 py-1.5 text-[12px] font-bold text-emerald-700 panel-oscuro:text-emerald-400">
-              {/* `shrink-0`: es un punto y tiene que seguir siendo redondo.
-                  Sin eso, en un flex apretado se achica a un óvalo. */}
-              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-              {/* "mirando ahora" sirve para uno y para muchos, así que no
-                  lleva plural: "1 mirando ahora" y "3 mirando ahora". */}
-              <span className="tabular-nums">{mirando}</span> mirando ahora
-            </span>
+              ⚠️ Lo único que no se dibuja es "no sé": `null` —Redis caído, o
+              Free, que ni pregunta— no es cero. Y el número lo refresca el
+              navegador, porque uno dibujado acá quedaría congelado en el
+              momento en que se cargó la pantalla. Ver `MirandoAhora`. */}
+          {mirando !== null && permisoDeMirando !== null && (
+            <MirandoAhora
+              /* ⚠️ El permiso como `key`: cuando vence, el componente lo pide
+                 recargando la pantalla, y al llegar uno nuevo tiene que
+                 empezar de cero con él. Sin la `key` seguiría usando el viejo
+                 para siempre. */
+              key={permisoDeMirando}
+              permiso={permisoDeMirando}
+              inicial={mirando.total}
+              detalleInicial={mirando.porProducto}
+              /* Sólo los que se están contando: con un producto elegido, el
+                 detalle sería el mismo número escrito dos veces. */
+              productos={(elegido ? [elegido] : productos).map((x) => ({ id: x.id, nombre: x.nombre }))}
+            />
           )}
 
           <Link

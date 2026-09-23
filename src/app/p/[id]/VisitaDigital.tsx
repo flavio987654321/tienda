@@ -32,7 +32,7 @@ export default function VisitaDigital({ paso, productoId, apagado = false }: {
   /* ── El latido del puntito verde ──────────────────────────────────────
      "Sigo acá". Va por su propia ruta, que no toca la base y no guarda nada
      (ver `lib/mirando-ahora`): sólo suma una huella anónima a un contador de
-     Redis que se borra solo a los tres minutos.
+     Redis que se borra solo enseguida.
 
      ⚠️ SÓLO MIENTRAS LA PESTAÑA ESTÁ A LA VISTA. Sin eso, una pestaña
      olvidada en el fondo seguiría latiendo toda la tarde: el panel diría que

@@ -13,7 +13,7 @@ const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 /**
  * Cuántos latidos por IP y por minuto se aceptan.
  *
- * El latido va cada 45 segundos, así que uno solo manda ~2 por minuto. El
+ * El latido va cada 20 segundos, así que uno solo manda 3 por minuto. El
  * techo deja lugar a una casa con varios teléfonos detrás de la misma IP —y
  * en el celular, a cientos que comparten IP por CGNAT— sin darle a nadie una
  * forma gratis de inflar el cartelito ni de hacernos escribir en Redis todo
@@ -29,18 +29,18 @@ const LATIDOS_POR_MINUTO = 40;
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Es el latido del puntito verde del panel. Lo único que hace es sumar una
- * huella anónima a un contador de Redis que se borra solo a los tres minutos
+ * huella anónima a un contador de Redis que se borra solo enseguida
  * (ver `lib/mirando-ahora`): no hay tabla, no hay fila por visita, no queda
  * registro de nadie y no se guarda ninguna hora.
  *
  * ⚠️ Va SEPARADA de `/api/digitales/visita/[id]` a propósito, y no es por
  * orden. Aquélla escribe en la base y tiene un tope por IP pensado para UNA
- * visita por día; un latido cada 45 segundos se comería ese tope en minutos
+ * visita por día; un latido cada 20 segundos se comería ese tope en minutos
  * y dejaría de contarse la visita de verdad — que es la que alimenta las
  * estadísticas. Son dos cosas con vidas distintas y por eso son dos rutas.
  *
  * ⚠️ Y NO verifica que el producto exista ni que esté publicado. A propósito:
- * eso es una consulta a la base cada 45 segundos por cada persona mirando,
+ * eso es una consulta a la base cada 20 segundos por cada persona mirando,
  * justo lo que esta ruta existe para evitar. Lo peor que consigue quien
  * inventa un id es escribir en una clave de Redis que nadie lee y que se
  * borra sola; el panel sólo cuenta las claves de SUS productos.
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
      cartelito en una broma.
 
      Se mira la COOKIE y nada más: preguntarle a Supabase quién es costaría un
-     viaje cada 45 segundos por cada persona mirando, que es justo lo que esta
+     viaje cada 20 segundos por cada persona mirando, que es justo lo que esta
      ruta existe para evitar. Y alcanza, porque quien COMPRA no tiene cuenta:
      una cookie de sesión en esta página es, casi siempre, su dueña.
 
