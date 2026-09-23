@@ -14,10 +14,12 @@ import {
   PRO_MAX_AFFILIATES,
   planesDelEcosistema,
   tierDelMismoEcosistema,
+  ecosistemaDeRol,
   COMISION_DIGITAL,
   type DefinicionPlan,
 } from "@/lib/planLimits";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { despublicarLasDeMas } from "@/lib/caida-a-free";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
 
@@ -83,6 +85,34 @@ export async function PATCH(
     );
   }
 
+  // ⚠️ EN DIGITALES EL PLAN NO SE VENCE NI SE CANCELA: SE BAJA A FREE.
+  //
+  // Y no es una diferencia de nombre, son dos hechos del sistema:
+  //
+  //   1. El panel de Productos Digitales decide qué funciones prender mirando
+  //      SÓLO el tier (`digitales/layout`), sin el estado. Con el tier en Pro,
+  //      la cuenta tiene Pro, diga lo que diga el estado.
+  //   2. El cron revisa las digitales en ACTIVE, TRIAL o GRACE. Una que quede
+  //      guardada en EXPIRED o en CANCELLED no entra en esa consulta, así que
+  //      no la mira nunca más.
+  //
+  // Juntas dan lo mismo en los dos casos: el plan más caro, gratis, para
+  // siempre, sin nada en el sistema que lo corrija. Y ninguno de los dos
+  // estados lo produce nada de digitales —ni el cron, que en vez de dejarlas
+  // vencidas las baja a Free; ni el pago; ni cerrar la cuenta, que ni toca la
+  // suscripción—: sólo podían llegar desde estos botones.
+  //
+  // Lo que el admin quiere hacer con ellos —sacarle el plan pago— es bajarla a
+  // Free, y eso sí está: apaga las funciones, sube la comisión, apaga las
+  // páginas de más y deja la cuenta donde el cron la sigue viendo.
+  const ESTADOS_QUE_ESTACIONAN = ["EXPIRED", "CANCELLED"];
+  if (ecosistemaDeRol(sub.role) === "DIGITAL" && ESTADOS_QUE_ESTACIONAN.includes(status)) {
+    return NextResponse.json(
+      { error: "En Productos Digitales el plan no se vence ni se cancela desde acá: se baja a Free. Dejarla así le deja el plan pago prendido y sin nada que lo corrija." },
+      { status: 400 }
+    );
+  }
+
   const data: Record<string, unknown> = {};
 
   if (status && VALID_STATUSES.includes(status)) {
@@ -143,7 +173,21 @@ export async function PATCH(
   const activating = data.status === "ACTIVE";
   const rebilling = data.plan !== undefined && (data.status ?? sub.status) === "ACTIVE";
 
-  if (activating || rebilling) {
+  // ⚠️ SUBIR DESDE FREE ES UNA ACTIVACIÓN, aunque el pedido no diga "activar".
+  //
+  // Free no tiene período: `caidaAFree` lo deja en null a propósito. Entonces
+  // darle Starter o Pro escribiendo sólo el tier dejaba la cuenta con un plan
+  // pago y `currentPeriodEnd` en null, y eso NO es un estado raro pero
+  // inofensivo: `getSubscriptionStatus` lo lee como EXPIRED —un plan que se
+  // cobra y no tiene vencimiento no lo pudo producir ningún pago— y esa misma
+  // noche el cron la devolvía a Free.
+  //
+  // O sea: el admin le daba Pro, la persona lo veía, y al día siguiente ya no
+  // lo tenía. Sin ningún error en el medio.
+  const subeDesdeFree =
+    destino?.ecosistema === "DIGITAL" && sub.tier === "FREE" && destino.tier !== "FREE";
+
+  if (activating || rebilling || subeDesdeFree) {
     Object.assign(data, periodFor(effectivePlan));
     data.status = "ACTIVE";
   }
@@ -173,6 +217,34 @@ export async function PATCH(
 
   const updated = await prisma.subscription.update({ where: { userId }, data });
 
+  /* ══════════════════════════════════════════════════════════════════════
+     LAS PÁGINAS DE MÁS SE APAGAN, IGUAL QUE CUANDO CAE SOLA
+     ══════════════════════════════════════════════════════════════════════
+
+     Bajar de plan a mano dejaba publicadas las páginas que el plan nuevo ya no
+     permite: una cuenta que tenía Pro con cinco páginas quedaba con las cinco
+     prendidas en Free. Y la fila quedaba ACTIVE/FREE, que es justo lo que el
+     cron NO vuelve a mirar —él sólo agarra las que se le vencen—, así que eso
+     no se arreglaba nunca. Era el plan de arriba gratis para siempre.
+
+     Se llama a la MISMA función que usan el cron y la reapertura, no a una
+     copia: lo que se apaga primero (lo que menos vendió) y lo que se respeta
+     es una decisión que ya está tomada en `caida-a-free`.
+
+     ⚠️ Se corre SIEMPRE que se escriba un tier digital, y no sólo cuando baja.
+     Es idempotente —si nada pasa el tope, no toca nada— y así se arregla sola
+     la cuenta que quedó a medias por un error en el medio. Con un `if` de
+     "sólo cuando baja", reintentar después de una falla ya no hacía nada: el
+     tier ya estaba escrito y el pedido dejaba de verse como una bajada. */
+  let apagadas: string[] = [];
+  if (destino?.ecosistema === "DIGITAL") {
+    const tienda = await prisma.store.findUnique({ where: { ownerId: userId }, select: { id: true } });
+    if (tienda) {
+      const r = await despublicarLasDeMas(tienda.id, destino.tier as TierDigital);
+      apagadas = r.despublicadas.map((d) => d.name);
+    }
+  }
+
   // Avisarle a la dueña que le cambiaron el plan. Es un cambio que le hicimos
   // nosotros a su cuenta y que le cambia lo que puede hacer: sin aviso, se entera
   // recién cuando algo deja de funcionarle. Solo cuando el tier cambia de verdad
@@ -196,12 +268,25 @@ export async function PATCH(
 
     await createNotification({
       userId,
-      type: subio ? "PLAN_UPGRADED" : "PLAN_DOWNGRADED",
+      /* Bajar en digitales usa el MISMO tipo que cuando la cuenta se cae sola
+         (el cron): para la persona es lo mismo que le pasó, y si algún día se
+         filtran los avisos por tipo, los de este producto tienen que quedar
+         juntos y no repartidos entre dos nombres para el mismo hecho. */
+      type: subio ? "PLAN_UPGRADED" : esDigital ? "DIGITAL_DOWNGRADE" : "PLAN_DOWNGRADED",
       title: `Tu plan pasó a ${destino.label}`,
       body: esDigital
         ? subio
           ? `Ya lo tenés activo. La comisión de tus ventas pasa a ser del ${comision}%.`
-          : `Tus productos, tus ventas y tus clientes siguen donde estaban. La comisión de tus ventas pasa a ser del ${comision}%, y las funciones del plan anterior quedan apagadas.`
+          /* ⚠️ Si se le apagaron páginas hay que NOMBRARLAS, igual que hace el
+             cron cuando la cuenta se cae sola. Enterarse de que tu página de
+             venta dejó de estar publicada porque dejaron de entrarte ventas es
+             la peor forma posible de enterarse; y con el nombre, la persona
+             sabe cuál prender de nuevo sin tener que adivinar. */
+          : `Tus productos, tus ventas y tus clientes siguen donde estaban. La comisión de tus ventas pasa a ser del ${comision}%, y las funciones del plan anterior quedan apagadas.${
+              apagadas.length > 0
+                ? ` Pasaron a borrador ${apagadas.length === 1 ? "esta página" : "estas páginas"} de venta: ${apagadas.join(", ")}. No se borró nada; podés cambiar cuál queda publicada desde Productos.`
+                : ""
+            }`
         : destino.tier === "PREMIUM"
           ? "Ya tenés cupones, promociones y afiliados sin límite, notificaciones, dominio propio y tu tienda instalable como app."
           : `Tienda Pro incluye hasta ${PRO_MAX_ACTIVE_COUPONS} cupones, ${PRO_MAX_LIVE_PROMOTIONS} promociones y ${PRO_MAX_AFFILIATES} afiliados. Lo que ya tenías creado sigue funcionando.`,

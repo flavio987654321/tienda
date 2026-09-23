@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power, Lock, Palette,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power, Lock, Palette, BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -16,6 +16,7 @@ const NAV_GROUPS = [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { href: "/admin/usuarios", label: "Usuarios", icon: Users },
       { href: "/admin/tiendas", label: "Tiendas", icon: Store },
+      { href: "/admin/digitales", label: "Digitales", icon: BookOpen },
     ],
   },
   {

@@ -153,7 +153,7 @@ function ConfirmacionPlan({ etiqueta, activa, guardando, onCancelar, onConfirmar
   );
 }
 
-export default function UsuariosAdmin({ users: initial, filter: activeFilter }: { users: User[]; filter: string }) {
+export default function UsuariosAdmin({ users: initial, filter: activeFilter, busqueda = "" }: { users: User[]; filter: string; busqueda?: string }) {
   const baseUsers = useMemo(() => applyUserFilter(initial, activeFilter), [initial, activeFilter]);
   const [users, setUsers] = useState(baseUsers);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- resincroniza la lista local cuando cambia el filtro/listado del servidor
@@ -172,7 +172,10 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
     topesPro: { cupones: number; promociones: number; afiliados: number };
   } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  /* Arranca con lo que venga en la dirección: la pantalla de Productos
+     Digitales enlaza a una cuenta puntual, y sin esto el link dejaba al admin
+     en una lista para buscar a mano la fila que acababa de tocar. */
+  const [query, setQuery] = useState(busqueda);
   const [deleteModal, setDeleteModal] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -662,6 +665,22 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
           );
         }
 
+        /* ⚠️ En digitales el plan no se vence ni se cancela: se baja a Free.
+           El panel de Productos Digitales prende sus funciones mirando SÓLO el
+           tier, sin el estado, y el cron sólo revisa las que están en ACTIVE,
+           TRIAL o GRACE. Una cuenta que quede guardada en vencida o cancelada
+           con el tier en Pro se queda con Pro gratis para siempre y no hay
+           nada que la corrija. Lo que estos botones querían hacer lo hace el
+           botón "Free" de acá arriba, y bien.
+           El backend también los rechaza; acá se sacan para no ofrecer algo
+           que va a fallar. */
+        const acciones = esDigital
+          ? statusActions.filter((a) => {
+              const s = (a.body as { status?: string }).status;
+              return s !== "CANCELLED" && s !== "EXPIRED";
+            })
+          : statusActions;
+
         return (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setSubModal(null); setPendingPlan(null); }}>
             <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm overflow-y-auto max-h-[92vh]" onClick={e => e.stopPropagation()}>
@@ -816,7 +835,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
               {/* Acciones de estado (contextuales) */}
               <div className="space-y-2">
                 <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Acciones</p>
-                {statusActions.map(({ label, body, color, disabled, disabledReason }) => (
+                {acciones.map(({ label, body, color, disabled, disabledReason }) => (
                   <button
                     key={label}
                     onClick={() => changeSub(subModal.id, body)}

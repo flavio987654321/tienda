@@ -20,6 +20,7 @@
 
 import { readFileSync } from "node:fs";
 import { PLANES, planDe, ecosistemaDeRol, tierDelMismoEcosistema, planesDelEcosistema } from "./planLimits";
+import { getSubscriptionStatus } from "./subscription";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -213,6 +214,57 @@ chequear("bajar a Free digital usa la misma caída que el cron",
   /destino\?\.ecosistema === "DIGITAL"/.test(adminSub) &&
   /Object\.assign\(data, caidaAFree\(\)\)/.test(adminSub) &&
   /data\.freeDesde = null/.test(adminSub));
+
+/* ⚠️ SUBIR DESDE FREE TIENE QUE ESCRIBIR EL PERÍODO. Free no tiene vencimiento
+   (`caidaAFree` lo deja en null), así que darle Starter o Pro escribiendo sólo
+   el tier deja un plan pago sin fecha. Y eso no queda raro pero inofensivo:
+   esta línea de abajo prueba que el sistema lo lee como VENCIDO, o sea que el
+   cron lo devolvía a Free esa misma noche. El admin le daba Pro, la persona lo
+   veía, y al día siguiente ya no lo tenía. */
+chequear("un plan digital pago sin vencimiento se lee como vencido (por eso hace falta el período)",
+  getSubscriptionStatus({
+    status: "ACTIVE", role: "DIGITAL", tier: "PRO",
+    trialEndsAt: new Date("2026-01-01"), currentPeriodEnd: null, gracePeriodEndsAt: null,
+  }) === "EXPIRED");
+
+chequear("subir desde Free cuenta como activación y escribe el período",
+  /const subeDesdeFree =/.test(adminSub) &&
+  /if \(activating \|\| rebilling \|\| subeDesdeFree\)/.test(adminSub));
+
+/* ⚠️ Y BAJAR TIENE QUE APAGAR LAS PÁGINAS DE MÁS. Una cuenta que tenía Pro con
+   cinco páginas publicadas y pasa a Free se quedaba con las cinco prendidas, y
+   la fila terminaba en ACTIVE/FREE, que es lo que el cron NO vuelve a mirar:
+   el plan de arriba, gratis, para siempre. Se llama a la misma función que el
+   cron y la reapertura, no a una copia. */
+chequear("al escribir un tier digital se apagan las páginas que pasan el tope",
+  /despublicarLasDeMas\(tienda\.id, destino\.tier as TierDigital\)/.test(adminSub));
+
+/* Y se corre siempre que se escriba un tier digital, no sólo "cuando baja": es
+   idempotente, y con la condición de bajada un reintento después de una falla
+   ya no hacía nada —el tier ya estaba escrito, así que el pedido dejaba de
+   parecer una bajada y la cuenta quedaba a medias para siempre—. */
+/* (`\r?\n`: la copia de trabajo tiene finales de línea mezclados.) */
+chequear("se corre sin condición de bajada, para que un reintento la arregle",
+  /if \(destino\?\.ecosistema === "DIGITAL"\) \{\r?\n\s+const tienda = await prisma\.store\.findUnique/.test(adminSub));
+
+/* ⚠️ Y EN DIGITALES EL PLAN NO SE VENCE NI SE CANCELA: SE BAJA A FREE. Son dos
+   hechos que se suman: el panel de Productos Digitales prende sus funciones
+   mirando sólo el tier —sin el estado—, y el cron sólo revisa las digitales en
+   ACTIVE, TRIAL o GRACE. Una que quede guardada en vencida o cancelada con el
+   tier en Pro se queda con Pro gratis para siempre y no hay nada que la
+   corrija. Ninguno de los dos estados lo produce nada de digitales: sólo
+   podían llegar desde estos botones. */
+chequear("una suscripción digital no se puede dejar vencida ni cancelada",
+  /const ESTADOS_QUE_ESTACIONAN = \["EXPIRED", "CANCELLED"\]/.test(adminSub) &&
+  /ecosistemaDeRol\(sub\.role\) === "DIGITAL" && ESTADOS_QUE_ESTACIONAN\.includes\(status\)/.test(adminSub) &&
+  /s !== "CANCELLED" && s !== "EXPIRED"/.test(adminPantalla));
+
+/* Y que el cron siga siendo el que NO las mira: si algún día empieza a mirar
+   las vencidas y las canceladas, este freno deja de hacer falta y hay que
+   volver a decidirlo a propósito, no descubrirlo. */
+chequear("el cron sigue sin revisar las digitales vencidas o canceladas",
+  /where: \{ role: "DIGITAL", tier: \{ not: "FREE" \}, status: \{ in: \["ACTIVE", "TRIAL", "GRACE"\] \} \}/
+    .test(soloCodigo(readFileSync("src/app/api/cron/daily/route.ts", "utf8"))));
 
 /* Y la pantalla, que es de donde salen esos pedidos: los botones se dibujan con
    los planes del ecosistema de la cuenta. Escritos a mano, a una cuenta digital
