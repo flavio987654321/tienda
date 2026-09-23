@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
+import { VolverAtras } from "@/components/VolverAtras";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLoginForm } from "@/hooks/useLoginForm";
@@ -170,6 +171,11 @@ function LoginForm() {
           transition={{ duration: 0.5 }}
           className="relative w-full max-w-md"
         >
+          {/* Sale del inicio y vuelve al inicio. En la PWA no se dibuja: ahí no hay
+              home a dónde volver —por eso el logo de abajo tampoco linkea—, y un
+              volver que se va del panel instalado es peor que no tenerlo. */}
+          {!inPwa && <VolverAtras href="/" className="mb-6" />}
+
           {/* Mobile logo */}
           {inPwa ? (
             <div className="flex items-center gap-2.5 mb-10 lg:hidden">

@@ -6,6 +6,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import { useTurnstile } from "@/components/Turnstile";
+import { VolverAtras } from "@/components/VolverAtras";
 import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
 import { isPwa } from "@/lib/pwa";
 import { trackEvent } from "@/lib/meta-pixel";
@@ -536,30 +537,40 @@ function RegistroContent() {
               <span className="text-xl font-bold text-gray-950">TiendaApps</span>
             </Link>
 
-            {/* Tipo + cambiar */}
-            <div className="flex items-center justify-between gap-3 mb-8">
+            {/* La salida de este paso.
+
+                Hasta el 23/09/26 esto era un "Cambiar" chiquito y subrayado, a la
+                derecha de la chapita. Hacía exactamente lo mismo que hace este
+                botón, pero nadie lo leía como la forma de volver: en esta pantalla
+                la flecha del navegador viene apagada —se entra por un botón de la
+                web, sin pestaña anterior— así que quedaba sin salida visible.
+
+                Es un botón y no un link: volver de acá no cambia de página, cambia
+                de paso. */}
+            <VolverAtras
+              className="mb-4"
+              /* En digitales se vuelve a los planes y no a las cuatro cuentas: lo
+                 que se cambia nueve de cada diez veces es el plan, y desde ahí se
+                 puede seguir saliendo a las cuentas. El texto lo dice, para que la
+                 flecha no sorprenda con otro destino. */
+              onClick={() => {
+                setError("");
+                if (accountType === "digital") { setVerPlanesDigitales(true); }
+                setStep("type");
+              }}
+            >
+              {accountType === "digital" ? "Volver a los planes" : "Volver a elegir cuenta"}
+            </VolverAtras>
+
+            {/* La chapita de lo que eligió, sola. */}
+            <div className="flex items-center gap-3 mb-8">
               <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${colors.border} ${colors.bg}`}>
                 <selected.icon className={`h-4 w-4 ${colors.text}`} />
                 {/* Sin el plan. Lo dice el recuadro de abajo, con el doble de
                     tamaño y al lado del precio. Acá sólo estorbaba: en 360 el
-                    texto pasaba a dos renglones, la chapita se estiraba y
-                    empujaba a "Cambiar" fuera de la pantalla. */}
+                    texto pasaba a dos renglones y la chapita se estiraba. */}
                 <span className={`text-sm font-semibold ${colors.text}`}>{selected.title}</span>
               </div>
-              <button
-                type="button"
-                /* En digitales "Cambiar" vuelve a los planes y no a las cuatro
-                   cuentas: lo que se cambia nueve de cada diez veces es el plan,
-                   y desde ahí se puede seguir saliendo a las cuentas. */
-                onClick={() => {
-                  setError("");
-                  if (accountType === "digital") { setVerPlanesDigitales(true); }
-                  setStep("type");
-                }}
-                className="text-xs text-gray-500 hover:text-gray-800 transition-colors underline underline-offset-2"
-              >
-                Cambiar
-              </button>
             </div>
 
             <h1 className="text-4xl font-black text-gray-950 mb-2">Completá tus datos</h1>
@@ -949,6 +960,16 @@ function RegistroContent() {
 
       {/* Con la cuarta tarjeta el contenedor crece; con tres queda como estaba. */}
       <div className={`relative w-full ${TYPES.length === 4 ? "max-w-7xl" : "max-w-5xl"}`}>
+        {/* Volver al inicio. Acá no hay paso anterior: se llega desde los
+            botones de "Registrate gratis" de toda la web y desde /precios, casi
+            siempre en una pestaña recién abierta y con la flecha del navegador
+            apagada. Tocar el logo volvía, pero eso hay que adivinarlo.
+
+            Con los planes de digitales a la vista no se dibuja: ese bloque trae su
+            propio "Volver a todas las cuentas", y dos volver juntos que van a
+            lugares distintos es peor que uno solo. */}
+        {!verPlanesDigitales && <VolverAtras href="/" className="mb-6" />}
+
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
             <AppLogo size={72} />
