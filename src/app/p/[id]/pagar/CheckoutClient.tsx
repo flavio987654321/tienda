@@ -8,7 +8,7 @@ import { celularArgentino } from "@/lib/ventas-digitales";
 import { descuentoDe, normalizarCodigo, textoDelDescuento, type TipoDeCupon } from "@/lib/cupones-digitales";
 import { venceEnDelToken, cuentaRegresiva } from "@/lib/oferta-salida";
 import { venceEnDelTokenDeBienvenida } from "@/lib/bienvenida";
-import { precioDelUpsell, venceEnDelTokenDeUpsell, elTokenDeUpsellMasViejo, claveDeOfertaUpsell } from "@/lib/oferta-upsell";
+import { precioDelUpsell, venceEnDelTokenDeUpsell, elTokenDeUpsellMasViejo, claveDeOfertaUpsell, type OfertaDeUpsellEnPantalla } from "@/lib/oferta-upsell";
 import { guardarPlazo } from "@/lib/plazo-en-el-navegador";
 import { useAhora } from "@/lib/reloj-compartido";
 import CartelDeSalida from "@/components/digitales/CartelDeSalida";
@@ -64,19 +64,6 @@ export type OfertaEnElCheckout = {
  */
 export type BienvenidaEnElCheckout = { productId: string; codigo: string; porcentaje: number; token: string; texto: string };
 
-/**
- * La oferta del upsell de ESTA visita, ya decidida por el servidor
- * (`ofertaUpsellDeLaVisita`).
- *
- * `null` = no hay (apagada, sin plan, o ningún upsell tiene precio de lista);
- * la caja se dibuja como siempre. `"vencida"` = esta persona ya tuvo su plazo:
- * sin reloj y al precio de lista, que es el que se va a cobrar. Son dos cosas
- * distintas y por eso no se juntan en `null`.
- */
-export type OfertaDeUpsellEnElCheckout =
-  | { estado: "viva"; productoId: string; token: string; texto: string }
-  | { estado: "vencida" };
-
 type Bono = { id: string; nombre: string; vale: number };
 type Upsell = {
   id: string; nombre: string; descripcion: string | null;
@@ -118,7 +105,7 @@ type Props = {
   /** Null = sin precio de bienvenida para esta visita. Ver `lib/bienvenida`. */
   bienvenida: BienvenidaEnElCheckout | null;
   /** Null = sin oferta del upsell para esta visita. Ver `lib/oferta-upsell`. */
-  ofertaUpsell: OfertaDeUpsellEnElCheckout | null;
+  ofertaUpsell: OfertaDeUpsellEnPantalla | null;
 };
 
 const plata = (n: number) =>

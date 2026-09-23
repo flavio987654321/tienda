@@ -103,28 +103,28 @@ const fila = (activa: boolean, sub: typeof alDia | null = alDia) => ({
   store: { owner: { subscription: sub } },
 });
 
-check("UPS-J", ofertaUpsellDeLaVisita(fila(false), [], true, AHORA) === null
-  && ofertaUpsellDeLaVisita(fila(true), [], false, AHORA) === null
-  && ofertaUpsellDeLaVisita(fila(true, null), [], true, AHORA) === null
-  && ofertaUpsellDeLaVisita(fila(true, { ...alDia, tier: "FREE" }), [], true, AHORA) === null,
+check("UPS-J", ofertaUpsellDeLaVisita(fila(false), [], true, { ahora: AHORA }) === null
+  && ofertaUpsellDeLaVisita(fila(true), [], false, { ahora: AHORA }) === null
+  && ofertaUpsellDeLaVisita(fila(true, null), [], true, { ahora: AHORA }) === null
+  && ofertaUpsellDeLaVisita(fila(true, { ...alDia, tier: "FREE" }), [], true, { ahora: AHORA }) === null,
   "apagada, sin ningún upsell que participe, sin plan o en Free: no hay oferta para nadie");
 
-const primeraVez = ofertaUpsellDeLaVisita(fila(true), [], true, AHORA);
+const primeraVez = ofertaUpsellDeLaVisita(fila(true), [], true, { ahora: AHORA });
 check("UPS-K", primeraVez?.estado === "viva" && primeraVez.venceEn === AHORA + 10 * 60_000
   && leerTokenDeUpsell(primeraVez.token, ID, AHORA)?.vivo === true,
   "quien entra por primera vez se lleva un plazo firmado de los minutos configurados");
 
-check("UPS-L", ofertaUpsellDeLaVisita(fila(true), [muerto], true, AHORA)?.estado === "vencida"
-  && ofertaUpsellDeLaVisita(fila(true), [vivo], true, AHORA)?.estado === "viva",
+check("UPS-L", ofertaUpsellDeLaVisita(fila(true), [muerto], true, { ahora: AHORA })?.estado === "vencida"
+  && ofertaUpsellDeLaVisita(fila(true), [vivo], true, { ahora: AHORA })?.estado === "viva",
   "con un token vencido NO se firma otro: ya tuvo su plazo");
 
 /* ⚠️ EL CHEQUEO QUE SOSTIENE TODO. Sin `firmarSiNoHay: false`, a cualquiera le
    alcanza con no mandar el token —o mandar basura— para que la ruta que cobra
    le firme un plazo fresco y le cobre el precio de oferta para siempre. */
-check("UPS-M", ofertaUpsellDeLaVisita(fila(true), [], true, AHORA, { firmarSiNoHay: false })?.estado === "vencida"
-  && ofertaUpsellDeLaVisita(fila(true), ["inventado"], true, AHORA, { firmarSiNoHay: false })?.estado === "vencida"
-  && ofertaUpsellDeLaVisita(fila(true), [firmarUpsell(OTRO, AHORA + 60_000)], true, AHORA, { firmarSiNoHay: false })?.estado === "vencida"
-  && ofertaUpsellDeLaVisita(fila(true), [vivo], true, AHORA, { firmarSiNoHay: false })?.estado === "viva",
+check("UPS-M", ofertaUpsellDeLaVisita(fila(true), [], true, { ahora: AHORA, firmarSiNoHay: false })?.estado === "vencida"
+  && ofertaUpsellDeLaVisita(fila(true), ["inventado"], true, { ahora: AHORA, firmarSiNoHay: false })?.estado === "vencida"
+  && ofertaUpsellDeLaVisita(fila(true), [firmarUpsell(OTRO, AHORA + 60_000)], true, { ahora: AHORA, firmarSiNoHay: false })?.estado === "vencida"
+  && ofertaUpsellDeLaVisita(fila(true), [vivo], true, { ahora: AHORA, firmarSiNoHay: false })?.estado === "viva",
   "al COBRAR no se firma un plazo nuevo: sin token válido (o de otro producto) no hay precio de oferta");
 
 /* ── El precio que se cobra ─────────────────────────────────────────────── */
@@ -221,11 +221,28 @@ check("UPS-AE", !/node:crypto/.test(leer("src/lib/oferta-upsell.ts"))
   && claveDeOfertaUpsell(ID) === `pv_upsell_${ID}`,
   "lo que importa el navegador no trae crypto, y la clave del guardado es por producto");
 
-/* ⚠️ El agregado de después de pagar NO lleva reloj: es otra oferta, en otra
-   pantalla. Si entrara acá, a quien se le venció el reloj en el checkout
-   tampoco le serviría el upsell de la pantalla de gracias. */
-check("UPS-AF", /const ofertaDelUpsell = ordenPrevia\n\s+\? null/.test(comprar),
-  "el upsell de después de pagar queda afuera del reloj, a propósito");
+/* ⚠️ EL RELOJ NO SE APAGA AL PAGAR. Estuvo afuera del agregado de después de
+   pagar, y entonces a quien se le vencía el reloj en el checkout le
+   volvíamos a ofrecer el MISMO upsell al precio de oferta dos minutos
+   después de decirle "se terminó". Nadie pagaba de más, pero el reloj
+   quedaba en evidencia como un adorno. */
+const gracias = leer("src/app/p/[id]/gracias/page.tsx");
+const graciasCliente = leer("src/app/p/[id]/gracias/GraciasClient.tsx");
+
+check("UPS-AF", !/const ofertaDelUpsell = ordenPrevia/.test(comprar)
+  && /ofertaUpsellDeLaVisita\(\n\s+producto,\n\s+\[typeof cuerpo\.upsell === "string"/.test(comprar),
+  "el agregado de después de pagar pasa por la MISMA puerta que el checkout: el reloj sigue corriendo");
+
+check("UPS-AF2", /ofertaUpsellDeLaVisita\(/.test(gracias) && /firmarSiNoHay: false/.test(gracias)
+  && /estado: "vencida"/.test(gracias),
+  "la pantalla de gracias CONTINÚA el reloj y nunca firma uno nuevo: el plazo arranca al abrir el pago y en ningún otro lado");
+
+check("UPS-AF3", /upsell: tokenDeUpsell \?\? undefined/.test(graciasCliente)
+  && /upsellVencido: hayOfertaDeUpsell && !upsellVivo \? true : undefined/.test(graciasCliente)
+  && /if \(d\.upsellVencido\) setUpsellRechazado\(true\);/.test(graciasCliente)
+  && /\{plata\(precioAhora\(u\)\)\}/.test(graciasCliente)
+  && /La oferta se terminó: queda el precio de siempre\./.test(graciasCliente),
+  "la última oferta muestra y manda lo mismo que el checkout: precio según el reloj, aviso al vencer y sin bucle");
 
 check("UPS-AG", /if \(!elegido && !firmarSiNoHay\) return \{ estado: "vencida" \};/.test(servidor),
   "el corte está escrito en una línea sola y se ve: sin token y sin permiso de firmar, no hay oferta");

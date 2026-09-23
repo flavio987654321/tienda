@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Download, CheckCircle2, Mail, AlertTriangle, Clock } from "lucide-react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { marcarCompraEnElNavegador } from "@/lib/medicion-digital";
+import { precioDelUpsell, venceEnDelTokenDeUpsell, type OfertaDeUpsellEnPantalla } from "@/lib/oferta-upsell";
+import { cuentaRegresiva } from "@/lib/oferta-salida";
+import { useAhora } from "@/lib/reloj-compartido";
 
 /**
  * Lo que se ve después de pagar: la espera, los archivos y una última oferta.
@@ -44,6 +47,12 @@ type Props = {
   botonRedondo: string;
   tarjeta: string;
   upsells: Upsell[];
+  /**
+   * El reloj del upsell, que ARRANCÓ EN EL CHECKOUT y sigue corriendo acá.
+   * Esta pantalla nunca firma uno nuevo: si la persona ya lo perdió, el
+   * extra sale su precio de lista, igual que allá. Ver `lib/oferta-upsell`.
+   */
+  ofertaUpsell: OfertaDeUpsellEnPantalla | null;
 };
 
 const plata = (n: number) =>
@@ -62,6 +71,27 @@ export default function GraciasClient(p: Props) {
   const [yendo, setYendo] = useState<string | null>(null);
   const [errorUpsell, setErrorUpsell] = useState("");
   const enVuelo = useRef(false);
+
+  /* ── El reloj del upsell ──────────────────────────────────────────────
+     El mismo plazo del checkout, leído del token que el servidor ya
+     verificó. Acá NO se guarda nada: esta pantalla continúa un reloj, no
+     lo arranca (ver el comentario en `gracias/page.tsx`).
+
+     `upsellRechazado` late igual que en el checkout: si el plazo se termina
+     justo entre apretar "Agregarlo" y que el servidor lea el pedido, se
+     acomoda el precio en pantalla en vez de cobrar de más a escondidas. */
+  const [upsellRechazado, setUpsellRechazado] = useState(false);
+  const ofertaUpsell = p.ofertaUpsell;
+  const tokenDeUpsell = ofertaUpsell?.estado === "viva" ? ofertaUpsell.token : null;
+  const upsellVenceEn = tokenDeUpsell ? venceEnDelTokenDeUpsell(tokenDeUpsell) : null;
+  const ahoraUpsell = useAhora(upsellVenceEn);
+  const hayOfertaDeUpsell = ofertaUpsell !== null;
+  const upsellVivo =
+    ofertaUpsell?.estado === "viva" && !upsellRechazado && upsellVenceEn !== null &&
+    (ahoraUpsell === 0 || ahoraUpsell < upsellVenceEn);
+  /** Lo que sale este extra ahora, con la MISMA función que usa la ruta al cobrar. */
+  const precioAhora = (u: Upsell) =>
+    precioDelUpsell({ price: u.precio, comparePrice: u.regular }, !hayOfertaDeUpsell || upsellVivo);
 
   useEffect(() => {
     if (!p.ordenId) return;
@@ -128,11 +158,21 @@ export default function GraciasClient(p: Props) {
              no escondida atrás de un link. El texto que se guarda lo elige el
              servidor —el del agregado, no el del checkout—. */
           acepto: true,
+          /* El plazo que arrancó en el checkout, para que el servidor cobre
+             el precio que esta pantalla está mostrando. Sin él —o vencido—
+             cobra el de lista, así que no mandarlo no abarata nada. */
+          upsell: tokenDeUpsell ?? undefined,
+          /* "Esta pantalla YA está mostrando el precio de después." Igual que
+             en el checkout: el corte por reloj vencido sirve una vez, para
+             que nadie pague más de lo que vio, y ninguna para trabar la
+             compra. Sin esto el segundo intento chocaba para siempre. */
+          upsellVencido: hayOfertaDeUpsell && !upsellVivo ? true : undefined,
         }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.initPoint) {
         setErrorUpsell(d.error ?? "No pudimos abrir el pago. Probá de nuevo.");
+        if (d.upsellVencido) setUpsellRechazado(true);
         enVuelo.current = false;
         setYendo(null);
         return;
@@ -224,9 +264,28 @@ export default function GraciasClient(p: Props) {
           archivo está atrás de otra compra. */}
       {estado === "listo" && p.ordenId && p.upsells.length > 0 && (
         <div className="mt-10 border-t border-[color:var(--pv-linea)] pt-8">
-          <p className="mb-4 text-[11px] font-extrabold uppercase tracking-widest text-[color:var(--pv-tenue)]">
-            Una cosa más, si te sirve
-          </p>
+          {/* El mismo reloj del checkout, continuado. `ahoraUpsell > 0` es
+              "ya está en el navegador": en el servidor no hay reloj que leer
+              y dibujar uno ahí rompe la hidratación. */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <p className="shrink-0 text-[11px] font-extrabold uppercase tracking-widest text-[color:var(--pv-tenue)]">
+              Una cosa más, si te sirve
+            </p>
+            {upsellVivo && upsellVenceEn !== null && ahoraUpsell > 0 && ofertaUpsell?.estado === "viva" && (
+              <p role="status" className="inline-flex min-w-0 items-center gap-1.5 text-[11.5px] font-bold text-[color:var(--pv-acento)]">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0">{ofertaUpsell.texto}</span>
+                <span className="shrink-0 tabular-nums">{cuentaRegresiva(upsellVenceEn, ahoraUpsell) ?? "0:00"}</span>
+              </p>
+            )}
+          </div>
+          {/* Se dice, no se esconde: el precio que ve acá puede no ser el que
+              vio hace un minuto en la pantalla de pago. */}
+          {hayOfertaDeUpsell && !upsellVivo && (
+            <p role="status" className="mb-3 text-[12px] text-[color:var(--pv-tenue)]">
+              La oferta se terminó: queda el precio de siempre.
+            </p>
+          )}
           {errorUpsell && (
             <p role="alert" className="mb-3 bg-[color:var(--pv-fuerte)] px-3 py-2 text-sm text-[color:var(--pv-tinta)]">
               {errorUpsell}
@@ -238,9 +297,14 @@ export default function GraciasClient(p: Props) {
               {u.descripcion && (
                 <p className="mt-1 text-[13px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
               )}
+              {/* El tachado sale sólo si de verdad se está pagando menos: con
+                  el reloj terminado, `sale` YA ES el precio de lista y
+                  tacharlo al lado de sí mismo sería un descuento inventado. */}
               <p className="mt-2 text-base font-extrabold text-[color:var(--pv-tinta)]">
-                {u.regular && <s className="mr-2 text-sm font-normal opacity-55">{plata(u.regular)}</s>}
-                {plata(u.precio)}
+                {u.regular !== null && precioAhora(u) < u.regular && (
+                  <s className="mr-2 text-sm font-normal opacity-55">{plata(u.regular)}</s>
+                )}
+                {plata(precioAhora(u))}
               </p>
               <button
                 type="button"

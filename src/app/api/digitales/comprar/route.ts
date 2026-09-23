@@ -322,23 +322,24 @@ export async function POST(req: NextRequest) {
    *      así que uno inventado, uno de otro producto o uno de otra de las
    *      ofertas con reloj no pasa.
    *
-   * ⚠️ El agregado de después de pagar (`ordenPrevia`) queda AFUERA a
-   * propósito: ésa es otra oferta, en otra pantalla, sin reloj. Meterlo acá
-   * haría que a quien se le venció el reloj en el checkout tampoco le
-   * sirviera el upsell de la pantalla de gracias, que nunca se lo prometió.
+   * ⚠️ El agregado de después de pagar (`ordenPrevia`) entra por la MISMA
+   * puerta, y no es un detalle: el reloj arranca cuando la persona abre el
+   * pago y sigue corriendo en la pantalla de gracias. Estaba afuera, y
+   * entonces a quien se le vencía el reloj en el checkout le ofrecíamos el
+   * mismo upsell al precio de oferta dos minutos después de haberle dicho
+   * "se terminó, queda el precio de siempre". Nadie pagaba de más —el de
+   * oferta es el más barato—, pero el reloj quedaba en evidencia como un
+   * adorno. Y todo esto existe para que no lo sea.
    */
   const hayUpsellEnOferta = producto.hijos.some(
     (h) => h.rolDigital === "UPSELL" && entraEnLaOferta({ price: h.price, comparePrice: h.comparePrice }),
   );
-  const ofertaDelUpsell = ordenPrevia
-    ? null
-    : ofertaUpsellDeLaVisita(
-        producto,
-        [typeof cuerpo.upsell === "string" ? cuerpo.upsell : undefined],
-        hayUpsellEnOferta,
-        Date.now(),
-        { firmarSiNoHay: false },
-      );
+  const ofertaDelUpsell = ofertaUpsellDeLaVisita(
+    producto,
+    [typeof cuerpo.upsell === "string" ? cuerpo.upsell : undefined],
+    hayUpsellEnOferta,
+    { firmarSiNoHay: false },
+  );
   /* Sin oferta configurada (`null`), todo sigue como siempre: precio de
      siempre. Configurada y viva, precio de oferta. Vencida, precio de lista. */
   const ofertaDelUpsellViva = ofertaDelUpsell === null || ofertaDelUpsell.estado === "viva";

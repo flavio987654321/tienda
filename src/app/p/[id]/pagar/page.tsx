@@ -20,7 +20,7 @@ import type { OfertaEnElCheckout, BienvenidaEnElCheckout } from "./CheckoutClien
 import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie } from "@/lib/bienvenida-servidor";
 import { ofertaUpsellDeLaVisita, tokenDeUpsellDeLaCookie } from "@/lib/oferta-upsell-servidor";
 import { entraEnLaOferta } from "@/lib/oferta-upsell";
-import type { OfertaDeUpsellEnElCheckout } from "./CheckoutClient";
+import type { OfertaDeUpsellEnPantalla } from "@/lib/oferta-upsell";
 
 /**
  * La pantalla de pago de un producto digital.
@@ -174,7 +174,7 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
 
      El plazo se firma ACÁ y viaja a la pantalla, que lo guarda: recargar o
      volver desde Mercado Pago no lo reinicia. */
-  const ofertaUpsell = ((): OfertaDeUpsellEnElCheckout | null => {
+  const ofertaUpsell = ((): OfertaDeUpsellEnPantalla | null => {
     if (!seLePuedeVender) return null;
     const hayAlguno = upsells.some((u) => entraEnLaOferta({ price: u.price, comparePrice: u.comparePrice }));
     const o = ofertaUpsellDeLaVisita(fila, [tokenDeUpsellCookie], hayAlguno);

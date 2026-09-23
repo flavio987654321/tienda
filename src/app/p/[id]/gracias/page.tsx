@@ -8,6 +8,9 @@ import { TOPES_DIGITALES } from "@/lib/planLimits";
 import GraciasClient from "./GraciasClient";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { medicionDelProducto } from "@/lib/medicion-digital";
+import { SUB_STATUS_SELECT } from "@/lib/subscription";
+import { ofertaUpsellDeLaVisita, tokenDeUpsellDeLaCookie } from "@/lib/oferta-upsell-servidor";
+import { entraEnLaOferta, type OfertaDeUpsellEnPantalla } from "@/lib/oferta-upsell";
 
 /** Lo más que puede llevar una orden de un embudo, con el doble de margen. */
 const TECHO_DE_UNA_ORDEN =
@@ -52,11 +55,14 @@ export default async function Gracias({ params, searchParams }: Props) {
   const fila = await prisma.product.findFirst({
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
-      id: true, name: true, paginaVenta: true, medicion: true,
+      id: true, name: true, paginaVenta: true, medicion: true, ofertaUpsell: true,
       store: {
         select: {
           isPublished: true, storeConfig: true,
-          owner: { select: { role: true, name: true } },
+          /* La suscripción, para que la oferta del upsell se apague sola si el
+             plan venció: es la misma regla que en el checkout y la decide la
+             misma función. Ver `lib/oferta-upsell-servidor`. */
+          owner: { select: { role: true, name: true, subscription: { select: SUB_STATUS_SELECT } } },
         },
       },
       /* Los upsells que todavía se pueden ofrecer. La oferta de después de pagar
@@ -92,6 +98,35 @@ export default async function Gracias({ params, searchParams }: Props) {
       })).map((i) => i.productId)
     : [];
 
+  /* ── La oferta del upsell, también acá ────────────────────────────────────
+     El reloj que arrancó en el checkout SIGUE corriendo en esta pantalla, y
+     si se terminó, acá también se terminó.
+
+     ⚠️ Sin esto, a quien se le vencía el reloj en el checkout le volvíamos a
+     ofrecer el MISMO upsell al precio de oferta dos minutos después de
+     haberle dicho "se terminó, queda el precio de siempre". Nadie pagaba de
+     más —el de oferta es el más barato—, pero quien lo notara aprendía que
+     el reloj era de mentira. Y todo esto existe para que no lo sea.
+
+     ⚠️ `firmarSiNoHay: false`: esta pantalla NO arranca plazos. El reloj
+     empieza cuando la persona abre el pago y en ningún otro lado. Sin eso,
+     quien abriera el recibo en otro teléfono —sin la cookie— se llevaría
+     minutos nuevos que nadie le prometió. */
+  const o = ofertaUpsellDeLaVisita(
+    fila,
+    [await tokenDeUpsellDeLaCookie(fila.id)],
+    fila.hijos.some((u) => entraEnLaOferta({ price: u.price, comparePrice: u.comparePrice })),
+    { firmarSiNoHay: false },
+  );
+  const ofertaUpsell: OfertaDeUpsellEnPantalla | null = !o
+    ? null
+    /* "Vencida" viaja, no se convierte en `null`: sin oferta el extra se
+       muestra como siempre, y vencida al precio de lista, que es el que se
+       va a cobrar. Igual que en el checkout. */
+    : o.estado === "viva"
+      ? { estado: "viva", productoId: fila.id, token: o.token, texto: o.texto }
+      : { estado: "vencida" };
+
   return (
     <div className={CLASES_FUENTES}>
       <div
@@ -126,6 +161,7 @@ export default async function Gracias({ params, searchParams }: Props) {
               precio: u.price,
               regular: u.comparePrice && u.comparePrice > u.price ? u.comparePrice : null,
             }))}
+          ofertaUpsell={ofertaUpsell}
         />
       </div>
     </div>

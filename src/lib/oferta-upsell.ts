@@ -123,6 +123,20 @@ export function precioDelUpsell(u: UpsellConPrecios, ofertaViva: boolean): numbe
   return u.comparePrice as number;
 }
 
+/**
+ * La oferta de ESTA visita, tal como se la pasa el servidor a la pantalla.
+ * La usan las DOS que ofrecen el upsell —el checkout y la de gracias— con
+ * el mismo tipo, para que no puedan interpretarla distinto.
+ *
+ * `null` = no hay (apagada, sin plan, o ningún upsell tiene precio de
+ * lista); se muestra como siempre. `"vencida"` = esta persona ya tuvo su
+ * plazo: al precio de lista, que es el que se va a cobrar. Son dos cosas
+ * distintas y por eso no se juntan en `null`.
+ */
+export type OfertaDeUpsellEnPantalla =
+  | { estado: "viva"; productoId: string; token: string; texto: string }
+  | { estado: "vencida" };
+
 /* ── El token en el navegador ───────────────────────────────────────────── */
 
 /** Dónde lo guarda el navegador: cookie y localStorage, con la misma clave. */

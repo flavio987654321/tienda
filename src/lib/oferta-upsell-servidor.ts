@@ -72,8 +72,11 @@ export function ofertaUpsellDeLaVisita(
   fila: FilaConOfertaUpsell,
   candidatos: Array<string | undefined>,
   hayAlgunoQueParticipa: boolean,
-  ahora = Date.now(),
-  { firmarSiNoHay = true }: { firmarSiNoHay?: boolean } = {},
+  /* `ahora` va adentro de las opciones y no como parámetro suelto: así quien
+     sólo quiere `firmarSiNoHay` no tiene que escribir `Date.now()` para
+     llegar hasta él. Escribirlo en una pantalla, además, es una llamada
+     impura en el dibujo y el linter la frena — con razón. */
+  { firmarSiNoHay = true, ahora = Date.now() }: { firmarSiNoHay?: boolean; ahora?: number } = {},
 ): OfertaUpsellDeLaVisita {
   const o = leerOfertaUpsell(fila.ofertaUpsell);
   if (!o.activa || !hayAlgunoQueParticipa) return null;
