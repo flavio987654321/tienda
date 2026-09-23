@@ -3,6 +3,7 @@ import { BookOpen, AlertTriangle, Gift, Globe, ExternalLink } from "lucide-react
 import { fotoDeDigitales, necesitanAtencion, type CuentaDigital } from "@/lib/admin-digitales";
 import { COMISION_DIGITAL } from "@/lib/planLimits";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { topeDe } from "@/lib/productos-digitales";
 
 export const dynamic = "force-dynamic";
 
@@ -219,7 +220,7 @@ export default async function AdminDigitalesPage() {
                 <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-gray-500">
                   <th className="px-5 py-3 text-left font-semibold">Cuenta</th>
                   <th className="px-5 py-3 text-left font-semibold">Plan</th>
-                  <th className="px-5 py-3 text-right font-semibold">Productos</th>
+                  <th className="px-5 py-3 text-right font-semibold">Páginas</th>
                   <th className="px-5 py-3 text-right font-semibold">Ventas del mes</th>
                   <th className="px-5 py-3 text-right font-semibold">Comisión</th>
                 </tr>
@@ -265,10 +266,18 @@ export default async function AdminDigitalesPage() {
                         )}
                       </div>
                     </td>
+                    {/* ⚠️ El segundo número es EL TOPE DEL PLAN, no lo que
+                        tiene cargado. Antes era "publicadas / cargadas", y
+                        "1 / 1" se lee solo de una manera: "usa 1 de la 1 que
+                        puede". Justo en la columna de al lado del plan, eso
+                        hacía parecer que Pro permite una sola página. Lo que
+                        tiene cargado va abajo, con todas las letras. */}
                     <td className="px-5 py-3.5 text-right text-sm tabular-nums">
-                      <span className="text-white">{c.publicados}</span>
-                      <span className="text-gray-600"> / {c.productos}</span>
-                      <span className="block text-[11px] text-gray-600">publicados</span>
+                      <span className={c.publicados > 0 ? "text-white" : "text-gray-500"}>{c.publicados}</span>
+                      <span className="text-gray-600"> / {topeDe(c.tier, "PRINCIPAL")}</span>
+                      <span className="block text-[11px] text-gray-600">
+                        publicadas · {c.productos} cargada{c.productos === 1 ? "" : "s"}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-right text-sm tabular-nums">
                       <span className="text-white">{c.ventasDelMes}</span>

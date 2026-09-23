@@ -181,5 +181,51 @@ check("ADM-P",
   /foto\.regaladas > 0 &&/.test(pantalla) && /sin ningún pago registrado/.test(pantalla),
   "las cuentas regaladas se dicen, no se esconden");
 
+/* ── Lo que la pantalla de Tiendas NO puede hacerle a una cuenta digital ── */
+
+const tiendasPagina = leer("src/app/admin/tiendas/page.tsx");
+const tiendasLista = leer("src/app/admin/tiendas/TiendasAdmin.tsx");
+const tiendasRuta = leer("src/app/api/admin/tiendas/[id]/route.ts");
+
+/* ⚠️ EL PEOR BOTÓN DE TODOS. Las cuentas de Productos Digitales tienen una fila
+   en `Store` —ahí viven sus productos— pero sus páginas públicas exigen que esa
+   tienda NO esté publicada: `/p/[id]`, `/pagar`, `/gracias` y `/legales` hacen
+   `notFound()` si lo está. Publicarlas desde el listado de tiendas les apagaba
+   la página de venta, el checkout y la pantalla de gracias al mismo tiempo, sin
+   ningún error y sin que nadie se entere hasta que dejan de entrar ventas. */
+check("ADM-Q",
+  /owner\?\.role === "DIGITAL" && data\.isPublished === true/.test(tiendasRuta)
+  && /status: 400/.test(tiendasRuta),
+  "publicar la tienda de una cuenta digital se rechaza: le devolvería 404 en todas sus páginas");
+
+/* Y el botón tampoco se ofrece: un botón que existe y falla es peor que uno que
+   no está, porque el admin lo aprieta igual y se queda sin saber qué pasó. */
+check("ADM-R",
+  /\{s\.esDigital \? \(/.test(tiendasLista) && /Por producto/.test(tiendasLista),
+  "en el listado, la columna de publicar de una cuenta digital no es un botón");
+
+/* Resetear el diseño le vacía `storeConfig`, que en digitales guarda los
+   píxeles de medición que leen su página de venta, su checkout y su pantalla de
+   gracias: le apagaba el seguimiento de sus anuncios en silencio. */
+check("ADM-S",
+  /store\.owner\?\.role === "DIGITAL"/.test(tiendasRuta)
+  && /Ver en Digitales/.test(tiendasLista),
+  "resetear el diseño de una cuenta digital se rechaza, y en su lugar hay un link a su pantalla");
+
+/* ⚠️ En digitales, cada bono y cada upsell es su propia fila de `Product`
+   colgando del principal. Contando filas, una cuenta con un ebook y dos bonos
+   figuraba con "3 productos" cuando tiene UNO — y ese número es el que se mira
+   para saber si la cuenta se está usando. */
+check("ADM-T",
+  /rolDigital: "PRINCIPAL"/.test(tiendasPagina) && /principalesDe\.get\(s\.id\)/.test(tiendasPagina),
+  "a una cuenta digital se le cuentan las páginas principales, no los bonos y upsells");
+
+/* ⚠️ Y en la pantalla de Digitales, el segundo número es EL TOPE DEL PLAN.
+   Cuando era "publicadas / cargadas", un "1 / 1" al lado de la chapita de Pro
+   se leía como que Pro permite una sola página. */
+check("ADM-U",
+  /topeDe\(c\.tier, "PRINCIPAL"\)/.test(pantalla) && /publicadas · \{c\.productos\} cargada/.test(pantalla),
+  "el segundo número de Páginas es el tope del plan, y lo cargado se dice aparte");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);

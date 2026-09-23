@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
+import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2, RotateCcw, AlertTriangle, BookOpen } from "lucide-react";
 
 type PendingToggle = { store: StoreRow; field: "isPublished" | "isActive" };
 type ResetState = { store: StoreRow; loading: boolean; error: string };
@@ -15,6 +15,16 @@ type StoreRow = {
   isActive: boolean;
   isPublished: boolean;
   createdAt: string;
+  /**
+   * Es una cuenta de Productos Digitales, no una tienda.
+   *
+   * ⚠️ Tienen una fila en `Store` porque ahí viven sus productos, pero NO son
+   * una tienda, y la diferencia no es de etiqueta: sus páginas públicas exigen
+   * `store.isPublished === false` (`/p/[id]`, `/pagar`, `/gracias`,
+   * `/legales` hacen `notFound()` si está publicada). Publicarlas desde acá le
+   * apaga la venta entera.
+   */
+  esDigital: boolean;
   owner: { name: string | null; email: string };
   _count: { products: number; affiliates: number; orders: number };
 };
@@ -23,6 +33,7 @@ const STORE_FILTERS = [
   { value: "",           label: "Todas" },
   { value: "activas",    label: "Activas" },
   { value: "inactivas",  label: "Sin publicar" },
+  { value: "digitales",  label: "Digitales" },
   { value: "eliminadas", label: "Eliminadas" },
 ] as const;
 
@@ -31,7 +42,11 @@ function isDeletedStore(s: StoreRow) { return s.slug.startsWith("deleted-"); }
 function applyStoreFilter(stores: StoreRow[], filter: string): StoreRow[] {
   switch (filter) {
     case "activas":    return stores.filter(s => s.isActive && s.isPublished && !isDeletedStore(s));
-    case "inactivas":  return stores.filter(s => !isDeletedStore(s) && (!s.isActive || !s.isPublished));
+    /* Las digitales quedan afuera de "Sin publicar": estar sin publicar es su
+       estado normal y correcto, no algo pendiente de resolver. Mezcladas, la
+       lista de "esto hay que revisarlo" tenía adentro cuentas que están bien. */
+    case "inactivas":  return stores.filter(s => !isDeletedStore(s) && !s.esDigital && (!s.isActive || !s.isPublished));
+    case "digitales":  return stores.filter(s => s.esDigital && !isDeletedStore(s));
     case "eliminadas": return stores.filter(isDeletedStore);
     default:           return stores.filter(s => !isDeletedStore(s));
   }
@@ -302,15 +317,35 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                 <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: s.primaryColor + "22" }}
-                      >
-                        <Store className="h-4 w-4" style={{ color: s.primaryColor }} />
-                      </div>
+                      {/* El ícono dice de una qué es esto. Una cuenta digital
+                          con el mismo cartelito de tienda se lee como una
+                          tienda, y todo lo que sigue en la fila se interpreta
+                          mal: su "sin publicar" no es un pendiente, y su
+                          cantidad de productos no significa lo mismo. */}
+                      {s.esDigital ? (
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-orange-500/10 border border-orange-500/20">
+                          <BookOpen className="h-4 w-4 text-orange-400" />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: s.primaryColor + "22" }}
+                        >
+                          <Store className="h-4 w-4" style={{ color: s.primaryColor }} />
+                        </div>
+                      )}
                       <div>
-                        <p className="text-white text-sm font-medium">{s.name}</p>
-                        <p className="text-gray-500 text-xs">/{s.slug}</p>
+                        <p className="text-white text-sm font-medium">
+                          {s.name}
+                          {s.esDigital && (
+                            <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-orange-400 bg-orange-500/10 border border-orange-500/20">
+                              Digital
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {s.esDigital ? "cuenta de Productos Digitales" : `/${s.slug}`}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -319,6 +354,25 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                     <p className="text-gray-500 text-xs">{s.owner.email}</p>
                   </td>
                   <td className="px-5 py-4">
+                    {/* ⚠️ ACÁ NO VA UN BOTÓN PARA UNA CUENTA DIGITAL.
+                        Sus páginas públicas exigen que la tienda NO esté
+                        publicada: `/p/[id]`, `/pagar`, `/gracias` y
+                        `/legales` devuelven 404 si lo está. Un clic de más en
+                        esta columna le apagaba la página de venta, el checkout
+                        y la pantalla de gracias al mismo tiempo, sin ningún
+                        error y sin que nadie se enterara hasta que dejaran de
+                        entrarle ventas. El backend también lo rechaza.
+                        Cada página digital se publica de a una, desde su
+                        propio panel. */}
+                    {s.esDigital ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/5 bg-gray-800/60 text-gray-500"
+                        title="Las páginas de una cuenta digital se publican de a una desde su panel. Publicar la tienda le devolvería 404 en todas."
+                      >
+                        <BookOpen className="h-3 w-3" />
+                        Por producto
+                      </span>
+                    ) : (
                     <button
                       onClick={() => setPending({ store: s, field: "isPublished" })}
                       disabled={loadingId === s.id + "-isPublished"}
@@ -335,6 +389,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                       )}
                       {s.isPublished ? "Publicada" : "Sin publicar"}
                     </button>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <button
@@ -379,13 +434,28 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <button
-                      onClick={() => setResetState({ store: s, loading: false, error: "" })}
-                      title="Resetear diseño"
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-all"
-                    >
-                      <RotateCcw className="h-3 w-3" /> Resetear diseño
-                    </button>
+                    {/* ⚠️ Una cuenta digital no tiene diseño de tienda que
+                        resetear, pero SÍ guarda lo suyo en `storeConfig`: ahí
+                        viven sus píxeles de medición, que leen su página de
+                        venta, su checkout y su pantalla de gracias. Vaciarlo le
+                        apagaba el seguimiento de sus anuncios en silencio.
+                        En vez del botón, el link a su pantalla. */}
+                    {s.esDigital ? (
+                      <Link
+                        href="/admin/digitales"
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-orange-500/20 bg-orange-500/5 text-orange-400 hover:bg-orange-500/20 hover:text-orange-300 transition-all"
+                      >
+                        <BookOpen className="h-3 w-3" /> Ver en Digitales
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => setResetState({ store: s, loading: false, error: "" })}
+                        title="Resetear diseño"
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-all"
+                      >
+                        <RotateCcw className="h-3 w-3" /> Resetear diseño
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
