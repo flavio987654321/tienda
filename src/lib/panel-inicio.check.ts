@@ -188,6 +188,34 @@ check("VIS-B",
 /* ⚠️ LOS DOS NÚMEROS QUE SE DIVIDEN MIDEN EL MISMO MES. Estuvo con las ventas
    de SIEMPRE arriba y las visitas de los últimos 30 días abajo: una cuenta con
    un año vendido y diez visitas este mes mostraba 1200 % de conversión. */
+/* ══════════════════════════════════════════════════════════════════════════
+   GENERAL Y POR PRODUCTO NO SE MEZCLAN
+   ══════════════════════════════════════════════════════════════════════════
+
+   Con un producto elegido, TODO tiene que ser de ese producto: ventas, neto,
+   ticket, visitas y la conversión que sale de dividir dos de ellos. Basta con
+   que uno solo quede en el total para que la pantalla muestre la conversión de
+   la cuenta entera debajo del nombre de un producto — y con cinco productos,
+   ese número no significa nada.
+
+   Es el riesgo más caro de esta pantalla: no se rompe, MIENTE. */
+check("VIS-D",
+  /visitas: elegido\.visitas,/.test(lib) &&
+  /ticket: ticketPromedio\(c\.bruto, c\.ventas\),/.test(lib) &&
+  /ventasDelMes: m\.ventas,/.test(lib) &&
+  /ticket: ticketPromedio\(totalGeneral\.bruto, totalGeneral\.ventas\),/.test(lib) &&
+  /visitas: visitasTotales,/.test(lib) &&
+  /const numeros: NumerosDelPanel \| null = elegido \? foto!\.numerosDelElegido : foto\?\.total \?\? null;/.test(pagina),
+  "con un producto elegido los números son de ESE producto, y sin elegir son de la cuenta: no se mezclan");
+
+/* Y la conversión sale de UN solo objeto, no de dos: `numeros.ventasDelMes` y
+   `numeros.visitas` vienen juntos, así que o los dos son del producto o los
+   dos son de la cuenta. Tomar uno de `numeros` y otro de `foto.total` sería
+   exactamente la mezcla que VIS-D impide. */
+check("VIS-E",
+  !/conversion\([^)]*foto\./.test(pagina) && !/conversion\([^)]*elegido\./.test(pagina),
+  "la conversión se calcula con dos números del mismo objeto: no puede cruzar el total con un producto");
+
 check("VIS-C",
   /const mesEnCurso = `\$\{getArgentinaDayKey\(\)\.slice\(0, 7\)\}-01`;/.test(lib) &&
   /const primeroDelMes = inicioDiaArgentino\(mesEnCurso\);/.test(lib) &&

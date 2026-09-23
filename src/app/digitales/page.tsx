@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { primerosPasos, terminado } from "@/lib/primeros-pasos";
 import { fotoDelPanel, type NumerosDelPanel, type ProductoDelPanel, type VentaReciente } from "@/lib/panel-inicio";
 import { puedeVer } from "@/lib/estadisticas-digitales";
+import { cuantosMirando } from "@/lib/mirando-ahora-servidor";
 import { haceCuanto } from "@/lib/carritos-digitales";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
@@ -128,6 +129,20 @@ export default async function DigitalesPage({
      dejar una tienda vacía colgando. */
   const foto = store ? await fotoDelPanel(store.id, p ?? null, veVisitas) : null;
 
+  /* ── Cuántos están mirando ahora ────────────────────────────────────────
+     El puntito verde. Va con el MISMO candado que las visitas —es de la
+     misma familia y se decidió que esa familia es de Starter para arriba— y
+     se pregunta sólo por los productos de ESTA cuenta.
+
+     `null` es "no se pudo averiguar" (Redis caído o sin configurar) y
+     entonces no se dibuja nada: un cero inventado diría "no hay nadie", que
+     es una afirmación distinta de "no sé". Ver `lib/mirando-ahora`. */
+  const mirando = veVisitas && foto
+    ? await cuantosMirando(
+        (foto.elegido ? [foto.elegido] : foto.productos).map((x) => x.id),
+      )
+    : null;
+
   /* ⚠️ Un `?p=` que no es de esta persona no existe para `fotoDelPanel` —sólo
      mira los productos de su tienda—, así que cae solo en la vista de todos.
      No hace falta un error: pedir algo ajeno simplemente no muestra nada ajeno. */
@@ -223,12 +238,32 @@ export default async function DigitalesPage({
           </p>
         </div>
 
-        <Link
-          href="/digitales/mi-cuenta"
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-gray-200 panel-oscuro:border-gray-700 px-3 py-1.5 text-[12px] font-bold text-gray-600 panel-oscuro:text-gray-400 hover:border-orange-300 hover:text-orange-700 panel-oscuro:hover:text-orange-400 transition-colors"
-        >
-          Plan {COPY_DIGITAL[tier].nombre}
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* ── El puntito verde ──────────────────────────────────────────
+              ⚠️ Sólo cuando hay ALGUIEN. Un "0 mirando ahora" fijo en una
+              cuenta nueva es un cartel triste sobre algo que ya se sabe, y
+              además no es información: nadie necesita que le confirmen cada
+              vez que entra al panel que su página está vacía. Cuando hay
+              alguien, en cambio, es la única cosa de esta pantalla que pasa
+              en este momento.
+
+              Y `null` —no se pudo averiguar— tampoco dibuja nada: no es cero. */}
+          {mirando !== null && mirando > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 panel-oscuro:bg-emerald-500/15 px-2.5 py-1.5 text-[12px] font-bold text-emerald-700 panel-oscuro:text-emerald-400">
+              <span aria-hidden className="h-2 w-2 rounded-full bg-emerald-500" />
+              {/* "mirando ahora" sirve para uno y para muchos, así que no
+                  lleva plural: "1 mirando ahora" y "3 mirando ahora". */}
+              <span className="tabular-nums">{mirando}</span> mirando ahora
+            </span>
+          )}
+
+          <Link
+            href="/digitales/mi-cuenta"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-gray-200 panel-oscuro:border-gray-700 px-3 py-1.5 text-[12px] font-bold text-gray-600 panel-oscuro:text-gray-400 hover:border-orange-300 hover:text-orange-700 panel-oscuro:hover:text-orange-400 transition-colors"
+          >
+            Plan {COPY_DIGITAL[tier].nombre}
+          </Link>
+        </div>
       </div>
 
       {/* ── El selector ──────────────────────────────────────────────────────

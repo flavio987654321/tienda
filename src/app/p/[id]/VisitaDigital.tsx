@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { registrarVisitaDigital, anotarOrigen, type PasoDigital } from "@/lib/visitas-digitales";
+import { LATIDO_MS } from "@/lib/mirando-ahora";
 
 /**
  * Cuenta la visita. No dibuja nada.
@@ -27,5 +28,37 @@ export default function VisitaDigital({ paso, productoId, apagado = false }: {
     if (paso === "pagina") anotarOrigen(productoId);
     registrarVisitaDigital(paso, productoId);
   }, [paso, productoId, apagado]);
+
+  /* ── El latido del puntito verde ──────────────────────────────────────
+     "Sigo acá". Va por su propia ruta, que no toca la base y no guarda nada
+     (ver `lib/mirando-ahora`): sólo suma una huella anónima a un contador de
+     Redis que se borra solo a los tres minutos.
+
+     ⚠️ SÓLO MIENTRAS LA PESTAÑA ESTÁ A LA VISTA. Sin eso, una pestaña
+     olvidada en el fondo seguiría latiendo toda la tarde: el panel diría que
+     hay diez personas mirando cuando no hay ninguna, y el cartelito pasaría a
+     ser uno de esos números inventados que este proyecto no tiene. Al volver
+     a la pestaña late enseguida, así que quien vuelve reaparece al toque.
+
+     `keepalive` para que el último latido salga aunque la pestaña se esté
+     cerrando, y todo adentro de un `catch` vacío: es un cartelito, y no
+     puede ensuciar la consola de la página donde entra la plata. */
+  useEffect(() => {
+    if (apagado || paso !== "pagina") return;
+    let vivo = true;
+    const latir = () => {
+      if (!vivo || document.visibilityState !== "visible") return;
+      fetch(`/api/digitales/mirando/${productoId}`, { method: "POST", keepalive: true }).catch(() => {});
+    };
+    latir();
+    const reloj = window.setInterval(latir, LATIDO_MS);
+    document.addEventListener("visibilitychange", latir);
+    return () => {
+      vivo = false;
+      window.clearInterval(reloj);
+      document.removeEventListener("visibilitychange", latir);
+    };
+  }, [paso, productoId, apagado]);
+
   return null;
 }
