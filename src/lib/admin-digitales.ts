@@ -4,7 +4,7 @@ import { comisionCongelada } from "@/lib/compra-digital";
 import { PRECIOS_DIGITALES } from "@/lib/planLimits";
 import { DIAS_DE_DOMINIO_EN_FREE } from "@/lib/configuracion-digital";
 import { diaArgentino, inicioDiaArgentino } from "@/lib/fechas-comerciales";
-import type { TierDigital } from "@/lib/planes-digitales";
+import { TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
 
 /* ══════════════════════════════════════════════════════════════════════════
    PRODUCTOS DIGITALES, VISTO DESDE ADMIN
@@ -272,7 +272,15 @@ export async function fotoDeDigitales(ahora: Date = new Date()): Promise<FotoDig
       email: s.user?.email ?? "",
       banned: s.user?.banned ?? false,
       storeId,
-      tier: (s.tier ?? "FREE") as TierDigital,
+      /* ⚠️ UN TIER QUE NINGÚN PLAN DIGITAL DEFINE SE MUESTRA COMO FREE.
+         No es cosmética: la pantalla le pide a `topeDe` cuántas páginas
+         permite ese plan, y `topeDe` lo busca en la tabla de topes. Con un
+         tier que no está —una fila vieja, un dato escrito a mano— devuelve
+         undefined y explota al leerle una propiedad: se cae la pantalla
+         ENTERA, no esa fila.
+         Y Free además es lo que esa cuenta puede hacer de verdad: con un tier
+         desconocido, el panel de digitales no le abre ninguna función. */
+      tier: TIERS_DIGITALES.includes(s.tier as TierDigital) ? (s.tier as TierDigital) : "FREE",
       plan: s.plan,
       pago: s.mpPaymentId !== null,
       estado: getSubscriptionStatus(s, ahora),

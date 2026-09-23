@@ -263,5 +263,15 @@ check("ADM-Y",
   && !/f=digitales&q=/.test(pantalla),
   "desde Digitales se cae siempre en la persona, incluso si está baneada");
 
+/* ⚠️ EL QUE EVITA QUE SE CAIGA LA PANTALLA ENTERA. La pantalla le pregunta a
+   `topeDe` cuántas páginas permite el plan de cada cuenta, y `topeDe` lo busca
+   en la tabla de topes: con un tier que ahí no está —una fila vieja, un dato
+   escrito a mano— devuelve undefined y explota al leerle una propiedad. No se
+   rompe esa fila: se cae la pantalla completa, con todas las demás cuentas
+   adentro. Por eso el tier se normaliza antes de salir de la consulta. */
+check("ADM-Z",
+  /TIERS_DIGITALES\.includes\(s\.tier as TierDigital\) \? \(s\.tier as TierDigital\) : "FREE"/.test(lib),
+  "un tier que ningún plan define se muestra como Free en vez de voltear la pantalla");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);
