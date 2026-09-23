@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  BadgeCheck, Eye, Search, ChevronLeft, ChevronRight,
+  BadgeCheck, Eye, Search,
   Package, ArrowLeft, LayoutGrid, Shirt, Car,
   Home, Utensils, Store,
 } from "lucide-react";
@@ -25,7 +26,74 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
 const ALL_TAB = { id: "TODAS", label: "Todas" };
 const tabs = [ALL_TAB, ...STORE_TYPES.map((t) => ({ id: t.id, label: t.label }))];
 
-type ArrowState = Record<string, { left: boolean; right: boolean }>;
+/**
+ * La tapa de la tarjeta.
+ *
+ * ── Acá vivía un `<iframe>` con la tienda entera adentro ─────────────────────
+ *
+ * Hasta el 23/09/26 cada tarjeta metía `/tienda/<slug>` en un iframe de 1280px
+ * escalado al 25%. O sea que abrir el directorio cargaba una copia COMPLETA de
+ * cada tienda publicada, todas a la vez. Tres cosas salían mal:
+ *
+ * 1. Casi nunca llegaba a dibujarse: en el listado de verdad las tapas se veían
+ *    grises. La foto que mostraba el directorio era un rectángulo vacío.
+ * 2. En el celular mostraba el diseño de ESCRITORIO apretado —el iframe mide
+ *    1280 y se achica—, que es algo que ningún visitante ve nunca.
+ * 3. Pagábamos la tienda entera (fuentes, fotos, JavaScript) para mostrar una
+ *    estampilla de 150 píxeles.
+ *
+ * Y todo eso teniendo la imagen buena al alcance de la mano: `listarTiendas` ya
+ * manda el hero de su landing, la foto del último producto, el banner y el logo.
+ * Llegaban a la tarjeta y no los usaba nadie. Es el mismo orden que ya elige la
+ * imagen de OpenGraph en `api/og/store/[slug]`, así que la tapa del directorio y
+ * la que se ve al compartir el link ahora muestran lo mismo.
+ *
+ * ── Por qué `next/image` y no un `<img>` ────────────────────────────────────
+ *
+ * Porque lo sirve achicado al tamaño real de la tarjeta en vez de bajar la foto
+ * original del hero —que pesa lo que pesa un fondo de pantalla— y lo cachea. En
+ * este proyecto eso no es un detalle: lo que se paga de Supabase es el egress.
+ *
+ * Si la imagen no carga —se borró del bucket, la URL quedó vieja— el `onError`
+ * cae al respaldo de color en vez de dejar el hueco.
+ *
+ * ⚠️ Eso NO cubre un dominio que `next.config` no tenga permitido, o al menos no
+ * en desarrollo: ahí el cargador de imágenes tira error antes de dibujar nada y
+ * se lleva puesta la pantalla entera (en producción sí cae al respaldo). Hoy
+ * todas las fotos salen de Supabase y de unsplash, que están permitidos; si
+ * algún día se acepta una URL de afuera, el dominio hay que agregarlo allá y no
+ * confiar en este respaldo.
+ */
+function TapaDeTienda({ store }: { store: StoreItem }) {
+  const [fallo, setFallo] = useState(false);
+  const imagen = store.heroImg || store.coverImg || store.banner || store.logo;
+
+  if (!imagen || fallo) {
+    /* Sin foto: el color de la tienda y su inicial. Prolijo y reconocible, en vez
+       del gris de "acá falta algo". */
+    return (
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{ background: `linear-gradient(135deg, ${store.primaryColor} 0%, ${store.primaryColor}99 100%)` }}
+      >
+        <span className="text-white/90 text-3xl font-black">{store.name.charAt(0).toUpperCase()}</span>
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={imagen}
+      alt=""
+      fill
+      /* Dos por fila en el celular y hasta cuatro en escritorio: sin esto el
+         navegador se baja la imagen para el ancho entero de la pantalla. */
+      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+      className="object-cover"
+      onError={() => setFallo(true)}
+    />
+  );
+}
 
 export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: StoreItem[] }) {
   // Arranca CON las tiendas puestas, no vacío: son las que el servidor ya
@@ -36,10 +104,6 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
   const [loading, setLoading] = useState(tiendasIniciales.length === 0);
   const [tipo, setTipo] = useState("TODAS");
   const [search, setSearch] = useState("");
-  const [arrows, setArrows] = useState<ArrowState>({});
-
-  const tabsScrollRef = useRef<HTMLDivElement>(null);
-  const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Sólo si el servidor no pudo traerlas (la base caída, por ejemplo). En el
   // camino normal no se pide nada: el dato ya vino con la página.
@@ -51,19 +115,6 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
       .finally(() => setLoading(false));
   }, [tiendasIniciales.length]);
 
-  const checkArrows = useCallback((id: string) => {
-    const el = carouselRefs.current[id];
-    if (!el) return;
-    setArrows((prev) => ({
-      ...prev,
-      [id]: {
-        left: el.scrollLeft > 2,
-        right: Math.ceil(el.scrollLeft) < el.scrollWidth - el.clientWidth - 2,
-      },
-    }));
-  }, []);
-
-  // Re-init listeners whenever visible groups change
   const searchFiltered = search.trim()
     ? allStores.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
     : allStores;
@@ -73,52 +124,17 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
     .filter((g) => g.stores.length > 0);
 
   const visibleGroups = tipo === "TODAS" ? groups : groups.filter((g) => g.id === tipo);
-  const visibleGroupIds = visibleGroups.map((g) => g.id).join(",");
 
-  useEffect(() => {
-    if (loading) return;
-    const cleanups: Array<() => void> = [];
-
-    const raf = requestAnimationFrame(() => {
-      visibleGroupIds.split(",").filter(Boolean).forEach((id) => {
-        const el = carouselRefs.current[id];
-        if (!el) return;
-
-        const onScroll = () => checkArrows(id);
-        checkArrows(id);
-        el.addEventListener("scroll", onScroll, { passive: true });
-
-        const ro = new ResizeObserver(() => checkArrows(id));
-        ro.observe(el);
-
-        cleanups.push(() => {
-          el.removeEventListener("scroll", onScroll);
-          ro.disconnect();
-        });
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(raf);
-      cleanups.forEach((c) => c());
-    };
-  }, [loading, visibleGroupIds, checkArrows]);
-
-  function scrollTabs(dir: "left" | "right") {
-    tabsScrollRef.current?.scrollBy({ left: dir === "right" ? 240 : -240, behavior: "smooth" });
-  }
-
-  function scrollCarousel(id: string, dir: "left" | "right") {
-    carouselRefs.current[id]?.scrollBy({ left: dir === "right" ? 312 : -312, behavior: "smooth" });
-  }
+  /* Dos por fila en el celular, tres en tablet y cuatro en escritorio. Es la
+     misma grilla para las tarjetas y para los esqueletos: si fueran distintas,
+     al terminar de cargar se reacomodaría todo de golpe. */
+  const GRILLA = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4";
 
   return (
     <div className="min-h-screen bg-[#f8f7f5]">
       <style>{`
         .store-card { transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s cubic-bezier(.4,0,.2,1); }
         .store-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.10); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* ── HEADER ── */}
@@ -140,42 +156,32 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
           </div>
         </div>
 
-        {/* Tabs row — flechas en la misma línea */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 flex items-center gap-2">
-          <button
-            onClick={() => scrollTabs("left")}
-            className="shrink-0 w-7 h-7 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+        {/* Los rubros, en los renglones que hagan falta.
 
-          <div ref={tabsScrollRef} className="no-scrollbar flex-1 flex gap-2 overflow-x-auto">
-            {tabs.map((tab) => {
-              const active = tipo === tab.id;
-              const Icon = TYPE_ICONS[tab.id];
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setTipo(tab.id)}
-                  className={`shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-all duration-150 ${
-                    active
-                      ? "bg-gray-900 text-white border-gray-900 shadow-sm"
-                      : "bg-white text-gray-500 border-black/8 hover:border-gray-300 hover:text-gray-800"
-                  }`}
-                >
-                  {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => scrollTabs("right")}
-            className="shrink-0 w-7 h-7 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+            Antes eran una tira que se corría al costado, con una flechita en cada
+            punta. En 360 se veían dos y medio: para enterarse de que existía
+            "Gastronomía" había que adivinar que eso se arrastraba. Son seis y
+            entran en dos renglones; mostrarlos todos de una es más corto que
+            cualquier gesto. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const active = tipo === tab.id;
+            const Icon = TYPE_ICONS[tab.id];
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setTipo(tab.id)}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap border transition-all duration-150 ${
+                  active
+                    ? "bg-gray-900 text-white border-gray-900 shadow-sm"
+                    : "bg-white text-gray-500 border-black/8 hover:border-gray-300 hover:text-gray-800"
+                }`}
+              >
+                {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -187,11 +193,11 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
             {[1, 2].map((s) => (
               <div key={s}>
                 <div className="h-6 w-40 bg-gray-200 rounded-full animate-pulse mb-5" />
-                <div className="flex gap-4">
-                  {[1, 2, 3].map((c) => (
-                    <div key={c} className="shrink-0 w-72 bg-white rounded-2xl overflow-hidden animate-pulse border border-black/5">
-                      <div className="h-44 bg-gray-100" />
-                      <div className="p-4 space-y-2.5">
+                <div className={GRILLA}>
+                  {[1, 2, 3, 4].map((c) => (
+                    <div key={c} className="bg-white rounded-2xl overflow-hidden animate-pulse border border-black/5">
+                      <div className="aspect-[4/3] bg-gray-100" />
+                      <div className="p-3 sm:p-4 space-y-2.5">
                         <div className="h-4 bg-gray-100 rounded-full w-2/3" />
                         <div className="h-3 bg-gray-100 rounded-full w-1/3" />
                       </div>
@@ -219,8 +225,6 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
         ) : (
           visibleGroups.map((group) => {
             const Icon = TYPE_ICONS[group.id];
-            const canLeft = arrows[group.id]?.left ?? false;
-            const canRight = arrows[group.id]?.right ?? false;
 
             return (
               <section key={group.id}>
@@ -237,98 +241,62 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
                   </span>
                 </div>
 
-                {/* Carrusel con flechas en los bordes */}
-                <div className="relative">
-                  {/* Flecha izquierda */}
-                  {canLeft && (
-                    <button
-                      onClick={() => scrollCarousel(group.id, "left")}
-                      className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white border border-black/10 shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-all"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  )}
-
-                  {/* Cards */}
-                  <div
-                    ref={(el) => { carouselRefs.current[group.id] = el; }}
-                    className="no-scrollbar flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory"
-                  >
-                    {group.stores.map((store) => {
-                      const StoreIcon = TYPE_ICONS[store.tipoTienda];
-                      return (
-                        <Link
-                          key={store.id}
-                          href={`/tienda/${store.slug}`}
-                          className="store-card snap-start shrink-0 w-[280px] sm:w-72 bg-white rounded-2xl overflow-hidden border border-black/[0.06] group block"
-                        >
-                          <div className="relative overflow-hidden h-44 bg-gray-50">
-                            <iframe
-                              src={`/tienda/${store.slug}`}
-                              className="absolute border-0 pointer-events-none"
-                              style={{
-                                top: "-20px",
-                                left: "calc(50% - 160px)",
-                                width: "1280px",
-                                height: "800px",
-                                transform: "scale(0.25)",
-                                transformOrigin: "top left",
-                              }}
-                              loading="lazy"
-                              tabIndex={-1}
-                              aria-hidden="true"
-                              title=""
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-                            {store.isVerified && (
-                              <div className="absolute top-2.5 right-2.5">
-                                <div className="flex items-center gap-1 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
-                                  <BadgeCheck className="h-3 w-3" />
-                                  Verificado
-                                </div>
+                <div className={GRILLA}>
+                  {group.stores.map((store) => {
+                    const StoreIcon = TYPE_ICONS[store.tipoTienda];
+                    return (
+                      <Link
+                        key={store.id}
+                        href={`/tienda/${store.slug}`}
+                        className="store-card bg-white rounded-2xl overflow-hidden border border-black/[0.06] group block"
+                      >
+                        <div className="relative overflow-hidden aspect-[4/3] bg-gray-50">
+                          <TapaDeTienda store={store} />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                          {store.isVerified && (
+                            <div className="absolute top-2 right-2">
+                              {/* En 360 la tarjeta mide media pantalla: ahí la
+                                  chapita entera comía el ancho, así que queda el
+                                  tilde solo y el texto aparece desde tablet. */}
+                              <div className="flex items-center gap-1 bg-indigo-600 text-white text-[10px] font-bold px-1.5 sm:px-2 py-1 rounded-full shadow">
+                                <BadgeCheck className="h-3 w-3" />
+                                <span className="hidden sm:inline">Verificado</span>
                               </div>
-                            )}
-                            {StoreIcon && (
-                              <div className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
-                                <StoreIcon className="h-3.5 w-3.5 text-gray-600" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
-                          <div className="p-4">
-                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                              <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">
-                                {store.name}
-                              </h3>
-                              <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: store.primaryColor }} />
                             </div>
-                            {store.description && (
-                              <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
-                            )}
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                              <span className="text-[11px] text-gray-400 font-medium">
-                                {store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}
-                              </span>
-                              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">
-                                <Eye className="h-3.5 w-3.5" />
-                                Ver tienda
-                              </span>
+                          )}
+                          {StoreIcon && (
+                            <div className="absolute top-2 left-2 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
+                              <StoreIcon className="h-3.5 w-3.5 text-gray-600" />
                             </div>
+                          )}
+                        </div>
+                        <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
+                        <div className="p-3 sm:p-4">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">
+                              {store.name}
+                            </h3>
+                            <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: store.primaryColor }} />
                           </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-
-                  {/* Flecha derecha */}
-                  {canRight && (
-                    <button
-                      onClick={() => scrollCarousel(group.id, "right")}
-                      className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white border border-black/10 shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-all"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
+                          {store.description && (
+                            <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
+                          )}
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span className="text-[11px] text-gray-400 font-medium">
+                              {store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}
+                            </span>
+                            {/* "Ver tienda" se esconde en el celular: al lado del
+                                contador no entraba y se pisaban. La tarjeta
+                                entera es el link, así que no se pierde nada. */}
+                            <span className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">
+                              <Eye className="h-3.5 w-3.5" />
+                              Ver tienda
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             );
