@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LUGARES } from "@/lib/orden-promociones";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export async function GET() {
   const promotions = await prisma.promotion.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
-    take: 3,
+    take: LUGARES,
     select: { id: true, imageUrl: true, link: true },
   });
   return NextResponse.json({ promotions });

@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Loader2, Check, Megaphone, Link2, Trash2 } from "lucide-react";
+import { Upload, Loader2, Check, Megaphone, Link2, Trash2, ArrowLeft, ArrowRight } from "lucide-react";
+import { LUGARES } from "@/lib/orden-promociones";
 
 type Promotion = {
   id: string;
@@ -13,7 +14,11 @@ type Promotion = {
   active: boolean;
 };
 
-const SLOT_COUNT = 3;
+/* Cuántos lugares dibuja el panel. Sale de `orden-promociones`, que es donde lo
+   mira también la ruta que los mueve: con el número escrito en los dos lados,
+   agrandar el carrusel un día dejaría al panel ofreciendo un lugar que la ruta
+   rechaza. */
+const SLOT_COUNT = LUGARES;
 
 async function putJSON(url: string, body: unknown) {
   const res = await fetch(url, {
@@ -83,11 +88,18 @@ function PromotionSlot({
   promotion,
   onUploaded,
   onRemoved,
+  onMover,
+  moviendo,
 }: {
   slot: number;
   promotion: Promotion | null;
   onUploaded: (p: Promotion) => void;
   onRemoved: (id: string) => void;
+  /* Mover toca DOS lugares, así que el movimiento lo maneja el padre: es el
+     único que tiene la lista entera y el que pisa el estado con lo que contesta
+     el servidor. Acá sólo se avisa a dónde. */
+  onMover: (promotion: Promotion, destino: number) => void;
+  moviendo: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -227,7 +239,51 @@ function PromotionSlot({
         }}
       />
 
-      {promotion && <LinkField promotionId={promotion.id} initialValue={promotion.link} />}
+      {/* Mover de lugar.
+
+          Va abajo de la imagen y no encima, como los de subir y quitar: estos dos
+          son los únicos botones que se pueden querer tocar varias veces seguidas,
+          y tapando el flyer no se ve el resultado de lo que se acaba de hacer.
+
+          El número del lugar se dice acá con todas las letras porque ES el orden
+          del carrusel de la home: el #1 es el que se ve primero. */}
+      {promotion && (
+        <div className="flex items-center justify-between gap-1">
+          <button
+            type="button"
+            onClick={() => onMover(promotion, slot - 1)}
+            disabled={slot === 0 || moviendo}
+            title="Mover un lugar para atrás"
+            className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/15 text-white flex items-center justify-center transition-colors disabled:opacity-25 disabled:hover:bg-white/5"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="text-[11px] text-gray-500">Lugar #{slot + 1}</span>
+          <button
+            type="button"
+            onClick={() => onMover(promotion, slot + 1)}
+            disabled={slot === SLOT_COUNT - 1 || moviendo}
+            title="Mover un lugar para adelante"
+            className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/15 text-white flex items-center justify-center transition-colors disabled:opacity-25 disabled:hover:bg-white/5"
+          >
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* ⚠️ `key` con el id del flyer, y NO alcanza con la del `PromotionSlot`,
+          que va por lugar. `LinkField` guarda el texto en un `useState` que sólo
+          lee `initialValue` al montarse: sin esta key, después de un intercambio
+          React reutiliza el input de antes —queda mostrando el link del OTRO
+          flyer mientras `promotionId` ya apunta a éste— y el primer cambio que
+          se escriba ahí le guarda ese link viejo a la promoción equivocada.
+
+          Antes no podía pasar porque un flyer nunca cambiaba de lugar; lo
+          destapó mover. Con la key, React lo desmonta y lo vuelve a montar con
+          el valor correcto. */}
+      {promotion && (
+        <LinkField key={promotion.id} promotionId={promotion.id} initialValue={promotion.link} />
+      )}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </motion.div>
   );
@@ -236,6 +292,12 @@ function PromotionSlot({
 export default function PromocionesAdmin({ promotions: initial }: { promotions: Promotion[] }) {
   const router = useRouter();
   const [promotions, setPromotions] = useState<Promotion[]>(initial);
+  const [moviendo, setMoviendo] = useState(false);
+  const [errorMover, setErrorMover] = useState<string | null>(null);
+  /* El estado tarda un render en llegar; el ref corta en el acto. Es el mismo
+     candado que ya usan subir y quitar, y acá importa más: dos clics seguidos en
+     la flecha mandarían dos intercambios sobre una lista que ya cambió. */
+  const moviendoRef = useRef(false);
 
   function bySlot(slot: number) {
     return promotions.find((p) => p.sortOrder === slot) ?? null;
@@ -247,6 +309,38 @@ export default function PromocionesAdmin({ promotions: initial }: { promotions: 
       return exists ? prev.map((x) => (x.id === p.id ? p : x)) : [...prev, p];
     });
     router.refresh();
+  }
+
+  async function mover(promotion: Promotion, destino: number) {
+    if (moviendoRef.current) return;
+    moviendoRef.current = true;
+    setMoviendo(true);
+    setErrorMover(null);
+    try {
+      const res = await fetch("/api/admin/promociones/reordenar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: promotion.id, sortOrder: destino }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "No se pudo mover");
+      /* Se mira que sea una lista antes de pisar el estado: `bySlot` hace
+         `.find` sobre esto, y un 200 con cualquier otra cosa adentro —un proxy
+         que devuelve HTML, por ejemplo— dejaría el panel en blanco con un error
+         de JavaScript en vez de un mensaje. Es el mismo recaudo que ya toma
+         `PromotionsCarousel` con esta misma forma. */
+      if (!Array.isArray(data)) throw new Error("El servidor contestó algo raro — recargá la página.");
+      /* La lista entera, tal como quedó en la base. Mover toca dos flyers y el
+         link se muda con su imagen —son la misma fila—, así que reconstruirlo acá
+         era repetir del lado del navegador una cuenta que el servidor ya hizo. */
+      setPromotions(data);
+      router.refresh();
+    } catch (e) {
+      setErrorMover(e instanceof Error ? e.message : "No se pudo mover");
+    } finally {
+      moviendoRef.current = false;
+      setMoviendo(false);
+    }
   }
 
   function handleRemoved(id: string) {
@@ -268,9 +362,23 @@ export default function PromocionesAdmin({ promotions: initial }: { promotions: 
         Hasta {SLOT_COUNT} flyers — se muestran en un carrusel en la página principal. Formato vertical recomendado (1080×1920px).
       </p>
 
+      {/* Arriba de la grilla y no adentro de un flyer: el que falló puede ser
+          cualquiera de los dos que se estaban intercambiando. */}
+      {errorMover && (
+        <p className="text-sm text-red-400 mb-4">{errorMover}</p>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {Array.from({ length: SLOT_COUNT }, (_, slot) => (
-          <PromotionSlot key={slot} slot={slot} promotion={bySlot(slot)} onUploaded={handleUploaded} onRemoved={handleRemoved} />
+          <PromotionSlot
+            key={slot}
+            slot={slot}
+            promotion={bySlot(slot)}
+            onUploaded={handleUploaded}
+            onRemoved={handleRemoved}
+            onMover={mover}
+            moviendo={moviendo}
+          />
         ))}
       </div>
     </div>

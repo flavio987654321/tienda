@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { LUGARES } from "@/lib/orden-promociones";
 
-const MAX_ACTIVE = 3;
+/* Los lugares del carrusel, de un solo lado. Hasta el 23/09/26 el panel, la ruta
+   que los mueve y este tope escribían cada uno su propio 3. */
+const MAX_ACTIVE = LUGARES;
 
 export async function GET() {
   const user = await getCurrentUser();
