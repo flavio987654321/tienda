@@ -24,7 +24,8 @@ import {
   venceEnDelTokenDeUpsell, elTokenDeUpsellMasViejo, OFERTA_UPSELL_DE_FABRICA, MINUTOS_DE_UPSELL,
   MINUTOS_MAXIMOS_UPSELL, TEXTO_UPSELL_MAX,
 } from "./oferta-upsell";
-import { firmarUpsell, leerTokenDeUpsell, firmarBienvenida, firmarOferta } from "./oferta-salida-firma";
+import { firmarUpsell, leerTokenDeUpsell, firmarBienvenida, firmarOferta, leerTokenDeBienvenida, leerTokenDeOferta } from "./oferta-salida-firma";
+import { claveDeBienvenida } from "./bienvenida";
 import { ofertaUpsellDeLaVisita } from "./oferta-upsell-servidor";
 import { upsellsQueValen } from "./compra-digital";
 
@@ -258,6 +259,59 @@ check("UPS-AL", /validarCampos\(\{ price: hijo\.price, comparePrice: n \}, "UPSE
 check("UPS-AH", /borrador\.rol === "UPSELL" && \(/.test(leer("src/app/digitales/productos/ProductosClient.tsx"))
   && /es lo que se cobra cuando el reloj termina/.test(leer("src/app/digitales/productos/ProductosClient.tsx")),
   "en Productos, el «Precio original» de un upsell avisa que con la oferta prendida es plata que se cobra");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LOS CUATRO RELOJES NO SE PISAN
+   ══════════════════════════════════════════════════════════════════════════
+
+   En el panel hay tres ofertas con plazo (salida, bienvenida, upsell) y la
+   de salida guarda además la marca de "ya se lo mostramos". Son cuatro cosas
+   guardadas en el mismo navegador, y dos productos distintos pueden tener
+   las cuatro al mismo tiempo. Si dos compartieran clave, el plazo de una le
+   cambiaría el precio a la otra — o el de un producto al de otro. */
+
+const claves = (id: string) => [
+  claveDeOfertaUpsell(id),
+  claveDeBienvenida(id),
+  `pv_salida_token_${id}`,
+  `pv_salida_vista_${id}`,
+];
+
+check("UPS-AM", new Set(claves(ID)).size === 4
+  && claves(ID).every((c) => c.includes(ID))
+  && claves(ID).every((c) => !claves(OTRO).includes(c)),
+  "las cuatro claves del navegador son distintas entre sí Y entre productos: ningún plazo le cambia el precio a otro");
+
+check("UPS-AN", /pv_salida_token_\$\{p\.productoId\}/.test(cliente) && /pv_salida_vista_\$\{p\.productoId\}/.test(cliente),
+  "las dos claves de la oferta de salida llevan el id del producto adentro, como las otras dos");
+
+/* Las firmas ya se probaron cruzadas arriba (UPS-G). Esto es el otro lado:
+   que el mismo plazo, del mismo producto, no valga para la oferta de al lado. */
+check("UPS-AO", leerTokenDeUpsell(firmarUpsell(ID, AHORA + 60_000), ID, AHORA) !== null
+  && leerTokenDeBienvenida(firmarUpsell(ID, AHORA + 60_000), ID, AHORA) === null
+  && leerTokenDeOferta(firmarUpsell(ID, AHORA + 60_000), ID, AHORA) === null,
+  "un plazo del upsell no vale como plazo de bienvenida ni de la oferta de salida");
+
+/* ── Que esté conectado con el resto del panel ──────────────────────────── */
+
+const saber = leer("src/lib/sasha-digital-saber.ts");
+check("UPS-AP", /"\/digitales\/marketing\/upsells": "Armar la oferta del upsell"/.test(saber)
+  && /"\/digitales\/marketing\/bienvenida"/.test(saber) && /"\/digitales\/marketing\/salida"/.test(saber),
+  "Sasha puede llevar a las tres pantallas de ofertas: explicarlas sin poder llevar es dejar a la persona buscando");
+
+check("UPS-AQ", /se ofrece DOS veces/.test(saber) && !/aparece sólo en la pantalla de gracias/.test(saber)
+  && /Marketing → Upsells/.test(saber),
+  "Sasha ya no dice que el upsell aparece SÓLO después de pagar —es falso— y sabe del reloj");
+
+check("UPS-AR", /Oferta del upsell con reloj de verdad/.test(leer("src/lib/planes-digitales.ts")),
+  "el reloj del upsell figura en los planes: si se cobra, se tiene que ver qué se compra");
+
+/* El renglón del cupón: el código lo escribe quien vende y es una palabra
+   sola de hasta 20 letras. Sin esto se estira y a 360px se sale de la
+   tarjeta llevándose el reloj o el "sacar". */
+check("UPS-AS", (cliente.match(/flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-\[13px\] text-\[color:var\(--pv-ok\)\]/g) ?? []).length === 2
+  && (cliente.match(/<span className="inline-flex min-w-0 items-center gap-1\.5 font-bold">/g) ?? []).length === 2,
+  "el renglón del cupón corta y envuelve: un código largo no se lleva puesta la tarjeta");
 
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);

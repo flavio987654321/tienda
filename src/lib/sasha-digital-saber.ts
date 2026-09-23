@@ -92,8 +92,11 @@ export const ARTICULOS: Articulo[] = [
   {
     slug: "bono-y-upsell",
     titulo: "Bono y upsell: cómo se usan",
-    palabras: ["bono", "bonos", "regalo", "upsell", "upsells", "oferta", "gracias", "segunda oferta", "agregar", "combo"],
-    texto: `El bono se crea desde la tarjeta del principal ("Agregar bono"): es otro archivo que va de regalo y se muestra en la página como "y además te llevás…". El upsell también se crea ahí: tiene precio propio y aparece sólo en la pantalla de gracias, después de pagar, con un botón de un clic. Bono bueno: algo rápido de usar (una planilla, una checklist). Upsell bueno: el paso siguiente del mismo tema, a un precio parecido o menor.`,
+    palabras: ["bono", "bonos", "regalo", "upsell", "upsells", "oferta", "gracias", "segunda oferta", "agregar", "combo", "sumar", "extra", "reloj del upsell"],
+    /* ⚠️ Este texto decía que el upsell aparecía únicamente después de pagar,
+       y era FALSO: se ofrece DOS veces, y la primera —en el checkout, con un
+       clic— es la que más vende. Sasha lo estuvo explicando mal. */
+    texto: `El bono se crea desde la tarjeta del principal ("Agregar bono"): es otro archivo que va de regalo y se muestra en la página como "y además te llevás…". El upsell también se crea ahí y tiene precio propio, pero se ofrece DOS veces: en la pantalla de pago, en la caja "Sumá a tu compra" con un clic, y si no lo tomó, otra vez después de pagar. En Marketing → Upsells le podés poner un reloj: mientras corre sale su precio de oferta y cuando termina pasa a su precio de lista (el "precio original" que cargaste). Ese reloj es de verdad: no se reinicia al recargar y el precio de después se cobra. Es de Starter y Pro. Bono bueno: algo rápido de usar (una planilla, una checklist). Upsell bueno: el paso siguiente del mismo tema, a un precio parecido o menor.`,
   },
   {
     slug: "compartir",
@@ -180,6 +183,13 @@ export const PANTALLAS_DEL_PANEL: Record<string, string> = {
   "/digitales/marketing/enlaces": "Ver los enlaces",
   "/digitales/marketing/cupones": "Ir a Cupones",
   "/digitales/marketing/compradores": "Escribirles a tus compradores",
+  /* ⚠️ Las tres ofertas con reloj y los reels faltaban acá, así que Sasha
+     podía explicarlas y después no tenía cómo llevar a nadie: mandaba a
+     Marketing a buscarlas. Esta lista es la única puerta que tiene. */
+  "/digitales/marketing/bienvenida": "Armar el precio de bienvenida",
+  "/digitales/marketing/salida": "Armar la oferta de salida",
+  "/digitales/marketing/upsells": "Armar la oferta del upsell",
+  "/digitales/marketing/reels": "Buscar videos para reels",
   "/digitales/configuracion": "Ir a Configuración",
   "/digitales/mi-cuenta": "Ir a Mi cuenta",
 };

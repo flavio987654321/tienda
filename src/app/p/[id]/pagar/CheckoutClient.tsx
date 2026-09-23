@@ -742,15 +742,22 @@ export default function CheckoutClient(p: Props) {
             {/* El precio de bienvenida puesto: con su reloj, y sin "sacar" —no
                 es un código que alguien escribió, es el precio de esta visita—.
                 Escribir otro cupón lo reemplaza, como cualquier cupón. */}
+            {/* ⚠️ `flex-wrap` + `min-w-0` + `shrink-0`, y no es estética: un
+                código de cupón es una palabra sola de hasta 20 letras que la
+                escribe quien vende. Sin esto, el renglón se estira al ancho de
+                esa palabra y a 360px se pasa de la tarjeta, arrastrando el
+                reloj o el "sacar" fuera de la pantalla. El corte de palabra
+                global no alcanza: un hijo de un flex en fila no achica por
+                debajo de su contenido si no se le dice. */}
             {cuponVigente && esElDeBienvenida ? (
-              <p className="flex items-center justify-between gap-2 text-[13px] text-[color:var(--pv-ok)]">
-                <span className="inline-flex items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5" /> Precio de bienvenida · {cuponVigente.texto}</span>
-                <span className="tabular-nums text-[12px] font-bold">{ahora > 0 && bienvenidaVenceEn !== null ? cuentaRegresiva(bienvenidaVenceEn, ahora) ?? "0:00" : ""}</span>
+              <p className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[13px] text-[color:var(--pv-ok)]">
+                <span className="inline-flex min-w-0 items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5 shrink-0" /> <span className="min-w-0">Precio de bienvenida · {cuponVigente.texto}</span></span>
+                <span className="shrink-0 tabular-nums text-[12px] font-bold">{ahora > 0 && bienvenidaVenceEn !== null ? cuentaRegresiva(bienvenidaVenceEn, ahora) ?? "0:00" : ""}</span>
               </p>
             ) : cuponVigente ? (
-              <p className="flex items-center justify-between gap-2 text-[13px] text-[color:var(--pv-ok)]">
-                <span className="inline-flex items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5" /> Cupón {cuponVigente.codigo} · {cuponVigente.texto}</span>
-                <button type="button" onClick={() => { setCupon(null); setCodigo(""); }} className="text-[12px] underline underline-offset-2 text-[color:var(--pv-tenue)]">sacar</button>
+              <p className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[13px] text-[color:var(--pv-ok)]">
+                <span className="inline-flex min-w-0 items-center gap-1.5 font-bold"><Ticket className="h-3.5 w-3.5 shrink-0" /> <span className="min-w-0">Cupón {cuponVigente.codigo} · {cuponVigente.texto}</span></span>
+                <button type="button" onClick={() => { setCupon(null); setCodigo(""); }} className="shrink-0 text-[12px] underline underline-offset-2 text-[color:var(--pv-tenue)]">sacar</button>
               </p>
             ) : (
               <div className="flex gap-2">

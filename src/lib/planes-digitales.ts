@@ -98,6 +98,10 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Ver carritos abandonados", on: true },
     { text: "Oferta de salida a quien se va sin pagar", on: pago },
     { text: "Precio de bienvenida con reloj de verdad", on: pago },
+    /* El upsell existe en los tres planes (arriba, con su número); lo que
+       agrega el plan pago es el RELOJ. Por eso es una fila aparte y no una
+       aclaración de aquélla: son dos cosas que se compran distinto. */
+    { text: "Oferta del upsell con reloj de verdad", on: pago },
     { text: "Mail automático de recuperación", on: tier === "PRO" },
     { text: "Mail a tus compradores", on: tier === "PRO" },
     /* "Por producto" no es un detalle: es TODO. Un dominio por cuenta no le sirve

@@ -160,10 +160,17 @@ export default async function PantallaDePago({ params, searchParams }: Props) {
      El reloj de la caja "Sumá a tu compra". Manda sobre los upsells y sobre
      nada más: el principal vale lo mismo antes, durante y después.
 
-     ⚠️ Convive con el precio de bienvenida sin pisarlo —no es un descuento
-     arriba de otro, son dos productos distintos—, pero sólo uno de los dos
-     relojes se dibuja: el de bienvenida está arriba, en el resumen, y éste
-     adentro de la caja del upsell. Ver `lib/oferta-upsell`.
+     ⚠️ CONVIVE CON EL PRECIO DE BIENVENIDA, Y LOS DOS RELOJES PUEDEN ESTAR A
+     LA VEZ. No se pisan porque cuentan cosas distintas y cada uno lo dice:
+     el de bienvenida está en el renglón del cupón —"Precio de bienvenida ·
+     20% · 14:59"— y cuenta el descuento del producto principal; éste está
+     adentro de la caja del upsell y cuenta el precio del extra. Tampoco se
+     suman: el descuento de bienvenida es un cupón sobre el total, y el
+     precio del upsell lo decide su propio plazo.
+
+     No se esconde uno para que quede "más limpio": esconder un reloj que
+     sigue corriendo es la forma más rápida de que alguien pague un precio
+     que no vio venir. Ver `lib/oferta-upsell`.
 
      El plazo se firma ACÁ y viaja a la pantalla, que lo guarda: recargar o
      volver desde Mercado Pago no lo reinicia. */
