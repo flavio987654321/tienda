@@ -32,7 +32,7 @@ type Archivo = {
 };
 type Upsell = {
   id: string; nombre: string; descripcion: string | null;
-  precio: number; regular: number | null;
+  precio: number; regular: number | null; imagen: string | null;
 };
 type Estado = "esperando" | "listo" | "cancelado" | "desconocido" | "demorado";
 
@@ -293,19 +293,29 @@ export default function GraciasClient(p: Props) {
           )}
           {p.upsells.map((u) => (
             <div key={u.id} className={`mb-3 border-2 border-[color:var(--pv-acento)] bg-[color:var(--pv-suave)] p-4 ${p.tarjeta}`}>
-              <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
-              {u.descripcion && (
-                <p className="mt-1 text-[13px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
-              )}
-              {/* El tachado sale sólo si de verdad se está pagando menos: con
-                  el reloj terminado, `sale` YA ES el precio de lista y
-                  tacharlo al lado de sí mismo sería un descuento inventado. */}
-              <p className="mt-2 text-base font-extrabold text-[color:var(--pv-tinta)]">
-                {u.regular !== null && precioAhora(u) < u.regular && (
-                  <s className="mr-2 text-sm font-normal opacity-55">{plata(u.regular)}</s>
+              {/* La tapa al lado del nombre, igual que en la pantalla de pago:
+                  la misma oferta se tiene que ver igual en los dos lados. */}
+              <div className="flex items-start gap-3">
+                {u.imagen && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={u.imagen} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
                 )}
-                {plata(precioAhora(u))}
-              </p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
+                  {u.descripcion && (
+                    <p className="mt-1 text-[13px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
+                  )}
+                  {/* El tachado sale sólo si de verdad se está pagando menos: con
+                      el reloj terminado, `sale` YA ES el precio de lista y
+                      tacharlo al lado de sí mismo sería un descuento inventado. */}
+                  <p className="mt-2 text-base font-extrabold text-[color:var(--pv-tinta)]">
+                    {u.regular !== null && precioAhora(u) < u.regular && (
+                      <s className="mr-2 text-sm font-normal opacity-55">{plata(u.regular)}</s>
+                    )}
+                    {plata(precioAhora(u))}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => sumar(u.id)}

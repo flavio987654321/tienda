@@ -11,6 +11,7 @@ import { medicionDelProducto } from "@/lib/medicion-digital";
 import { SUB_STATUS_SELECT } from "@/lib/subscription";
 import { ofertaUpsellDeLaVisita, tokenDeUpsellDeLaCookie } from "@/lib/oferta-upsell-servidor";
 import { entraEnLaOferta, type OfertaDeUpsellEnPantalla } from "@/lib/oferta-upsell";
+import { primeraImagen } from "@/lib/productos-digitales";
 
 /** Lo más que puede llevar una orden de un embudo, con el doble de margen. */
 const TECHO_DE_UNA_ORDEN =
@@ -160,6 +161,7 @@ export default async function Gracias({ params, searchParams }: Props) {
               descripcion: u.description,
               precio: u.price,
               regular: u.comparePrice && u.comparePrice > u.price ? u.comparePrice : null,
+              imagen: primeraImagen(u.images),
             }))}
           ofertaUpsell={ofertaUpsell}
         />

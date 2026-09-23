@@ -169,6 +169,27 @@ export function imagenValida(url: unknown): boolean {
   return Boolean(supabase && url.startsWith(`${supabase}/storage/`));
 }
 
+/**
+ * La portada de un producto: la primera de sus imágenes, o `null`.
+ *
+ * `Product.images` es un JSON con una lista de direcciones. Un JSON roto no
+ * puede tumbar la pantalla donde se dibuja —y una de ésas es la de pago—,
+ * así que cualquier cosa rara devuelve `null` y la pantalla sale sin tapa.
+ *
+ * ⚠️ Estaba COPIADA IGUAL en cuatro pantallas: la página de venta, la de
+ * pago, Productos y la oferta de salida. Cuatro copias de un `try/catch` no
+ * duelen hasta que una tiene que cambiar —una segunda imagen, otro formato
+ * guardado— y cambian tres.
+ */
+export function primeraImagen(images: string): string | null {
+  try {
+    const lista = JSON.parse(images);
+    return Array.isArray(lista) && typeof lista[0] === "string" ? lista[0] : null;
+  } catch {
+    return null;
+  }
+}
+
 export type CamposProducto = {
   name?: unknown;
   description?: unknown;

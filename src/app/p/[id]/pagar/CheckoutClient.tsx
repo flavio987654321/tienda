@@ -626,7 +626,7 @@ export default function CheckoutClient(p: Props) {
             Lo que te llevás
           </p>
 
-          <Renglon nombre={p.nombre} valor={plata(p.regular)} />
+          <Renglon nombre={p.nombre} valor={plata(p.regular)} imagen={p.imagen} />
           {p.bonos.map((b) => (
             <Renglon
               key={b.id}
@@ -640,7 +640,7 @@ export default function CheckoutClient(p: Props) {
             />
           ))}
           {p.upsells.filter((u) => elegidos.includes(u.id)).map((u) => (
-            <Renglon key={u.id} nombre={u.nombre} valor={plata(u.regular ?? u.precio)} />
+            <Renglon key={u.id} nombre={u.nombre} valor={plata(u.regular ?? u.precio)} imagen={u.imagen} />
           ))}
 
           {/* ── La caja del upsell ───────────────────────────────────────
@@ -691,19 +691,31 @@ export default function CheckoutClient(p: Props) {
                 const sale = precioAhora(u);
                 return (
                   <div key={u.id} className={`mt-2.5 border-2 border-dashed border-[color:var(--pv-acento)] p-3.5 ${p.tarjeta} ${puesto ? "bg-[color:var(--pv-fuerte)] border-solid" : "bg-[color:var(--pv-tarjeta)]"}`}>
-                    <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
-                    {u.descripcion && (
-                      <p className="mt-1 text-[12.5px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
-                    )}
-                    {/* El tachado sale sólo si de verdad se está pagando menos.
-                        Con la oferta vencida, `sale` YA ES el precio de lista:
-                        tacharlo al lado de sí mismo sería un descuento inventado. */}
-                    <p className="mt-2 text-sm font-bold text-[color:var(--pv-tinta)]">
-                      {u.regular !== null && sale < u.regular && (
-                        <s className="mr-2 font-normal opacity-55">{plata(u.regular)}</s>
+                    {/* La tapa al lado del nombre, como en el cartel de salida.
+                        `min-w-0 flex-1` en la columna del texto: sin eso el
+                        nombre estira la fila y la tapa empuja el precio afuera
+                        de la tarjeta en un celular. */}
+                    <div className="flex items-start gap-3">
+                      {u.imagen && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.imagen} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
                       )}
-                      {plata(sale)}
-                    </p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
+                        {u.descripcion && (
+                          <p className="mt-1 text-[12.5px] text-[color:var(--pv-tenue)]">{u.descripcion}</p>
+                        )}
+                        {/* El tachado sale sólo si de verdad se está pagando menos.
+                            Con la oferta vencida, `sale` YA ES el precio de lista:
+                            tacharlo al lado de sí mismo sería un descuento inventado. */}
+                        <p className="mt-2 text-sm font-bold text-[color:var(--pv-tinta)]">
+                          {u.regular !== null && sale < u.regular && (
+                            <s className="mr-2 font-normal opacity-55">{plata(u.regular)}</s>
+                          )}
+                          {plata(sale)}
+                        </p>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setElegidos((v) => puesto ? v.filter((x) => x !== u.id) : [...v, u.id])}
@@ -847,10 +859,27 @@ function Sello({ icono, children }: { icono: React.ReactNode; children: React.Re
   );
 }
 
-function Renglon({ nombre, valor }: { nombre: string; valor: React.ReactNode }) {
+/**
+ * Un renglón de "Lo que te llevás".
+ *
+ * `imagen` es la tapa, y va sólo donde hay una: el producto y los upsells
+ * que se agregaron. Los bonos quedan como texto a propósito —son el
+ * "y además"—, y una fila de miniaturas todas iguales le saca peso a lo
+ * que de verdad se está comprando.
+ *
+ * ⚠️ `alt=""` a propósito: la tapa no dice nada que el nombre de al lado no
+ * diga ya. Repetirlo hace que un lector de pantalla lea dos veces lo mismo.
+ */
+function Renglon({ nombre, valor, imagen }: { nombre: string; valor: React.ReactNode; imagen?: string | null }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 border-b border-[color:var(--pv-linea)] py-2.5 text-[13.5px] last:border-b-0">
-      <span className="min-w-0 text-[color:var(--pv-tinta)]">{nombre}</span>
+      <span className="flex min-w-0 items-center gap-2.5">
+        {imagen && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imagen} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+        )}
+        <span className="min-w-0 text-[color:var(--pv-tinta)]">{nombre}</span>
+      </span>
       <span className="whitespace-nowrap font-semibold tabular-nums text-[color:var(--pv-tinta)]">{valor}</span>
     </div>
   );

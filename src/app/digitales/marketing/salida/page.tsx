@@ -5,6 +5,7 @@ import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { normalizarContenido, variablesDePagina, buscarEstilo } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { leerOfertaSalida } from "@/lib/oferta-salida";
+import { primeraImagen } from "@/lib/productos-digitales";
 import BotonVolver from "../../BotonVolver";
 import SalidaClient, { type ProductoDeSalida } from "./SalidaClient";
 
@@ -77,11 +78,3 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
   );
 }
 
-function primeraImagen(images: string): string | null {
-  try {
-    const lista = JSON.parse(images);
-    return Array.isArray(lista) && typeof lista[0] === "string" ? lista[0] : null;
-  } catch {
-    return null;
-  }
-}

@@ -8,6 +8,7 @@ import { estadoDelBorrador } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus } from "@/lib/subscription";
 import { leerEstadoDeLanding } from "@/lib/landing-estado";
 import { cuantosDe } from "@/lib/correos-compradores-db";
+import { primeraImagen } from "@/lib/productos-digitales";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
 
 /**
@@ -33,15 +34,6 @@ const TECHO_DE_PRODUCTOS =
  * producto (ver `espacioDigital`). Entrar a mirar no tiene por qué dejar una
  * tienda vacía colgando.
  */
-/** La portada, o `null`. Un JSON roto no puede tumbar la pantalla entera. */
-function primeraImagen(images: string): string | null {
-  try {
-    const lista = JSON.parse(images);
-    return Array.isArray(lista) && typeof lista[0] === "string" ? lista[0] : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * ⚠️ `?pagina=` SE LEE ACÁ, EN EL SERVIDOR, Y NO EN EL NAVEGADOR.

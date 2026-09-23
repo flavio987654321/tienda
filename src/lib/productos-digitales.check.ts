@@ -12,12 +12,16 @@
  */
 
 import {
-  rolDe, topeDe, loQueFalta, validarCampos, imagenValida, porQueNoSePublica, lasQueSobran,
+  rolDe, topeDe, loQueFalta, validarCampos, imagenValida, porQueNoSePublica, lasQueSobran, primeraImagen,
   PRECIO_MAXIMO, LARGO_TITULO, ROLES,
 } from "./productos-digitales";
 import { readFileSync } from "node:fs";
 import { TOPES_DIGITALES, EBOOKS_IA_ARRANQUE, MAX_PRODUCTOS_DIGITALES_CREADOS } from "./planLimits";
 import { TIERS_DIGITALES } from "./planes-digitales";
+
+/* Con los finales de línea normalizados: la copia de trabajo mezcla CRLF y
+   LF, y un regex escrito con \n no engancha en los archivos que tienen CRLF. */
+const leerTexto = (f: string) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -371,6 +375,46 @@ check("TECHO-D",
 check("TECHO-E",
   /if \(creado === "techo"\) \{[\s\S]{0,600}status: 409/.test(rutaCrear) && /escribinos/.test(rutaCrear),
   "al llegar contesta 409 y dice a dónde escribir, sin el número");
+
+/* ── La portada ─────────────────────────────────────────────────────────── */
+
+check("TAPA-A", primeraImagen(JSON.stringify(["/uploads/a.jpg", "/uploads/b.jpg"])) === "/uploads/a.jpg"
+  && primeraImagen("[]") === null
+  && primeraImagen("{roto") === null
+  && primeraImagen(JSON.stringify([1, 2])) === null
+  && primeraImagen(JSON.stringify({ a: 1 })) === null,
+  "la portada es la primera de la lista, y cualquier cosa rara devuelve null: un JSON roto no tumba la pantalla de pago");
+
+/* ⚠️ Estaba copiada IGUAL en cuatro pantallas. Cuatro copias de un try/catch
+   no duelen hasta que una tiene que cambiar y cambian tres. */
+const conCopia = [
+  "src/app/digitales/marketing/salida/page.tsx",
+  "src/app/digitales/productos/page.tsx",
+  "src/app/p/[id]/pagar/page.tsx",
+  "src/app/p/[id]/page.tsx",
+  "src/app/p/[id]/gracias/page.tsx",
+].filter((f) => /function primeraImagen\(/.test(leerTexto(f)));
+check("TAPA-B", conCopia.length === 0,
+  `ninguna pantalla se define su propia primeraImagen: sale de la librería${conCopia.length ? ` (la copian: ${conCopia.join(", ")})` : ""}`);
+
+/* La tapa DIBUJADA, que es lo que faltaba: el servidor la mandaba desde
+   siempre y las pantallas la tiraban. */
+const elCheckout = leerTexto("src/app/p/[id]/pagar/CheckoutClient.tsx");
+const elGracias = leerTexto("src/app/p/[id]/gracias/GraciasClient.tsx");
+check("TAPA-C", /<img src=\{u\.imagen\} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" \/>/.test(elCheckout)
+  && /<img src=\{imagen\} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" \/>/.test(elCheckout)
+  && /imagen=\{p\.imagen\}/.test(elCheckout) && /imagen=\{u\.imagen\}/.test(elCheckout),
+  "la pantalla de pago dibuja la tapa del producto y la del upsell: el dato viajaba y no se usaba");
+
+check("TAPA-D", /<img src=\{u\.imagen\} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" \/>/.test(elGracias)
+  && /imagen: primeraImagen\(u\.images\)/.test(leerTexto("src/app/p/[id]/gracias/page.tsx")),
+  "la última oferta muestra la MISMA tapa que la pantalla de pago: la misma oferta no se ve distinta en cada lado");
+
+/* `alt=""` a propósito en las dos: la tapa no dice nada que el nombre de al
+   lado no diga ya, y repetirlo hace que un lector de pantalla lea dos veces
+   lo mismo. Si alguna vez deja de estar al lado del nombre, esto cambia. */
+check("TAPA-E", !/<img src=\{u\.imagen\} alt=\{u\.nombre\}/.test(elCheckout) && !/<img src=\{u\.imagen\} alt=\{u\.nombre\}/.test(elGracias),
+  "la tapa va con alt vacío: el nombre está al lado y un lector de pantalla no tiene que leerlo dos veces");
 
 console.log(fallos === 0
   ? "\nok — el embudo de Productos Digitales se sostiene"

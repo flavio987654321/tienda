@@ -11,6 +11,7 @@ import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { leerEstadoDeLanding, leerInventario } from "@/lib/landing-estado";
 import { armarLanding } from "@/lib/landing-propia";
+import { primeraImagen } from "@/lib/productos-digitales";
 import { documentosPublicados, type FilaPoliticas } from "@/lib/politicas-tienda";
 import LandingPropia from "@/components/digitales/LandingPropia";
 import { isSubscriptionActive } from "@/lib/subscription";
@@ -88,15 +89,6 @@ async function loQueSeMuestra(id: string) {
   return { ...fila, anio: new Date().getFullYear() };
 }
 
-/** La portada. Un JSON roto no puede tumbar la página entera. */
-function primeraImagen(images: string): string | null {
-  try {
-    const lista = JSON.parse(images);
-    return Array.isArray(lista) && typeof lista[0] === "string" ? lista[0] : null;
-  } catch {
-    return null;
-  }
-}
 
 const paraPagina = (f: {
   id: string; name: string; description: string | null;

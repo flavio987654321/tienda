@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { normalizarContenido, variablesDePagina, buscarEstilo, diasDeGarantia } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
-import { loQueFalta } from "@/lib/productos-digitales";
+import { loQueFalta, primeraImagen } from "@/lib/productos-digitales";
 import { totalDeLaCompra, type ItemDeCompra } from "@/lib/compra-digital";
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import CheckoutClient from "./CheckoutClient";
@@ -300,12 +300,3 @@ function recortar(texto: string | null): string | null {
   return t.length > 220 ? `${t.slice(0, 217).trimEnd()}…` : t;
 }
 
-/** La portada. Un JSON roto no puede tumbar la pantalla de pago. */
-function primeraImagen(images: string): string | null {
-  try {
-    const lista = JSON.parse(images);
-    return Array.isArray(lista) && typeof lista[0] === "string" ? lista[0] : null;
-  } catch {
-    return null;
-  }
-}
