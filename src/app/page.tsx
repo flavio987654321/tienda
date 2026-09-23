@@ -9,12 +9,13 @@ import PromotionsCarousel from "@/components/PromotionsCarousel";
 import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
+import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, CheckCircle,
   ShoppingBag, Star, Send, MessageCircle, HeartHandshake,
   Package, ShoppingCart, ChevronRight, ChevronLeft, Menu,
-  BadgeCheck, Sparkles,
+  BadgeCheck, Sparkles, Download,
   Bell, Tag, Shield, Clock,
 } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -463,6 +464,14 @@ export default function Home() {
               se parta a dos líneas. El gap arranca chico y crece en xl. */}
           <div className="hidden lg:flex items-center gap-6 xl:gap-8">
             <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Tiendas</Link>
+            {/* ⚠️ Este nav es una COPIA del de `SiteNav`, escrita a mano. La home
+                se quedó afuera de la unificación, así que un link nuevo hay que
+                ponerlo en los dos lados —y acá abajo otra vez, en el menú de la
+                hamburguesa—. Si algún día se unifica de verdad, estas tres
+                copias se van juntas. */}
+            {DIGITALES_ABIERTO && (
+              <Link href="/productos-digitales" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Productos digitales</Link>
+            )}
             <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Precios</Link>
             <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5">
@@ -528,6 +537,10 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-1 px-4 py-4 flex-1">
                 <Link href="/tiendas" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Tiendas</Link>
+                {/* La tercera copia del mismo listado: ver el aviso de arriba. */}
+                {DIGITALES_ABIERTO && (
+                  <Link href="/productos-digitales" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Productos digitales</Link>
+                )}
                 <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Quiénes somos</Link>
                 <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Precios</Link>
                 <Link href="/seguimiento" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Seguimiento</Link>
@@ -1137,6 +1150,134 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── PRODUCTOS DIGITALES ──
+
+          POR QUÉ VA ACÁ Y NO EN OTRO LADO
+          En "Para afiliados" la home deja de hablarle a quien quiere una tienda
+          y empieza a mostrar las OTRAS formas de usar la plataforma. Este es el
+          tercer camino, así que acompaña ese tramo en vez de interrumpir el
+          anterior. Más arriba competiría con el mensaje principal; al final,
+          después de los testimonios, sería un tema nuevo cuando la página ya
+          está cerrando — ahí sí quedaría colgado.
+
+          POR QUÉ ES BLANCO
+          Afiliados es un degradado cálido y Sasha es `bg-gray-50`. Pintado de
+          gris quedaban dos fondos iguales pegados y las dos secciones se leían
+          como una sola.
+
+          PROMETE, NO EXPLICA
+          Tres frases y un botón. La explicación entera —la IA, los planes, la
+          comisión, la garantía— va a vivir en su propia página. Contada en los
+          dos lados son dos textos que en tres meses dicen cosas distintas.
+
+          LA PANTALLA DE LA DERECHA ES UN EJEMPLO NUESTRO
+          Mismo diseño que la página de venta de verdad, con un producto
+          inventado (`public/marketing/pagina-de-venta-ejemplo.png`). La única
+          página real que existe hoy es la de una clienta, y su tapa y sus textos
+          son de ella. Si algún día se muestra una real, va con su permiso.
+
+          ⚠️ SE DIBUJA SÓLO SI EL PRODUCTO ESTÁ ABIERTO
+          La misma llave que ya miran `/precios`, `/login` y `/registro`. Hoy
+          está prendida, pero si un día se apaga —para rehacer algo, o porque se
+          frena el alta— sin esto la home lo seguiría ofreciendo y "Empezá
+          gratis" llevaría a un registro donde esa cuenta ya no está: el
+          parámetro se descarta y la persona cae a elegir entre las otras tres,
+          sin que nada le explique qué pasó. */}
+      {DIGITALES_ABIERTO && (
+      <section className="py-24 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
+            <motion.span variants={fadeUp} className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-600 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-4">
+              <Download className="h-3.5 w-3.5" /> Productos digitales
+            </motion.span>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-5 leading-tight">
+              Subí tu ebook.<br className="hidden sm:block" /> Del resto nos ocupamos.
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg leading-relaxed mb-8">
+              Vendés guías, plantillas o recetarios sin tener una tienda: te armamos la página de venta, cobrás con Mercado Pago y el archivo le llega solo al que compra.
+            </motion.p>
+
+            <motion.div variants={fadeUp} className="space-y-3 mb-9">
+              {[
+                "Su propia página de venta, lista para publicar",
+                "Cobrás con Mercado Pago, a tu cuenta",
+                "La entrega es automática: se manda sola al pagar",
+              ].map((t) => (
+                <div key={t} className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-700 text-base">{t}</p>
+                </div>
+              ))}
+            </motion.div>
+
+            {/* La página explica el producto y desde ahí se elige el plan; el
+                alta queda en el siguiente paso, junto con precios. */}
+            <motion.div variants={fadeUp}>
+              <Link
+                href="/productos-digitales"
+                className="inline-flex items-center gap-2 bg-gray-950 text-white px-7 py-4 rounded-2xl font-bold hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+              >
+                Conocé cómo funciona <ArrowRight className="h-4 w-4" />
+              </Link>
+              <p className="text-gray-400 text-sm mt-3">Sin tarjeta. El plan gratis no vence.</p>
+            </motion.div>
+          </motion.div>
+
+          {/* La pantalla, en un celular.
+
+              Va después del texto en el código: en el celular las dos columnas
+              colapsan a una y así se entra por el título y no por una foto sin
+              saber de qué se trata. Es el mismo criterio que usa la sección de
+              "Diseño a tu medida" más arriba.
+
+              El recorte es a propósito: se ve la parte de arriba —la tapa y el
+              título, que es lo que convence— y el resto se va abajo del marco.
+              Mostrar la página entera achicada no dejaría leer nada. */}
+          <motion.div
+            initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }} transition={{ duration: 0.6 }}
+            className="relative mx-auto w-[248px] sm:w-[276px]"
+          >
+            <div className="relative h-[420px] sm:h-[470px] rounded-[2.2rem] overflow-hidden border-[7px] border-gray-900 shadow-2xl shadow-gray-300/70 bg-white">
+              <Image
+                src="/marketing/pagina-de-venta-ejemplo.png"
+                alt="Ejemplo de una página de venta de un producto digital"
+                fill
+                sizes="276px"
+                className="object-cover object-top"
+              />
+            </div>
+
+            {/* El aviso de venta. Es lo único de la escena que no está en la
+                pantalla de al lado, y es lo que la sección promete: que cobrás.
+
+                Va abajo y a la izquierda, sobre la tapa del ebook. Arriba a la
+                derecha —donde estaba— le tapaba el título a la pantalla, que es
+                justo lo que la captura tiene para mostrar.
+
+                Se esconde en el celular: ahí el marco ocupa casi todo el ancho y
+                cualquier cosa encima tapa algo. */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.45 }}
+              className="hidden sm:flex absolute -left-10 bottom-16 items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-xl shadow-gray-300/60 border border-black/5"
+              style={{ transform: "rotate(-3deg)" }}
+            >
+              <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] text-gray-400 font-semibold leading-none mb-1">Venta aprobada</p>
+                <p className="text-sm font-black text-gray-900 leading-none">$ 9.900</p>
+              </div>
+            </motion.div>
+          </motion.div>
+
+        </div>
+      </section>
+      )}
 
       {/* ── SASHA (asistente de IA) ── */}
       <section className="py-24 bg-gray-50 overflow-hidden">
