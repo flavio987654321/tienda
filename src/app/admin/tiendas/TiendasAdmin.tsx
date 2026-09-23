@@ -25,6 +25,8 @@ type StoreRow = {
    * apaga la venta entera.
    */
   esDigital: boolean;
+  /** Cuándo cerró la cuenta, o `null` si sigue abierta. */
+  cerradaEl: string | null;
   owner: { name: string | null; email: string };
   _count: { products: number; affiliates: number; orders: number };
 };
@@ -117,17 +119,24 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
     return p.store.isActive ? "desactivar" : "activar";
   }
 
+  /* ⚠️ Cada número tiene que contar EXACTAMENTE lo que muestra su filtro.
+     Las digitales quedaron afuera de "Sin publicar" —para ellas eso no es un
+     pendiente, es su estado correcto— así que también tienen que quedar afuera
+     de ese contador, y de "Total", que cuenta tiendas. Si no, la tarjeta dice
+     un número, se la toca, y la lista muestra otro. */
   const stats = useMemo(() => ({
-    total:     initial.filter(s => !isDeletedStore(s)).length,
+    total:     initial.filter(s => !isDeletedStore(s) && !s.esDigital).length,
     activas:   initial.filter(s => s.isActive && s.isPublished && !isDeletedStore(s)).length,
-    inactivas: initial.filter(s => !isDeletedStore(s) && (!s.isActive || !s.isPublished)).length,
+    inactivas: initial.filter(s => !isDeletedStore(s) && !s.esDigital && (!s.isActive || !s.isPublished)).length,
+    digitales: initial.filter(s => s.esDigital && !isDeletedStore(s)).length,
     eliminadas: initial.filter(isDeletedStore).length,
   }), [initial]);
 
   return (
     <>
       {/* Resumen clicable */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {/* Cinco tarjetas desde que las cuentas digitales se cuentan aparte. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         <Link href="/admin/tiendas" className={`rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "" ? "ring-2 ring-white/20" : ""}`}>
           <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
             <Store className="h-4 w-4 text-indigo-400" />
@@ -153,6 +162,15 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
           <div>
             <p className="text-xl font-black text-white">{stats.inactivas}</p>
             <p className="text-xs text-gray-400 font-medium">Sin publicar</p>
+          </div>
+        </Link>
+        <Link href="/admin/tiendas?f=digitales" className={`rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "digitales" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+            <BookOpen className="h-4 w-4 text-orange-400" />
+          </div>
+          <div>
+            <p className="text-xl font-black text-white">{stats.digitales}</p>
+            <p className="text-xs text-orange-400 font-medium">Digitales</p>
           </div>
         </Link>
         <Link href="/admin/tiendas?f=eliminadas" className={`rounded-2xl border border-red-500/20 bg-red-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "eliminadas" ? "ring-2 ring-white/20" : ""}`}>
@@ -392,6 +410,30 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                     )}
                   </td>
                   <td className="px-5 py-4">
+                    {/* ⚠️ Para una cuenta digital, este botón no hacía NADA.
+                        `Store.isActive` no lo lee nadie en su camino: ni sus
+                        páginas públicas, ni su panel, ni el cron. Se apretaba,
+                        se guardaba la columna, y la cuenta seguía igual — un
+                        botón que promete y no cumple es tan malo como uno que
+                        rompe, sólo que se descubre más tarde.
+                        Lo que sí dice si esa cuenta está andando es si está
+                        cerrada, y eso es lo que se muestra. Se cierra y se
+                        reabre desde su propio panel. */}
+                    {s.esDigital ? (
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border ${
+                          s.cerradaEl
+                            ? "bg-red-500/10 text-red-400 border-red-500/20"
+                            : "bg-gray-800/60 text-gray-400 border-white/5"
+                        }`}
+                        title={s.cerradaEl
+                          ? `La dueña cerró su cuenta el ${new Date(s.cerradaEl).toLocaleDateString("es-AR")}`
+                          : "Cuenta abierta. Las cuentas digitales se cierran y se reabren desde su propio panel."}
+                      >
+                        <Power className="h-3 w-3" />
+                        {s.cerradaEl ? "Cerrada" : "Abierta"}
+                      </span>
+                    ) : (
                     <button
                       onClick={() => setPending({ store: s, field: "isActive" })}
                       disabled={loadingId === s.id + "-isActive"}
@@ -408,6 +450,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                       )}
                       {s.isActive ? "Activa" : "Inactiva"}
                     </button>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <span className="flex items-center gap-1.5 text-white text-sm font-semibold">

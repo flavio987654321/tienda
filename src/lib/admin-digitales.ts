@@ -184,7 +184,14 @@ export async function fotoDeDigitales(ahora: Date = new Date()): Promise<FotoDig
   const desde = inicioDiaArgentino(`${diaArgentino(ahora).slice(0, 7)}-01`);
 
   const filas = await prisma.subscription.findMany({
-    where: { role: "DIGITAL" },
+    /* ⚠️ Sin las cuentas eliminadas. Al borrar una cuenta se le cambia el mail
+       por uno terminado en `.invalid` (es la marca que usa todo el panel: no
+       hay una columna de borrado), pero la suscripción queda. Sin este filtro
+       una cuenta eliminada seguía contando como cuenta viva, seguía apareciendo
+       en la tabla, y si había llegado a pagar seguía sumando al fijo del mes
+       **para siempre**: plata que no entra más, en el número que se mira para
+       decidir si el producto va. */
+    where: { role: "DIGITAL", user: { email: { not: { endsWith: ".invalid" } } } },
     take: TOPE_DE_CUENTAS + 1,
     orderBy: { createdAt: "asc" },
     select: {

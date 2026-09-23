@@ -69,12 +69,19 @@ function Numero({ valor, titulo, detalle, acento }: {
   );
 }
 
-/** Una cuenta en una lista de "mirá esto". Dice el qué y el cuándo. */
+/**
+ * Una cuenta en una lista de "mirá esto". Dice el qué y el cuándo.
+ *
+ * ⚠️ El link va con la búsqueda sola, SIN el filtro de digitales. Ese filtro
+ * deja afuera a las cuentas baneadas, así que justo la fila que uno toca para
+ * ir a ver qué pasa con una cuenta con problemas abría una lista vacía. Con la
+ * búsqueda sola se cae siempre en la persona.
+ */
 function Renglon({ cuenta, cuando }: { cuenta: CuentaDigital; cuando: string }) {
   return (
     <li className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
       <Link
-        href={`/admin/usuarios?f=digitales&q=${encodeURIComponent(cuenta.email)}`}
+        href={`/admin/usuarios?q=${encodeURIComponent(cuenta.email)}`}
         className="min-w-0 truncate text-gray-300 hover:text-white transition-colors"
       >
         {cuenta.nombre ?? cuenta.email}
@@ -230,7 +237,7 @@ export default async function AdminDigitalesPage() {
                   <tr key={c.userId} className={c.banned ? "bg-red-950/20" : "hover:bg-white/[0.02] transition-colors"}>
                     <td className="px-5 py-3.5">
                       <Link
-                        href={`/admin/usuarios?f=digitales&q=${encodeURIComponent(c.email)}`}
+                        href={`/admin/usuarios?q=${encodeURIComponent(c.email)}`}
                         className="group inline-flex items-center gap-1.5"
                       >
                         <span className="min-w-0">

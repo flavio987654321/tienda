@@ -47,6 +47,9 @@ export default async function AdminTiendasPage({
       primaryColor: s.primaryColor,
       isActive: s.isActive,
       isPublished: s.isPublished,
+      /* Para las cuentas digitales, esto es lo que de verdad dice si están
+         andando: `isActive` no lo lee nadie para ellas. */
+      cerradaEl: s.closedAt ? s.closedAt.toISOString() : null,
       createdAt: s.createdAt.toISOString(),
       esDigital,
       owner: { name: s.owner?.name ?? null, email: s.owner?.email ?? "" },

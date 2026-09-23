@@ -227,5 +227,41 @@ check("ADM-U",
   /topeDe\(c\.tier, "PRINCIPAL"\)/.test(pantalla) && /publicadas · \{c\.productos\} cargada/.test(pantalla),
   "el segundo número de Páginas es el tope del plan, y lo cargado se dice aparte");
 
+/* ⚠️ Cada tarjeta del resumen tiene que contar EXACTAMENTE lo que muestra su
+   filtro. Las digitales salieron del filtro "Sin publicar" —para ellas eso no
+   es un pendiente, es su estado correcto— y por un rato siguieron contadas en
+   la tarjeta: el número decía una cosa y la lista que abría mostraba otra. */
+check("ADM-V",
+  /total:\s+initial\.filter\(s => !isDeletedStore\(s\) && !s\.esDigital\)/.test(tiendasLista)
+  && /inactivas:\s+initial\.filter\(s => !isDeletedStore\(s\) && !s\.esDigital &&/.test(tiendasLista)
+  && /digitales:\s+initial\.filter\(s => s\.esDigital/.test(tiendasLista)
+  && /f=digitales/.test(tiendasLista),
+  "los contadores de arriba cuentan lo mismo que abre cada filtro");
+
+/* ⚠️ El botón "Activa" no le hacía NADA a una cuenta digital: `Store.isActive`
+   no lo lee nadie en su camino —ni sus páginas, ni su panel, ni el cron—. Se
+   apretaba, se guardaba la columna, y la cuenta seguía igual. Lo que sí dice
+   si está andando es si está cerrada. */
+check("ADM-W",
+  /s\.cerradaEl \? "Cerrada" : "Abierta"/.test(tiendasLista)
+  && /cerradaEl: s\.closedAt/.test(tiendasPagina),
+  "a una cuenta digital no se le ofrece un botón que no hace nada: se le muestra si está abierta");
+
+/* ⚠️ Una cuenta eliminada no es una cuenta. Al borrarla se le cambia el mail
+   por uno terminado en `.invalid` —es la marca que usa todo el panel— pero la
+   suscripción queda: sin filtrarla seguía contando como viva y, si había
+   llegado a pagar, seguía sumando al fijo del mes para siempre. */
+check("ADM-X",
+  /email: \{ not: \{ endsWith: "\.invalid" \} \}/.test(lib),
+  "las cuentas eliminadas no cuentan como cuentas ni como plata que entra");
+
+/* El link de cada fila va con la búsqueda sola: el filtro de digitales deja
+   afuera a las baneadas, así que la fila que uno toca para ir a ver un
+   problema abría una lista vacía. */
+check("ADM-Y",
+  /admin\/usuarios\?q=\$\{encodeURIComponent/.test(pantalla)
+  && !/f=digitales&q=/.test(pantalla),
+  "desde Digitales se cae siempre en la persona, incluso si está baneada");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);
