@@ -10,6 +10,7 @@ import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { DIGITALES_ABIERTO } from "@/lib/planLimits";
+import { LINKS_PUBLICOS } from "@/lib/nav-publico";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, CheckCircle,
@@ -461,25 +462,24 @@ export default function Home() {
           {/* Mismo criterio que el nav compartido (SiteNav): el menú completo no
               entra en 768px, así que aparece recién en lg (1024px) y abajo de eso
               manda la hamburguesa. whitespace-nowrap para que ningún link ni botón
-              se parta a dos líneas. El gap arranca chico y crece en xl. */}
+              se parta a dos líneas. El gap arranca chico y crece en xl.
+
+              Los links salen de `@/lib/nav-publico`, el mismo array que usa
+              SiteNav. La home mantiene su barra propia (arranca transparente
+              sobre el hero, y abajo abre un cajón lateral) pero ya no tiene su
+              propia lista: agregar un link en un solo archivo lo hace aparecer
+              en las dos barras y en los dos menús. */}
           <div className="hidden lg:flex items-center gap-6 xl:gap-8">
-            <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Tiendas</Link>
-            {/* ⚠️ Este nav es una COPIA del de `SiteNav`, escrita a mano. La home
-                se quedó afuera de la unificación, así que un link nuevo hay que
-                ponerlo en los dos lados —y acá abajo otra vez, en el menú de la
-                hamburguesa—. Si algún día se unifica de verdad, estas tres
-                copias se van juntas. */}
-            {DIGITALES_ABIERTO && (
-              <Link href="/productos-digitales" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Productos digitales</Link>
-            )}
-            <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Quiénes somos</Link>
-            <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5">
-              <Package className="h-4 w-4" />Seguimiento
-            </Link>
-            <Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5">
-              <MessageCircle className="h-4 w-4" />Contacto
-            </Link>
+            {LINKS_PUBLICOS.map(({ key, href, label, icon: Icon }) => (
+              <Link
+                key={key}
+                href={href}
+                className={`text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors${Icon ? " flex items-center gap-1.5" : ""}`}
+              >
+                {Icon && <Icon className="h-4 w-4" />}
+                {label}
+              </Link>
+            ))}
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -527,7 +527,13 @@ export default function Home() {
             <motion.div
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "tween", duration: 0.3 }}
-              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 flex flex-col lg:hidden"
+              /* Arranca abajo de la barra del anuncio, igual que el nav. Con
+                 `top-0` el cajón se metía por debajo de esa barra (que va en
+                 z-[60], arriba del cajón) y la X para cerrar quedaba tapada:
+                 medido a 360px, el botón caía en y=22 y el click lo comía la
+                 barra. Se podía cerrar tocando afuera, pero la X no respondía. */
+              style={{ top: announcementClosed ? 0 : ANNOUNCEMENT_H }}
+              className="fixed right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 flex flex-col lg:hidden"
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
                 <span className="text-gray-900 font-bold">Menú</span>
@@ -536,15 +542,18 @@ export default function Home() {
                 </button>
               </div>
               <div className="flex flex-col gap-1 px-4 py-4 flex-1">
-                <Link href="/tiendas" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Tiendas</Link>
-                {/* La tercera copia del mismo listado: ver el aviso de arriba. */}
-                {DIGITALES_ABIERTO && (
-                  <Link href="/productos-digitales" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Productos digitales</Link>
-                )}
-                <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Quiénes somos</Link>
-                <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Precios</Link>
-                <Link href="/seguimiento" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Seguimiento</Link>
-                <Link href="/contacto" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Contacto</Link>
+                {/* El mismo array que el nav de escritorio de acá arriba; el
+                    menú chico va sin íconos, igual que el de SiteNav. */}
+                {LINKS_PUBLICOS.map(({ key, href, label }) => (
+                  <Link
+                    key={key}
+                    href={href}
+                    onClick={() => setMobileMenu(false)}
+                    className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    {label}
+                  </Link>
+                ))}
                 <div className="pt-3 border-t border-gray-200 flex flex-col gap-2 mt-2">
                   {authCargando ? (
                     <div aria-hidden className="h-[46px] rounded-xl bg-gray-100 animate-pulse" />

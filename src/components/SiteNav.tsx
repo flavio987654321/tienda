@@ -2,48 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, X, Package, MessageCircle } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
-import { DIGITALES_ABIERTO } from "@/lib/planLimits";
+import { LINKS_PUBLICOS, type SiteNavKey } from "@/lib/nav-publico";
 
-// Nav público único. Antes cada página pública se copiaba el nav a mano
-// (home, contacto, precios, seguimiento, quienes-somos) y las copias se
-// fueron desincronizando: quienes-somos apuntaba a /tiendas mientras el resto
-// apuntaba al ancla #tiendas, y contacto/seguimiento nunca mostraron la sesión
-// iniciada. Un solo componente evita que vuelva a pasar.
+// Nav público de las pantallas internas. Antes cada página pública se copiaba
+// el nav a mano (home, contacto, precios, seguimiento, quienes-somos) y las
+// copias se fueron desincronizando: quienes-somos apuntaba a /tiendas mientras
+// el resto apuntaba al ancla #tiendas, y contacto/seguimiento nunca mostraron
+// la sesión iniciada. Un solo componente evita que vuelva a pasar.
+//
+// La home es la única que sigue con nav propio, porque el suyo arranca
+// transparente sobre el hero y abre un cajón lateral en vez de este panel. Lo
+// que comparte con éste es el listado de links (`@/lib/nav-publico`), que es lo
+// que de verdad se desincronizaba.
 
-export type SiteNavKey =
-  | "tiendas"
-  | "digitales"
-  | "quienes-somos"
-  | "precios"
-  | "seguimiento"
-  | "contacto";
-
-// "Cómo funciona" salió de acá: apuntaba a #como-funciona, el ancla de la
-// galería de plantillas de la home, que se sacó. Los diseños se muestran ahora
-// en los videos publicitarios.
-/* Un solo listado para los dos menús: el de escritorio y el que se abre con la
-   hamburguesa recorren este mismo array, así que lo que se agrega acá aparece en
-   los dos sin que haya que acordarse del segundo. */
-const LINKS: { key: SiteNavKey; href: string; label: string; icon?: LucideIcon }[] = [
-  { key: "tiendas",       href: "/tiendas",          label: "Tiendas" },
-  /* Sólo si el producto está abierto: es la misma llave que miran la home, el
-     registro y los precios. Se filtra más abajo, no acá, para que el array siga
-     siendo la lista completa de lo que existe. */
-  { key: "digitales",     href: "/productos-digitales", label: "Productos digitales" },
-  { key: "quienes-somos", href: "/quienes-somos",    label: "Quiénes somos" },
-  { key: "precios",       href: "/precios",          label: "Precios" },
-  { key: "seguimiento",   href: "/seguimiento",      label: "Seguimiento", icon: Package },
-  { key: "contacto",      href: "/contacto",         label: "Contacto",    icon: MessageCircle },
-];
-
-/* Lo que se dibuja de verdad. Productos Digitales sale del menú cuando el
-   producto está apagado: un link a una pantalla que avisa "todavía no" es peor
-   que no tener el link. */
-const LINKS_VISIBLES = LINKS.filter((l) => l.key !== "digitales" || DIGITALES_ABIERTO);
+export type { SiteNavKey };
 
 export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?: boolean }) {
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -67,7 +42,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
             hamburguesa. El gap arranca chico y se agranda en `xl` para respetar
             el desktop grande, que ya se veía bien. */}
         <div className="hidden lg:flex items-center gap-6 xl:gap-8">
-          {LINKS_VISIBLES.map(({ key, href, label, icon: Icon }) => (
+          {LINKS_PUBLICOS.map(({ key, href, label, icon: Icon }) => (
             <Link
               key={key}
               href={href}
@@ -135,7 +110,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
             </button>
           </div>
           <div className="flex flex-col gap-1 px-4 py-4 flex-1">
-            {LINKS_VISIBLES.map(({ key, href, label }) => (
+            {LINKS_PUBLICOS.map(({ key, href, label }) => (
               <Link
                 key={key}
                 href={href}
