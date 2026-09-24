@@ -608,7 +608,7 @@ export default function ProductosDigitalesPage() {
             ))}
           </div>
 
-          <Link href="/precios" className="inline-flex items-center gap-2 text-orange-600 font-bold hover:text-orange-700 transition-colors">
+          <Link href="/precios?ver=digitales" className="inline-flex items-center gap-2 text-orange-600 font-bold hover:text-orange-700 transition-colors">
             Ver todo lo que incluye cada plan <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

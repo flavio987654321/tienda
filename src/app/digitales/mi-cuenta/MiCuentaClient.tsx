@@ -646,9 +646,15 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             {/* `/precios` es de la web comercial, fuera del panel: desde la app
                 instalada se abre en el navegador. Sin esto reemplazaba la pantalla
                 y dejaba a la persona navegando tiendaapps.com adentro de la app,
-                sin barra de direcciones ni forma de volver. */}
+                sin barra de direcciones ni forma de volver.
+
+                Y va con `?ver=digitales`, que abre derecho en los tres planes.
+                Sin el parámetro aterrizaba en la fila de cuatro ecosistemas
+                —Afiliado, Dueño de Tienda, Cliente, Productos Digitales— y
+                había que encontrar la tarjeta propia y tocar "Ver los planes"
+                para llegar a lo que decía el botón. */}
             <a
-              href="/precios"
+              href="/precios?ver=digitales"
               {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
             >

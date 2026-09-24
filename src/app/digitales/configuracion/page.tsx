@@ -1,5 +1,7 @@
 import { getCurrentUser } from "@/lib/auth-session";
 import { medicionDeLaTienda } from "@/lib/medicion-digital";
+import { diasParaPerderElDominio } from "@/lib/admin-digitales";
+import { TOPES_DIGITALES } from "@/lib/planLimits";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import BotonVolver from "../BotonVolver";
@@ -47,7 +49,10 @@ export default async function ConfiguracionPage({
   if (!user || user.role !== "DIGITAL") return null;
 
   const [sub, store] = await Promise.all([
-    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+    /* `freeDesde` es para la solapa de Dominio: dice desde cuándo cayó a Free,
+       y de ahí sale a cuántos días está de perder el dominio que había
+       conectado con Pro. Ver `diasParaPerderElDominio`. */
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true, freeDesde: true } }),
     prisma.store.findUnique({
       where: { ownerId: user.id },
       select: {
@@ -90,6 +95,32 @@ export default async function ConfiguracionPage({
       })
     : null;
 
+  /* Los dominios propios que hay conectados hoy. La solapa de Dominio los
+     necesita para no mentirle a quien cayó a Free: el dominio NO se apaga al
+     caer —sigue resolviendo y redirige a la dirección de tiendaapps— y recién
+     se suelta a los DIAS_DE_DOMINIO_EN_FREE. Sin esta lista, la pantalla sólo
+     podía decir "es de Pro", que a alguien con un dominio ya conectado no le
+     contesta lo único que le importa saber. */
+  const dominios = store
+    ? (
+        await prisma.product.findMany({
+          where: {
+            storeId: store.id,
+            rolDigital: "PRINCIPAL",
+            deletedAt: null,
+            dominioPropio: { not: null },
+          },
+          select: { dominioPropio: true },
+          /* El techo es el tope de páginas de Pro, que es el plan más alto: un
+             dominio cuelga de un producto principal, así que no puede haber
+             más dominios que productos permitidos. No es una defensa teórica —
+             `panel-digitales.check.ts` no deja pasar una consulta de lista sin
+             techo, y tiene razón: una cuenta con basura vieja traería todo. */
+          take: TOPES_DIGITALES.PRO.paginas,
+        })
+      ).map((p) => p.dominioPropio!)
+    : [];
+
   const politicas = {
     devoluciones: { texto: store?.policyReturns ?? "", visible: store?.policyReturnsActive !== false },
     terminos: { texto: store?.policyTerms ?? "", visible: store?.policyTermsActive !== false },
@@ -128,6 +159,8 @@ export default async function ConfiguracionPage({
         base={process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com"}
         politicas={politicas}
         hrefLegales={primerProducto ? `/p/${primerProducto.id}/legales` : null}
+        dominios={dominios}
+        diasDeDominio={diasParaPerderElDominio({ tier, freeDesde: sub?.freeDesde ?? null }, new Date())}
       />
     </div>
   );

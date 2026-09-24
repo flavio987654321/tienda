@@ -239,6 +239,27 @@ const avisos = readFileSync("src/app/digitales/configuracion/AvisosDeVenta.tsx",
 const layout = readFileSync("src/app/digitales/layout.tsx", "utf8");
 check("VIEJO-A", !/lista: false/.test(cliente) && /El dominio va <strong[^>]*>por producto<\/strong>/.test(cliente) && /href="\/digitales\/productos"/.test(cliente),
   "la pestaña Dominio no dice 'viene después': dice que va por producto y lleva a Productos");
+
+/* La pestaña Dominio se bifurca por plan. Hasta el 24/09/26 era una sola para
+   todos: en Free mostraba la explicación completa y el botón naranja a
+   Productos, o sea mandaba a alguien a un callejón —se llega al producto, se
+   toca "Cambiar la dirección" y recién ahí aparece que hace falta Pro—. El
+   candado del servidor (`api/digitales/productos/[id]/dominio`) siempre estuvo;
+   lo que faltaba era decirlo antes del viaje. */
+check("DOM-PLAN-A", /\{p\.tier === "PRO" \? \(/.test(cliente),
+  "la pestaña Dominio mira el plan antes de dibujar");
+check("DOM-PLAN-B", /Conectar tu propio dominio viene con el plan/.test(cliente)
+  && /href="\/digitales\/mi-cuenta"/.test(cliente),
+  "sin Pro dice que es de Pro y lleva a Mi cuenta, no a Productos");
+check("DOM-PLAN-C", /p\.dominios\.length > 0/.test(cliente) && /No se apagó/.test(cliente),
+  "y a quien cayó a Free con un dominio conectado le aclara que no se le apagó");
+/* Los días salen del servidor con `diasParaPerderElDominio`, que usa el mismo
+   plazo que aplica el cron. Un número escrito a mano en la pantalla se queda
+   viejo el día que cambie `DIAS_DE_DOMINIO_EN_FREE` y nadie se entera. */
+const pantallaConfig = readFileSync("src/app/digitales/configuracion/page.tsx", "utf8");
+check("DOM-PLAN-D", /diasParaPerderElDominio\(/.test(pantallaConfig)
+  && /p\.diasDeDominio/.test(cliente) && !/\b90 días\b/.test(cliente),
+  "el plazo lo calcula el servidor con el mismo número que el cron, no está escrito en la pantalla");
 check("VIEJO-B", !/todavía no le llega ningún\s+aviso/.test(general) && /<AvisosDeVenta \/>/.test(general)
   && /subscribeToPush\(\)/.test(avisos) && /unsubscribeFromPush\(\)/.test(avisos) && /enVuelo\.current/.test(avisos)
   && /Notification\.permission === "denied"/.test(avisos) && /candadito/.test(avisos)

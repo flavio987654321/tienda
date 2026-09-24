@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight } from "lucide-react";
+import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock } from "lucide-react";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   normalizarSlug, validarSlug, validarNombre, validarCheckoutName, validarEmail,
@@ -48,6 +48,14 @@ type Props = {
    * la lista, así que acá no puede llegar una inventada.
    */
   abrirEn: "general" | "pagos" | "meta" | "legales" | null;
+  /** Los dominios propios conectados hoy, para la solapa de Dominio. */
+  dominios: string[];
+  /**
+   * A cuántos días está de soltarse un dominio conectado, o `null` si no corre
+   * (está en Pro, o nació en Free y nunca tuvo uno). Lo calcula el servidor con
+   * el mismo plazo que aplica el cron.
+   */
+  diasDeDominio: number | null;
 };
 
 /**
@@ -58,6 +66,11 @@ type Props = {
  * dirección" del producto. La pestaña queda para que quien lo busque acá lo
  * encuentre: dice dónde está y lleva. Hasta el 21/09/26 decía "viene después",
  * cuando ya existía hacía dos semanas.
+ *
+ * A dónde lleva depende del plan, y por eso sigue estando para todos en vez de
+ * esconderse sin Pro: con Pro, a Productos, que es donde se conecta; sin Pro, a
+ * Mi cuenta, porque lo que falta es el plan y no la pantalla. Esconderla
+ * dejaría a alguien buscando dónde se hace algo que sí existe.
  */
 const PESTANAS = [
   { id: "general", label: "General", Icon: Settings, lista: true },
@@ -358,19 +371,74 @@ export default function ConfiguracionClient(p: Props) {
           titulo="Dominio propio"
           bajada="Que tu página viva en tu propia dirección (mecanicafacil.com) en vez de colgar de la nuestra."
         >
-          <p className="text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
-            El dominio va <strong className="font-bold">por producto</strong>, no por cuenta: cada página de
-            venta puede tener el suyo. Se conecta desde el producto, en{" "}
-            <strong className="font-bold">Cambiar la dirección</strong>. Es de los planes Pro.
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/digitales/productos"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500"
-            >
-              Ir a tus productos <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          {/* ── Con Pro y sin Pro son dos pantallas distintas ─────────────────
+              Hasta el 24/09/26 era una sola: la misma explicación y el mismo
+              botón naranja a Productos para todo el mundo. En Free eso mandaba
+              a un callejón — se llega al producto, se toca "Cambiar la
+              dirección" y ahí recién aparece que hace falta Pro. El plan ya se
+              sabe acá, así que el desvío se corta acá. */}
+          {p.tier === "PRO" ? (
+            <>
+              <p className="text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+                El dominio va <strong className="font-bold">por producto</strong>, no por cuenta: cada página de
+                venta puede tener el suyo. Se conecta desde el producto, en{" "}
+                <strong className="font-bold">Cambiar la dirección</strong>.
+              </p>
+              <div className="mt-4">
+                <Link
+                  href="/digitales/productos"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500"
+                >
+                  Ir a tus productos <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-start gap-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/60 px-4 py-3.5">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                <p className="text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+                  Conectar tu propio dominio viene con el plan{" "}
+                  <strong className="font-bold">Pro</strong>. Tu dirección de tiendaapps.com sigue
+                  funcionando igual, y el dominio va <strong className="font-bold">por producto</strong>: con
+                  Pro, cada página de venta puede tener el suyo.
+                </p>
+              </div>
+
+              {/* El que cayó a Free teniendo un dominio conectado necesita saber
+                  dos cosas que no se deducen: que no se le rompió, y hasta
+                  cuándo. Los días salen del servidor con el mismo plazo que
+                  aplica el cron que lo suelta. */}
+              {p.dominios.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3.5">
+                  <p className="text-sm leading-relaxed text-amber-800 panel-oscuro:text-amber-200">
+                    {p.dominios.length === 1 ? "Tenés conectado " : "Tenés conectados "}
+                    {p.dominios.map((d, i) => (
+                      <span key={d}>
+                        {i > 0 && (i === p.dominios.length - 1 ? " y " : ", ")}
+                        <strong className="font-bold">{d}</strong>
+                      </span>
+                    ))}
+                    {". "}
+                    No se apagó: sigue andando y lleva a tu dirección de tiendaapps.com
+                    {typeof p.diasDeDominio === "number" && p.diasDeDominio > 0
+                      ? `, y se suelta en ${p.diasDeDominio} ${p.diasDeDominio === 1 ? "día" : "días"} si no volvés a Pro.`
+                      : "."}{" "}
+                    Soltarlo vos, en cambio, lo podés hacer cuando quieras desde el producto.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <Link
+                  href="/digitales/mi-cuenta"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500"
+                >
+                  Ver el plan Pro <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </>
+          )}
         </Seccion>
       )}
     </div>

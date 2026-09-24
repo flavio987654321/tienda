@@ -246,11 +246,24 @@ export default function PreciosPage() {
 }
 
 function PreciosContent() {
+  /* Va arriba de todo porque el estado de abajo lo necesita para arrancar: si
+     se leyera en un efecto, la pantalla dibujaría primero la fila de cuatro y
+     recién después saltaría a los tres planes. */
+  const searchParams = useSearchParams();
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
   /* Productos Digitales no es una tarjeta más: al tocarla, las cuatro se
-     reemplazan por sus tres planes. Son dos vistas de la misma pantalla. */
-  const [verDigitales, setVerDigitales] = useState(false);
+     reemplazan por sus tres planes. Son dos vistas de la misma pantalla.
+     Con `?ver=digitales` se entra directo a la de los tres planes: quien viene
+     del panel de Digitales apretando "Comparar los tres planes" ya eligió
+     ecosistema, y aterrizaba en la fila de cuatro teniendo que buscar la suya
+     y tocar "Ver los planes" para llegar a lo que había pedido. */
+  const [verDigitales, setVerDigitales] = useState(
+    /* Sólo si el producto está abierto: con la persiana baja el bloque de los
+       tres planes no se dibuja, y entrar en esa vista dejaría la pantalla con
+       el botón de "volver a todos los planes" y nada más. */
+    () => DIGITALES_ABIERTO && searchParams.get("ver") === "digitales",
+  );
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL" } | null>(null);
   // Precios ya calculados por el servidor, con el descuento por días no usados
   // aplicado. Vacío mientras carga o si no hay sesión: ahí se muestra el de lista.
@@ -258,7 +271,6 @@ function PreciosContent() {
   const [userSub, setUserSub] = useState<UserSub | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [userMetaRole, setUserMetaRole] = useState<string | null>(null);
-  const searchParams = useSearchParams();
   const router = useRouter();
   const isRegistered = searchParams.get("registered") === "true";
   const role = searchParams.get("role");
