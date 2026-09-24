@@ -5,7 +5,7 @@ import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { normalizarContenido, variablesDePagina, buscarEstilo } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { leerBienvenida } from "@/lib/bienvenida";
-import { leerEstadoDeLanding } from "@/lib/landing-estado";
+import { laDireccionMuestraTuDiseno } from "@/lib/landing-del-producto";
 import BotonVolver from "../../BotonVolver";
 import BienvenidaClient, { type ProductoDeBienvenida } from "./BienvenidaClient";
 
@@ -43,9 +43,10 @@ export default async function BienvenidaPage({ searchParams }: { searchParams: P
   const productos: ProductoDeBienvenida[] = filas.map((f) => ({
     id: f.id, name: f.name, price: f.price, comparePrice: f.comparePrice, publicado: f.isActive,
     bienvenida: leerBienvenida(f.bienvenida),
-    /* Para decirle dónde va a aparecer: en su landing propia, si la prendió,
-       el reloj va en el hueco que dejó o en una barra nuestra arriba. */
-    conLandingPropia: leerEstadoDeLanding(f.landingPropia).activa,
+    /* Para decirle dónde va a aparecer: si la dirección está mostrando su
+       landing propia, el reloj va en el hueco que dejó o en una barra nuestra
+       arriba. Con el plan caído no la muestra, así que va en nuestra página. */
+    conLandingPropia: laDireccionMuestraTuDiseno(f.landingPropia, sub),
   }));
   const elegido = productos.find((x) => x.id === p) ?? productos[0] ?? null;
 

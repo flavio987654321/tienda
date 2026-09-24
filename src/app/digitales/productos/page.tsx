@@ -6,7 +6,7 @@ import BotonVolver from "../BotonVolver";
 import { estadoDelCupo } from "@/lib/cupo-ia";
 import { estadoDelBorrador } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus } from "@/lib/subscription";
-import { leerEstadoDeLanding } from "@/lib/landing-estado";
+import { laDireccionMuestraTuDiseno } from "@/lib/landing-del-producto";
 import { cuantosDe } from "@/lib/correos-compradores-db";
 import { primeraImagen } from "@/lib/productos-digitales";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
@@ -179,9 +179,11 @@ export default async function ProductosPage({
     contado: f.ebookIA ? { tema: f.ebookIA.tema, publico: f.ebookIA.publico ?? "" } : null,
     slugDigital: f.slugDigital,
     dominioPropio: f.dominioPropio,
-    /* Para el botón "Tu propio diseño" de la tarjeta: prendido, la página
-       de secciones no es lo que muestra la dirección, y se dice ahí. */
-    landingPrendida: leerEstadoDeLanding(f.landingPropia).activa,
+    /* Para el botón "Tu propio diseño" de la tarjeta: cuando la dirección lo
+       está mostrando, la página de secciones no es lo que se ve, y se dice
+       ahí. Mira el plan además del interruptor — prendido pero en Free, lo que
+       se muestra es nuestra página. Ver `landing-del-producto`. */
+    landingPrendida: laDireccionMuestraTuDiseno(f.landingPropia, sub),
   }));
 
   /* ⚠️ `max-w-4xl` — 896 px — y no más.

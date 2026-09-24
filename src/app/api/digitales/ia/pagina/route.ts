@@ -9,7 +9,7 @@ import { normalizarContenido } from "@/lib/pagina-venta";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import type { TierDigital } from "@/lib/planes-digitales";
-import { leerEstadoDeLanding } from "@/lib/landing-estado";
+import { laDireccionMuestraTuDiseno } from "@/lib/landing-del-producto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -120,11 +120,16 @@ export async function POST(req: NextRequest) {
   if (!producto) {
     return NextResponse.json({ error: "No encontramos ese producto." }, { status: 404 });
   }
-  /* Con su propio diseño prendido, esta página no la ve nadie: escribirla
+  /* Con su propio diseño EN PANTALLA, esta página no la ve nadie: escribirla
      con IA gasta una generación (y plata nuestra) en vano. El botón está
      apagado en el panel; acá se cierra también, por si el pedido viene de
-     otro lado. */
-  if (leerEstadoDeLanding(producto.landingPropia).activa) {
+     otro lado.
+
+     "En pantalla" y no "prendido": son dos cosas distintas desde el 24/09/26.
+     Con el interruptor prendido y el plan caído a Free, la dirección muestra
+     ESTA página — y acá se cortaba igual, o sea que se le negaba escribir la
+     única página que le estaba vendiendo. Ver `landing-del-producto`. */
+  if (laDireccionMuestraTuDiseno(producto.landingPropia, sub)) {
     return NextResponse.json({ error: "Tu dirección está mostrando tu propio diseño: esta página está apagada y no gasta generaciones. Apagá tu diseño para escribirla con IA." }, { status: 409 });
   }
   /**

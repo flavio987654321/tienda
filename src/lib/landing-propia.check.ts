@@ -449,7 +449,10 @@ check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\/
   && /const r = acomodarEnlace\(url \?\? ""\);/.test(ruta) && /if \(!r\.error && r\.url\.length <= 600\)/.test(ruta),
   "no se prende sin nada subido; una foto sólo por https, y el link pasa por el mismo acomodo que la pantalla");
 
-check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica) && /sub\.tier === "FREE" \|\| !isSubscriptionActive\(sub\)\) return null/.test(publica),
+const reglaLanding = leer("src/lib/landing-del-producto.ts");
+check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica)
+  && /elPlanMuestraDisenos\(fila\.store\.owner\.subscription\)/.test(publica)
+  && /return estado\.activa && !!estado\.versionId && elPlanMuestraDisenos\(sub\);/.test(reglaLanding),
   "la landing se muestra sólo si está prendida y el plan la incluye; si vence, vuelve la página de secciones");
 /* El link del pago lo mira PAGO-B, que es donde se explica por qué. */
 check("PUB-B", /nombre: fila\.name,[\s\S]{0,400}?precio: viva \? viva\.precio : fila\.price,\n\s+precioAnterior: viva \? viva\.precioNormal : fila\.comparePrice,/.test(publica)

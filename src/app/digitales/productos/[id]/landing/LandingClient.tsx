@@ -290,18 +290,40 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
 
   /* ── Sin plan ─────────────────────────────────────────────────────────── */
   if (!esPago) {
+    /* Quien CAYÓ de plan teniendo un diseño prendido no es lo mismo que quien
+       nunca subió ninguno, y hasta el 24/09/26 veían la misma tarjeta. A ella
+       le faltaba lo único que importa saber: que su diseño sigue guardado, que
+       la dirección mientras tanto muestra nuestra página, y que vuelve sola.
+       Sin eso, se iba de acá creyendo que su página estaba caída. */
+    const teniaUnoPrendido = estado.activa && !!estado.versionId;
     return (
-      <div className="rounded-3xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 p-6">
-        <p className="flex items-center gap-2 text-sm font-bold text-gray-800 panel-oscuro:text-gray-200">
-          <Lock className="h-4 w-4" /> Publicar tu propio diseño es de los planes Starter y Pro
-        </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-          Con tu plan actual tenés la página de venta nuestra, que también vende y no necesita que toques nada.
-          Si querés traer una página hecha por vos, es con plan.
-        </p>
-        <Link href="/digitales/mi-cuenta" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-orange-600 hover:text-orange-500">
-          Ver los planes <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
+      <div className="space-y-4">
+        {teniaUnoPrendido && (
+          <div className="rounded-3xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 p-5">
+            <p className="text-sm font-bold text-amber-900 panel-oscuro:text-amber-200">
+              Tu diseño sigue guardado, pero tu dirección está mostrando nuestra página
+            </p>
+            <p className="mt-2 text-[13px] leading-relaxed text-amber-900/90 panel-oscuro:text-amber-200/90">
+              Lo dejaste prendido y no se borró nada: el archivo, las fotos y los links siguen como los
+              dejaste. Mientras estés en este plan, quien entra a la dirección de tu producto ve la página
+              de venta nuestra. Al volver a Starter o Pro, tu diseño vuelve solo — no hay que prenderlo de
+              nuevo.
+            </p>
+          </div>
+        )}
+
+        <div className="rounded-3xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 p-6">
+          <p className="flex items-center gap-2 text-sm font-bold text-gray-800 panel-oscuro:text-gray-200">
+            <Lock className="h-4 w-4" /> Publicar tu propio diseño es de los planes Starter y Pro
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            Con tu plan actual tenés la página de venta nuestra, que también vende y no necesita que toques nada.
+            Si querés traer una página hecha por vos, es con plan.
+          </p>
+          <Link href="/digitales/mi-cuenta" className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-orange-600 hover:text-orange-500">
+            Ver los planes <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </div>
     );
   }

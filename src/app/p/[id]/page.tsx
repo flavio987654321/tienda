@@ -14,7 +14,7 @@ import { armarLanding } from "@/lib/landing-propia";
 import { primeraImagen } from "@/lib/productos-digitales";
 import { documentosPublicados, type FilaPoliticas } from "@/lib/politicas-tienda";
 import LandingPropia from "@/components/digitales/LandingPropia";
-import { isSubscriptionActive } from "@/lib/subscription";
+import { elPlanMuestraDisenos } from "@/lib/landing-del-producto";
 import { bienvenidaDeLaVisita, tokenDeBienvenidaDeLaCookie, type BienvenidaDeLaVisita } from "@/lib/bienvenida-servidor";
 import { BIENVENIDA_DE_FABRICA, leerBienvenida } from "@/lib/bienvenida";
 import { opinionesPublicadasDe, htmlDeOpiniones } from "@/lib/opiniones-digitales-db";
@@ -248,8 +248,11 @@ async function laLanding(fila: {
 }, previa: boolean, bienvenida: BienvenidaDeLaVisita, opiniones: OpinionPublicada[]): Promise<{ html: string; fuentes: string[] } | null> {
   const estado = leerEstadoDeLanding(fila.landingPropia);
   if ((!estado.activa && !previa) || !estado.versionId) return null;
-  const sub = fila.store.owner.subscription;
-  if (!sub || sub.tier === "FREE" || !isSubscriptionActive(sub)) return null;
+  /* La MISMA regla que mira el panel (`elPlanMuestraDisenos`). Estaba escrita
+     a mano acá y el panel se sabía sólo la mitad, así que le decía a quien
+     cayó a Free que su dirección mostraba su diseño cuando esta línea ya
+     estaba sirviendo nuestra página. */
+  if (!elPlanMuestraDisenos(fila.store.owner.subscription)) return null;
 
   const version = await laVersion(estado.versionId, fila.id);
   if (!version) return null;
