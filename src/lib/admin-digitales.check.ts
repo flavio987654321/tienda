@@ -151,7 +151,8 @@ const pantalla = leer("src/app/admin/digitales/page.tsx");
    pantallas de la misma plata dirían números distintos y no habría forma de
    saber cuál miente. */
 check("ADM-L",
-  /status: "CONFIRMED"/.test(lib) && !/PENDING/.test(lib) && /_sum: \{ total: true \}/.test(lib),
+  /where: \{ storeId: \{ in: storeIds \}, status: "CONFIRMED"/.test(lib)
+  && !/status: "PENDING"/.test(lib) && /_sum: \{ total: true \}/.test(lib),
   "una venta cobrada es lo mismo acá que en el panel de la dueña");
 
 /* ⚠️ Y la comisión sale de la tasa CONGELADA en cada orden, agrupada por esa
