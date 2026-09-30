@@ -52,6 +52,19 @@ const DIBUJOS = new Map(
 /** El último campo que se abrió tocándolo acá adentro. Ver el efecto que centra. */
 const tocadoAca: { campo: string | null } = { campo: null };
 
+/** Cuántos renglones ocupa un texto y de qué tamaño es la letra: con eso la
+    lista marca los títulos que en el celular quedaron larguísimos. */
+function medida(el: HTMLElement) {
+  const tamano = parseFloat(getComputedStyle(el).fontSize) || 0;
+  const r = document.createRange(); r.selectNodeContents(el);
+  const tops = [...r.getClientRects()].filter(x => x.width > 0).map(x => x.top).sort((a, b) => a - b);
+  // Dos pedazos del mismo renglón (una palabra en negrita, un ícono) no caen
+  // exactamente a la misma altura: es otro renglón sólo si baja más de media letra.
+  let renglones = 0, ultimo = -Infinity;
+  for (const t of tops) if (t - ultimo > tamano / 2) { renglones++; ultimo = t; }
+  return { renglones, tamano: Math.round(tamano) };
+}
+
 /** Está dibujado: no escondido con `display: none` (propio o de un contenedor). */
 const seVe = (el: HTMLElement) => el.getClientRects().length > 0;
 
@@ -125,6 +138,7 @@ export default function PreviaCelular() {
           label: el.dataset.editLabel || field,
           texto: textoDe(el),
           original: el.dataset.editOriginal ?? "",
+          ...medida(el),
         });
       });
       const json = JSON.stringify(items);
@@ -207,6 +221,8 @@ export default function PreviaCelular() {
       setSectionColor: p("setSectionColor"),
       toggleHiddenSection: p("toggleHiddenSection"),
       moveSection: p("moveSection"),
+      vistaCelular: !!edicion,
+      setHiddenSectionCelular: p("setHiddenSectionCelular"),
     };
   }, [edicion, config]);
 

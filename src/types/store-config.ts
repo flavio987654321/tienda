@@ -380,6 +380,9 @@ export type StoreConfig = {
    */
   legales?: ClaveLegal[];
   hiddenSections?: string[];
+  /** Bloques ocultos SÓLO en el celular (menos de 768 px). `hiddenSections` los
+   *  oculta en todos lados. Lo aplica `SectionBlock` + `globals.css`. */
+  hiddenSectionsCelular?: string[];
   sectionOrder?: string[];
 };
 

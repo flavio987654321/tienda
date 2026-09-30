@@ -130,6 +130,9 @@ export const storeConfigSchema = z.object({
     images: z.array(z.string().max(2000)).max(3),
   }).optional(),
   hiddenSections: z.array(z.string().max(60)).optional(),
+  // Ocultos sólo en el celular. Mismo tope que el de arriba, y con techo de
+  // cantidad: ningún template tiene más de 15 bloques.
+  hiddenSectionsCelular: z.array(z.string().max(60)).max(40).optional(),
   sectionOrder: z.array(z.string().max(60)).optional(),
 });
 

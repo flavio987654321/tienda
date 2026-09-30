@@ -26,6 +26,7 @@ export const LLAMADAS = [
   "setSectionColor",
   "toggleHiddenSection",
   "moveSection",
+  "setHiddenSectionCelular",
 ] as const;
 export type Llamada = (typeof LLAMADAS)[number];
 
@@ -45,7 +46,16 @@ export type ItemIndice = {
   texto: string;
   /** El que trae el diseño, aunque ya se haya cambiado: arranca la caja del panel. */
   original: string;
+  /** Cuántos renglones ocupa en el celular, y el tamaño de la letra en px. */
+  renglones: number;
+  tamano: number;
 };
+
+/** Un título "largo" en el celular: letra grande que ocupa cuatro renglones o
+ *  más. No se mide por alto: los títulos de portada son enormes a propósito
+ *  (Boho Terra: tres renglones a 52 px de fábrica), y un aviso que salta sobre el
+ *  diseño tal como viene haría creer que el template está mal. */
+export const esLargo = (it: Pick<ItemIndice, "renglones" | "tamano">) => it.tamano >= 20 && it.renglones >= 4;
 
 /** Lo que el editor le cuenta a la previa cuando se está editando. */
 export type Edicion = {

@@ -614,6 +614,11 @@ html[data-panel-tema] body {
   [data-cel-oculto]:not([data-editando]) {
     display: none !important;
   }
+  /* Un bloque entero oculto sólo en el celular. La marca la pone SectionBlock
+     sólo fuera del editor: editando, el bloque se apaga en vez de irse. */
+  [data-cel-bloque-oculto] {
+    display: none !important;
+  }
   /* Editando no desaparece: se apaga, para poder tocarlo y volver a mostrarlo. */
   [data-cel-oculto][data-editando] {
     opacity: 0.35;

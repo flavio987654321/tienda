@@ -2557,6 +2557,30 @@ export default function ConfiguracionPage() {
     setIsDirty(true);
   }, []);
 
+  const setHiddenSectionCelular = useCallback((id: string, oculto: boolean) => {
+    setConfig(c => {
+      const sin = (c.hiddenSectionsCelular ?? []).filter(s => s !== id);
+      return { ...c, hiddenSectionsCelular: oculto ? [...sin, id] : sin };
+    });
+    setIsDirty(true);
+  }, []);
+
+  /* "Deshacer todo lo del celular": vuelve cada texto y cada bloque a como se ve
+     en computadora. Toca sólo lo del celular —lo de PC queda como está— y es
+     un borrador más: hasta "Guardar cambios" no se pierde nada. */
+  const deshacerCelular = useCallback(() => {
+    setConfig(c => {
+      const textOverrides: Record<string, TextOverride> = {};
+      for (const [campo, ov] of Object.entries(c.textOverrides)) {
+        const { celular: _, ...resto } = ov;
+        // Si lo único que tenía era lo del celular, el campo se va entero.
+        if (Object.values(resto).some(v => v !== undefined)) textOverrides[campo] = resto;
+      }
+      return { ...c, textOverrides, hiddenSectionsCelular: [] };
+    });
+    setIsDirty(true);
+  }, []);
+
   /* ── Lo que se toca adentro del celular ─────────────────────────────────────
      El celular es otra ventana (ver `MarcoCelular`): sus textos y botones llaman
      a las mismas funciones de siempre, pero le llegan acá por nombre. La lista de
@@ -2564,10 +2588,10 @@ export default function ConfiguracionPage() {
   const llamadaDelCelular = useCallback((fn: Llamada, args: unknown[]) => {
     const funciones: Record<Llamada, (...a: never[]) => void> = {
       setActiveField, setOverride, resetOverride, setImageOverride,
-      setSectionColor, toggleHiddenSection, moveSection,
+      setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular,
     };
     (funciones[fn] as (...a: unknown[]) => void)(...args);
-  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection]);
+  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular]);
   const edicionCelular = useMemo<Edicion>(
     () => ({ activeField, activeLabel, imageLoading: imageLoadingFields }),
     [activeField, activeLabel, imageLoadingFields],
@@ -3148,7 +3172,9 @@ export default function ConfiguracionPage() {
             setMsCarrusel={ms => update("bannerInterval", ms)} />
           {ancho === "celular" && !activeField && (
             <IndiceCelular items={indiceCelular} overrides={config.textOverrides}
-              onElegir={(field, label) => setActiveField(field, label)} />
+              bloquesOcultos={config.hiddenSectionsCelular?.length ?? 0}
+              onElegir={(field, label) => setActiveField(field, label)}
+              onDeshacer={deshacerCelular} />
           )}
         </EditContext.Provider>
 

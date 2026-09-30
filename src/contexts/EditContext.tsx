@@ -36,6 +36,13 @@ type EditContextType = {
   toggleHiddenSection: (id: string) => void;
   sectionOrder: string[];
   moveSection: (id: string, defaultOrder: string[], direction: "up" | "down") => void;
+  /** Se está editando la vista de celular (el iframe de /preview/celular).
+   *  Opcional: la tienda publicada y la previa de PC no lo pasan. */
+  vistaCelular?: boolean;
+  /** Oculta o muestra un bloque SÓLO en el celular. Recibe el estado que se
+   *  quiere y no "alternar": desde el celular la respuesta tarda en volver, y
+   *  un doble clic alternaba dos veces y dejaba todo como estaba. */
+  setHiddenSectionCelular?: (id: string, oculto: boolean) => void;
 };
 
 export const EditContext = createContext<EditContextType>({

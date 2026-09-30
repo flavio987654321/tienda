@@ -38,11 +38,18 @@ export function SectionBlock({
   defaultOrder: string[];
   children: React.ReactNode;
 }) {
-  const { editMode, hiddenSections, toggleHiddenSection, sectionOrder, moveSection } = useEditContext();
+  const { editMode, hiddenSections, toggleHiddenSection, sectionOrder, moveSection, vistaCelular, setHiddenSectionCelular } = useEditContext();
   /** Sólo para resaltar ESTE bloque cuando el mouse está encima, en edición. */
   const [encima, setEncima] = useState(false);
   const config = useStoreConfig();
   const isHidden = (config?.hiddenSections ?? hiddenSections).includes(id);
+  /* ── Oculto sólo en el celular ───────────────────────────────────────────────
+     En el celular la página es mucho más larga: sacar las reseñas o "lo más
+     visto" ahí la acorta sin tocar la de computadora. No se decide acá con el
+     ancho de la ventana —el primer dibujo lo hace el servidor, que no lo
+     sabe—: el bloque se dibuja siempre con una marca y `globals.css` lo esconde
+     por debajo de 768 px. Así tampoco aparece un instante antes de irse. */
+  const ocultoCelular = !isHidden && (config?.hiddenSectionsCelular ?? []).includes(id);
 
   const effectiveOrder = useMemo(() => {
     const persisted = config?.sectionOrder ?? sectionOrder;
@@ -57,7 +64,32 @@ export function SectionBlock({
   if (!editMode && !isPreview && isHidden) return null;
 
   // Sin modo edición: renderizar normal, pero respetando el orden guardado
-  if (!editMode) return <div style={{ order: cssOrder }}>{children}</div>;
+  if (!editMode) return <div data-cel-bloque-oculto={ocultoCelular ? "" : undefined} style={{ order: cssOrder }}>{children}</div>;
+
+  /* Editando el celular, un bloque oculto ahí se PLIEGA en una franjita en vez
+     de quedar apagado con su cartel. Apagado ocupaba su alto entero —y en el
+     celular ese bloque no ocupa nada— y en uno bajo (la franja de categorías,
+     60 px) el cartel y los botones no entraban y se salían encima del bloque de
+     arriba. Plegado muestra lo que pasa: ahí no hay nada, y se puede volver. */
+  if (vistaCelular && ocultoCelular) {
+    return (
+      <div style={{ order: cssOrder, padding: "6px 8px" }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+          padding: "8px 10px", borderRadius: 10, border: "1.5px dashed rgba(239,68,68,0.55)",
+          background: "rgba(239,68,68,0.07)", color: "#991b1b",
+          fontFamily: "system-ui, -apple-system, sans-serif", fontSize: 12, lineHeight: 1.3,
+        }}>
+          <span style={{ minWidth: 0 }}>📱 <strong>{label}</strong> · oculto en el celular</span>
+          <button onClick={() => setHiddenSectionCelular?.(id, false)} title={`Mostrar "${label}" en el celular`}
+            style={{ flexShrink: 0, background: "#dc2626", color: "#fff", border: "none", borderRadius: 7,
+              padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+            Mostrar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /* ── Modo edición: el bloque tiene que VERSE como un bloque ─────────────────
    *
@@ -146,6 +178,19 @@ export function SectionBlock({
         {children}
       </div>
 
+      {/* Mirando la computadora, un bloque oculto sólo en el celular se ve
+          entero —en computadora está— con una chapita que avisa. Sin ella,
+          quien lo ocultó en el celular una semana antes no tiene por qué saber
+          que ahí no aparece. */}
+      {ocultoCelular && !vistaCelular && (
+        <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: CAPAS.nav,
+          background: "rgba(0,0,0,0.78)", color: "#fff", borderRadius: 999, padding: "4px 12px",
+          fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", pointerEvents: "none",
+          border: "1px solid rgba(255,255,255,0.3)" }}>
+          📱 Oculto en el celular
+        </div>
+      )}
+
       {/* Overlay "TV apagada" cuando está oculto */}
       {isHidden && (
         <div style={{
@@ -176,6 +221,30 @@ export function SectionBlock({
 
       {/* Toggle en esquina inferior derecha — la superior ya la usan los controles
           propios del editor (cambiar imagen, fondo de sección, etc.) */}
+      {/* Abajo a la IZQUIERDA, en la misma línea que "Ocultar bloque": en 390 px
+          entran los dos con las flechas en el medio. Arriba del otro se salía del
+          bloque en los bajos (la franja de categorías) y caía sobre el de arriba.
+          Sólo mirando el celular, que es donde se ve lo que hace. Oculto en todos
+          lados le gana: ahí no hay nada que mostrar sólo en el celular.
+          (Mostrarlo de nuevo lo hace la franjita plegada, más arriba.) */}
+      {vistaCelular && !isHidden && setHiddenSectionCelular && (
+        <div style={{ position: "absolute", bottom: 10, left: 10, zIndex: CAPAS.nav }}>
+          <button
+            onClick={() => setHiddenSectionCelular(id, true)}
+            title={`Ocultar "${label}" sólo en el celular`}
+            style={{
+              background: "rgba(79,70,229,0.92)",
+              color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 7,
+              padding: "5px 12px", fontSize: 11, fontWeight: 700,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+              backdropFilter: "blur(8px)", letterSpacing: 0.3,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
+            }}
+          >
+            📱 Ocultar en celular
+          </button>
+        </div>
+      )}
       <div style={{ position: "absolute", bottom: 10, right: 10, zIndex: CAPAS.nav }}>
         <button
           onClick={() => {

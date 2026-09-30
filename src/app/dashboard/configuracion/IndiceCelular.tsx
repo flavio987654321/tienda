@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { TextOverride } from "@/types/store-config";
-import type { ItemIndice } from "@/app/preview/celular/avisos";
+import { esLargo, type ItemIndice } from "@/app/preview/celular/avisos";
 
 /* ── La lista de textos, en la vista de celular ─────────────────────────────────
    Es lo que muestra el panel cuando no hay nada elegido: en esta vista el panel
@@ -45,11 +45,18 @@ const TIPOS: { patron: RegExp; tipo: Tipo }[] = [
 const TIPO_TEXTO: Tipo = { nombre: "Texto", letra: "¶", color: "#0f766e", fondo: "#ccfbf1" };
 const tipoDe = (label: string) => TIPOS.find(t => t.patron.test(label))?.tipo ?? TIPO_TEXTO;
 
-export default function IndiceCelular({ items, overrides, onElegir }: {
+export default function IndiceCelular({ items, overrides, bloquesOcultos, onElegir, onDeshacer }: {
   items: ItemIndice[];
   overrides: Record<string, TextOverride>;
+  /** Cuántos bloques están ocultos sólo en el celular. */
+  bloquesOcultos: number;
   onElegir: (field: string, label: string) => void;
+  /** Vuelve todo lo del celular (textos y bloques) a como se ve en computadora. */
+  onDeshacer: () => void;
 }) {
+  /* "Deshacer todo" pide confirmación en el mismo lugar: es un clic que borra
+     el trabajo de un rato, y un botón suelto se aprieta sin querer. */
+  const [confirmando, setConfirmando] = useState(false);
   /* Agrupados por bloque en el orden en que se ven. Por orden y no por nombre:
      si un bloque se repite más abajo, son dos grupos, como en la pantalla. */
   const grupos: { clave: string; bloque: string; items: ItemIndice[] }[] = [];
@@ -80,6 +87,11 @@ export default function IndiceCelular({ items, overrides, onElegir }: {
   };
   const cuantosPropios = items.filter(it => estado(it.field).propio).length;
   const cuantosOcultos = items.filter(it => estado(it.field).oculto).length;
+  const cuantosLargos = items.filter(it => esLargo(it) && !estado(it.field).oculto).length;
+  /* Lo que "Deshacer" vuelve atrás: acomodos, textos ocultos en el celular y
+     bloques ocultos en el celular. Lo oculto en toda la tienda NO: eso es de PC. */
+  const hayAlgoDelCelular = cuantosPropios > 0 || bloquesOcultos > 0
+    || items.some(it => overrides[it.field]?.celular?.hidden);
 
   return (
     <div data-editor-panel style={{
@@ -105,7 +117,28 @@ export default function IndiceCelular({ items, overrides, onElegir }: {
           <Chapa>{items.length} textos</Chapa>
           <Chapa>{cuantosPropios === 1 ? "1 acomodado" : `${cuantosPropios} acomodados`}</Chapa>
           {cuantosOcultos > 0 && <Chapa>{cuantosOcultos === 1 ? "1 oculto" : `${cuantosOcultos} ocultos`}</Chapa>}
+          {bloquesOcultos > 0 && <Chapa>{bloquesOcultos === 1 ? "1 bloque oculto" : `${bloquesOcultos} bloques ocultos`}</Chapa>}
+          {cuantosLargos > 0 && <Chapa>⚠ {cuantosLargos === 1 ? "1 largo" : `${cuantosLargos} largos`}</Chapa>}
         </div>
+        {hayAlgoDelCelular && (confirmando ? (
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, fontWeight: 600 }}>¿Volver todo a como se ve en computadora?</span>
+            <button type="button" onClick={() => { onDeshacer(); setConfirmando(false); }}
+              style={{ fontSize: 11, fontWeight: 800, color: "#be185d", background: "white", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>
+              Sí, deshacer
+            </button>
+            <button type="button" onClick={() => setConfirmando(false)}
+              style={{ fontSize: 11, fontWeight: 700, color: "white", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 6, padding: "3px 10px", cursor: "pointer" }}>
+              No
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmando(true)}
+            style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: "white", background: "none", border: "none",
+              padding: 0, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2, opacity: 0.9 }}>
+            ↺ Deshacer todo lo del celular
+          </button>
+        ))}
       </div>
 
       {/* Para que no parezca que hay que editar todo dos veces: la pregunta
@@ -180,6 +213,14 @@ export default function IndiceCelular({ items, overrides, onElegir }: {
                             {it.label}
                           </span>
                           {propio && <Marca color="#4338ca" fondo="#e0e7ff">📱 propio</Marca>}
+                          {/* Largo: letra grande en cuatro renglones o más. Se avisa
+                              acá porque en la pantalla no salta a la vista: hay
+                              que bajar hasta ese bloque para verlo. */}
+                          {!oculto && esLargo(it) && (
+                            <span title={`Ocupa ${it.renglones} renglones en el celular. Achicale el tamaño o acortalo.`}>
+                              <Marca color="#b45309" fondo="#fef3c7">⚠ largo</Marca>
+                            </span>
+                          )}
                           {oculto && <Marca color="#b91c1c" fondo="#fee2e2">{oculto === "Oculto en el celular" ? "oculto 📱" : "oculto"}</Marca>}
                         </span>
                         <span style={{ display: "block", marginTop: 2, color: C.texto, overflow: "hidden",
