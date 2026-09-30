@@ -601,6 +601,13 @@ html[data-panel-tema] body {
   :where(a, button, span, [style*="display: inline-block"], [style*="display: inline-flex"]):has(> [data-cel-align="center"]) { margin-left: auto !important; margin-right: auto !important; align-self: center !important; }
   :where(a, button, span, [style*="display: inline-block"], [style*="display: inline-flex"]):has(> [data-cel-align="right"])  { margin-left: auto !important; margin-right: 0 !important; align-self: flex-end !important; }
 
+  /* Una fila de cosas que no son texto (los íconos de redes del pie) y que
+     sigue la alineación de un texto de al lado. La marca la pone el template
+     con el valor de ese texto: sin alineación, no hay marca y nada cambia. */
+  [data-cel-fila="left"]   { justify-content: flex-start !important; }
+  [data-cel-fila="center"] { justify-content: center !important; }
+  [data-cel-fila="right"]  { justify-content: flex-end !important; }
+
   [data-cel-size] {
     font-size: var(--cel-size) !important;
   }

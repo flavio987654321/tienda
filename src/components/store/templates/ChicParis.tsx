@@ -278,6 +278,11 @@ export default function ChicParis() {
     modalAbierto: tiendaModalOpen, abrirModal: abrirTiendaModal, cerrarModal: cerrarTiendaModal,
   } = resenasHome;
   const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
+
+  /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
+     Aire): preguntar la fecha mientras se dibuja puede dar dos resultados en dos
+     dibujados seguidos, y React lo prohíbe. */
+  const [ANIO] = useState(() => new Date().getFullYear());
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   /* ── Escape cierra lo que este template abre por su cuenta ───────────────────
@@ -2128,9 +2133,12 @@ export default function ChicParis() {
                   facebook · tiktok · youtube · pinterest) piden ~380px y a 360 de
                   pantalla se salían por la derecha, arrastrando a toda la página. */}
               {storeConfig?.socialLinks && (isPreview || Object.values(storeConfig.socialLinks).some(v => v)) && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 20 }}>
+                /* En el celular la fila sigue la alineación de la descripción de
+                   arriba (`data-cel-fila`, en globals.css). */
+                <div data-cel-fila={textOverrides.footerDescription?.celular?.align} style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 20 }}>
                   {Object.entries(storeConfig.socialLinks).filter(([, v]) => isPreview || v).map(([net, url]) => (
-                    <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener"
+                    <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer"
+                      title={url ? undefined : "Sin cargar. Se carga en Configuración → Redes sociales"}
                       onClick={e => { if (!url) e.preventDefault(); }}
                       style={{ color: footerText, opacity: url ? 0.55 : 0.3, fontSize: 11, textDecoration: "none", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, cursor: url ? "pointer" : "default" }}>{net}</a>
                   ))}
@@ -2150,6 +2158,11 @@ export default function ChicParis() {
                   <button key={l} onClick={() => { abrirCatalogo({ categoria: l! }); }}
                     style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.55, fontSize: 13, cursor: "pointer", padding: "4px 0", textAlign: "left", textTransform: "capitalize" }}>{l}</button>
                 ))}
+                {/* Con más de seis, las que no entran tienen que tener por dónde llegarse. */}
+                {categoryList.length > 6 && (
+                  <button onClick={() => { abrirCatalogo(); }}
+                    style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.8, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "4px 0", textAlign: "left" }}>Ver todas →</button>
+                )}
               </div>
             )}
             {/* La columna "Legal" que iba acá se sacó: repetía exactamente los mismos
@@ -2219,7 +2232,7 @@ export default function ChicParis() {
             </div>
             <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"8px 20px", alignItems:"center" }}>
               <p style={{ margin: 0, fontSize: 11, color: footerText, opacity: 0.4 }}>
-                <EditableZone field="footerCopyright" label="Copyright">© 2025 Chic Paris. Todos los derechos reservados.</EditableZone>
+                <EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "Chic Paris"}. Todos los derechos reservados.</EditableZone>
               </p>
               {!editMode && (
                 <button onClick={() => setShowReport(true)}

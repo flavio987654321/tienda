@@ -52,7 +52,9 @@ import { CAPAS } from "@/lib/capas-tienda";
 type Product = StorefrontProduct;
 
 /* ── Redes del footer: sigla que se muestra + clave en socialLinks ── */
-const REDES_UP = [["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const;
+/* Las cinco que se cargan en Configuración: faltaba Pinterest, que cargado no
+   aparecía en ningún lado. */
+const REDES_UP = [["IG","instagram","Instagram"],["FB","facebook","Facebook"],["TK","tiktok","TikTok"],["YT","youtube","YouTube"],["PT","pinterest","Pinterest"]] as const;
 
 /* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
 const CART_ICON_OPTIONS: React.ReactNode[] = [
@@ -210,6 +212,11 @@ export default function UrbanPulse() {
   const storefront  = useStorefront();
   const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+
+  /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
+     Aire): preguntar la fecha mientras se dibuja puede dar dos resultados en dos
+     dibujados seguidos, y React lo prohíbe. */
+  const [ANIO] = useState(() => new Date().getFullYear());
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   /* ── El catálogo deja de ser otra página ─────────────────────────────────────
@@ -401,6 +408,14 @@ export default function UrbanPulse() {
       externo: false,
       accion: { tipo: "catalogo", valor: cat } as AccionPie,
     }));
+    /* Con más de cinco, las que no entran tienen que tener por dónde llegarse.
+       `valor` vacío = el catálogo entero, sin filtro. */
+    if (categoryList.length > 5) catalogo.push({
+      label: "Ver todas →",
+      href: `/tienda/${storeConfig?.slug ?? ""}/productos${isPreview ? "?t=urban-pulse&from=editor" : ""}`,
+      externo: false,
+      accion: { tipo: "catalogo", valor: "" } as AccionPie,
+    });
 
     const ayuda: { label: string; href: string; externo: boolean; accion?: AccionPie }[] = [];
     // Existe siempre y es lo que más se busca en un pie después de comprar.
@@ -409,17 +424,15 @@ export default function UrbanPulse() {
     // y el link volvería a no llevar a ningún lado.
     if (!ocultas.includes("up-nosotros")) ayuda.push({ label: "Nosotros", href: "#nosotros", externo: false, accion: { tipo: "seccion", valor: "nosotros" } });
     if (!ocultas.includes("up-contacto")) ayuda.push({ label: "Contacto", href: "#contacto", externo: false, accion: { tipo: "seccion", valor: "contacto" } });
-    if (hasWA && storeConfig?.whatsapp?.number) {
-      const tel = storeConfig.whatsapp.number.replace(/\D/g, "");
-      if (tel) ayuda.push({ label: "WhatsApp", href: `https://wa.me/${tel}`, externo: true });
-    }
+    // Sin "WhatsApp": repetía el botón verde flotante, que está siempre a la
+    // vista, y "Contacto" de arriba ya lleva a la sección que lo tiene.
 
     const columnas = [
       { titleField: "footerCol1Title", titleDefault: "Tienda", links: catalogo },
       { titleField: "footerCol2Title", titleDefault: "Ayuda", links: ayuda },
     ];
     return editMode ? columnas : columnas.filter(c => c.links.length > 0);
-  }, [categoryList, storeConfig, isPreview, hasWA, editMode]);
+  }, [categoryList, storeConfig, isPreview, editMode]);
 
   /* Las categorías del bloque de baldosas: SOLO las que el dueño creó de verdad.
      `categoryList` no sirve acá porque en el editor `products` viene con los
@@ -2603,13 +2616,19 @@ export default function UrbanPulse() {
                   dejaba 18px de aire suelto abajo de la descripción, sin nada
                   adentro. Mismo agujero que ya se tapó en Chic Paris. */}
               {(isPreview || REDES_UP.some(([, k]) => storeConfig?.socialLinks?.[k])) && (
-              <div style={{ display:"flex", gap:10, marginTop:18 }}>
-                {REDES_UP.map(([label, key]) => {
+              /* En el celular la fila sigue la alineación de la descripción de
+                 arriba (`data-cel-fila`, en globals.css). Envuelve: cinco en
+                 fila piden ~200px y con el margen del pie justo entraban. */
+              <div data-cel-fila={textOverrides.footerDescription?.celular?.align} style={{ display:"flex", flexWrap:"wrap", gap:10, marginTop:18 }}>
+                {REDES_UP.map(([label, key, nombre]) => {
                   const url = storeConfig?.socialLinks?.[key];
                   if (!isPreview && !url) return null;
                   return (
-                    <button key={label}
-                      onClick={() => url && window.open(url, "_blank")}
+                    <button key={label} aria-label={nombre}
+                      title={url ? nombre : `${nombre} — sin cargar. Se carga en Configuración → Redes sociales`}
+                      /* `noopener`: sin eso la pestaña nueva queda con acceso a
+                         la tienda que la abrió y puede mandarla a otra dirección. */
+                      onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
                       style={{ background:"none", border:`2px solid ${footerUpMid}`, color:footerUpText, width:32, height:32, fontSize:10, fontWeight:900, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"transform 0.1s", opacity: url ? 1 : 0.35 }}
                       onMouseEnter={e => { if (url) { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 ${ACC}`; e.currentTarget.style.borderColor = ACC; } }}
                       onMouseLeave={e => { e.currentTarget.style.transform = "translate(0,0)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = footerUpMid; }}>
@@ -2640,7 +2659,7 @@ export default function UrbanPulse() {
                       if (editMode) { e.preventDefault(); return; }
                       if (!accion || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
                       e.preventDefault();
-                      if (accion.tipo === "catalogo") abrirCatalogo({ categoria: accion.valor });
+                      if (accion.tipo === "catalogo") abrirCatalogo(accion.valor ? { categoria: accion.valor } : {});
                       else irASeccion(accion.valor);
                     }}
                     style={{ display:"block", color:footerUpMid, fontSize:13, marginBottom:10,
@@ -2686,7 +2705,7 @@ export default function UrbanPulse() {
                 )}
               </div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 12px", justifyContent:"center", textAlign:"center" }}>
-                <p style={{ color:footerUpMid, fontSize:11, margin:0, opacity:0.7 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
+                <p style={{ color:footerUpMid, fontSize:11, margin:0, opacity:0.7 }}><EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "UrbanPulse"}. Todos los derechos reservados.</EditableZone></p>
                 <p style={{ color:footerUpMid, fontSize:11, margin:0, opacity:0.7 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
               </div>
             </div>
@@ -2715,7 +2734,7 @@ export default function UrbanPulse() {
                 ))}
               </div>
               <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
-                <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
+                <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "UrbanPulse"}. Todos los derechos reservados.</EditableZone></p>
                 <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
                 {!editMode && (
                   <button onClick={() => setShowReport(true)}

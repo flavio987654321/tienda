@@ -455,6 +455,8 @@ export default function Aire() {
     return map;
   }, [products]);
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+  /** La red apagada que se tocó en el editor, para decir dónde se carga. */
+  const [redSinCargar, setRedSinCargar] = useState<string | null>(null);
   /* `lockScrollOnModal: false` — Aire NO tiene ventanita de producto.
      El carrito trae un candado que congela el `<body>` (`overflow:hidden` +
      `position:fixed`) mientras hay un producto elegido. Tiene sentido cuando la
@@ -1175,7 +1177,9 @@ export default function Aire() {
      una tienda que todavía no cargó sus políticas no tiene por qué mostrar un
      título "Ayuda" con el vacío debajo. */
   const columnasPie = useMemo(() => {
-    const cols: { titulo: string; items: { label: string; href: string }[] }[] = [];
+    /* `accion`: los links que llevan a una pantalla de la propia tienda se abren
+       en el lugar (igual que el menú de arriba) en vez de recargar la página. */
+    const cols: { titulo: string; items: { label: string; href: string; accion?: "catalogo" | "contacto" }[] }[] = [];
     const conEditor = isPreview ? "t=aire&from=editor&" : "";
 
     if (categoryList.length > 0) {
@@ -1183,10 +1187,19 @@ export default function Aire() {
         titulo: "Catálogo",
         // Hasta cinco. Con veinte categorías la columna se vuelve una lista
         // interminable que estira el pie más que toda la portada.
-        items: categoryList.slice(0, 5).map(cat => ({
-          label: cat,
-          href: `/tienda/${storeConfig?.slug ?? ""}/productos?${conEditor}categoria=${encodeURIComponent(cat)}`,
-        })),
+        items: [
+          ...categoryList.slice(0, 5).map(cat => ({
+            label: cat,
+            href: `/tienda/${storeConfig?.slug ?? ""}/productos?${conEditor}categoria=${encodeURIComponent(cat)}`,
+          })),
+          /* Con más de cinco, las que no entran tienen que tener por dónde
+             llegarse. Antes ese link vivía en "Contacto", que no es su lugar. */
+          ...(categoryList.length > 5 ? [{
+            label: "Ver todas →",
+            href: `/tienda/${storeConfig?.slug ?? ""}/productos${isPreview ? "?t=aire&from=editor" : ""}`,
+            accion: "catalogo" as const,
+          }] : []),
+        ],
       });
     }
 
@@ -1199,19 +1212,17 @@ export default function Aire() {
       cols.push({ titulo: "Ayuda", items: legales.map(l => ({ label: l.label, href: l.href })) });
     }
 
-    const contacto: { label: string; href: string }[] = [];
-    const wa = storeConfig?.whatsapp?.number?.replace(/\D/g, "");
-    if (storeConfig?.whatsapp?.enabled && wa) {
-      contacto.push({ label: "Escribinos por WhatsApp", href: `https://wa.me/${wa}` });
-    }
-    contacto.push({
-      label: "Ver todo el catálogo",
-      href: `/tienda/${storeConfig?.slug ?? ""}/productos${isPreview ? "?t=aire&from=editor" : ""}`,
-    });
-    cols.push({ titulo: "Contacto", items: contacto });
+    /* A la pantalla de contacto, que ya tiene el WhatsApp y todo lo demás. Antes
+       acá iba "Escribinos por WhatsApp", que repetía el botón verde flotante
+       —siempre a la vista— dos renglones más abajo. */
+    cols.push({ titulo: "Contacto", items: [{
+      label: "Página de contacto",
+      href: `/tienda/${storeConfig?.slug ?? ""}/contacto${isPreview ? "?t=aire&from=editor" : ""}`,
+      accion: "contacto",
+    }] });
 
     return cols;
-  }, [categoryList, storeConfig?.slug, storeConfig?.legales, storeConfig?.whatsapp?.enabled, storeConfig?.whatsapp?.number, isPreview, enEditor]);
+  }, [categoryList, storeConfig?.slug, storeConfig?.legales, isPreview, enEditor]);
 
   /* El velo que va sobre la foto del bloque de suscripción: más cerrado del lado
      del texto y más abierto del lado del formulario, para que la foto se vea sin
@@ -3262,12 +3273,17 @@ export default function Aire() {
                 ] as const);
                 const visibles = redes.filter(([k]) => isPreview || !!storeConfig?.socialLinks?.[k]);
                 if (visibles.length === 0) return null;
+                /* En el celular la fila sigue la alineación de la descripción de
+                   arriba: si la dueña la centró, los íconos quedaban solos contra
+                   la izquierda. La aplica `globals.css` (`data-cel-fila`). */
+                const alineacionCelular = textOverrides.footerDescription?.celular?.align;
                 return (
-                  <div style={{ display:"flex", gap:9, marginTop:20, flexWrap:"wrap" }}>
+                  <>
+                  <div data-cel-fila={alineacionCelular} style={{ display:"flex", gap:9, marginTop:20, flexWrap:"wrap" }}>
                     {visibles.map(([k, nombre, icono]) => {
                       const url = storeConfig?.socialLinks?.[k];
                       return (
-                        <button key={k} onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
+                        <button key={k} onClick={() => url ? window.open(url, "_blank", "noopener,noreferrer") : editMode && setRedSinCargar(nombre)}
                           aria-label={nombre} title={url ? nombre : `${nombre} — sin cargar`}
                           style={{ width:36, height:36, borderRadius:"50%", background:"none", border:`1px solid ${footerBorde}`, color:footerText, cursor: url ? "pointer" : "default", opacity: url ? 1 : 0.3, display:"grid", placeItems:"center", transition:"all 0.2s", padding:0 }}
                           onMouseEnter={e => { if (url) { e.currentTarget.style.background = G; e.currentTarget.style.color = accentText; e.currentTarget.style.borderColor = G; } }}
@@ -3277,6 +3293,15 @@ export default function Aire() {
                       );
                     })}
                   </div>
+                  {/* Tocar una red apagada no hacía nada, y un clic que no hace
+                      nada se lee como que está roto. Sólo en el editor: en la
+                      tienda las apagadas ni se dibujan. */}
+                  {editMode && redSinCargar && (
+                    <p role="status" style={{ fontSize:11.5, lineHeight:1.45, margin:"10px 0 0", padding:"8px 10px", borderRadius:10, background:"rgba(99,102,241,0.1)", color:footerText }}>
+                      {redSinCargar} todavía no está cargada. Las redes se cargan en <strong>Configuración → Redes sociales</strong>, y acá aparecen solas.
+                    </p>
+                  )}
+                  </>
                 );
               })()}
             </div>
@@ -3296,6 +3321,13 @@ export default function Aire() {
                           a la que la abrio. */}
                       <a href={it.href}
                         {...(it.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : null)}
+                        /* Con Ctrl, Shift o la rueda del mouse el navegador hace lo suyo (pestaña
+                           nueva): sólo el clic común se resuelve acá adentro. */
+                        onClick={it.accion ? (e => {
+                          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                          e.preventDefault();
+                          if (it.accion === "contacto") irAContacto(); else irAlCatalogo();
+                        }) : undefined}
                         /* `inline-block` + padding vertical: el link medía 17px de alto —
                             el alto de la letra— y en un celular hay que acertarle a eso
                             con el dedo. Con esto el blanco pasa a ~29px sin que se mueva

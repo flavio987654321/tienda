@@ -159,6 +159,11 @@ export default function BohoTerra() {
   const storefront  = useStorefront();
   const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+
+  /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
+     Aire): preguntar la fecha mientras se dibuja puede dar dos resultados en dos
+     dibujados seguidos, y React lo prohíbe. */
+  const [ANIO] = useState(() => new Date().getFullYear());
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   /* ── Portada o catálogo, SIN irse a otra página ─────────────────────────────
@@ -1721,11 +1726,14 @@ export default function BohoTerra() {
         <div style={{ position:"relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "20px 16px" : "28px 40px", display:"flex", alignItems:"center", justifyContent: isMobile ? "center" : "space-between", flexWrap:"wrap", gap:20 }}>
-          <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
-          {/* Envuelve en celular: los cinco enlaces no entran en una línea de
-              360px y el último quedaba cortado contra el borde. */}
+          <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "Terra"}</EditableZone></span>
+          {/* Envuelve en celular: los enlaces no entran en una línea de 360px y
+              el último quedaba cortado contra el borde.
+              Eran cinco: "Envíos" y "Devoluciones" llevaban a CONTACTO, no a las
+              políticas — que están en la barra de abajo con esos mismos nombres.
+              Un link que dice una cosa y lleva a otra es peor que no tenerlo. */}
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap: isMobile ? "10px 18px" : 24 }}>
-            {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"],["Envíos","contacto"],["Devoluciones","contacto"]].map(([l,t])=>(
+            {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([l,t])=>(
               <button key={l} onClick={()=>irASeccion(t)} style={{ background:"none", border:"none", color:footerMid, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
                 onMouseEnter={e=>(e.currentTarget.style.color=footerText)}
                 onMouseLeave={e=>(e.currentTarget.style.color=footerMid)}>
@@ -1734,12 +1742,17 @@ export default function BohoTerra() {
             ))}
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            {([["IG","instagram"],["FB","facebook"],["PT","pinterest"]] as const).map(([label, key]) => {
+            {/* Las cinco que se cargan en Configuración. Eran tres: TikTok y
+                YouTube cargados no aparecían en ningún lado. */}
+            {([["IG","instagram","Instagram"],["FB","facebook","Facebook"],["TT","tiktok","TikTok"],["YT","youtube","YouTube"],["PT","pinterest","Pinterest"]] as const).map(([label, key, nombre]) => {
               const url = storeConfig?.socialLinks?.[key];
               if (!isPreview && !url) return null;
               return (
-                <button key={label}
-                  onClick={() => url && window.open(url, "_blank")}
+                <button key={label} aria-label={nombre}
+                  title={url ? nombre : `${nombre} — sin cargar. Se carga en Configuración → Redes sociales`}
+                  /* `noopener`: sin eso la pestaña nueva queda con acceso a la
+                     tienda que la abrió y puede mandarla a otra dirección. */
+                  onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
                   style={{ background:"none", border:`1px solid ${footerMid}33`, color:footerMid, width:32, height:32, fontSize:9, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
                   onMouseEnter={e=>{ if(url){ e.currentTarget.style.borderColor=A; e.currentTarget.style.color=A; }}}
                   onMouseLeave={e=>{ e.currentTarget.style.borderColor=`${footerMid}33`; e.currentTarget.style.color=footerMid; }}>
@@ -1779,7 +1792,10 @@ export default function BohoTerra() {
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"8px 16px", alignItems:"center" }}>
             <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
-              <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
+              {/* Era "© 2025 Terra · Moda consciente · Mendoza, Argentina", escrito a
+                  mano: en la tienda de cualquiera salía el nombre del template, un
+                  año viejo y una ciudad inventada. */}
+              <EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "Terra"}. Todos los derechos reservados.</EditableZone>
             </p>
             {!editMode && (
               <button onClick={() => setShowReport(true)}
