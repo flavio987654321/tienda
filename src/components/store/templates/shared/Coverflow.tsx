@@ -305,6 +305,13 @@ export function Coverflow({
                 {/* Las de los costados van apagadas: sin esto compiten con la del
                     centro y la fila se lee como cinco cosas, no como una elegida. */}
                 <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: base, opacity: centro ? 0 : 0.42 + (abs - 1) * 0.16, transition: "opacity .62s ease" }} />
+                {/* El título (más abajo) se apoya sobre el borde inferior de esta
+                    tarjeta a propósito. Con una foto clara —una remera sobre fondo
+                    blanco, que es la foto de producto más común— la mitad de
+                    arriba de las letras blancas caía sobre blanco y no se leía
+                    (visto en Aurora el 30/09/26). Este degradé oscurece sólo esa
+                    franja y sólo en la del centro, que es la que lleva título. */}
+                <span aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "38%", background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.58))", opacity: centro ? 1 : 0, transition: "opacity .62s ease", pointerEvents: "none" }} />
                 {centro && p.etiqueta && (
                   <span style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,.14)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontSize: 9, letterSpacing: 2, textTransform: "uppercase", padding: "4px 12px", borderRadius: 999, whiteSpace: "nowrap" }}>
                     {p.etiqueta}

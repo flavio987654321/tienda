@@ -91,6 +91,14 @@ export const TEMPLATES_CON_RESENA_TIENDA: TemplateId[] = ["chic-paris", "aire"];
 // Sale de leer qué claves `sectionbg_*` consume realmente cada template. Si a un
 // template se le agrega una sección con foto, hay que sumarla acá o el dueño no va
 // a poder cargarla.
+/* Fondos con foto donde el template lee el encuadre y la foto de CELULAR
+   (posXMobile/posYMobile y urlMobile). El editor ofrece esos controles sólo acá:
+   un control que no cambia nada en la tienda es peor que no tenerlo. Si un
+   template empieza a leerlos en otra sección, se suma a esta lista. */
+export const SECTION_BG_FOCO_CELULAR: Partial<Record<TemplateId, string[]>> = {
+  "aurora": ["bgHero"],
+};
+
 export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   // Sólo el hero. El resto de Aurora no acepta foto de fondo a propósito: el
   // fondo ES la escena de luz, y una foto encima la tapa y le saca al template
@@ -162,6 +170,10 @@ export type ImageOverride = {
   posXMobile?: number; // focal point X en celular, 0-100
   posYMobile?: number; // focal point Y en celular, 0-100
   hideContent?: boolean; // hide template text + buttons (for images with embedded text)
+  /** Otra foto sólo para el celular (menos de 768 px). Sirve cuando la de PC es
+   *  apaisada o tiene texto adentro y en un celular queda cortada. Sin ella se
+   *  usa `url`. Sólo donde el template la lee: ver SECTION_BG_FOCO_CELULAR. */
+  urlMobile?: string;
 };
 
 export type FlyerConfig = {

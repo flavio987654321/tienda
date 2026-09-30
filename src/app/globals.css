@@ -626,6 +626,21 @@ html[data-panel-tema] body {
   }
 }
 
+/* ── La foto de portada de HeroFoto: una para PC y otra para el celular ────────
+   Las variables las pone HeroFoto en cada capa. Por CSS y no con JavaScript: el
+   navegador baja sólo la foto de la regla que se aplica, y no hay un instante con
+   la foto equivocada antes de que la página sepa el ancho. */
+.hero-foto-capa {
+  background-image: var(--hf-foto);
+  background-position: var(--hf-pos, center);
+}
+@media (max-width: 767px) {
+  .hero-foto-capa {
+    background-image: var(--hf-foto-cel, var(--hf-foto));
+    background-position: var(--hf-pos-cel, var(--hf-pos, center));
+  }
+}
+
 /* ── El botón "Fondo" del editor, en el celular ───────────────────────────────
    En PC va abajo de la chapita con el nombre del bloque (de 17 a 38 px desde el
    filo), porque las secciones dejan 40 de margen arriba. En celular casi todas

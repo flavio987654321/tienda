@@ -294,6 +294,10 @@ export default function Aurora() {
     return map;
   }, [products]);
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+  /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
+     Aire): preguntar la fecha mientras se dibuja puede dar dos resultados en dos
+     dibujados seguidos, y React lo prohíbe. */
+  const [ANIO] = useState(() => new Date().getFullYear());
   const [inquiryMessage, setInquiryMessage] = useState("");
   const cart = useCartLogic(storefront);
   const {
@@ -1084,6 +1088,12 @@ export default function Aurora() {
         <HeroFoto
           imagenes={heroFotos}
           posicion={heroBgImg ? `${heroBgImg.posX ?? 50}% ${heroBgImg.posY ?? 50}%` : "center"}
+          // La foto y el encuadre para el celular, si la dueña los eligió. Sin
+          // ellos el celular usa los de PC, como siempre.
+          imagenCelular={heroBgImg?.urlMobile}
+          posicionCelular={heroBgImg && (heroBgImg.posXMobile !== undefined || heroBgImg.posYMobile !== undefined)
+            ? `${heroBgImg.posXMobile ?? heroBgImg.posX ?? 50}% ${heroBgImg.posYMobile ?? heroBgImg.posY ?? 50}%`
+            : undefined}
           base={BG}
           tinta={T}
           acento={G}
@@ -1190,7 +1200,12 @@ export default function Aurora() {
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
       <SectionBlock id="au-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-      <section id="productos" data-reveal style={{ background:productosBg, position:"relative" }}>
+      {/* `overflowX: clip`: la grilla tiene `perspective` para inclinar las
+          tarjetas, y una tarjeta inclinada cuenta como más ancha de lo que se ve.
+          A 1280 la página medía 1309 y se podía arrastrar de costado (medido el
+          30/09/26). `clip` y no `hidden`: recorta sin volverse un contenedor con
+          scroll propio, que rompería el `position: sticky` de adentro. */}
+      <section id="productos" data-reveal style={{ background:productosBg, position:"relative", overflowX:"clip" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
@@ -1362,7 +1377,7 @@ export default function Aurora() {
               </h2>
             </div>
             <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText }}>
-              <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">AURORA nació en 2018 con una premisa simple: crear piezas que duren más que una temporada. En un mundo saturado de fast fashion, apostamos por la confección artesanal, las telas de origen responsable y los diseños que no envejecen.</EditableZone>
+              <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">Nacimos con una premisa simple: crear piezas que duren más que una temporada. En un mundo saturado de fast fashion, apostamos por la confección artesanal, las telas de origen responsable y los diseños que no envejecen.</EditableZone>
             </p>
             <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Cada prenda pasa por un proceso riguroso de selección de materiales y control de calidad. Trabajamos con talleres locales y artesanos que comparten nuestra filosofía: menos piezas, más valor.</EditableZone>
@@ -1469,17 +1484,23 @@ export default function Aurora() {
                 costado: medido, 39px a 1100 de ancho. Ahora se parte antes que romper la
                 pagina. Un nombre largo va a quedar en dos renglones, que es feo pero se lee;
                 arrastrar la pagina para el costado no se lee. */}
-            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">AURORA</EditableZone></span>
+            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "AURORA"}</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
               <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
             </p>
-            <div style={{ display:"flex", gap:12, marginTop:24 }}>
-              {([["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const).map(([label, key]) => {
+            {/* Las cinco redes que se cargan en Configuración (faltaba Pinterest:
+                cargada, no aparecía). En el celular la fila sigue la alineación de
+                la descripción de arriba (`data-cel-fila`, en globals.css). */}
+            <div data-cel-fila={textOverrides.footerDescription?.celular?.align} style={{ display:"flex", flexWrap:"wrap", gap:12, marginTop:24 }}>
+              {([["IG","instagram","Instagram"],["FB","facebook","Facebook"],["TK","tiktok","TikTok"],["YT","youtube","YouTube"],["PT","pinterest","Pinterest"]] as const).map(([label, key, nombre]) => {
                 const url = storeConfig?.socialLinks?.[key];
                 if (!isPreview && !url) return null;
                 return (
-                  <button key={label}
-                    onClick={() => url && window.open(url, "_blank")}
+                  <button key={label} aria-label={nombre}
+                    title={url ? nombre : `${nombre} — sin cargar. Se carga en Configuración → Redes sociales`}
+                    /* `noopener`: sin eso la pestaña nueva queda con acceso a la
+                       tienda que la abrió y puede mandarla a otra dirección. */
+                    onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
                     style={{ background:"none", border:`1px solid ${footerSubtleBorder}`, color:footerText, width:34, height:34, fontSize:10, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
                     onMouseEnter={e => { if(url){ e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}}
                     onMouseLeave={e => { e.currentTarget.style.borderColor=footerSubtleBorder; e.currentTarget.style.color=footerText; }}>
@@ -1533,12 +1554,17 @@ export default function Aurora() {
           ] as { title: string; links: [string, () => void][] }[]).map(col => (
             <div key={col.title}>
               <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>{col.title}</p>
+              {/* Botones y no párrafos con clic: un <p> no se alcanza con el
+                  teclado y un lector de pantalla no lo anuncia como algo que se
+                  puede apretar. Se ven igual que antes. */}
               {col.links.map(([label, ir]) => (
-                <p key={label} onClick={ir} style={{ fontSize:13, opacity:0.45, marginBottom:10, cursor:"pointer", transition:"opacity 0.2s" }}
+                <button key={label} type="button" onClick={ir}
+                  style={{ display:"block", background:"none", border:"none", padding:0, font:"inherit", color:"inherit", textAlign:"left",
+                    fontSize:13, opacity:0.45, marginBottom:10, cursor:"pointer", transition:"opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity="0.9")}
                   onMouseLeave={e => (e.currentTarget.style.opacity="0.45")}>
                   {label}
-                </p>
+                </button>
               ))}
             </div>
           ))}
@@ -1596,7 +1622,7 @@ export default function Aurora() {
             </div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 12px", justifyContent:"center", textAlign:"center" }}>
               <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
-                <EditableZone field="footerCopyright" label="Copyright">© 2025 AURORA. Todos los derechos reservados.</EditableZone>
+                <EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "AURORA"}. Todos los derechos reservados.</EditableZone>
               </p>
               <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
                 <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
@@ -1629,7 +1655,7 @@ export default function Aurora() {
             </div>
             <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
               <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
-                <EditableZone field="footerCopyright" label="Copyright">© 2025 AURORA. Todos los derechos reservados.</EditableZone>
+                <EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "AURORA"}. Todos los derechos reservados.</EditableZone>
               </p>
               <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
                 <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>

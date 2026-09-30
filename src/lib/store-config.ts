@@ -100,6 +100,8 @@ export const storeConfigSchema = z.object({
     // Paris lo lee, pero zod lo descartaba al guardar. Se tildaba, el texto
     // desaparecía en el momento, y volvía solo al recargar la tienda.
     hideContent: z.boolean().optional(),
+    // La foto sólo para el celular. Mismo tope que `url`.
+    urlMobile: z.string().max(2000).optional(),
   })),
   // El fondo de una sección puede ser un color (`#0a0a0a`, 7 caracteres) o un
   // degradado ya armado como CSS (`linear-gradient(90deg, #… 20%, #… 100%)`, unos

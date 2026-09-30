@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, TextOverrideCelular, ImageOverride, TemplateId } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, SECTION_BG_FOCO_CELULAR, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
@@ -852,7 +852,7 @@ function useHueco(field: string, selector: "data-edit-image" | "data-edit-bg") {
  * —cuánto se puede mover de verdad—, y dos copias se despegan a la primera
  * corrección.
  */
-function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }: {
+function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, arrancaEnCelular = false, setImageOverride }: {
   imgKey: string;
   ov: ImageOverride;
   /** La forma real del hueco, medida. `null` = no se pudo medir. */
@@ -861,6 +861,8 @@ function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }
   capa: string;
   /** ¿Se ofrece un encuadre aparte para celular? Sólo donde el template lo lee. */
   ofreceMobil: boolean;
+  /** Editando la vista de celular: el encuadre arranca en "celular". */
+  arrancaEnCelular?: boolean;
   setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
 }) {
   const dk = { color: P.text };
@@ -872,8 +874,11 @@ function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }
      puede controlar el recorte en los dos. Para esas imágenes se ofrece un
      encuadre aparte para celular. En el resto (forma fija, ej. la foto de
      "Nosotros" 4:5) el toggle no aparece: el recorte es el mismo en los dos. */
-  const [modoMobil, setModoMobil] = useState(false);
+  const [modoMobil, setModoMobil] = useState(arrancaEnCelular);
   const mobil = ofreceMobil && modoMobil;
+  /* La foto que se encuadra: en celular, la de celular si hay una. Si no, la
+     misma de PC con su propio encuadre. */
+  const foto = mobil ? (ov.urlMobile ?? ov.url) : ov.url;
   // En celular el valor arranca del de PC (que es lo que hoy se ve en el celu por
   // el fallback) y se vuelve propio recién cuando se mueve.
   const posX = mobil ? (ov.posXMobile ?? ov.posX ?? 50) : (ov.posX ?? 50);
@@ -890,16 +895,16 @@ function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }
   // las barras mienten (ver `sobraX`/`sobraY` acá abajo).
   const [natural, setNatural] = useState<{ url: string; w: number; h: number } | null>(null);
   useEffect(() => {
-    if (!ov.url) return;
+    if (!foto) return;
     const img = new window.Image();
-    const url = ov.url;
+    const url = foto;
     img.onload = () => setNatural({ url, w: img.naturalWidth, h: img.naturalHeight });
     img.src = url;
     return () => { img.onload = null; };
-  }, [ov.url]);
+  }, [foto]);
   // Se compara la URL en vez de limpiar el estado al cambiar de foto: así no hay
   // un instante mostrando las medidas de la foto anterior.
-  const medidas = natural && natural.url === ov.url ? natural : null;
+  const medidas = natural && natural.url === foto ? natural : null;
 
   // ── Cuánto se puede mover, de verdad ───────────────────────────────────────
   // La sección recorta con `cover`: la foto se agranda hasta tapar el hueco, y
@@ -999,7 +1004,7 @@ function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }
             ? { height: 260, width: "auto", maxWidth: "100%", marginLeft: "auto", marginRight: "auto" }
             : { width: "100%" }),
           borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden",
-          backgroundImage: `url(${ov.url})`, backgroundSize: "cover",
+          backgroundImage: `url(${foto})`, backgroundSize: "cover",
           backgroundPosition: `${posX}% ${posY}%`, backgroundRepeat: "no-repeat",
           cursor: "grab",
           // Sin esto, arrastrar hacia abajo en un celular scrollea el panel en
@@ -1353,12 +1358,16 @@ function ImageFieldEditor({
 }
 
 /* ── Background + image editor for section bg fields ────────── */
-function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
+function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = false, celular = false }: {
   field: string;
   base: React.CSSProperties;
   setActiveField: (f: string | null) => void;
   /** ¿Este template dibuja foto de fondo en ESTA sección? Si no, no se ofrece. */
   aceptaFoto: boolean;
+  /** ¿Lee acá el encuadre y la foto de celular? (SECTION_BG_FOCO_CELULAR) */
+  focoCelular?: boolean;
+  /** Se está editando la vista de celular. */
+  celular?: boolean;
 }) {
   const { sectionColors, setSectionColor, imageOverrides, setImageOverride } = useEditContext();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1372,6 +1381,10 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
   const [colorAbierto, setColorAbierto] = useState(false);
 
   const imgKey = `sectionbg_${field}`;
+  /* La misma subida sirve para las dos fotos (la de PC y la de celular): cambia
+     sólo dónde se guarda. */
+  const destinoSubida = useRef<"url" | "urlMobile">("url");
+  const elegirFoto = (destino: "url" | "urlMobile") => { destinoSubida.current = destino; fileRef.current?.click(); };
   const ov: ImageOverride = imageOverrides[imgKey] ?? {};
   const currentOverlay = ov.overlayType ?? "dark";
   const hasImage = !!ov.url;
@@ -1472,7 +1485,10 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
       const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
-      setImageOverride(imgKey, { url: data.publicUrl, overlayType: "dark", overlayOpacity: 0.45 });
+      // La de celular no toca la capa: la capa es una sola para las dos fotos.
+      setImageOverride(imgKey, destinoSubida.current === "urlMobile"
+        ? { urlMobile: data.publicUrl }
+        : { url: data.publicUrl, overlayType: "dark", overlayOpacity: 0.45 });
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {
@@ -1675,11 +1691,34 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           {ov.url && <img src={ov.url} alt="" style={{ width: 40, height: 34, objectFit: "cover", borderRadius: 5, border: "1px solid #e2e8f0", flexShrink: 0 }} />}
-          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          <button onClick={() => elegirFoto("url")} disabled={uploading}
             style={{ ...dkBtn, ...(ov.url ? dkBtnActive : {}), flex: 1, padding: "7px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
             📷 {uploading ? "Subiendo..." : ov.url ? "Cambiar foto" : "Elegir foto"}
           </button>
         </div>
+        {/* La foto para el celular: sólo donde el template la lee, y sólo si ya
+            hay una de PC (sin ella, el celular muestra las de los productos). */}
+        {focoCelular && ov.url && (
+          <div style={{ marginTop: 10, padding: "10px", borderRadius: 8, background: celular ? "#eef2ff" : "#f8fafc", border: `1px solid ${celular ? "#c7d2fe" : "#e2e8f0"}` }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: P.text }}>📱 Foto para el celular</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7 }}>
+              {ov.urlMobile && <img src={ov.urlMobile} alt="" style={{ width: 26, height: 40, objectFit: "cover", borderRadius: 5, border: "1px solid #e2e8f0", flexShrink: 0 }} />}
+              <button onClick={() => elegirFoto("urlMobile")} disabled={uploading}
+                style={{ ...dkBtn, ...(ov.urlMobile ? dkBtnActive : {}), flex: 1, padding: "7px 0" }}>
+                {uploading ? "Subiendo..." : ov.urlMobile ? "Cambiar" : "Elegir otra foto"}
+              </button>
+              {ov.urlMobile && (
+                <button onClick={() => setImageOverride(imgKey, { urlMobile: undefined })} disabled={uploading}
+                  title="Usar la misma foto que en computadora" style={{ ...dkBtn, padding: "7px 10px" }}>✕</button>
+              )}
+            </div>
+            <p style={{ margin: "6px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+              {ov.urlMobile
+                ? "En el celular se ve esta; en computadora, la de arriba."
+                : "Opcional. En el celular la portada es alta y angosta: una foto vertical, o una sin texto adentro, se ve mejor. Sin elegir nada se usa la de arriba."}
+            </p>
+          </div>
+        )}
         {uploadError && <p style={{ margin: "6px 0 0", fontSize: 11, color: P.danger }}>⚠ {uploadError}</p>}
         <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
           {ov.url
@@ -1699,7 +1738,7 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
           se mide en vivo — si achicás la ventana, cambia con ella. */}
       {aceptaFoto && ov.url && (
         <EncuadreFoto imgKey={imgKey} ov={ov} hueco={hueco} capa={currentOverlay}
-          ofreceMobil={false} setImageOverride={setImageOverride} />
+          ofreceMobil={focoCelular} arrancaEnCelular={celular} setImageOverride={setImageOverride} />
       )}
 
       {/* Fila 2: capa (solo si hay imagen) + reset color */}
@@ -1837,7 +1876,10 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
   /* ── Background color + image editor ── */
   if (isBgField) {
     const field = activeField.slice(3);
-    return <BgFieldEditor field={field} base={base} setActiveField={setActiveField} aceptaFoto={SECTION_BG_PHOTO[template]?.includes(field) ?? false} />;
+    return <BgFieldEditor field={field} base={base} setActiveField={setActiveField}
+      aceptaFoto={SECTION_BG_PHOTO[template]?.includes(field) ?? false}
+      focoCelular={SECTION_BG_FOCO_CELULAR[template]?.includes(field) ?? false}
+      celular={celular} />;
   }
 
   /* ── Image editor ── */

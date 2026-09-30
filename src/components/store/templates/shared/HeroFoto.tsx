@@ -45,6 +45,8 @@ export function HeroFoto({
   acento,
   alto = "min(78vh, 720px)",
   posicion = "center",
+  imagenCelular,
+  posicionCelular,
   margenNav = 0,
 }: {
   nav?: React.ReactNode;
@@ -69,6 +71,15 @@ export function HeroFoto({
    * algo: sin esto la dueña mueve la imagen y no pasa nada.
    */
   posicion?: string;
+  /**
+   * La primera foto y su encuadre en el CELULAR (menos de 768 px). Van por CSS
+   * (`globals.css`, `.hero-foto-capa`) y no eligiéndolos con el ancho de la
+   * ventana: el primer dibujo lo hace el servidor, que no sabe el ancho, y
+   * decidirlo después hacía aparecer la foto de PC y cambiarla — y el celular
+   * bajaba las dos. Con CSS el navegador baja sólo la que va a mostrar.
+   */
+  imagenCelular?: string;
+  posicionCelular?: string;
   /**
    * Alto de la barra de navegación cuando el template la dibuja FUERA del hero y
    * flotando encima. Sin esto el título arranca debajo del logo: en escritorio
@@ -118,12 +129,17 @@ export function HeroFoto({
         <div
           key={src}
           aria-hidden={i !== activa}
+          className="hero-foto-capa"
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url(${src})`,
+            // La foto y el encuadre van en variables: la regla de `globals.css`
+            // elige entre las de PC y las de celular según el ancho.
+            ["--hf-foto" as string]: `url(${src})`,
+            ["--hf-pos" as string]: posicion,
+            ...(i === 0 && imagenCelular ? { ["--hf-foto-cel" as string]: `url(${imagenCelular})` } : null),
+            ...(posicionCelular ? { ["--hf-pos-cel" as string]: posicionCelular } : null),
             backgroundSize: "cover",
-            backgroundPosition: posicion,
             opacity: i === activa ? 1 : 0,
             // El acercamiento corre sólo en la que se ve, así arranca de cero
             // cada vez que le toca y no llega ya terminado.
