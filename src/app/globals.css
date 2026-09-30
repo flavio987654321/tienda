@@ -573,6 +573,12 @@ html[data-panel-tema] body {
     align-self: stretch !important;
     flex-grow: 1 !important;
   }
+  /* Y si la caja tiene ancho máximo (la descripción del pie de Aire: 300 px en
+     un celular de 390), centrar el texto adentro lo deja en el medio de la CAJA,
+     no de la pantalla. Así que la caja también se corre para ese lado. */
+  :where(h1, h2, h3, h4, h5, h6, p, div, li, small, label):has(> [data-cel-align="left"])   { margin-left: 0 !important; margin-right: auto !important; }
+  :where(h1, h2, h3, h4, h5, h6, p, div, li, small, label):has(> [data-cel-align="center"]) { margin-left: auto !important; margin-right: auto !important; }
+  :where(h1, h2, h3, h4, h5, h6, p, div, li, small, label):has(> [data-cel-align="right"])  { margin-left: auto !important; margin-right: 0 !important; }
   /* Un nivel más: la fila de adentro de otra fila ("Hecho en", al lado del
      link de reportar, en el pie de Aire). Si crece sólo la de adentro, la de
      afuera sigue midiendo lo justo y el texto no tiene adónde ir. */
