@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, isValidElement, useContext, useState } from "react";
 import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
 import { colorRepresentativo } from "@/lib/section-bg";
@@ -162,6 +162,14 @@ export function getReadableAccentFill(accent: string, bg: string, fallback: stri
 
 export function useEditContext() { return useContext(EditContext); }
 
+/** El texto de un pedazo de JSX: "© " + 2026 + " Aire" → "© 2026 Aire". Lo que no es texto no suma. */
+function textoPlano(n: React.ReactNode): string {
+  if (typeof n === "string" || typeof n === "number") return String(n);
+  if (Array.isArray(n)) return n.map(textoPlano).join("");
+  if (isValidElement<{ children?: React.ReactNode }>(n)) return textoPlano(n.props.children);
+  return "";
+}
+
 /* ── EditableZone ─────────────────────────────────────────────
    Wrap any text element. In edit mode shows hover outline +
    pencil badge. Applies textOverrides (color, font, size, B/I/U)
@@ -211,8 +219,31 @@ export function EditableZone({
     ...(ov.letterSpacing !== undefined && { letterSpacing: `${ov.letterSpacing}px` }),
   };
 
+  /* ── Lo que cambia sólo en el celular ────────────────────────────────────────
+   * No puede ir en `overrideStyle`: eso es un `style` en línea, y un `style` en
+   * línea no sabe de anchos de pantalla. Va como marcas `data-cel-*` más dos
+   * variables, y la regla que las aplica está en `globals.css`, adentro de un
+   * `@media (max-width: 767px)` — el mismo corte con el que los templates deciden
+   * dibujar su versión de celular. La regla lleva `!important` porque tiene que
+   * ganarle al `style` en línea de lo que se eligió para PC.
+   *
+   * Así funciona igual en la tienda publicada, en el celular del editor (que es
+   * un iframe angosto de verdad) y en cualquier template, sin tocar ninguno. */
+  const cel = ov.celular;
+  const marcasCelular: Record<string, string> = {};
+  const varsCelular: Record<string, string> = {};
+  if (cel?.align)    { marcasCelular["data-cel-align"] = cel.align; varsCelular["--cel-align"] = cel.align; }
+  if (cel?.fontSize) { marcasCelular["data-cel-size"] = "";  varsCelular["--cel-size"] = `${cel.fontSize}px`; }
+  if (cel?.hidden)   { marcasCelular["data-cel-oculto"] = ""; }
+  const tocaCelular = Object.keys(marcasCelular).length > 0;
+
   const displayContent = ov.text !== undefined ? ov.text : children;
-  const hasStyle = Object.keys(overrideStyle).length > 0;
+  /* El texto que trae el diseño, para que el panel lo muestre en la caja aunque
+     ya se haya cambiado. Se saca de `children` y no de la pantalla: la pantalla
+     muestra lo escrito, y recién después de volver al original muestra el
+     original — leerla ahí confundía lo tipeado con el texto de fábrica. */
+  const original = editMode ? textoPlano(children) : "";
+  const hasStyle = Object.keys(overrideStyle).length > 0 || tocaCelular;
 
   /* Que una palabra larguísima CORTE en vez de salirse de la pantalla.
    *
@@ -234,6 +265,7 @@ export function EditableZone({
   const estiloConCorte: React.CSSProperties = {
     overflowWrap: "anywhere", wordBreak: "break-word", maxWidth: "100%",
     ...overrideStyle,
+    ...varsCelular,
   };
   const isHidden = !!ov.hidden;
 
@@ -241,7 +273,7 @@ export function EditableZone({
     if (isHidden) return null;
     if (!hasStyle && ov.text === undefined) return <>{children}</>;
     const Tag = block ? "div" : ("span" as React.ElementType);
-    return <Tag style={estiloConCorte}>{displayContent}</Tag>;
+    return <Tag style={estiloConCorte} {...marcasCelular}>{displayContent}</Tag>;
   }
 
   const Tag = block ? "div" : ("span" as React.ElementType);
@@ -255,6 +287,8 @@ export function EditableZone({
         // justo en el campo que más lo necesita — el que estás por volver a mostrar
         // y todavía no viste sobre su fondo.
         data-edit-field={field}
+        data-edit-label={label}
+        data-edit-original={original}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field, label); }}
@@ -281,7 +315,7 @@ export function EditableZone({
       >
         {displayContent}
         {(hovered || isActive) && (
-          <span style={{
+          <span data-edit-globito="" style={{
             position: "absolute", top: 0, left: 0,
             transform: "translateY(-100%)",
             background: "#ef4444", color: "white",
@@ -308,10 +342,17 @@ export function EditableZone({
       // elegido no se lee. Adivinar el fondo desde la configuración no serviría:
       // cada template pinta sus secciones a su manera.
       data-edit-field={field}
+      data-edit-label={label}
+      data-edit-original={original}
+      // Editando, lo oculto en el celular no desaparece: se ve apagado (la regla
+      // de `globals.css` mira esta marca), igual que lo oculto en todos lados.
+      data-editando=""
+      {...marcasCelular}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field, label); }}
       style={{
+        ...varsCelular,
         position: "relative",
         display: block ? "block" : "inline",
         cursor: "pointer",
@@ -339,7 +380,7 @@ export function EditableZone({
     >
       {displayContent}
       {hovered && !isActive && !noBadge && (
-        <span style={{
+        <span data-edit-globito="" style={{
           position: "absolute", top: 0, left: 0,
           transform: "translateY(-100%)",
           background: "#6366f1", color: "white",
@@ -558,6 +599,9 @@ export function EditableSectionBg({ field, label, lado = "izquierda", nombreBloq
       // template de fábrica: asume negro, y prender un difuminado sobre una
       // sección que nunca se tocó la pintaba de negro de golpe.
       data-edit-bg={field}
+      // En el celular este botón se acomoda distinto: sube a la línea de la
+      // chapita, contra el otro costado. Lo hace `globals.css` con esta marca.
+      data-fondo-lado={lado}
       style={{
         /* JUSTO DEBAJO de la chapita con el nombre del bloque.
          *

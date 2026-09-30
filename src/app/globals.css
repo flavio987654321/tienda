@@ -546,3 +546,85 @@ html[data-panel-tema] body {
   outline-offset: 2px;
   border-radius: 0.75rem; /* rounded-xl, que es lo que usan estos botones */
 }
+
+/* ── Textos de la tienda: lo que cambia sólo en el celular ────────────────────
+   Las marcas las pone `EditableZone` (src/contexts/EditContext.tsx) cuando la
+   dueña eligió algo en la vista de celular del editor de Diseño. 767 px es el
+   mismo corte con el que los templates dibujan su versión de celular.
+   `!important` porque tiene que ganarle al `style` en línea de lo elegido para PC. */
+@media (max-width: 767px) {
+  [data-cel-align] {
+    text-align: var(--cel-align) !important;
+    /* Sin esto no se mueve nada: `text-align` no hace efecto en un <span>. */
+    display: block !important;
+    width: 100% !important;
+  }
+  /* ── Que alinear MUEVA algo ──────────────────────────────────────────────────
+     Alinear el texto adentro de su caja no hace nada si la caja mide justo lo
+     que el texto: medido el 30/09/26, pasaba en 115 de los 347 textos de los 11
+     templates ("Hecho en", copyright, títulos con un "Ver todo" al lado…). Así
+     que se agranda o se mueve la caja de AFUERA, que es la que decide dónde cae.
+     Sólo cuando la dueña alineó ese texto en el celular: nada más cambia. */
+
+  /* Un texto en una caja justa: la caja ocupa el renglón y el texto se corre
+     adentro. Estirar sirve en una columna; crecer, en una fila (el título se
+     queda con el lugar libre y el "Ver todo" sigue contra la derecha). */
+  :where(h1, h2, h3, h4, h5, h6, p, div, li, small, label):has(> [data-cel-align]) {
+    align-self: stretch !important;
+    flex-grow: 1 !important;
+  }
+  /* Un nivel más: la fila de adentro de otra fila ("Hecho en", al lado del
+     link de reportar, en el pie de Aire). Si crece sólo la de adentro, la de
+     afuera sigue midiendo lo justo y el texto no tiene adónde ir. */
+  :where(div, li):has(> :where(h1, h2, h3, h4, h5, h6, p, div, li, small, label) > [data-cel-align]) {
+    align-self: stretch !important;
+    flex-grow: 1 !important;
+  }
+  /* Un botón o una pastilla: correr el texto adentro no se ve. Se corre la caja
+     entera. `width: fit-content` para que siga midiendo lo mismo, y `display`
+     de bloque para que los márgenes automáticos la puedan empujar. */
+  /* "Pastilla" también es cualquier caja escrita en línea como `inline-block` o
+     `inline-flex` (la etiqueta del hero de Aire es un <p> así): se mide por lo
+     que tiene adentro, igual que un botón. */
+  :where(a, button, span, [style*="display: inline-block"], [style*="display: inline-flex"]):has(> [data-cel-align]) {
+    display: flex !important;
+    width: fit-content !important;
+    max-width: 100%;
+  }
+  :where(a, button, span, [style*="display: inline-block"], [style*="display: inline-flex"]):has(> [data-cel-align="left"])   { margin-left: 0 !important; margin-right: auto !important; align-self: flex-start !important; }
+  :where(a, button, span, [style*="display: inline-block"], [style*="display: inline-flex"]):has(> [data-cel-align="center"]) { margin-left: auto !important; margin-right: auto !important; align-self: center !important; }
+  :where(a, button, span, [style*="display: inline-block"], [style*="display: inline-flex"]):has(> [data-cel-align="right"])  { margin-left: auto !important; margin-right: 0 !important; align-self: flex-end !important; }
+
+  [data-cel-size] {
+    font-size: var(--cel-size) !important;
+  }
+  [data-cel-oculto]:not([data-editando]) {
+    display: none !important;
+  }
+  /* Editando no desaparece: se apaga, para poder tocarlo y volver a mostrarlo. */
+  [data-cel-oculto][data-editando] {
+    opacity: 0.35;
+    outline: 2px dashed rgba(239, 68, 68, 0.5) !important;
+  }
+}
+
+/* ── El botón "Fondo" del editor, en el celular ───────────────────────────────
+   En PC va abajo de la chapita con el nombre del bloque (de 17 a 38 px desde el
+   filo), porque las secciones dejan 40 de margen arriba. En celular casi todas
+   dejan menos: medido el 30/09/26, pisaba el título en 9 secciones de 6
+   templates. En vez de agrandar el margen sección por sección, el botón sube a la
+   MISMA línea que la chapita (0 a 16 px) y se pone del otro costado: la chapita
+   ocupa la izquierda. Ahí no hay contenido en ningún template.
+   Los que ya iban a la derecha (el segundo fondo de un bloque, la tarjeta de
+   adentro) quedan donde estaban: suben, y chocarían con el de su sección. */
+@media (max-width: 767px) {
+  [data-fondo-lado="izquierda"] {
+    top: 0 !important;
+    left: auto !important;
+    right: 8px !important;
+    padding: 2px 8px !important;
+    font-size: 9.5px !important;
+    border-radius: 0 0 7px 7px !important;
+    border-top: none !important;
+  }
+}

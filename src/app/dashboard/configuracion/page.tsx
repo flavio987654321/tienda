@@ -1,9 +1,9 @@
 "use client";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import type { StoreConfig, TextOverride, ImageOverride, TemplateId } from "@/types/store-config";
+import type { StoreConfig, TextOverride, TextOverrideCelular, ImageOverride, TemplateId } from "@/types/store-config";
 import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
@@ -13,6 +13,9 @@ import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
 import { topeDelTexto, nombreDelTope } from "@/lib/topes-texto";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import TourGuide from "@/components/TourGuide";
+import MarcoCelular, { SelectorAncho, type Ancho } from "./MarcoCelular";
+import IndiceCelular from "./IndiceCelular";
+import type { Edicion, ItemIndice, Llamada } from "@/app/preview/celular/avisos";
 import { GUION_PREVIEW, GUION_EDITOR, TOUR_PREVIEW_KEY, TOUR_EDITOR_KEY } from "@/components/tours";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -1737,7 +1740,26 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
 }
 
 /* ── Floating editor (text + image) ─────────────────────────── */
-function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: TemplateId; msCarrusel: number; setMsCarrusel: (ms: number) => void }) {
+/** El texto que trae el diseño para un campo de la previa de PC (lo marca `EditableZone`). */
+function originalEnPantalla(field: string): string {
+  if (typeof document === "undefined") return "";
+  return document.querySelector<HTMLElement>(`[data-edit-field="${CSS.escape(field)}"]`)?.dataset.editOriginal ?? "";
+}
+
+/** Lo que ocupa el panel de edición a la derecha. El celular se corre esto. */
+const ANCHO_PANEL = 340;
+
+function FloatingEditor({ template, celular = false, puedeAlinear, originalCelular, msCarrusel, setMsCarrusel }: {
+  template: TemplateId;
+  /** Se está editando en la vista de celular: los textos cambian sólo ahí. */
+  celular?: boolean;
+  /** En celular: si alinear este texto lo mueve. `undefined` = todavía no se midió. */
+  puedeAlinear?: boolean;
+  /** En celular: el texto de fábrica del elegido. Lo lee el teléfono, que es otra ventana. */
+  originalCelular?: string;
+  msCarrusel: number;
+  setMsCarrusel: (ms: number) => void;
+}) {
   const { activeField, activeLabel, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
 
   // Cerrar con Escape o tocando fuera del panel.
@@ -1801,7 +1823,7 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
   // Si angostáramos la vista previa, seguirían creyendo que están en escritorio y
   // mostrarían ese diseño apretujado — una pantalla que no existe en la realidad.
   // La vista previa tiene un solo trabajo y es no mentir.
-  const PANEL_W = 340;
+  const PANEL_W = ANCHO_PANEL;
   const TOPBAR_H = 44;
   const base: React.CSSProperties = {
     position: "fixed", top: TOPBAR_H, right: 0, bottom: 0, width: PANEL_W, zIndex: 99999,
@@ -1856,8 +1878,32 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
      campo arriba de 500, el formulario dejaria escribir algo que el guardado
      rechaza entero, y el aviso hablaria de otra cosa. */
   const topeDeEsteCampo = Math.min(topeDelTexto(activeField), TEXTO_MAX);
-  const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
+  const cel = ov.celular ?? {};
+  /* En la vista de celular, "hay cambios" y "volver al diseño" hablan sólo de
+     lo del celular: el ↺ de ahí no puede borrarte lo que armaste para PC. */
+  const hasOverride = celular
+    ? Object.values(cel).some(v => v !== undefined)
+    : Object.entries(ov).some(([k, v]) => k !== "celular" && v !== undefined);
   const isHidden = !!ov.hidden;
+
+  /* ── Lo que dice HOY este texto ─────────────────────────────────────────────
+     La caja arrancaba vacía —con el nombre del campo en gris— hasta que se
+     escribía algo: para cambiar "Ropa que se usa todos los días" había que
+     tipearlo de cero o ir a copiarlo de la previa. Ahora arranca con el texto
+     que trae el diseño, y se edita encima.
+     El texto de fábrica lo escribe cada template y no está en la config: lo
+     marca `EditableZone` en `data-edit-original` (en celular lo manda el
+     teléfono). Se lee de esa marca y NO de lo que se ve, porque lo que se ve es
+     lo escrito — y justo después de volver al original todavía muestra lo
+     escrito: leerlo ahí guardaba lo tipeado como si fuera de fábrica. */
+  const original = (celular ? originalCelular : originalEnPantalla(activeField)) ?? "";
+
+  /** Cambia sólo lo del celular; lo que queda sin definir se saca, y si no queda nada, se va entero. */
+  const setCel = (p: Partial<TextOverrideCelular>) => {
+    const n: TextOverrideCelular = { ...cel, ...p };
+    (Object.keys(n) as (keyof TextOverrideCelular)[]).forEach(k => { if (n[k] === undefined) delete n[k]; });
+    setOverride(activeField, { celular: Object.keys(n).length ? n : undefined });
+  };
 
   const fmtBtn = (active: boolean): React.CSSProperties => ({
     width: 28, height: 28,
@@ -1911,6 +1957,14 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
   return (
     <div data-editor-panel style={{ ...base, display: "flex", flexDirection: "column" }}>
       {/* ── Encabezado: qué estoy editando ── */}
+      {celular && (
+        <button type="button" onClick={() => setActiveField(null)}
+          style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "10px 18px",
+            background: "#f8fafc", border: "none", borderBottom: "1px solid #eef1f5", cursor: "pointer",
+            color: P.muted, fontSize: 12, fontWeight: 600, textAlign: "left", flexShrink: 0 }}>
+          ← Todos los textos
+        </button>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
         <span style={{
           fontSize: 11, fontWeight: 700, color: P.accent,
@@ -1919,10 +1973,16 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
         }}>
           ✏ {label}
         </span>
+        {celular && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#0f172a", background: "#e2e8f0",
+            borderRadius: 20, padding: "3px 8px", flexShrink: 0, whiteSpace: "nowrap" }}>
+            📱 Celular
+          </span>
+        )}
         <div style={{ flex: 1 }} />
         {hasOverride && (
-          <button type="button" onClick={() => resetOverride(activeField)}
-            title="Volver este texto a como venía en el diseño"
+          <button type="button" onClick={() => celular ? setOverride(activeField, { celular: undefined }) : resetOverride(activeField)}
+            title={celular ? "Volver a como se ve en computadora" : "Volver este texto a como venía en el diseño"}
             style={{ ...fmtBtn(false), fontSize: 14, width: 26, height: 26 }}>↺</button>
         )}
         <button type="button" onClick={() => setActiveField(null)} aria-label="Cerrar editor"
@@ -1940,11 +2000,14 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
             precios— con un "Error al guardar" que no decía dónde estaba el
             problema. Es mucho mejor frenar acá, donde se ve lo que pasa. */}
         <textarea
-          value={ov.text ?? ""}
+          value={ov.text ?? original}
           placeholder={label}
           rows={3}
           maxLength={topeDeEsteCampo}
-          onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
+          /* Vacío se deja mientras se escribe: si volviera al original en el acto,
+             borrar todo para escribir algo nuevo sería imposible. Al salir de la
+             caja, vacío o igual al original vuelven a ser "el del diseño". */
+          onChange={e => setOverride(activeField, { text: e.target.value })}
           style={{
             width: "100%", boxSizing: "border-box", marginTop: 7,
             border: "1px solid #e2e8f0", borderRadius: 8,
@@ -1952,7 +2015,11 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
             fontFamily: "inherit", color: P.text, background: "#f8fafc",
           }}
           onFocus={e => (e.target.style.borderColor = "#6366f1")}
-          onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
+          onBlur={e => {
+            e.target.style.borderColor = "#e2e8f0";
+            const v = e.target.value;
+            if (ov.text !== undefined && (v.trim() === "" || v === original)) setOverride(activeField, { text: undefined });
+          }}
         />
         {/* El contador aparece recién cerca del tope, y el tope depende de QUÉ
             es este campo: un botón no acepta lo mismo que un párrafo. Antes era
@@ -1967,10 +2034,17 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
               : ""}
           </p>
         )}
-        {ayuda(ov.text
-          ? "Se muestra este texto en lugar del que trae el diseño."
-          : "Vacío significa que se usa el texto original del diseño. Escribí para reemplazarlo.")}
+        {ayuda(celular
+          ? "El texto es el mismo en computadora y en celular: si lo cambiás acá, cambia en los dos."
+          : ov.text !== undefined
+          ? "Cambiaste el texto del diseño. Si lo dejás vacío, vuelve el original."
+          : "Es el texto que trae el diseño. Escribí encima para cambiarlo.")}
       </div>
+
+      {celular ? (
+        <PanelTextoCelular ov={ov} cel={cel} setCel={setCel} titulo={titulo} ayuda={ayuda} bloque={bloque}
+          fmtBtn={fmtBtn} tamanios={FONT_SIZES} puedeAlinear={puedeAlinear !== false} />
+      ) : (<>
 
       {/* ── Formato ── */}
       <div style={bloque}>
@@ -2126,7 +2200,110 @@ function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: Tem
           ? "Nadie lo ve en tu tienda. Acá en el editor te lo seguimos mostrando para que puedas volver a activarlo."
           : "Tocá para esconderlo de tu tienda sin borrar lo que escribiste.")}
       </div>
+      </>)}
     </div>
+  );
+}
+
+/* ── Los ajustes de un texto que valen sólo en el celular ──────────────────────
+   Tres y no todos, a propósito. Lo que cambia entre una pantalla y la otra es el
+   ACOMODO: dónde queda el texto, qué tan grande entra en 390 px, si hace falta
+   en una pantalla tan chica. El color, la letra y la negrita son la identidad de
+   la tienda y tienen que ser los mismos en las dos — tenerlos por separado
+   duplica el trabajo y termina en dos tiendas que no se parecen.
+
+   Cada ajuste arranca "como en computadora": sin tocar nada, el celular hereda
+   lo de PC, igual que siempre. Se aplica en `EditableZone` + `globals.css`. */
+function PanelTextoCelular({ ov, cel, setCel, titulo, ayuda, bloque, fmtBtn, tamanios, puedeAlinear }: {
+  ov: TextOverride;
+  cel: TextOverrideCelular;
+  setCel: (p: Partial<TextOverrideCelular>) => void;
+  titulo: (t: string) => React.ReactNode;
+  ayuda: (t: string) => React.ReactNode;
+  bloque: React.CSSProperties;
+  fmtBtn: (activo: boolean) => React.CSSProperties;
+  tamanios: number[];
+  /** Falso cuando el texto ocupa justo su lugar y alinearlo no lo mueve. */
+  puedeAlinear: boolean;
+}) {
+  const NOMBRE_ALINEACION = { left: "izquierda", center: "centrado", right: "derecha" } as const;
+  return (
+    <>
+      {/* ── Acomodo ── */}
+      <div style={bloque}>
+        {titulo("Acomodo en el celular")}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {([
+              ["left",   "Izquierda", "M3 5h18M3 10h11M3 15h18M3 20h11"],
+              ["center", "Centrado",  "M3 5h18M6 10h12M3 15h18M6 20h12"],
+              ["right",  "Derecha",   "M3 5h18M10 10h11M3 15h18M10 20h11"],
+            ] as const).map(([val, nombre, d]) => (
+              <button key={val} type="button" title={nombre} aria-label={nombre} aria-pressed={cel.align === val}
+                disabled={!puedeAlinear && cel.align !== val}
+                onClick={() => setCel({ align: cel.align === val ? undefined : val })}
+                style={{ ...fmtBtn(cel.align === val), width: 34, height: 32,
+                  ...(!puedeAlinear && cel.align !== val ? { opacity: 0.35, cursor: "not-allowed" } : null) }}>
+                <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d={d} /></svg>
+              </button>
+            ))}
+          </div>
+          <select value={cel.fontSize ?? ""} aria-label="Tamaño en el celular"
+            onChange={e => setCel({ fontSize: e.target.value ? Number(e.target.value) : undefined })}
+            style={{ flex: 1, minWidth: 0, fontSize: 11, padding: "6px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: P.text, background: "#f8fafc", height: 32 }}>
+            <option value="" style={{ color: "#111", background: "#fff" }}>
+              {ov.fontSize ? `Tamaño: ${ov.fontSize}px, como en PC` : "Tamaño: como en PC"}
+            </option>
+            {tamanios.map(t => <option key={t} value={t} style={{ color: "#111", background: "#fff" }}>{t}px</option>)}
+          </select>
+        </div>
+        {!puedeAlinear ? (
+          /* Dicho y no sólo apagado: un botón gris sin explicación se lee como
+             que la pantalla está rota. */
+          <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, background: "#f1f5f9", border: "1px solid #e2e8f0" }}>
+            <p style={{ margin: 0, fontSize: 11, color: P.text, lineHeight: 1.45 }}>
+              <strong>Este texto ocupa justo su lugar en el celular</strong>, así que alinearlo no lo mueve.
+              El tamaño sí lo podés cambiar.
+            </p>
+          </div>
+        ) : ayuda(cel.align || cel.fontSize
+          ? "Esto vale sólo en el celular. En computadora sigue como estaba."
+          : "Sin tocar nada, el celular usa lo mismo que la computadora. Lo que elijas acá cambia sólo el celular.")}
+        {!cel.align && puedeAlinear && (
+          <p style={{ margin: "4px 0 0", fontSize: 10.5, lineHeight: 1.45, color: P.hint }}>
+            {ov.align ? `Alineación: la de PC (${NOMBRE_ALINEACION[ov.align]}).` : "Alineación: la del diseño."}
+          </p>
+        )}
+      </div>
+
+      {/* ── Visibilidad ── */}
+      <div style={bloque}>
+        {titulo("Visibilidad en el celular")}
+        {ov.hidden ? (
+          /* Oculto en todos lados le gana: mostrarlo sólo en el celular no existe,
+             y un botón que dice "visible" sin serlo miente. */
+          ayuda("Este texto está oculto en toda la tienda. Para volver a mostrarlo, pasá a la vista de computadora.")
+        ) : (
+          <>
+            <button type="button" aria-pressed={!!cel.hidden}
+              onClick={() => setCel({ hidden: cel.hidden ? undefined : true })}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                width: "100%", marginTop: 8, padding: "8px 11px", borderRadius: 6,
+                border: `1.5px solid ${cel.hidden ? "rgba(239,68,68,0.4)" : "#e2e8f0"}`,
+                background: cel.hidden ? "rgba(239,68,68,0.12)" : "#f8fafc",
+                color: cel.hidden ? "#dc2626" : P.muted,
+                cursor: "pointer", fontSize: 12, fontWeight: 600,
+              }}>
+              {cel.hidden ? "📱 Oculto en el celular" : "📱 Visible en el celular"}
+            </button>
+            {ayuda(cel.hidden
+              ? "En el celular no aparece; en computadora sí. Acá te lo dejamos apagado para que puedas volver a mostrarlo."
+              : "Si en una pantalla chica sobra, escondelo sólo en el celular. En computadora se sigue viendo.")}
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -2222,6 +2399,19 @@ export default function ConfiguracionPage() {
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
   const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
   const [isMobile, setIsMobile] = useState(false);
+  /** Cómo se mira la previa: la tienda de escritorio o la del celular. */
+  const [ancho, setAncho] = useState<Ancho>("pc");
+  /** Los textos que muestra el teléfono, para la lista del panel en vista celular. */
+  const [indiceCelular, setIndiceCelular] = useState<ItemIndice[]>([]);
+  /** Por campo: si alinearlo en el celular lo mueve de verdad. Lo mide el teléfono. */
+  const [alineables, setAlineables] = useState<Record<string, boolean>>({});
+  /* Por template y campo: varios templates usan los mismos nombres (heroHeading,
+     storeName) y en cada uno el texto está acomodado distinto. */
+  const templateActual = config.template;
+  const anotarAlineable = useCallback((field: string, puede: boolean) => {
+    const clave = `${templateActual}:${field}`;
+    setAlineables(a => a[clave] === puede ? a : { ...a, [clave]: puede });
+  }, [templateActual]);
   /** Candado sincrónico del guardado. Ver `handleSave`. */
   const guardando = useRef(false);
 
@@ -2366,6 +2556,22 @@ export default function ConfiguracionPage() {
     });
     setIsDirty(true);
   }, []);
+
+  /* ── Lo que se toca adentro del celular ─────────────────────────────────────
+     El celular es otra ventana (ver `MarcoCelular`): sus textos y botones llaman
+     a las mismas funciones de siempre, pero le llegan acá por nombre. La lista de
+     nombres válidos la controla `MarcoCelular` antes de llamar. */
+  const llamadaDelCelular = useCallback((fn: Llamada, args: unknown[]) => {
+    const funciones: Record<Llamada, (...a: never[]) => void> = {
+      setActiveField, setOverride, resetOverride, setImageOverride,
+      setSectionColor, toggleHiddenSection, moveSection,
+    };
+    (funciones[fn] as (...a: unknown[]) => void)(...args);
+  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection]);
+  const edicionCelular = useMemo<Edicion>(
+    () => ({ activeField, activeLabel, imageLoading: imageLoadingFields }),
+    [activeField, activeLabel, imageLoadingFields],
+  );
 
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
     setConfig(c => ({ ...c, [key]: value }));
@@ -2680,6 +2886,9 @@ export default function ConfiguracionPage() {
   }
 
   const TemplateComponent = selected!.component;
+  /* Lo que ve la previa, sea la de PC o la del celular. El `template` va explícito:
+     la del celular dibuja según ese campo y no según `selected`. */
+  const configPrevia: StoreConfig = { ...config, template: selected!.id, previewFill: true, previewDemoPuro: savedTemplateId !== selected?.id, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick };
 
   /* ── STEP 2: Preview ── */
   if (mode === "preview") {
@@ -2723,6 +2932,7 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* Derecha */}
+            <SelectorAncho ancho={ancho} onChange={setAncho} />
             <BotonAyuda onClick={() => setTour("preview")} />
             <BotonCentroAyuda />
             <button onClick={handleUseTemplate} data-tour="pv-usar"
@@ -2738,15 +2948,21 @@ export default function ConfiguracionPage() {
           </div>
 
           <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
+            {ancho === "celular" ? (
+              <div data-tour="pv-lienzo" style={{ flex: 1, minHeight: 0 }}>
+                <MarcoCelular config={configPrevia} />
+              </div>
+            ) : (
             <div data-tour="pv-lienzo" style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, previewDemoPuro: savedTemplateId !== selected?.id, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
+              <StoreConfigContext.Provider value={configPrevia}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
               </StoreConfigContext.Provider>
             </div>
+            )}
           </div>
 
           {tour === "preview" && (
@@ -2791,8 +3007,12 @@ export default function ConfiguracionPage() {
             Cambiar diseño
           </button>
 
-          {/* Centro: info template */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+          {/* Centro: info template. Va flotando al medio, así que no empuja a
+              nadie: con los botones PC / Celular a la derecha, en pantallas de
+              menos de ~1200 px se le metía abajo a los botones. Ahí se esconde —
+              el nombre del diseño es lo único de la barra que no se toca. */}
+          <style>{`@media (max-width: 1199px) { .ed-centro { display: none !important; } }`}</style>
+          <div className="ed-centro" style={{ display: "flex", alignItems: "center", gap: 10, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
             <div style={{ display: "flex", gap: 3 }}>
               {selected!.palette.map((c, i) => (
                 <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: c,
@@ -2810,6 +3030,7 @@ export default function ConfiguracionPage() {
 
           {/* Derecha: acciones */}
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <SelectorAncho ancho={ancho} onChange={a => { setAncho(a); setActiveField(null); }} />
             {savedTemplateId && (
               <a href={`/tienda/${storeSlug ?? config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
                 target="_blank" rel="noopener noreferrer" data-tour="ed-ver"
@@ -2891,20 +3112,44 @@ export default function ConfiguracionPage() {
           sectionOrder: config.sectionOrder ?? [],
           moveSection,
         }}>
+          {ancho === "celular" ? (
+            /* En el celular también se toca para editar: lo que se toque adentro
+               llega acá por `llamadaDelCelular` y abre el mismo panel de siempre,
+               que en esta vista cambia los textos SÓLO para el celular.
+               El panel está SIEMPRE abierto (sin nada elegido muestra la lista de
+               textos), así que el teléfono va siempre corrido a la izquierda. */
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "8px 16px 12px", minHeight: 0 }}>
+              <p style={{ margin: 0, textAlign: "center", fontSize: 12, color: P.muted, flexShrink: 0,
+                paddingRight: ANCHO_PANEL }}>
+                Así la ve tu cliente desde el celular. Tocá un texto para acomodarlo sólo acá.
+              </p>
+              <div data-tour="ed-lienzo" style={{ flex: 1, minHeight: 0 }}>
+                <MarcoCelular config={configPrevia} edicion={edicionCelular} onLlamada={llamadaDelCelular}
+                  onIndice={setIndiceCelular} onAlineable={anotarAlineable} corrido={ANCHO_PANEL} />
+              </div>
+            </div>
+          ) : (
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
             <div data-tour="ed-lienzo" style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, previewDemoPuro: savedTemplateId !== selected?.id, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
+              <StoreConfigContext.Provider value={configPrevia}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
               </StoreConfigContext.Provider>
             </div>
           </div>
-          <FloatingEditor template={config.template}
+          )}
+          <FloatingEditor template={config.template} celular={ancho === "celular"}
+            puedeAlinear={activeField ? alineables[`${config.template}:${activeField}`] : undefined}
+            originalCelular={ancho === "celular" && activeField ? indiceCelular.find(i => i.field === activeField)?.original : undefined}
             msCarrusel={carruselMs(config.template, config.bannerInterval)}
             setMsCarrusel={ms => update("bannerInterval", ms)} />
+          {ancho === "celular" && !activeField && (
+            <IndiceCelular items={indiceCelular} overrides={config.textOverrides}
+              onElegir={(field, label) => setActiveField(field, label)} />
+          )}
         </EditContext.Provider>
 
         {tour === "editing" && (

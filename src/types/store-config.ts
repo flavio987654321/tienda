@@ -135,6 +135,18 @@ export type TextOverride = {
   lineHeight?: number;
   /** Espacio entre letras, en px. Puede ser negativo para juntarlas. */
   letterSpacing?: number;
+  /** Lo que cambia SOLO en el celular (pantallas de menos de 768 px, el mismo
+   *  corte con el que los templates deciden dibujar su versión de celular).
+   *  Lo que no esté acá se hereda de lo de arriba. El texto y el color son los
+   *  mismos en las dos pantallas a propósito: cambian el mensaje, no el acomodo. */
+  celular?: TextOverrideCelular;
+};
+
+export type TextOverrideCelular = {
+  align?: "left" | "center" | "right";
+  fontSize?: number;
+  /** Oculto sólo en el celular. `hidden` de arriba lo oculta en todos lados. */
+  hidden?: boolean;
 };
 
 export type ImageOverride = {

@@ -32,7 +32,9 @@ export const HALO_EDITOR = "0 1px 0 rgba(255,255,255,0.9), 0 -1px 0 rgba(255,255
  */
 export function ChapitaBloque({ nombre }: { nombre: string }) {
   return (
-    <div style={{
+    /* `data-chapita`: la lista de textos del editor de celular agrupa por bloque
+       leyendo estas marcas en el orden en que aparecen (ver /preview/celular). */
+    <div data-chapita={nombre} style={{
       position: "absolute", top: 0, left: 0, zIndex: CAPAS.nav,
       pointerEvents: "none",
       background: LINEA_EDITOR, color: "#fff",

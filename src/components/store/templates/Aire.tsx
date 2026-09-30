@@ -1442,10 +1442,15 @@ export default function Aire() {
         /* En pantalla angosta el boton se va ABAJO y el campo se queda con todo
            el ancho. Pegados en una fila, en un celular de 390 al campo le
            quedaban 167px utiles: no entraba ni medio mail. */
+        /* Con !important porque la capsula trae su radio, su separacion y el
+           relleno del campo escritos EN LINEA (el theme de NewsletterForm), y lo
+           que esta en linea le gana a esta regla. Sin eso el campo y el boton se
+           apilaban adentro de una pastilla de radio 999: el boton verde se salia
+           por las esquinas y quedaban pegados. Se veia asi en la tienda de verdad. */
         @media (max-width:560px) {
-          .ai-suscripcion form > div { flex-direction:column; border-radius:22px; gap:6px }
-          .ai-suscripcion form input[type=email] { padding-left:16px }
-          .ai-suscripcion form button { width:100% }
+          .ai-suscripcion form > div { flex-direction:column; border-radius:22px !important; gap:6px !important }
+          .ai-suscripcion form input[type=email] { padding:12px 16px !important }
+          .ai-suscripcion form button { width:100%; border-radius:18px !important }
         }
         .ai-colecciones { display:grid; gap:12px; grid-template-columns:1fr }
         .ai-colecciones > button { height:190px }
@@ -2640,7 +2645,12 @@ export default function Aire() {
               cruzaban en y 23..40, x 32..88; en celular peor, porque el margen es
               la mitad). De este lado no se pueden tocar nunca. */}
           <EditableSectionBg field="bgNewsletter" label="Fondo de la suscripción" lado="derecha" />
-          <div className="ai-suscripcion" style={{ position:"relative", padding: isMobile ? "28px 22px" : "40px 44px" }}>
+          {/* 44 arriba en celular, y no 28. El botón "Fondo" de esta tarjeta va a
+              la derecha y ocupa de 17 a 40 desde el filo (ver `EditableSectionBg`);
+              con 28 el título quedaba abajo del botón, y con 40 todavía se tocaban
+              3px, porque la caja del título arranca un poco antes que su renglón.
+              Medido en el celular del editor el 30/09/26. */}
+          <div className="ai-suscripcion" style={{ position:"relative", padding: isMobile ? "44px 22px 30px" : "40px 44px" }}>
 
           {/* TODO el texto cuelga de este borde izquierdo: título, explicación y
               letra chica. Repartido en las dos columnas quedaban dos textos

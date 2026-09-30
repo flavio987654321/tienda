@@ -76,6 +76,12 @@ export const storeConfigSchema = z.object({
     uppercase: z.boolean().optional(),
     lineHeight: z.number().min(0.7).max(3).optional(),
     letterSpacing: z.number().min(-5).max(20).optional(),
+    // Lo que cambia sólo en el celular. Mismos topes que sus pares de arriba.
+    celular: z.object({
+      align: z.enum(["left", "center", "right"]).optional(),
+      fontSize: z.number().min(8).max(200).optional(),
+      hidden: z.boolean().optional(),
+    }).optional(),
   })),
   // Espejo de `ImageOverride`. Mismo cuidado que arriba: lo que falte acá se
   // guarda bien en pantalla y desaparece al recargar, sin ningún error a la vista.
