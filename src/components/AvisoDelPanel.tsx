@@ -143,6 +143,11 @@ export default function AvisoDelPanel({ className }: { className?: string } = {}
   /* Los que ya se anotaron como vistos en esta pestaña, para no repetir el pedido. */
   const vistos = useRef<Set<string>>(new Set());
   const esperaVoto = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  /* El voto que todavía no salió (está en su medio segundo de espera). Si justo
+     en ese momento el panel vuelve a preguntar, el servidor contesta el voto
+     VIEJO: sin esto la manito se desmarcaba sola, aunque después se guardara
+     bien. Mientras está acá, manda lo que tocó la persona. */
+  const votoPendiente = useRef<Map<string, number>>(new Map());
   /* Los que la persona cerró en esta pestaña. Por dos cosas: frena el doble
      click en la ✕ (un `ref` y no estado: dos clicks seguidos leen el mismo
      estado antes de que React vuelva a dibujar), y evita que una consulta que
@@ -157,7 +162,9 @@ export default function AvisoDelPanel({ className }: { className?: string } = {}
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!d || !Array.isArray(d.avisos)) return;
-        const lista = (d.avisos as AvisoEnPantalla[]).filter((a) => !cerrados.current.has(a.id));
+        const lista = (d.avisos as AvisoEnPantalla[])
+          .filter((a) => !cerrados.current.has(a.id))
+          .map((a) => (votoPendiente.current.has(a.id) ? { ...a, voto: votoPendiente.current.get(a.id) } : a));
         if (lista[0]) vistos.current.add(lista[0].id);
         setAvisos(lista);
       })
@@ -217,7 +224,9 @@ export default function AvisoDelPanel({ className }: { className?: string } = {}
     const id = aviso.id;
     setAvisos((lista) => lista.map((a) => (a.id === id ? { ...a, voto: nuevo } : a)));
     clearTimeout(esperaVoto.current.get(id));
+    votoPendiente.current.set(id, nuevo);
     esperaVoto.current.set(id, setTimeout(() => {
+      votoPendiente.current.delete(id);
       fetch(`/api/avisos/${encodeURIComponent(id)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
