@@ -401,10 +401,15 @@ check("TAPA-B", conCopia.length === 0,
    siempre y las pantallas la tiraban. */
 const elCheckout = leerTexto("src/app/p/[id]/pagar/CheckoutClient.tsx");
 const elGracias = leerTexto("src/app/p/[id]/gracias/GraciasClient.tsx");
-check("TAPA-C", /<img src=\{u\.imagen\} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" \/>/.test(elCheckout)
+/* La del upsell, entera (`object-contain`) y más grande: un cuadrado de 56 px
+   con `object-cover` le cortaba los costados a una tapa apaisada (01/10/26). */
+check("TAPA-C", /<img src=\{u\.imagen\} alt="" className="h-auto max-h-32 w-24 shrink-0 rounded-lg object-contain" \/>/.test(elCheckout)
   && /<img src=\{imagen\} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" \/>/.test(elCheckout)
-  && /imagen=\{p\.imagen\}/.test(elCheckout) && /imagen=\{u\.imagen\}/.test(elCheckout),
-  "la pantalla de pago dibuja la tapa del producto y la del upsell: el dato viajaba y no se usaba");
+  /* La del producto va GRANDE arriba de "Lo que te llevás", entera y sin
+     recortar: como miniatura de 36 px no se reconocía (01/10/26). */
+  && /src=\{p\.imagen\}[\s\S]{0,80}className="mx-auto mb-4 block h-auto max-h-80 w-auto max-w-full/.test(elCheckout)
+  && /imagen=\{u\.imagen\}/.test(elCheckout),
+  "la pantalla de pago dibuja la tapa del producto (grande) y la del upsell: el dato viajaba y no se usaba");
 
 check("TAPA-D", /<img src=\{u\.imagen\} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" \/>/.test(elGracias)
   && /imagen: primeraImagen\(u\.images\)/.test(leerTexto("src/app/p/[id]/gracias/page.tsx")),

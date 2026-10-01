@@ -626,7 +626,20 @@ export default function CheckoutClient(p: Props) {
             Lo que te llevás
           </p>
 
-          <Renglon nombre={p.nombre} valor={plata(p.regular)} imagen={p.imagen} />
+          {/* La tapa grande, la misma que se vio en la página de venta. Era una
+              miniatura de 36 px al lado del nombre, y quien llega a pagar tiene
+              que reconocer de un vistazo que es lo que eligió. Entera, sin
+              recortar: hay tapas verticales y apaisadas. */}
+          {p.imagen && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={p.imagen}
+              alt=""
+              className="mx-auto mb-4 block h-auto max-h-80 w-auto max-w-full rounded-lg shadow-sm"
+            />
+          )}
+
+          <Renglon nombre={p.nombre} valor={plata(p.regular)} />
           {p.bonos.map((b) => (
             <Renglon
               key={b.id}
@@ -698,7 +711,7 @@ export default function CheckoutClient(p: Props) {
                     <div className="flex items-start gap-3">
                       {u.imagen && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={u.imagen} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                        <img src={u.imagen} alt="" className="h-auto max-h-32 w-24 shrink-0 rounded-lg object-contain" />
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
@@ -718,7 +731,14 @@ export default function CheckoutClient(p: Props) {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setElegidos((v) => puesto ? v.filter((x) => x !== u.id) : [...v, u.id])}
+                      /* ⚠️ Mira `v`, no `puesto`. Dos clicks seguidos leen el
+                         mismo `puesto` antes de que React vuelva a dibujar, y
+                         con eso el doble click metía el MISMO id dos veces: la
+                         cuenta lo contaba una, pero al servidor le llegaba
+                         repetido. `upsellsQueValen` lo descarta, así que no se
+                         cobraba de más, pero cada repetido ocupaba un lugar del
+                         tope `MAX_UPSELLS_POR_COMPRA`. */
+                      onClick={() => setElegidos((v) => v.includes(u.id) ? v.filter((x) => x !== u.id) : [...v, u.id])}
                       aria-pressed={puesto}
                       className={`mt-2.5 flex w-full items-center justify-center gap-1.5 border-2 border-[color:var(--pv-acento)] px-3 py-2 text-[13px] font-bold transition ${p.botonRedondo} ${
                         puesto
@@ -862,9 +882,9 @@ function Sello({ icono, children }: { icono: React.ReactNode; children: React.Re
 /**
  * Un renglón de "Lo que te llevás".
  *
- * `imagen` es la tapa, y va sólo donde hay una: el producto y los upsells
- * que se agregaron. Los bonos quedan como texto a propósito —son el
- * "y además"—, y una fila de miniaturas todas iguales le saca peso a lo
+ * `imagen` es la tapa, y va sólo en los upsells que se agregaron: la del
+ * producto ya se ve grande arriba de la lista. Los bonos quedan como texto a
+ * propósito —son el "y además"—, y una fila de miniaturas todas iguales le saca peso a lo
  * que de verdad se está comprando.
  *
  * ⚠️ `alt=""` a propósito: la tapa no dice nada que el nombre de al lado no

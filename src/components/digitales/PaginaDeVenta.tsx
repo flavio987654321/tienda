@@ -505,8 +505,11 @@ const FONDO: Record<string, string> = {
   fuerte: "bg-[color:var(--pv-fuerte)]",
 };
 
-function Seccion({ children, tono, estilo }: {
+function Seccion({ children, tono, estilo, ancha }: {
   children: React.ReactNode; tono?: string; estilo: Estilo;
+  /** Para la sección del producto: en `max-w-3xl` partida en dos columnas, la
+      tapa quedaba de ~330 px en una pantalla de 1920 y no se leía nada. */
+  ancha?: boolean;
 }) {
   /* El aire lo pone el estilo. Es lo que más separa a los cinco de lejos: Suave
      respira el doble que Clásico, y eso se nota scrolleando aunque el color sea
@@ -517,7 +520,7 @@ function Seccion({ children, tono, estilo }: {
      tres juntos y no hay combinación fea posible. */
   return (
     <section className={FONDO[tono ?? "fondo"] ?? ""}>
-      <div className={`mx-auto max-w-3xl px-5 sm:px-8 ${estilo.seccion}`}>{children}</div>
+      <div className={`mx-auto ${ancha ? "max-w-6xl" : "max-w-3xl"} px-5 sm:px-8 ${estilo.seccion}`}>{children}</div>
     </section>
   );
 }
@@ -593,15 +596,19 @@ function Contenido({ clave, campos, tono, datos }: {
        Sigue sin tener campos de precio: todo sale del producto. */
     case "producto":
       return (
-        <Seccion tono={tono} estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo} ancha={!!producto.imagen}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          <div className={`${aire(!!texto(campos, "titulo"), "mt-8")} grid items-center gap-8 md:grid-cols-2 [&>*]:min-w-0`}>
+          {/* La tapa se lleva la columna más ancha: es lo que se compra. Y va
+              entera, sin recortar —sin alto fijo ni `object-cover`—, porque
+              cada vendedor la sube con la forma que quiere: vertical como un
+              libro o apaisada como un banner. */}
+          <div className={`${aire(!!texto(campos, "titulo"), "mt-8")} grid items-center gap-8 md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-12 [&>*]:min-w-0`}>
             {producto.imagen ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={producto.imagen}
                 alt=""
-                className={`w-full object-cover ${estilo.tarjeta}`}
+                className={`mx-auto block h-auto max-h-[min(720px,75vh)] w-auto max-w-full ${estilo.tarjeta}`}
               />
             ) : null}
 
