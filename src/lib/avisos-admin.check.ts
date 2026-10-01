@@ -71,7 +71,7 @@ check("AV-R", validarAudiencia({ roles: ["DIGITAL", "OWNER"], condicion: "SIN_MP
   "una condición sólo va a los paneles donde tiene sentido: sin Mercado Pago no le aplica a Afiliados, ni el archivo a Tiendas");
 check("AV-S", !validarAudiencia({ roles: ["DIGITAL"], condicion: "constructor" }).ok && !validarAudiencia({ roles: ["DIGITAL"], condicion: "BORRAR_TODO" }).ok,
   "una condición inventada se rechaza");
-check("AV-T", (() => { const r = validarAudiencia({ paraUserId: "1278f637-baea-49e9-90fc-5388de7426b5", roles: [], soloNuevosDias: 7, condicion: "SIN_MP" });
+check("AV-T", (() => { const r = validarAudiencia({ paraUserId: "00000000-0000-4000-8000-000000000001", roles: [], soloNuevosDias: 7, condicion: "SIN_MP" });
   return r.ok && r.audiencia.paraUserId !== null && r.audiencia.soloNuevosDias === null && r.audiencia.condicion === null; })()
   && !validarAudiencia({ paraUserId: "x' OR 1=1" }).ok,
   "a una persona: no hace falta panel, se ignoran los nuevos y la condición, y un id raro se rechaza");
