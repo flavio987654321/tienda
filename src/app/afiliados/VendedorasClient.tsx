@@ -9,6 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { QRCodeCanvas } from "qrcode.react";
 import { textoPlano, textoPlanoCorto } from "@/lib/texto-plano";
 import { esAppInstalada } from "@/lib/pwa";
+import AvisoDelPanel from "@/components/AvisoDelPanel";
 import {
   dibujarPlaca, fuentesListas, familiaDeMarca, money,
   FORMAT_SIZES, FORMAT_LABELS, PLACA_TEMPLATES,
@@ -1824,6 +1825,8 @@ export default function VendedorasClient() {
 
       {/* ── DASHBOARD ── */}
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+          {/* El aviso del admin. Sin su margen propio: acá separa `space-y-10`. */}
+          <AvisoDelPanel className="!mb-0" />
           {/* Profile + Stats header */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {profile && (

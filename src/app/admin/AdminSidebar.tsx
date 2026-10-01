@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power, Lock, Palette, BookOpen,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power, Lock, Palette, BookOpen, Radio,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -36,6 +36,7 @@ const NAV_GROUPS = [
       { href: "/admin/cierres", label: "Cierres", icon: Power },
       { href: "/admin/canasta", label: "Donaciones", icon: HeartHandshake },
       { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
+      { href: "/admin/avisos", label: "Avisos", icon: Radio },
     ],
   },
   {

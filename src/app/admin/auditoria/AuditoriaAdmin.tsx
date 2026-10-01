@@ -53,6 +53,11 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   UNPUBLISH_STORE: { label: "Ocultó tienda",    color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20" },
   ACTIVATE_STORE:  { label: "Activó tienda",    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
   DEACTIVATE_STORE:{ label: "Desactivó tienda", color: "text-red-400 bg-red-500/10 border-red-500/20" },
+  AVISO_CREADO:    { label: "Creó un aviso",    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  AVISO_EDITADO:   { label: "Editó un aviso",   color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20" },
+  AVISO_PRENDIDO:  { label: "Prendió un aviso", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  AVISO_APAGADO:   { label: "Apagó un aviso",   color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20" },
+  AVISO_BORRADO:   { label: "Borró un aviso",   color: "text-orange-400 bg-orange-500/10 border-orange-500/20" },
 };
 
 function getActionInfo(action: string) {

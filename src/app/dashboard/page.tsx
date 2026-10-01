@@ -14,6 +14,7 @@ import {
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import { condicionesTienda } from "@/lib/avisos-tienda";
 import { statusLabel, statusClass } from "@/lib/orders";
+import AvisoDelPanel from "@/components/AvisoDelPanel";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -243,6 +244,7 @@ export default async function DashboardPage() {
       initialLowStockCount={initialLowStockCount}
     >
       <div>
+        <AvisoDelPanel />
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
             Bienvenido, {user.name?.split(" ")[0]} 👋

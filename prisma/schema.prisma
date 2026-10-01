@@ -66,6 +66,10 @@ model User {
   cuposIA            CupoIA[]
   /// Los ebooks que la IA le está escribiendo o le escribió. Ver `EbookIA`.
   ebooksIA           EbookIA[]
+  /// Los avisos del admin que ya vio, cerró o tocó. Ver `AvisoAdmin`.
+  avisosVistos       AvisoAdminVisto[]
+  /// Los avisos que el admin le escribió sólo a esta persona.
+  avisosParaMi       AvisoAdmin[]        @relation("AvisoParaUsuario")
 }
 
 // Historial de chat con Sasha (asistente IA del dashboard). Se guarda en la base
@@ -1845,6 +1849,65 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+/// ── El cartel que el admin le muestra arriba del inicio a los paneles ──────
+///
+/// NO es una notificación. La campanita es de cada persona y la llenan los
+/// eventos (una venta, una verificación); esto es UNA fila que habla con muchos,
+/// y por eso no se copia una por usuario: así se puede editar o apagar después,
+/// y le llega también a quien se registra mañana. Ver `lib/avisos-admin`.
+model AvisoAdmin {
+  id         String    @id @default(cuid())
+  titulo     String
+  texto      String
+  /// El botón es opcional, pero va entero o no va: texto y link juntos.
+  botonTexto String?
+  botonLink  String?
+  /// A qué paneles: "OWNER" (tiendas), "SELLER" (afiliados), "DIGITAL".
+  roles      String[]
+  /// Null = a todos. N = sólo a las cuentas con menos de N días: así un mensaje
+  /// de bienvenida se escribe una vez y le sale a cada persona que llega.
+  soloNuevosDias Int?
+  /// Null = a todos los de esos paneles. Si no, sólo a quienes les falta algo:
+  /// "SIN_MP", "SIN_PUBLICAR" o "SIN_ARCHIVO". Ver `CONDICIONES`. Se mira cada
+  /// vez que la persona entra: cuando lo resuelve, el aviso se va solo.
+  condicion  String?
+  /// Para UNA persona. Con esto puesto, `roles` es el rol de esa persona y no
+  /// se mira ni "sólo los nuevos" ni la condición. Si la cuenta se borra, el
+  /// aviso se va con ella.
+  paraUserId String?
+  paraUser   User?     @relation("AvisoParaUsuario", fields: [paraUserId], references: [id], onDelete: Cascade)
+  /// El color del cartel. Ver `TONOS` en `lib/avisos-admin`.
+  tono       String    @default("verde")
+  desde      DateTime  @default(now())
+  hasta      DateTime?
+  activo     Boolean   @default(true)
+  creadoPor  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  vistos AvisoAdminVisto[]
+
+  @@index([activo])
+  @@index([paraUserId])
+}
+
+/// Quién vio un aviso, quién lo cerró y quién tocó el botón. Cerrado no vuelve.
+model AvisoAdminVisto {
+  avisoId   String
+  userId    String
+  vistoAt   DateTime  @default(now())
+  cerradoAt DateTime?
+  clickAt   DateTime?
+  /// 👍 = 1, 👎 = -1, null = no votó. Se puede cambiar o sacar.
+  voto      Int?
+
+  aviso AvisoAdmin @relation(fields: [avisoId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([avisoId, userId])
   @@index([userId])
 }
 
