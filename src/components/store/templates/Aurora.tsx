@@ -118,6 +118,14 @@ const GARANTIAS = [
   },
 ];
 
+const MODOS_VIDRIERA = [
+  { valor: "destacados",       label: "Arranca con destacados" },
+  { valor: "categorias",       label: "Arranca con categorías" },
+  { valor: "solo-destacados",  label: "Sólo destacados" },
+  { valor: "solo-categorias",  label: "Sólo categorías" },
+] as const;
+type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
+
 // Sin "au-categorias": las categorías ya no son una sección propia con tres
 // baldosas elegidas a mano, son el segundo mazo de la vidriera del hero — y
 // entran todas las que la tienda tenga, no tres.
@@ -275,13 +283,17 @@ export default function Aurora() {
   /* Las categorías que van al mazo de la vidriera: SÓLO las que el dueño creó de
      verdad. `categoryList` no sirve porque en el editor `products` viene con los
      productos demo de relleno mezclados, y sus categorías entrarían a la pista
-     como si fueran de la tienda — llevarían a un catálogo filtrado vacío. */
+     como si fueran de la tienda — llevarían a un catálogo filtrado vacío.
+     La excepción es el editor mientras la tienda no tiene ninguna categoría
+     propia: ahí van las de los ejemplos, para que la dueña vea que el mazo
+     existe y pueda elegirlo. Los clics del editor no llevan a ningún lado, así
+     que el catálogo vacío no se llega a ver. */
   const categoriasBaldosa = useMemo(() => {
-    const reales = [...new Set(
-      products.filter(p => !isDemoProductId(p.id)).map(p => p.category).filter(c => c && c !== "general")
-    )];
-    return reales;
-  }, [products]);
+    const deLaLista = (lista: typeof products) =>
+      [...new Set(lista.map(p => p.category).filter(c => c && c !== "general"))];
+    const reales = deLaLista(products.filter(p => !isDemoProductId(p.id)));
+    return reales.length === 0 && enEditor ? deLaLista(products) : reales;
+  }, [products, enEditor]);
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -293,7 +305,7 @@ export default function Aurora() {
     });
     return map;
   }, [products]);
-  const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+  const { editMode, overrides: textOverrides, setOverride, vistaCelular } = useEditContext();
   /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
      Aire): preguntar la fecha mientras se dibuja puede dar dos resultados en dos
      dibujados seguidos, y React lo prohíbe. */
@@ -674,7 +686,7 @@ export default function Aurora() {
      qué tarjeta está parado lo guarda en `useState`, y sus dos efectos van con
      lista de dependencias vacía. Se miró antes de dejarlo así.
      Un mazo vacío no se ofrece: el botón para cambiar de mazo llevaría a nada. */
-  const mazosVidriera = [
+  const mazosTodos = [
     {
       id: "destacados",
       etiqueta: "Destacados",
@@ -691,6 +703,20 @@ export default function Aurora() {
       piezas: piezasVidriera.categorias,
     },
   ].filter(m => m.piezas.length > 0);
+
+  /* Con qué mazo arranca la vidriera, o si muestra uno solo. Lo elige la dueña
+     en el editor y se guarda como un override más, igual que los íconos.
+     Si eligió un mazo que la tienda no puede llenar ("sólo categorías" sin
+     ninguna categoría con foto), se muestra lo que haya: la portada no se queda
+     sin vidriera por una elección que hoy no tiene con qué cumplirse. */
+  const modoVidriera = MODOS_VIDRIERA.some(m => m.valor === textOverrides["vidrieraMazos"]?.text)
+    ? textOverrides["vidrieraMazos"]!.text as ModoVidriera
+    : "destacados";
+  const primero = modoVidriera.endsWith("categorias") ? "categorias" : "destacados";
+  const ordenados = [...mazosTodos].sort((a, b) => (a.id === primero ? -1 : 0) - (b.id === primero ? -1 : 0));
+  const mazosVidriera = modoVidriera.startsWith("solo-") && ordenados[0]?.id === primero
+    ? ordenados.slice(0, 1)
+    : ordenados;
 
   /* Que mostrar en el pie: un link a un filtro vacio es un link que miente.
      En el editor se muestran igual, para que la duenia vea que existen. */
@@ -1126,7 +1152,25 @@ export default function Aurora() {
             al hero y sin fondo propio, así la foto de arriba se sigue en el
             teñido de la tarjeta elegida en vez de cortarse en un borde. */}
         {mazosVidriera.length > 0 && (
-          <Coverflow mazos={mazosVidriera} acento={G} base={BG} tinta={T} fundido />
+          <div style={{ position:"relative" }}>
+            {/* La key lo vuelve a armar cuando cambian los mazos: el Coverflow
+                guarda en qué mazo está parado, y ese número no vale para otra lista. */}
+            <Coverflow key={mazosVidriera.map(m => m.id).join()} mazos={mazosVidriera} acento={G} base={BG} tinta={T} fundido />
+            {/* No es un ajuste del celular: en esa vista no se ofrece, para que
+                no parezca que cambia sólo ahí. */}
+            {editMode && !vistaCelular && (
+              <label style={{ position:"absolute", top:isMobile ? 52 : 18, left:16, zIndex:6, display:"flex", alignItems:"center", gap:8, ...vidrio("oscuro"), color:T, borderRadius:999, padding:"6px 8px 6px 14px", fontSize:11, letterSpacing:1, fontWeight:600 }}>
+                🎠 Carrusel
+                <select
+                  value={modoVidriera}
+                  onChange={e => setOverride("vidrieraMazos", { text: e.target.value })}
+                  style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer" }}
+                >
+                  {MODOS_VIDRIERA.map(m => <option key={m.valor} value={m.valor} style={{ color:"#111" }}>{m.label}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
         )}
       </section>
 
