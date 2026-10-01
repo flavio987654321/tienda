@@ -1,12 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { needsMfaChallenge } from "@/lib/mfa";
+import { esElSitioDeLaPlataforma } from "@/lib/hosts-plataforma";
 
-const PLATFORM_HOSTS = new Set([
-  "tiendaapps.com",
-  "www.tiendaapps.com",
-  "localhost",
-]);
 
 const PUBLIC_API = /^\/api\/public\//;
 
@@ -149,8 +145,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = (request.headers.get("host") ?? "").split(":")[0];
 
-  const isVercelPreview = host.endsWith(".vercel.app");
-  const isPlatform = PLATFORM_HOSTS.has(host) || isVercelPreview;
+  /* La regla vive en `lib/hosts-plataforma`: el chat de soporte la usa para
+     saber dónde no va, y tiene que contestar lo mismo que acá. */
+  const isPlatform = esElSitioDeLaPlataforma(host);
 
   if (!isPlatform) {
     // Subdominio: luna.tiendaapps.com → /tienda/luna

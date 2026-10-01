@@ -663,6 +663,15 @@ chequear("el chat de soporte no aparece en el panel digital ni en las páginas d
   ["/digitales", "/p/", "/dashboard", "/afiliados"].every((r) => sinChatDeSoporte(r + "x"))
   && !sinChatDeSoporte("/") && !sinChatDeSoporte("/precios") && !sinChatDeSoporte("/ayuda"));
 
+/* La página de venta abierta por SU dirección: el navegador ve `/`, no `/p/`.
+   Así entran los compradores, y ahí el chat salía igual (01/10/26). */
+chequear("el chat de soporte no aparece en el subdominio de un producto o de una tienda, ni en un dominio propio",
+  sinChatDeSoporte("/", "curso-basico-de-informatica.tiendaapps.com")
+  && sinChatDeSoporte("/", "mitienda.tiendaapps.com")
+  && sinChatDeSoporte("/", "www.mitiendapropia.com.ar")
+  && !sinChatDeSoporte("/", "www.tiendaapps.com") && !sinChatDeSoporte("/", "tiendaapps.com")
+  && !sinChatDeSoporte("/", "localhost"));
+
 /* ── 14. Moverse adentro del panel ─────────────────────────────────────────── */
 console.log("\n14) Los enlaces de adentro del panel");
 

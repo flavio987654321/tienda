@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { esElSitioDeLaPlataforma } from "@/lib/hosts-plataforma";
 
 declare global {
   interface Window {
@@ -31,13 +32,27 @@ const CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "";
  * y el olvido se nota tarde. Acá el olvido es al revés y se ve enseguida. */
 const SIN_CHAT = ["/dashboard", "/afiliados", "/digitales", "/admin", "/panel", "/tienda/", "/preview/", "/p/", "/v/"];
 
-export function sinChatDeSoporte(pathname: string): boolean {
+/* ⚠️ La ruta sola NO alcanza. `curso.tiendaapps.com` muestra `/p/<id>` y
+ * `mitienda.tiendaapps.com` muestra `/tienda/mitienda`, pero lo hace el
+ * middleware por adentro: el navegador sigue viendo `/`, y `usePathname`
+ * devuelve eso. Con la lista de arriba sola, el chat salía en TODA página de
+ * venta y tienda abierta por su dirección propia, que es justo como llegan
+ * los compradores (01/10/26).
+ *
+ * Por eso además se mira el dominio, con la MISMA regla que usa el middleware
+ * para decidir si traduce (`lib/hosts-plataforma`): lo que él trata como de
+ * otro —un subdominio de tienda o de producto, o un dominio propio— acá no
+ * lleva chat. */
+export function sinChatDeSoporte(pathname: string, hostname?: string): boolean {
+  if (hostname && !esElSitioDeLaPlataforma(hostname)) return true;
   return SIN_CHAT.some((inicio) => pathname.startsWith(inicio));
 }
 
 export default function CrispWidget() {
   const pathname = usePathname();
-  const oculto = sinChatDeSoporte(pathname);
+  /* `window` sólo existe en el navegador, y es el único lugar donde importa:
+     el componente no dibuja nada y lo que decide pasa en los efectos. */
+  const oculto = sinChatDeSoporte(pathname, typeof window === "undefined" ? undefined : window.location.hostname);
   const cargado = useRef(false);
 
   /* El script de Crisp NO se carga en las rutas ocultas, ni siquiera para
