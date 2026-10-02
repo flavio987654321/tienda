@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { destinoTrasGoogle, googleRecienConectado, registroSinConfirmarConGoogle } from "@/lib/alta-google";
 import { sendAvisoGoogleConectado } from "@/lib/resend";
-import { esElAdmin, tieneAltaPendiente } from "@/lib/alta-google-servidor";
+import { esElAdmin, tieneAltaPendiente, anularClaveYReabrir } from "@/lib/alta-google-servidor";
 import { getClientIp } from "@/lib/request-ip";
 
 /**
@@ -57,14 +56,11 @@ async function regreso(req: NextRequest, a: (camino: string) => NextResponse) {
     return a("/login?vencida=sin-contrasena");
   }
 
-  if (registroSinConfirmarConGoogle(user)) {
+  if (registroSinConfirmarConGoogle(user) && user.email) {
     // Ver `registroSinConfirmarConGoogle`: la contraseña la puso otro.
-    const { error: errClave } = await createSupabaseAdminClient().auth.admin.updateUserById(user.id, {
-      password: `${crypto.randomUUID()}${crypto.randomUUID()}`,
-    });
-    console.warn("[google] cuenta sin confirmar tomada por Google: se anuló la contraseña", {
-      userId: user.id, ok: !errClave,
-    });
+    const ok = await anularClaveYReabrir(supabase, user.id, user.email);
+    console.warn("[google] cuenta sin confirmar tomada por Google: se anuló la contraseña", { userId: user.id, ok });
+    if (!ok) return a("/login?google=reingresar");
   } else if (user.email && googleRecienConectado(user, Date.now())) {
     // Ya tenía contraseña y se le sumó Google: se le avisa. Un fallo del mail no frena la entrada.
     await sendAvisoGoogleConectado({ to: user.email }).catch((e) =>

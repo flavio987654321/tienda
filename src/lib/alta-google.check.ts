@@ -17,16 +17,27 @@ check("GO-A", tieneGoogle({ app_metadata: { providers: ["email", "google"] } })
   && tieneGoogle({ identities: [{ provider: "google" }] })
   && !tieneGoogle({ app_metadata: { providers: ["email"] } }) && !tieneGoogle(null),
   "se reconoce una cuenta con Google, y una de mail sola no");
-check("GO-B", registroSinConfirmarConGoogle({
-  app_metadata: { providers: ["email", "google"] },
-  identities: [{ provider: "email", identity_data: { email_verified: false } }, { provider: "google" }],
-}) && !registroSinConfirmarConGoogle({
-  app_metadata: { providers: ["email", "google"] },
-  identities: [{ provider: "email", identity_data: { email_verified: true } }, { provider: "google" }],
-}) && !registroSinConfirmarConGoogle({
-  app_metadata: { providers: ["email"] },
-  identities: [{ provider: "email", identity_data: { email_verified: false } }],
-}), "el robo por adelantado: solo cuando hay Google Y un registro con mail nunca confirmado");
+const GOOGLE_LLEGO = "2026-10-02T06:04:02.921Z";
+const conMailYGoogle = (confirmado: string | null, extra: Record<string, unknown> = {}) => ({
+  email_confirmed_at: confirmado,
+  app_metadata: { providers: ["email", "google"], ...extra },
+  // email_verified en false A PROPÓSITO: así está en 11 de 17 cuentas reales, confirmadas o no.
+  identities: [{ provider: "email", identity_data: { email_verified: false } }, { provider: "google", created_at: GOOGLE_LLEGO }],
+});
+check("GO-B", registroSinConfirmarConGoogle(conMailYGoogle(null))
+  && registroSinConfirmarConGoogle(conMailYGoogle(GOOGLE_LLEGO))
+  && !registroSinConfirmarConGoogle({ email_confirmed_at: null, identities: [{ provider: "email" }] }),
+  "el robo por adelantado: Google llega a una cuenta con mail nunca confirmado (o confirmado recién por Google)");
+check("GO-B2", !registroSinConfirmarConGoogle(conMailYGoogle("2026-05-24T22:39:00.266Z")),
+  "EL CASO REAL del 02/10/26: cuenta confirmada en mayo que suma Google en octubre NO es un robo, aunque su identidad diga email_verified=false");
+check("GO-B3", !registroSinConfirmarConGoogle(conMailYGoogle(null, { clave_anulada: true })),
+  "a una cuenta ya se le anuló la contraseña una vez: no se repite en cada entrada");
+const servidorG = leer("src/lib/alta-google-servidor.ts");
+check("GO-B4", servidorG.includes("clave_anulada: true") && servidorG.indexOf("updateUserById(") < servidorG.indexOf("generateLink({ type: \"magiclink\"")
+  && servidorG.includes("supabase.auth.verifyOtp({ email, token: codigo"),
+  "anular la contraseña cierra todas las sesiones: se reabre la de quien acaba de entrar");
+check("GO-B5", !leer("src/lib/alta-google.ts").includes("identity_data?.email_verified"),
+  "nadie decide nada con identity_data.email_verified, que en esta base miente");
 
 /* ── Alta a medio hacer ──────────────────────────────────────────────────── */
 const vacio = { role: "BUYER", termsAcceptedAt: null, tieneTienda: false, tieneSuscripcion: false };

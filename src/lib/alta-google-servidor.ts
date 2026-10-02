@@ -1,4 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { altaPendiente, type PerfilParaAlta } from "@/lib/alta-google";
 import { huellaDeMail, dominiosParaBuscar } from "@/lib/prueba-repetida";
 
@@ -77,4 +79,41 @@ export async function pruebaUsadaAntes(email: string, tipo: "OWNER" | "DIGITAL")
     console.error("[prueba] no se pudo revisar si ya la usó:", e instanceof Error ? e.message : e);
     return false;
   }
+}
+
+/**
+ * Anula una contraseña que pudo poner otro (robo por adelantado) y le vuelve a
+ * abrir la sesión a quien acaba de entrar.
+ *
+ * Lo segundo no es opcional: cambiar la contraseña en Supabase cierra TODAS las
+ * sesiones de la cuenta, incluida la que se acaba de abrir. Sin reabrirla, la
+ * dueña real —que entró bien, con Google o con el código— terminaba en el login
+ * sin entender por qué. Se reabre con un código de un solo uso generado acá,
+ * que nunca sale del servidor.
+ *
+ * `clave_anulada` deja la marca para que no se repita en cada entrada.
+ *
+ * Devuelve false si algo falló: quien llama decide qué decirle.
+ */
+export async function anularClaveYReabrir(
+  supabase: SupabaseClient,
+  userId: string,
+  email: string,
+): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  const { data: actual } = await admin.auth.admin.getUserById(userId);
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: `${crypto.randomUUID()}${crypto.randomUUID()}`,
+    app_metadata: { ...(actual?.user?.app_metadata ?? {}), clave_anulada: true },
+  });
+  if (error) {
+    console.error("[cuenta] no se pudo anular la contraseña:", error.message);
+    return false;
+  }
+  const { data: link, error: errLink } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+  const codigo = link?.properties?.email_otp;
+  if (errLink || !codigo) return false;
+  let { error: errSesion } = await supabase.auth.verifyOtp({ email, token: codigo, type: "email" });
+  if (errSesion) ({ error: errSesion } = await supabase.auth.verifyOtp({ email, token: codigo, type: "magiclink" }));
+  return !errSesion;
 }

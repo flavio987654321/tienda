@@ -226,6 +226,8 @@ function LoginForm() {
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-2xl text-sm mb-6">
               {errorGoogle === "cancelado"
                 ? "No se completó el ingreso con Google. Podés probar de nuevo o entrar con tu email."
+                : errorGoogle === "reingresar"
+                ? "Por seguridad cerramos la sesión. Tocá Continuar con Google de nuevo."
                 : "No pudimos entrar con Google. Probá de nuevo o entrá con tu email."}
             </div>
           )}

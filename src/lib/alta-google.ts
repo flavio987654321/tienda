@@ -16,7 +16,9 @@ export const GOOGLE_PRENDIDO = process.env.NEXT_PUBLIC_GOOGLE_LOGIN === "1";
 
 type UsuarioDeSupabase = {
   email?: string | null;
-  app_metadata?: { provider?: unknown; providers?: unknown } | null;
+  /** Cuándo se confirmó el mail: la ÚNICA fuente confiable de eso. */
+  email_confirmed_at?: string | null;
+  app_metadata?: { provider?: unknown; providers?: unknown; clave_anulada?: unknown } | null;
   identities?: ReadonlyArray<{
     provider?: unknown;
     identity_data?: Record<string, unknown> | null;
@@ -43,10 +45,30 @@ export function tieneGoogle(u: UsuarioDeSupabase | null | undefined): boolean {
  * cambia la contraseña por una al azar: la dueña sigue entrando con Google.
  */
 export function registroSinConfirmarConGoogle(u: UsuarioDeSupabase | null | undefined): boolean {
-  if (!tieneGoogle(u)) return false;
-  return (u?.identities ?? []).some(
-    (i) => i.provider === "email" && i.identity_data?.email_verified === false,
-  );
+  const ids = u?.identities ?? [];
+  const google = ids.find((i) => i.provider === "google");
+  if (!google || !ids.some((i) => i.provider === "email")) return false;
+  // Ya se le anuló una vez: no se repite en cada entrada.
+  if (u?.app_metadata?.clave_anulada === true) return false;
+  return !confirmadoAntesDeGoogle(u, google.created_at);
+}
+
+/**
+ * ¿El mail ya estaba confirmado ANTES de que se sumara Google?
+ *
+ * ⚠️ NO se mira `identity_data.email_verified` de la identidad de mail: en esta
+ * base dice `false` en cuentas confirmadas hace meses (11 de 17 el 02/10/26).
+ * Creerle a ese dato le anuló la contraseña a una cuenta real que solo quería
+ * sumar Google. Se mira `email_confirmed_at`, la fecha de la cuenta: si es de
+ * antes de que llegara Google, el mail lo confirmó la persona; si es de ese
+ * mismo momento (o no hay), lo confirmó Google al unirlas.
+ */
+function confirmadoAntesDeGoogle(u: UsuarioDeSupabase | null | undefined, googleDesde: unknown): boolean {
+  const confirmado = typeof u?.email_confirmed_at === "string" ? Date.parse(u.email_confirmed_at) : NaN;
+  const desde = typeof googleDesde === "string" ? Date.parse(googleDesde) : NaN;
+  if (!Number.isFinite(confirmado)) return false;
+  if (!Number.isFinite(desde)) return true; // sin fecha de Google no se acusa a nadie
+  return confirmado < desde - 60_000;
 }
 
 /**
@@ -60,8 +82,9 @@ export function registroSinConfirmarConGoogle(u: UsuarioDeSupabase | null | unde
 export function googleRecienConectado(u: UsuarioDeSupabase | null | undefined, ahora: number): boolean {
   const ids = u?.identities ?? [];
   const google = ids.find((i) => i.provider === "google");
-  const conClave = ids.some((i) => i.provider === "email" && i.identity_data?.email_verified !== false);
-  if (!google || !conClave) return false;
+  if (!google || !ids.some((i) => i.provider === "email")) return false;
+  // Solo si ya era una cuenta confirmada: si no, es el caso de arriba (robo por adelantado).
+  if (!confirmadoAntesDeGoogle(u, google.created_at)) return false;
   const desde = typeof google.created_at === "string" ? Date.parse(google.created_at) : NaN;
   return Number.isFinite(desde) && ahora - desde >= 0 && ahora - desde < 10 * 60 * 1000;
 }

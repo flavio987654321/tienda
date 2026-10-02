@@ -32,7 +32,7 @@ const entrar = leer("src/app/api/auth/codigo/entrar/route.ts");
 check("CO-F", entrar.includes("countFailures(clave)") && entrar.includes("recordFailure(clave") && INTENTOS_MAX <= 5
   && entrar.includes("`codigo-entrar:${email}`"),
   "los códigos errados se cuentan por mail y a los 5 se frena: un código de 6 números no se adivina");
-check("CO-G", entrar.indexOf("sinConfirmar =") < entrar.indexOf("verifyOtp(") && entrar.includes("updateUserById(data.user.id"),
+check("CO-G", entrar.indexOf("sinConfirmar =") < entrar.indexOf("verifyOtp(") && entrar.includes("anularClaveYReabrir(supabase, data.user.id"),
   "robo por adelantado: si el mail nunca se confirmó, la contraseña de otro se anula");
 check("CO-H", entrar.includes("esElAdmin(data.user.id") && entrar.includes('signOut({ scope: "local" })'),
   "el admin no entra con código aunque lo consiga");
@@ -71,12 +71,16 @@ for (const [id, archivo] of [
 /* ── Aviso de Google conectado ───────────────────────────────────────────── */
 const ahora = Date.parse("2026-10-02T12:00:00Z");
 const hace = (min: number) => new Date(ahora - min * 60000).toISOString();
-const conClave = { provider: "email", identity_data: { email_verified: true } };
-check("CO-N", googleRecienConectado({ identities: [conClave, { provider: "google", created_at: hace(1) }] }, ahora)
-  && !googleRecienConectado({ identities: [conClave, { provider: "google", created_at: hace(60 * 24) }] }, ahora)
+const enMayo = "2026-05-24T22:39:00.266Z";
+const cuenta = (confirmado: string | null, googleHace: number) => ({
+  email_confirmed_at: confirmado,
+  identities: [{ provider: "email", identity_data: { email_verified: false } }, { provider: "google", created_at: hace(googleHace) }],
+});
+check("CO-N", googleRecienConectado(cuenta(enMayo, 1), ahora)
+  && !googleRecienConectado(cuenta(enMayo, 60 * 24), ahora)
   && !googleRecienConectado({ identities: [{ provider: "google", created_at: hace(1) }] }, ahora)
-  && !googleRecienConectado({ identities: [{ provider: "email", identity_data: { email_verified: false } }, { provider: "google", created_at: hace(1) }] }, ahora),
-  "se avisa solo cuando Google se suma recién a una cuenta que ya tenía contraseña");
+  && !googleRecienConectado(cuenta(null, 1), ahora),
+  "se avisa solo cuando Google se suma recién a una cuenta que ya estaba confirmada (y no se mira email_verified)");
 check("CO-O", leer("src/app/auth/callback/route.ts").includes("sendAvisoGoogleConectado("),
   "el regreso de Google manda el aviso");
 

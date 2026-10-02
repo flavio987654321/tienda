@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { countFailures, recordFailure, failureCooldown, clearFailures, checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { normalizarEmail, normalizarCodigo, INTENTOS_MAX, BLOQUEO_MS } from "@/lib/codigo-ingreso";
-import { esElAdmin } from "@/lib/alta-google-servidor";
+import { esElAdmin, anularClaveYReabrir } from "@/lib/alta-google-servidor";
 
 /**
  * Entra con el código del mail. Ver `lib/codigo-ingreso`.
@@ -91,10 +91,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (sinConfirmar) {
-      const { error: errClave } = await createSupabaseAdminClient().auth.admin.updateUserById(data.user.id, {
-        password: `${crypto.randomUUID()}${crypto.randomUUID()}`,
-      });
-      console.warn("[codigo] cuenta sin confirmar abierta con código: se anuló la contraseña", { userId: data.user.id, ok: !errClave });
+      const ok = await anularClaveYReabrir(supabase, data.user.id, email);
+      console.warn("[codigo] cuenta sin confirmar abierta con código: se anuló la contraseña", { userId: data.user.id, ok });
+      if (!ok) return NextResponse.json({ error: "Entraste, pero por seguridad tenés que pedir un código nuevo." }, { status: 409 });
     }
 
     if (contador) await clearFailures(clave).catch(() => {});
