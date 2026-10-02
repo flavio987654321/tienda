@@ -88,5 +88,31 @@ check("GO-N", leer("src/components/BotonGoogle.tsx").includes("if (!GOOGLE_PREND
 check("GO-O", leer("src/app/panel/page.tsx").includes('redirect("/registro?google=1")'),
   "quien entra al panel sin terminar el alta va a terminarla");
 
+/* ── Lo que salió de la auditoría ────────────────────────────────────────── */
+check("GO-P", caminoSeguro("/\t/malo.com") === null && caminoSeguro("/\n/malo.com") === null
+  && caminoSeguro("/%09/malo.com") === "/%09/malo.com" && caminoSeguro("/x".repeat(1500)) === null,
+  "un tab escondido no puede mandar a otro sitio (el navegador lo borra y queda //malo.com)");
+const login = leer("src/app/(auth)/login/page.tsx");
+const reg = leer("src/app/(auth)/registro/page.tsx");
+check("GO-Q", login.includes("caminoSeguro(redirectTo)") && reg.includes("caminoSeguro(rawRedirect)"),
+  "el login y el registro usan el mismo control para a dónde volver");
+check("GO-R", /if \(enviando\.current\) return;/.test(reg) && (reg.match(/AbortSignal\.timeout\(/g) ?? []).length >= 3
+  && reg.includes("enviando.current = false;"),
+  "el alta no sale dos veces con doble click, y sin internet no queda girando (con techo de tiempo)");
+const boton = leer("src/components/BotonGoogle.tsx");
+check("GO-S", boton.includes('addEventListener("pageshow"') && boton.includes("if (yendoYa.current) return;"),
+  "el botón de Google se destraba al volver atrás, y no sale dos veces");
+check("GO-T", cb.includes("return await regreso(req, a);") && /catch \(e\)[\s\S]*signOut\(\{ scope: "local" \}\)[\s\S]*google=error/.test(cb),
+  "si el regreso de Google falla, cierra la sesión y vuelve al login, nunca una pantalla de error");
+check("GO-U", g.includes("$transaction(") && g.includes('where: { id: user.id, role: "BUYER", termsAcceptedAt: null }')
+  && g.includes("reclamo.count === 0") && g.includes("existe?.banned"),
+  "dos altas a la vez: la segunda no pisa a la primera; y una cuenta suspendida no se completa");
+const auth = leer("src/components/AuthProvider.tsx");
+check("GO-V", auth.includes("payload.altaPendiente") && auth.includes("(registro|terminos|privacidad)")
+  && leer("src/app/api/auth/me/route.ts").includes("altaPendiente"),
+  "quien no terminó el alta no anda por el sitio; los términos sí se pueden leer");
+check("GO-W", auth.includes('signal: AbortSignal.timeout(15_000)') && auth.includes('addEventListener("online"'),
+  "sin internet la sesión se reintenta y no queda cargando para siempre");
+
 if (fallos) { console.log(`\n${fallos} chequeo(s) fallaron`); process.exit(1); }
 console.log("\nTodo bien");

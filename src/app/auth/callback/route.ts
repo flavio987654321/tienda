@@ -17,8 +17,24 @@ import { getClientIp } from "@/lib/request-ip";
  */
 export async function GET(req: NextRequest) {
   const url = req.nextUrl;
-  const next = url.searchParams.get("next");
   const a = (camino: string) => NextResponse.redirect(new URL(camino, url.origin));
+  /* Nunca una pantalla de error: si algo se cae (la base, la red con
+     Supabase), vuelve al login con un aviso. Y si la sesión alcanzó a
+     abrirse, se cierra: sin haber mirado si es el admin, no se deja abierta. */
+  try {
+    return await regreso(req, a);
+  } catch (e) {
+    console.error("[google] error en el regreso:", e instanceof Error ? e.message : e);
+    try {
+      await (await createSupabaseServerClient()).auth.signOut({ scope: "local" });
+    } catch { /* sin red tampoco se puede cerrar; el middleware igual corta el admin */ }
+    return a("/login?google=error");
+  }
+}
+
+async function regreso(req: NextRequest, a: (camino: string) => NextResponse) {
+  const url = req.nextUrl;
+  const next = url.searchParams.get("next");
 
   // Canceló en la pantalla de Google, o Google devolvió un error.
   if (url.searchParams.get("error")) return a("/login?google=cancelado");

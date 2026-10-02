@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import { BotonGoogle, SeparadorO } from "@/components/BotonGoogle";
+import { caminoSeguro } from "@/lib/alta-google";
 import { useTurnstile } from "@/components/Turnstile";
 import { VolverAtras } from "@/components/VolverAtras";
 import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
@@ -201,7 +202,8 @@ function RegistroContent() {
     null;
   const billingParam = searchParams.get("billing");
   const rawRedirect = searchParams.get("redirect");
-  const redirectParam = rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : null;
+  // Ver `caminoSeguro`: "empieza con / y no con //" dejaba pasar "/	/otro-sitio".
+  const redirectParam = caminoSeguro(rawRedirect);
 
   const rawTier = searchParams.get("tier");
   const tierParam: "BASIC" | "PREMIUM" = rawTier === "premium" || rawTier === "PREMIUM" ? "PREMIUM" : "BASIC";
@@ -245,6 +247,7 @@ function RegistroContent() {
   const [verPlanesDigitales, setVerPlanesDigitales] = useState(arrancaEnPlanesDigitales);
   const [digitalTier, setDigitalTier] = useState<TierDigital>(tierDigitalParam);
   const captcha = useTurnstile("registro");
+  const enviando = useRef(false);
 
   /* Volvió de Google sin la cuenta terminada (ver `lib/alta-google`). Es el
      mismo formulario, sin mail ni contraseña: los puso Google. Qué le falta a
@@ -256,7 +259,8 @@ function RegistroContent() {
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch("/api/auth/registro/google", { cache: "no-store" });
+        // Con techo: sin red, el fetch puede quedar colgado y la pantalla girando.
+        const r = await fetch("/api/auth/registro/google", { cache: "no-store", signal: AbortSignal.timeout(15_000) });
         const d = await r.json().catch(() => ({ pendiente: false }));
         if (!vivo) return;
         if (!d.pendiente) { window.location.replace("/panel"); return; }
@@ -333,6 +337,9 @@ function RegistroContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    /* El estado `loading` tarda un render en apagar el botón: dos clicks
+       seguidos alcanzaban a mandar dos altas. El ref corta en el acto. */
+    if (enviando.current) return;
     const conGoogle = modoGoogle && !!cuentaGoogle?.pendiente;
     const err = validate(form, accountType, conGoogle);
     if (err) { setError(err); return; }
@@ -344,6 +351,7 @@ function RegistroContent() {
       setError("Debés aceptar los términos y condiciones para continuar.");
       return;
     }
+    enviando.current = true;
     setLoading(true);
     setError("");
     const datosDelAlta = { name: form.name, storeName: form.storeName, accountType, billing, tier: ownerTier, digitalTier, phone: form.phone.trim(), termsAccepted, ageConfirmed };
@@ -354,15 +362,22 @@ function RegistroContent() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(datosDelAlta),
+            signal: AbortSignal.timeout(30_000),
           })
         : await fetch("/api/auth/registro", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ...datosDelAlta, email: form.email, password: form.password, turnstileToken: captcha.token }),
+            signal: AbortSignal.timeout(30_000),
           });
     } catch {
-      setError("Error de conexión. Intentá de nuevo.");
+      /* Sin red, o no contestó en 30 s. Con Google se puede reintentar sin
+         miedo: si la primera llegó, la segunda contesta "ya está creada" y
+         lleva al panel. */
+      setError("Se cortó la conexión. Revisá tu internet e intentá de nuevo.");
       setLoading(false);
+      enviando.current = false;
+      if (!conGoogle) captcha.reset();
       return;
     }
     const data = await res.json().catch(() => ({}));
@@ -371,6 +386,7 @@ function RegistroContent() {
     if (!res.ok) {
       setError(data.error || "Error al registrarse");
       setLoading(false);
+      enviando.current = false;
       return;
     }
     // Conversión para el pixel de plataforma. Va acá y no en la pantalla de

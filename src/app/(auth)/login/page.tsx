@@ -6,6 +6,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import { BotonGoogle, SeparadorO } from "@/components/BotonGoogle";
+import { caminoSeguro } from "@/lib/alta-google";
 import { VolverAtras } from "@/components/VolverAtras";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -53,7 +54,10 @@ function LoginForm() {
     faltaConfirmar, reenviando, reenviarConfirmacion,
     handleSubmit, handleForgotPassword,
   } = useLoginForm(() => {
-    const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null;
+    /* `caminoSeguro` y no solo "empieza con / y no con //": el navegador borra
+       los tabs de una URL, y "/\t/malo.com" pasaba ese control y terminaba en
+       "//malo.com", otro sitio. */
+    const safeRedirect = caminoSeguro(redirectTo);
     // Navegación completa (no router.push): la cookie de sesión recién escrita
     // por el cliente de Supabase puede no estar lista todavía para una transición
     // "soft" de Next — con un request HTTP real siempre llega.

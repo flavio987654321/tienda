@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { GOOGLE_PRENDIDO, esNavegadorDeApp } from "@/lib/alta-google";
@@ -27,6 +27,18 @@ export function BotonGoogle({ next, texto = "Continuar con Google" }: { next: st
   const donde = useSyncExternalStore(nada, dondeEsta, () => null);
   const [yendo, setYendo] = useState(false);
   const [error, setError] = useState("");
+  const yendoYa = useRef(false);
+
+  /* Si toca "atrás" desde Google, el navegador puede devolver esta página tal
+     cual quedó (bfcache): con el botón girando para siempre. Al volver así,
+     se destraba. */
+  useEffect(() => {
+    const alVolver = (e: PageTransitionEvent) => {
+      if (e.persisted) { yendoYa.current = false; setYendo(false); }
+    };
+    window.addEventListener("pageshow", alVolver);
+    return () => window.removeEventListener("pageshow", alVolver);
+  }, []);
 
   if (!GOOGLE_PRENDIDO || donde === null || donde === "pwa") return null;
 
@@ -40,7 +52,9 @@ export function BotonGoogle({ next, texto = "Continuar con Google" }: { next: st
   }
 
   async function ir() {
-    if (yendo) return;
+    // El ref corta el doble click en el acto; el estado tarda un render.
+    if (yendoYa.current) return;
+    yendoYa.current = true;
     setYendo(true);
     setError("");
     try {
@@ -54,7 +68,8 @@ export function BotonGoogle({ next, texto = "Continuar con Google" }: { next: st
       if (err) throw err;
       // Sale de la página: el botón queda girando hasta que se va.
     } catch {
-      setError("No pudimos abrir Google. Probá de nuevo.");
+      setError("No pudimos abrir Google. Revisá tu conexión y probá de nuevo.");
+      yendoYa.current = false;
       setYendo(false);
     }
   }

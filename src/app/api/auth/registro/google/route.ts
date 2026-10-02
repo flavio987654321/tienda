@@ -18,6 +18,10 @@ import { esElAdmin, tieneAltaPendiente } from "@/lib/alta-google-servidor";
  * cambiarle el rol ni el plan a una cuenta que ya existe.
  */
 
+class AltaRechazada extends Error {
+  constructor(mensaje: string, readonly status: number) { super(mensaje); }
+}
+
 async function quienEs() {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
@@ -71,18 +75,34 @@ export async function POST(req: NextRequest) {
     const email = user.email.toLowerCase().trim();
     const perfil = await perfilDeAlta(datos, getClientIp(req));
 
+    /* Una sola alta por cuenta, aunque lleguen dos a la vez (doble click, dos
+       pestañas con planes distintos). Si ya existe el "comprador" vacío que
+       crea `getCurrentUser`, primero se lo RECLAMA con un update condicionado
+       a que siga vacío: Postgres bloquea la fila, y la segunda encuentra 0
+       filas y no toca nada. Si no existe, se crea, y la segunda choca con el
+       id repetido. */
     try {
-      // Puede existir ya el "comprador" vacío que crea `getCurrentUser` al ver
-      // la sesión: se completa ese mismo. Si no, se crea.
-      await prisma.user.upsert({
-        where: { id: user.id },
-        create: { id: user.id, email, password: null, ...perfil },
-        update: perfil,
+      await prisma.$transaction(async (tx) => {
+        const existe = await tx.user.findUnique({ where: { id: user.id }, select: { banned: true } });
+        if (existe?.banned) throw new AltaRechazada("Esta cuenta está suspendida.", 403);
+        if (existe) {
+          const reclamo = await tx.user.updateMany({
+            where: { id: user.id, role: "BUYER", termsAcceptedAt: null },
+            data: { termsAcceptedAt: new Date() },
+          });
+          if (reclamo.count === 0) throw new AltaRechazada("Tu cuenta ya está creada.", 409);
+          await tx.user.update({ where: { id: user.id }, data: perfil });
+        } else {
+          await tx.user.create({ data: { id: user.id, email, password: null, ...perfil } });
+        }
       });
     } catch (e) {
+      if (e instanceof AltaRechazada) {
+        return NextResponse.json({ error: e.message, yaCreada: e.status === 409 }, { status: e.status });
+      }
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-        // Doble click: el primero ya la creó. O el mail es de otra cuenta.
-        if (!(await tieneAltaPendiente(user.id))) return NextResponse.json({ success: true });
+        // Llegaron dos a la vez y la otra ganó; o el mail es de otra cuenta.
+        if (!(await tieneAltaPendiente(user.id))) return NextResponse.json({ error: "Tu cuenta ya está creada.", yaCreada: true }, { status: 409 });
         return NextResponse.json({ error: "Ya existe una cuenta con ese email. Iniciá sesión con tu contraseña." }, { status: 400 });
       }
       throw e;

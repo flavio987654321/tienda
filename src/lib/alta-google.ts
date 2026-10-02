@@ -65,8 +65,18 @@ export function altaPendiente(perfil: PerfilParaAlta): boolean {
 
 /** Un camino de este sitio, o null. Nada de `//otro.com` ni `https://`. */
 export function caminoSeguro(next: string | null | undefined): string | null {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return null;
-  if (/[\r\n]/.test(next)) return null;
+  if (typeof next !== "string" || next.length > 2000) return null;
+  if (!next.startsWith("/") || next.startsWith("//")) return null;
+  /* Ni barras invertidas ni caracteres de control: el navegador BORRA los
+     tabs y saltos de línea de una URL, así que "/\t/malo.com" llega como
+     "//malo.com", que es otro sitio. Y "\" lo toma como "/". */
+  if (/[\\\u0000-\u001f\u007f]/.test(next)) return null;
+  // Última palabra: que resuelto contra este sitio siga en este sitio.
+  try {
+    if (new URL(next, "https://x.invalid").origin !== "https://x.invalid") return null;
+  } catch {
+    return null;
+  }
   return next;
 }
 

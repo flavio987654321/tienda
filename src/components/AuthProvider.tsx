@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      navegador. */
   const [status, setStatus] = useState<AuthState["status"]>("loading");
   const signingOut = useRef(false);
+  const intentosMe = useRef(0);
 
   async function loadUser(hasSession: boolean) {
     if (!hasSession) {
@@ -58,8 +59,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStatus("unauthenticated");
       return;
     }
-    const res = await fetch("/api/auth/me", { cache: "no-store" });
-    const payload = await res.json();
+    /* Sin red, esto tiraba y nadie lo atajaba: el estado se quedaba en
+       "loading" para siempre y lo que espera la sesión (los menús, el alta con
+       Google) quedaba girando. Ahora se reintenta: al volver la conexión, o a
+       los pocos segundos. Recién después de varios intentos se da por "no hay
+       nadie", que deja la página usable. */
+    let payload: { user?: AuthUser | null; altaPendiente?: boolean };
+    try {
+      const res = await fetch("/api/auth/me", { cache: "no-store", signal: AbortSignal.timeout(15_000) });
+      payload = await res.json();
+    } catch {
+      if (intentosMe.current < 3) {
+        intentosMe.current++;
+        const otraVez = () => { void loadUser(hasSession); };
+        if (!navigator.onLine) window.addEventListener("online", otraVez, { once: true });
+        else setTimeout(otraVez, 3000 * intentosMe.current);
+        return;
+      }
+      intentosMe.current = 0;
+      setUser(null);
+      setStatus("unauthenticated");
+      return;
+    }
+    intentosMe.current = 0;
+    /* Entró con Google y no eligió qué cuenta quiere ni aceptó los términos:
+       a terminar el alta, desde cualquier página. Sin esto podía andar por el
+       sitio como un "comprador" que nunca aceptó nada. */
+    /* Menos los términos y la privacidad, que el formulario abre en otra
+       pestaña para que los lea ANTES de aceptarlos. */
+    const sigueAca = /^\/(registro|terminos|privacidad)(\/|$)/.test(window.location.pathname);
+    if (payload.altaPendiente && !sigueAca) {
+      window.location.replace("/registro?google=1");
+      return;
+    }
     setUser(payload.user ?? null);
     setStatus(payload.user ? "authenticated" : "unauthenticated");
   }
@@ -119,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loadUser(!!session);
     });
     return () => data.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `loadUser` solo usa setters y refs, que no cambian entre renders: suscribirse de nuevo en cada render cortaría y rearmaría el oyente de sesión sin motivo.
   }, [signingOut, supabase]);
 
   return (
