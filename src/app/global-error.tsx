@@ -38,10 +38,11 @@ import * as Sentry from "@sentry/nextjs";
  */
 export default function GlobalError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  /** Vuelve a pedirle la pantalla al servidor (`reset` sólo la redibujaba con lo mismo que falló). */
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     /* Primero avisar. Si el dibujo de abajo también fallara, esto ya salió. */
@@ -81,7 +82,7 @@ export default function GlobalError({
             )}
 
             <button
-              onClick={reset}
+              onClick={() => unstable_retry()}
               style={{
                 border: 0,
                 borderRadius: "12px",

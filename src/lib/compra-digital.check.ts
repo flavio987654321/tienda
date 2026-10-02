@@ -471,6 +471,37 @@ check("CON-J",
   /diasDeGarantia\(pagina\)/.test(pantalla),
   "el sello, el texto aceptado y la prueba guardada leen la misma función");
 
+/* ── Auditoría del 03/10/26: sin internet, atrás, errores ───────────────── */
+{
+  const leer = (p: string) => readFileSync(p, "utf8");
+  const gracias = leer("src/app/p/[id]/gracias/GraciasClient.tsx");
+  const graciasPagina = leer("src/app/p/[id]/gracias/page.tsx");
+  const descarga = leer("src/app/api/digitales/descargar/[token]/route.ts");
+  check("AUD-A", (formulario.match(/AbortSignal\.timeout\(/g) ?? []).length >= 2
+    && (gracias.match(/AbortSignal\.timeout\(/g) ?? []).length >= 3,
+    "pagar, el cupón, la espera del pago y \"Agregarlo\" tienen techo de tiempo: con la señal colgada no giran para siempre");
+  check("AUD-B", gracias.includes('addEventListener("pageshow"') && /enVuelo\.current = false;\s*setYendo\(null\);\s*\}\s*window\.addEventListener\("pageshow"/.test(gracias),
+    "volver con \"atrás\" desde Mercado Pago destraba el botón de \"Agregarlo\"");
+  check("AUD-C", gracias.includes("Volver a mirar") && gracias.includes('if (estado !== "demorado") return;'),
+    "\"está tardando\" se puede volver a mirar, a mano o volviendo a la pestaña");
+  check("AUD-D", gracias.includes("const sinUso = a.vencido || agotado;") && gracias.includes("{!sinUso && ("),
+    "un enlace vencido o agotado se explica en pantalla, sin botón que lleve a un error");
+  check("AUD-E", !/where: \{ id, deletedAt: null, rolDigital: "PRINCIPAL" \}/.test(graciasPagina)
+    && graciasPagina.includes("if (fila.deletedAt && !ordenId) notFound();"),
+    "borrar un producto con ventas no le quita la pantalla de descarga a quien ya pagó");
+  /* Un solo `NextResponse.json(`: el de `falla`, para quien no es un navegador. */
+  check("AUD-F", descarga.includes('includes("text/html")') && (descarga.match(/NextResponse\.json\(/g) ?? []).length === 1,
+    "la descarga que no se puede contesta una página legible, no JSON en crudo");
+  const noEncontrado = leer("src/app/p/[id]/not-found.tsx");
+  const errorP = leer("src/app/p/[id]/error.tsx");
+  check("AUD-G", noEncontrado.includes("Este producto no está disponible") && errorP.includes("unstable_retry()")
+    && errorP.includes("Sentry.captureException(error)"),
+    "un producto que no está se dice en castellano, y un error se avisa y deja reintentar");
+  check("AUD-H", ["src/app/digitales/error.tsx", "src/app/dashboard/error.tsx", "src/app/mi-cuenta/error.tsx", "src/app/global-error.tsx"]
+    .every((p) => { const t = leer(p); return t.includes("unstable_retry()") && !t.includes("onClick={reset}"); }),
+    "\"Reintentar\" le vuelve a pedir la pantalla al servidor (reset sólo redibujaba lo que falló)");
+}
+
 console.log(fallos === 0
   ? "\nok — la compra digital cobra lo que dice y no entrega lo que no se pagó"
   : `\nFALLA — ${fallos} chequeo(s) de la compra digital`);

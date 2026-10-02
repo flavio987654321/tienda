@@ -39,6 +39,32 @@ export const runtime = "nodejs";
  * El mail linkea a una PÁGINA con un botón; el botón viene acá. Abrir la página
  * no cuesta nada. Esa página va en el paso siguiente, junto con el mail.
  */
+/**
+ * El "no se puede" de esta ruta, dicho como corresponde según quién pregunta.
+ *
+ * Quien llega acá es casi siempre una PERSONA que tocó "Descargar": su navegador
+ * abre esta dirección como una página. Contestarle JSON le mostraba
+ * `{"error":"Este enlace venció…"}` en letra de máquina, sin un botón para
+ * volver. Al navegador se le contesta una página chica con el mismo texto; a
+ * cualquier otro, el JSON de siempre.
+ */
+function falla(req: NextRequest, mensaje: string, status: number) {
+  if (!(req.headers.get("accept") ?? "").includes("text/html")) {
+    return NextResponse.json({ error: mensaje }, { status });
+  }
+  /* El texto es nuestro, pero se escapa igual: es HTML armado a mano. */
+  const texto = mensaje.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>No se pudo descargar</title></head>
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6f6f4;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1c1c;padding:16px;box-sizing:border-box">
+<main style="max-width:420px;width:100%;background:#fff;border:1px solid #e5e5e5;border-radius:16px;padding:28px 24px;text-align:center">
+<p style="font-size:34px;margin:0 0 8px">📄</p>
+<h1 style="font-size:19px;margin:0 0 10px">No se pudo descargar</h1>
+<p style="font-size:15px;line-height:1.5;margin:0 0 22px;color:#444">${texto}</p>
+<button onclick="history.back()" style="font:inherit;font-weight:700;font-size:14px;padding:11px 20px;border-radius:10px;border:0;background:#1c1c1c;color:#fff;cursor:pointer">Volver</button>
+</main></body></html>`;
+  return new NextResponse(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ token: string }> },
@@ -48,10 +74,7 @@ export async function GET(
      imposible, pero el intento igual nos cuesta una consulta por pedido. */
   const ip = getClientIp(_req);
   if (!(await checkRateLimit(`digital-descarga:${ip}`, 30, 60_000))) {
-    return NextResponse.json(
-      { error: "Demasiados intentos. Esperá un minuto." },
-      { status: 429 },
-    );
+    return falla(_req, "Demasiados intentos. Esperá un minuto.", 429);
   }
 
   const { token } = await ctx.params;
@@ -59,7 +82,7 @@ export async function GET(
   /* 32 bytes en base64url son 43 caracteres. Se comprueba la forma antes de
      buscar: descarta la basura sin gastar una consulta. */
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43,64}$/.test(token)) {
-    return NextResponse.json({ error: "Este enlace no es válido." }, { status: 404 });
+    return falla(_req, "Este enlace no es válido.", 404);
   }
 
   const permiso = await prisma.digitalDownload.findUnique({
@@ -76,7 +99,7 @@ export async function GET(
   });
 
   if (!permiso) {
-    return NextResponse.json({ error: "Este enlace no existe o ya no vale." }, { status: 404 });
+    return falla(_req, "Este enlace no existe o ya no vale.", 404);
   }
 
   /* ⚠️ El pago tiene que estar acreditado. El permiso nace recién cuando el
@@ -84,10 +107,7 @@ export async function GET(
      puede cancelar después (contracargo, devolución), y ahí el permiso queda
      escrito y el archivo no se tiene que entregar más. */
   if (permiso.orderItem.order.status !== "CONFIRMED") {
-    return NextResponse.json(
-      { error: "Esta compra no está confirmada. Si ya pagaste, escribinos." },
-      { status: 403 },
-    );
+    return falla(_req, "Esta compra no está confirmada. Si ya pagaste, escribinos.", 403);
   }
 
   /* Se distingue vencido de agotado, y se dice cuál es. No es una filtración:
@@ -96,31 +116,22 @@ export async function GET(
      reclamar. */
   const ahora = new Date();
   if (permiso.expiresAt <= ahora) {
-    return NextResponse.json(
-      { error: "Este enlace venció. Escribile a quien te lo vendió para que te lo renueve." },
-      { status: 410 },
-    );
+    return falla(_req, "Este enlace venció. Escribile a quien te lo vendió para que te lo renueve.", 410);
   }
   if (permiso.descargas >= permiso.maxDescargas) {
-    return NextResponse.json(
-      { error: `Ya usaste las ${permiso.maxDescargas} descargas de este enlace.` },
-      { status: 429 },
-    );
+    return falla(_req, `Ya usaste las ${permiso.maxDescargas} descargas de este enlace.`, 429);
   }
 
   const ruta = rutaDeRef(permiso.orderItem.product.archivoPath);
   if (!ruta) {
     console.error("[digital-descarga] permiso sin archivo alcanzable:", permiso.id);
-    return NextResponse.json(
-      { error: "No pudimos encontrar el archivo. Escribinos y lo resolvemos." },
-      { status: 500 },
-    );
+    return falla(_req, "No pudimos encontrar el archivo. Escribinos y lo resolvemos.", 500);
   }
 
   const config = configDeposito();
   if (!config) {
     console.error("[digital-descarga] falta configurar Supabase Storage");
-    return NextResponse.json({ error: "No pudimos preparar la descarga." }, { status: 500 });
+    return falla(_req, "No pudimos preparar la descarga.", 500);
   }
 
   /* ══════════════════════════════════════════════════════════════════════
@@ -145,10 +156,7 @@ export async function GET(
   });
 
   if (count === 0) {
-    return NextResponse.json(
-      { error: "Este enlace ya no tiene descargas disponibles." },
-      { status: 429 },
-    );
+    return falla(_req, "Este enlace ya no tiene descargas disponibles.", 429);
   }
 
   const enlace = await enlaceDeDescarga(config, ruta);
@@ -164,10 +172,7 @@ export async function GET(
     }).catch((e) => console.error("[digital-descarga] no se pudo devolver la descarga:", e));
 
     console.error("[digital-descarga] no se pudo firmar el enlace:", permiso.id);
-    return NextResponse.json(
-      { error: "No pudimos preparar la descarga. Probá de nuevo en un momento." },
-      { status: 502 },
-    );
+    return falla(_req, "No pudimos preparar la descarga. Probá de nuevo en un momento.", 502);
   }
 
   /* ══════════════════════════════════════════════════════════════════════

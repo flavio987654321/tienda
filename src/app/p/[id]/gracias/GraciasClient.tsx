@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Download, CheckCircle2, Mail, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, Download, CheckCircle2, Mail, AlertTriangle, Clock, RefreshCw } from "lucide-react";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { marcarCompraEnElNavegador } from "@/lib/medicion-digital";
 import { precioDelUpsell, venceEnDelTokenDeUpsell, type OfertaDeUpsellEnPantalla } from "@/lib/oferta-upsell";
@@ -29,7 +29,15 @@ import { useAhora } from "@/lib/reloj-compartido";
 type Archivo = {
   nombre: string; producto: string; esBono: boolean;
   token: string; usadas: number; tope: number; vence: string;
+  /** Calculado al recibirlo (no al dibujar: la hora no se pregunta dibujando). */
+  vencido?: boolean;
 };
+
+/** Lo que contesta `/api/digitales/estado-compra`, con "vencido" ya resuelto. */
+function conVencimiento(lista: Archivo[]): Archivo[] {
+  const ahora = Date.now();
+  return lista.map((a) => ({ ...a, vencido: Date.parse(a.vence) <= ahora }));
+}
 type Upsell = {
   id: string; nombre: string; descripcion: string | null;
   precio: number; regular: number | null; imagen: string | null;
@@ -64,6 +72,10 @@ const plata = (n: number) =>
    explica qué hacer, en vez de girar para siempre. */
 const CADA_MS = 2000;
 const HASTA_MS = 120_000;
+/* Cada pregunta, con techo. Sin esto, una señal colgada dejaba un pedido sin
+   terminar nunca: no llegaba ni la respuesta ni el error, no se volvía a
+   preguntar, y "Confirmando tu pago…" giraba para siempre. */
+const TECHO_POR_PREGUNTA_MS = 10_000;
 
 export default function GraciasClient(p: Props) {
   const [estado, setEstado] = useState<Estado>(p.ordenId ? "esperando" : "desconocido");
@@ -71,6 +83,9 @@ export default function GraciasClient(p: Props) {
   const [yendo, setYendo] = useState<string | null>(null);
   const [errorUpsell, setErrorUpsell] = useState("");
   const enVuelo = useRef(false);
+  /* Cada vez que sube, se vuelve a esperar desde cero: el botón "Volver a
+     mirar" y la vuelta a la pestaña después de "está tardando". */
+  const [ronda, setRonda] = useState(0);
 
   /* ── El reloj del upsell ──────────────────────────────────────────────
      El mismo plazo del checkout, leído del token que el servidor ya
@@ -96,16 +111,20 @@ export default function GraciasClient(p: Props) {
   useEffect(() => {
     if (!p.ordenId) return;
     let vivo = true;
+    let espera: ReturnType<typeof setTimeout> | undefined;
     const arranque = Date.now();
 
     async function preguntar() {
       try {
-        const r = await fetch(`/api/digitales/estado-compra/${p.ordenId}`);
+        const r = await fetch(`/api/digitales/estado-compra/${p.ordenId}`, {
+          cache: "no-store",
+          signal: AbortSignal.timeout(TECHO_POR_PREGUNTA_MS),
+        });
         const d = await r.json().catch(() => ({}));
         if (!vivo) return;
 
         if (d.estado === "listo" && Array.isArray(d.archivos)) {
-          setArchivos(d.archivos);
+          setArchivos(conVencimiento(d.archivos));
           setEstado("listo");
           /* La compra está confirmada: recién ahora se mide (Purchase en Meta,
              purchase en GA), una vez por orden en este navegador. */
@@ -124,16 +143,55 @@ export default function GraciasClient(p: Props) {
           setEstado("demorado");
           return;
         }
-        setTimeout(preguntar, CADA_MS);
+        espera = setTimeout(preguntar, CADA_MS);
       } catch {
         /* Un error de red no corta la espera: puede ser un segundo sin señal. */
-        if (vivo && Date.now() - arranque <= HASTA_MS) setTimeout(preguntar, CADA_MS);
+        if (vivo && Date.now() - arranque <= HASTA_MS) espera = setTimeout(preguntar, CADA_MS);
         else if (vivo) setEstado("demorado");
       }
     }
     preguntar();
-    return () => { vivo = false; };
-  }, [p.ordenId, p.productoId]);
+    return () => { vivo = false; clearTimeout(espera); };
+  }, [p.ordenId, p.productoId, ronda]);
+
+  /* "Está tardando" no es el final: el pago se puede acreditar cinco minutos
+     después. Si la persona vuelve a esta pestaña, se mira de nuevo solo. */
+  useEffect(() => {
+    if (estado !== "demorado") return;
+    function alVolver() {
+      if (document.visibilityState !== "visible") return;
+      setEstado("esperando");
+      setRonda((n) => n + 1);
+    }
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, [estado]);
+
+  /* ⚠️ Volver con "atrás" desde Mercado Pago después de tocar "Agregarlo":
+     el navegador puede devolver esta pantalla CONGELADA tal como quedó, con el
+     botón en "Abriendo el pago…" y el freno puesto, y no se podía tocar nada.
+     `pageshow` con `persisted` es justamente esa vuelta. */
+  useEffect(() => {
+    function alMostrar(e: PageTransitionEvent) {
+      if (!e.persisted) return;
+      enVuelo.current = false;
+      setYendo(null);
+    }
+    window.addEventListener("pageshow", alMostrar);
+    return () => window.removeEventListener("pageshow", alMostrar);
+  }, []);
+
+  /* El "te quedan N" se actualiza después de bajar: sin esto seguía diciendo
+     5 de 5 con el archivo ya en el celular. Una sola pregunta, sin repetir. */
+  function refrescarContadores() {
+    if (!p.ordenId) return;
+    setTimeout(() => {
+      fetch(`/api/digitales/estado-compra/${p.ordenId}`, { cache: "no-store", signal: AbortSignal.timeout(TECHO_POR_PREGUNTA_MS) })
+        .then((r) => r.json())
+        .then((d) => { if (d.estado === "listo" && Array.isArray(d.archivos)) setArchivos(conVencimiento(d.archivos)); })
+        .catch(() => {});
+    }, 2500);
+  }
 
   async function sumar(upsellId: string) {
     if (enVuelo.current) return;
@@ -144,6 +202,8 @@ export default function GraciasClient(p: Props) {
       const r = await fetch("/api/digitales/comprar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        /* Con la señal colgada, sin techo el botón no volvía nunca. */
+        signal: AbortSignal.timeout(30_000),
         /* ⚠️ NO se manda el correo. Va el identificador de la compra que se acaba
            de pagar, y el servidor saca de ahí a quién pertenece. Es la diferencia
            entre "agregale esto a mi compra" y "agregale esto a la de cualquiera". */
@@ -224,9 +284,28 @@ export default function GraciasClient(p: Props) {
         />
       )}
 
+      {/* "Está tardando" con una salida: mirar de nuevo a mano. Volver a la
+          pestaña también lo hace solo. */}
+      {estado === "demorado" && (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => { setEstado("esperando"); setRonda((n) => n + 1); }}
+            className={`inline-flex items-center gap-2 border-2 border-[color:var(--pv-acento)] px-5 py-2.5 text-sm font-bold text-[color:var(--pv-acento)] transition hover:bg-[color:var(--pv-acento)] hover:text-[color:var(--pv-sobre)] ${p.botonRedondo}`}
+          >
+            <RefreshCw className="h-4 w-4" /> Volver a mirar
+          </button>
+        </div>
+      )}
+
       {estado === "listo" && (
         <div className="mt-8 grid gap-3">
-          {archivos.map((a) => (
+          {archivos.map((a) => {
+            /* Vencido o agotado se dice ACÁ, antes de tocar: el botón llevaba a
+               una pantalla de error en vez de explicar qué pasó y qué hacer. */
+            const agotado = a.usadas >= a.tope;
+            const sinUso = a.vencido || agotado;
+            return (
             <div key={a.token} className={`flex flex-wrap items-center justify-between gap-3 border-2 border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)] p-4 ${p.tarjeta}`}>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-[color:var(--pv-tinta)]">
@@ -236,19 +315,27 @@ export default function GraciasClient(p: Props) {
                   )}
                 </p>
                 <p className="mt-0.5 text-[12px] text-[color:var(--pv-tenue)]">
-                  Te quedan {a.tope - a.usadas} de {a.tope} descargas
+                  {a.vencido
+                    ? `Este enlace venció. Escribile a ${p.vendedor ?? "quien te lo vendió"} para que te lo renueve.`
+                    : agotado
+                      ? `Ya usaste las ${a.tope} descargas. Si lo perdiste, escribile a ${p.vendedor ?? "quien te lo vendió"}.`
+                      : `Te quedan ${a.tope - a.usadas} de ${a.tope} descargas`}
                 </p>
               </div>
               {/* Un enlace, no un `fetch`: así el navegador lo trata como una
                   descarga de verdad y funciona igual en el celular. */}
-              <a
-                href={`/api/digitales/descargar/${a.token}`}
-                className={`inline-flex shrink-0 items-center gap-2 bg-[color:var(--pv-acento)] px-5 py-3 text-sm font-bold text-[color:var(--pv-sobre)] transition hover:brightness-110 ${p.botonRedondo}`}
-              >
-                <Download className="h-4 w-4" /> Descargar
-              </a>
+              {!sinUso && (
+                <a
+                  href={`/api/digitales/descargar/${a.token}`}
+                  onClick={refrescarContadores}
+                  className={`inline-flex shrink-0 items-center gap-2 bg-[color:var(--pv-acento)] px-5 py-3 text-sm font-bold text-[color:var(--pv-sobre)] transition hover:brightness-110 ${p.botonRedondo}`}
+                >
+                  <Download className="h-4 w-4" /> Descargar
+                </a>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           <p className="mt-2 flex items-start gap-2 text-[12.5px] text-[color:var(--pv-tenue)]">
             <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />

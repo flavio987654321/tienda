@@ -7,10 +7,11 @@ import { AlertCircle, RefreshCw, ShoppingBag } from "lucide-react";
 
 export default function MiCuentaError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  /** Vuelve a pedirle la pantalla al servidor (`reset` sólo la redibujaba con lo mismo que falló). */
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     /* ⚠️ A Sentry, no sólo a la consola: un `console.error` vive en el navegador
@@ -32,7 +33,7 @@ export default function MiCuentaError({
         </p>
         <div className="flex flex-col gap-3">
           <button
-            onClick={reset}
+            onClick={() => unstable_retry()}
             className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors shadow-sm shadow-indigo-200"
           >
             <RefreshCw className="h-4 w-4" /> Reintentar

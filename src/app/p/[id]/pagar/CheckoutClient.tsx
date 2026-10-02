@@ -237,6 +237,8 @@ export default function CheckoutClient(p: Props) {
       const r = await fetch("/api/digitales/cupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        /* Con la señal colgada, sin esto la ruedita del "Aplicar" no paraba nunca. */
+        signal: AbortSignal.timeout(15_000),
         body: JSON.stringify({ productoId: p.productoId, codigo: c, ...(plazos.oferta ? { oferta: plazos.oferta } : {}), ...(plazos.bienvenida ? { bienvenida: plazos.bienvenida } : {}) }),
       });
       const d = await r.json().catch(() => ({}));
@@ -375,6 +377,11 @@ export default function CheckoutClient(p: Props) {
       const r = await fetch("/api/digitales/comprar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        /* ⚠️ Un techo de tiempo. Con la señal colgada —no cortada: colgada, que es
+           lo que pasa en un colectivo— el pedido no termina nunca, ni bien ni mal,
+           y el botón quedaba en "Abriendo el pago…" para siempre. Reintentar no
+           duplica nada: la ruta reusa la orden pendiente del intento anterior. */
+        signal: AbortSignal.timeout(30_000),
         body: JSON.stringify({
           productoId: p.productoId,
           email: email.trim(),

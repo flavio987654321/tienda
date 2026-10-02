@@ -30,10 +30,11 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
  */
 export default function ErrorDigitales({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  /** Vuelve a pedirle la pantalla al servidor (`reset` sólo la redibujaba con lo mismo que falló). */
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     Sentry.captureException(error);
@@ -61,7 +62,7 @@ export default function ErrorDigitales({
         </p>
 
         <button
-          onClick={reset}
+          onClick={() => unstable_retry()}
           className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors"
         >
           <RefreshCw className="h-4 w-4" />

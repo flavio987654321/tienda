@@ -53,10 +53,20 @@ export default async function Gracias({ params, searchParams }: Props) {
   const q = await searchParams;
   const ordenId = typeof q.orden === "string" ? q.orden : null;
 
+  /* ⚠️ SIN `deletedAt: null`, a propósito. Borrar un producto es un borrado
+     suave justamente para que quien ya pagó siga bajando lo suyo (ver el DELETE
+     de `/api/digitales/productos/[id]`), y el botón del mail de entrega trae
+     ACÁ. Con el filtro, borrar un producto con ventas dejaba a sus compradores
+     con un "no existe" y sin forma de llegar a su archivo — el permiso seguía
+     valiendo, pero nadie podía usarlo. Encontrado en la auditoría del 03/10/26.
+
+     Borrado, se muestra sólo a quien trae una orden: la espera y los botones
+     salen de `/api/digitales/estado-compra`, que mira la orden y no el
+     producto. Y no se ofrece nada más: los upsells se borraron con él. */
   const fila = await prisma.product.findFirst({
-    where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
+    where: { id, rolDigital: "PRINCIPAL" },
     select: {
-      id: true, name: true, paginaVenta: true, medicion: true, ofertaUpsell: true,
+      id: true, name: true, paginaVenta: true, medicion: true, ofertaUpsell: true, deletedAt: true,
       store: {
         select: {
           isPublished: true, storeConfig: true,
@@ -77,6 +87,7 @@ export default async function Gracias({ params, searchParams }: Props) {
   });
 
   if (!fila || fila.store.isPublished || fila.store.owner.role !== "DIGITAL") notFound();
+  if (fila.deletedAt && !ordenId) notFound();
 
   const pagina = normalizarContenido(fila.paginaVenta);
   const estilo = buscarEstilo(pagina.estilo);

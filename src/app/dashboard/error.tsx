@@ -6,10 +6,11 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function DashboardError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  /** Vuelve a pedirle la pantalla al servidor (`reset` sólo la redibujaba con lo mismo que falló). */
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     /* ⚠️ A Sentry, no sólo a la consola. Un `console.error` vive en el navegador
@@ -31,7 +32,7 @@ export default function DashboardError({
           Hubo un error al cargar esta sección. Podés intentar recargar.
         </p>
         <button
-          onClick={reset}
+          onClick={() => unstable_retry()}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
         >
           <RefreshCw className="h-4 w-4" />
