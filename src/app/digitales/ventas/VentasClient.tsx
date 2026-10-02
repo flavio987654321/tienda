@@ -347,10 +347,18 @@ const CHIPS = {
  * con el detalle.
  */
 function Venta({ v }: { v: VentaEnPantalla }) {
+  /* ⚠️ LA JERARQUÍA. Una compra sin pagar o cancelada no es una venta: es
+     alguien que abrió el pago y se fue. Con la misma tarjeta grande que una
+     cobrada, cuando se juntaban muchas las ventas de verdad quedaban
+     enterradas. Ahora lo cobrado es la tarjeta, con su franja verde, y lo
+     demás un renglón finito y apagado que igual lleva al detalle. No se
+     esconde ni se borra nada: se ve lo que importa primero. Pedido por Flavio
+     el 03/10/26. */
+  if (v.estado !== "COBRADA") return <VentaChica v={v} />;
   const { Icon, texto, clase } = CHIPS[v.estado];
 
   return (
-    <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4">
+    <div className="rounded-2xl border border-gray-100 border-l-4 border-l-green-500 panel-oscuro:border-gray-800 panel-oscuro:border-l-green-500 bg-white panel-oscuro:bg-gray-900 p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -370,7 +378,7 @@ function Venta({ v }: { v: VentaEnPantalla }) {
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-base font-black text-gray-900 panel-oscuro:text-gray-100">{plata(v.total)}</p>
+          <p className="text-lg font-black text-gray-900 panel-oscuro:text-gray-100">{plata(v.total)}</p>
           {/* La comisión sólo se nombra cuando se cobró de verdad. En una venta
               que nadie pagó, "te queda" es un número que no existe. */}
           {v.estado === "COBRADA" && v.comision > 0 && (
@@ -416,6 +424,44 @@ function Venta({ v }: { v: VentaEnPantalla }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * Una compra que no se cobró (sin pagar o cancelada), en un renglón.
+ *
+ * Entero es un link al detalle: ahí se ve por qué se canceló, y una devuelta
+ * es justo la que hay que poder abrir. El monto va en gris y sin negrita: no es
+ * plata que entró. El producto que se nombra es el principal, y si había más
+ * cosas se dice cuántas.
+ */
+function VentaChica({ v }: { v: VentaEnPantalla }) {
+  const { Icon, texto } = CHIPS[v.estado];
+  const principal = v.lineas.find((l) => !l.esBono && !l.esUpsell) ?? v.lineas[0];
+  const mas = v.lineas.length - 1;
+  return (
+    <Link
+      href={`/digitales/ventas/${v.id}`}
+      className="group flex items-center gap-3 rounded-xl border border-dashed border-gray-200 panel-oscuro:border-gray-800 px-3.5 py-2.5 transition-colors hover:border-orange-300"
+    >
+      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold text-gray-500 panel-oscuro:text-gray-400">
+        <Icon className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{texto}</span>
+      </span>
+      {/* `min-w-0` + `truncate`: un correo larguísimo sin espacios no puede
+          empujar el monto fuera del renglón a 360 px. */}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium text-gray-600 panel-oscuro:text-gray-300">
+          {v.comprador || "sin correo"}
+        </span>
+        <span className="block truncate text-[11.5px] text-gray-400">
+          <span className="sm:hidden">{texto} · </span>
+          {principal?.producto ?? "—"}{mas > 0 ? ` y ${mas} más` : ""} · {v.fecha}
+        </span>
+      </span>
+      <span className="shrink-0 text-[13px] tabular-nums text-gray-400">{plata(v.total)}</span>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-orange-500" />
+    </Link>
   );
 }
 

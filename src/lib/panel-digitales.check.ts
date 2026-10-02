@@ -1751,6 +1751,10 @@ console.log("\n19) Cargando y sin conexión");
   const esqueleto = readFileSync("src/components/digitales/EsqueletoDelPanel.tsx", "utf8");
   chequear("el esqueleto no titila para quien pidió menos movimiento, y no carga JavaScript",
     esqueleto.includes("motion-safe:animate-pulse") && !esqueleto.includes('"use client"'));
+  const ventasPantalla = readFileSync("src/app/digitales/ventas/VentasClient.tsx", "utf8");
+  chequear("en Ventas lo cobrado es la tarjeta y lo sin pagar o cancelado un renglón que igual lleva al detalle",
+    ventasPantalla.includes('if (v.estado !== "COBRADA") return <VentaChica v={v} />;')
+    && ventasPantalla.slice(ventasPantalla.indexOf("function VentaChica")).includes("href={`/digitales/ventas/${v.id}`}"));
   chequear("con la señal cortada, el panel lo dice a la vista",
     readFileSync("src/app/digitales/layout.tsx", "utf8").includes("<AvisoSinConexion />"));
 }
