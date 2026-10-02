@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { Radio, Loader2, Pencil, Trash2, Power, Eye, X as Cerrar, MousePointerClick, Plus, Users, User, Search, ThumbsUp, ThumbsDown } from "lucide-react";
 import { CartelAviso } from "@/components/AvisoDelPanel";
 import {
   validarAviso, validarAudiencia, conNombre, linkDelBoton, esCondicion, ROLES_AVISO, NOMBRE_DEL_ROL, TONOS, CONDICIONES,
-  LARGO_TITULO, LARGO_TEXTO, LARGO_BOTON, LARGO_LINK, MAX_DIAS_NUEVOS, type RolAviso, type TonoAviso, type CondicionAviso,
+  LARGO_TITULO, LARGO_TEXTO, LARGO_BOTON, LARGO_LINK, type RolAviso, type TonoAviso, type CondicionAviso,
 } from "@/lib/avisos-admin";
 
 /** Como llega del servidor: las fechas, como texto. */
@@ -36,6 +36,30 @@ const VACIO: Borrador = {
 };
 
 const nombreDe = (p: { name: string | null; email: string }) => p.name?.trim() || p.email;
+
+/* ── El reloj de la pantalla ──────────────────────────────────────────────
+   Para decidir "al aire / programado / vencido" hace falta la hora, y la hora
+   no puede leerse en pleno dibujo (cambia en cada llamada y React lo marca).
+   Es un valor que se guarda y avisa cuando cambia: solo, cada 30 segundos, y
+   a mano (`tic`) apenas se publica o se cambia algo — si no, un aviso recién
+   publicado salía un instante como "Programado", porque su "desde" era más
+   nuevo que la última hora guardada. En el servidor no hay hora (null): ver el
+   comentario de `ahora` adentro del componente. */
+const reloj = (() => {
+  let hora = 0;
+  const oyentes = new Set<() => void>();
+  let intervalo: ReturnType<typeof setInterval> | undefined;
+  const tic = () => { hora = Date.now(); oyentes.forEach((o) => o()); };
+  return {
+    tic,
+    leer: () => { if (!hora) hora = Date.now(); return hora; },
+    suscribir: (o: () => void) => {
+      oyentes.add(o);
+      if (oyentes.size === 1) intervalo = setInterval(tic, 30_000);
+      return () => { oyentes.delete(o); if (oyentes.size === 0) clearInterval(intervalo); };
+    },
+  };
+})();
 
 /** El nombre de ejemplo de la vista previa: así se ve qué hace `{nombre}`. */
 const NOMBRE_DE_EJEMPLO = "Jorge";
@@ -134,10 +158,10 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
   /* La hora y las fechas se dibujan SÓLO en el navegador. El servidor y el
      navegador formatean distinto ("p. m." con un espacio especial de un lado y
      normal del otro), y `Date.now()` da otro número en cada uno: dibujarlas en
-     los dos rompía la hidratación de la lista entera. Arranca en null y se
-     llena al montar, un instante después. */
-  const [ahora, setAhora] = useState<number | null>(null);
-  useEffect(() => { setAhora(Date.now()); }, []);
+     los dos rompía la hidratación de la lista entera. En el servidor es null;
+     en el navegador, la del `reloj`. (Con un efecto que la guardaba al montar,
+     React dibujaba todo dos veces seguidas.) */
+  const ahora = useSyncExternalStore<number | null>(reloj.suscribir, reloj.leer, () => null);
   const [pestana, setPestana] = useState<Pestana>("aire");
 
   /* Los que ya están al aire (o por salir) para la misma gente. Cada persona ve
@@ -153,41 +177,50 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
   /* ── A cuántos le llegaría ────────────────────────────────────────────
      Se pregunta al servidor medio segundo después de dejar de tocar la
      audiencia, con la MISMA consulta que decide quién lo ve. `pedido` descarta
-     la respuesta de una pregunta vieja que llega tarde. */
-  const [alcance, setAlcance] = useState<{ total: number; nombres: string[] } | { error: string } | null>(null);
+     la respuesta de una pregunta vieja que llega tarde.
+
+     La respuesta se guarda junto con QUÉ se preguntó (`clave`): si la
+     audiencia cambió, la vieja no se muestra, sin tener que borrarla. */
+  type Alcance = { total: number; nombres: string[] } | { error: string };
+  const [respuestaAlcance, setRespuestaAlcance] = useState<{ clave: string; r: Alcance } | null>(null);
   const pedido = useRef(0);
   const claveAudiencia = JSON.stringify(audienciaDe(b));
+  const contable = b.modo === "paneles" && validarAudiencia(audienciaDe(b)).ok;
   useEffect(() => {
-    const aud = JSON.parse(claveAudiencia);
-    if (b.modo === "persona" || !validarAudiencia(aud).ok) { setAlcance(null); return; }
+    if (!contable) return;
     const n = ++pedido.current;
+    const guardar = (r: Alcance) => { if (n === pedido.current) setRespuestaAlcance({ clave: claveAudiencia, r }); };
     const t = setTimeout(() => {
       fetch("/api/admin/avisos/alcance", { method: "POST", headers: { "Content-Type": "application/json" }, body: claveAudiencia })
         .then(async (r) => ({ ok: r.ok, d: await r.json().catch(() => null) }))
-        .then(({ ok, d }) => { if (n === pedido.current) setAlcance(ok && d ? d : { error: d?.error ?? "No se pudo contar." }); })
-        .catch(() => { if (n === pedido.current) setAlcance({ error: "No se pudo contar." }); });
+        .then(({ ok, d }) => guardar(ok && d ? d : { error: d?.error ?? "No se pudo contar." }))
+        .catch(() => guardar({ error: "No se pudo contar." }));
     }, 500);
     return () => clearTimeout(t);
-  }, [claveAudiencia, b.modo]);
+  }, [claveAudiencia, contable]);
+  const alcance = contable && respuestaAlcance?.clave === claveAudiencia ? respuestaAlcance.r : null;
 
   /* ── Buscar a una persona ─────────────────────────────────────────── */
   const [busqueda, setBusqueda] = useState("");
-  const [encontrados, setEncontrados] = useState<Persona[]>([]);
-  const [buscando, setBuscando] = useState(false);
+  /* Igual que el contador: la respuesta va con la búsqueda que la pidió, y
+     "buscando" es simplemente que todavía no llegó la de lo que está escrito. */
+  const [respuestaBusqueda, setRespuestaBusqueda] = useState<{ q: string; lista: Persona[] } | null>(null);
   const pedidoBusqueda = useRef(0);
+  const q = busqueda.trim();
   useEffect(() => {
-    const q = busqueda.trim();
-    if (q.length < 2) { setEncontrados([]); setBuscando(false); return; }
+    if (q.length < 2) return;
     const n = ++pedidoBusqueda.current;
-    setBuscando(true);
+    const guardar = (lista: Persona[]) => { if (n === pedidoBusqueda.current) setRespuestaBusqueda({ q, lista }); };
     const t = setTimeout(() => {
       fetch(`/api/admin/avisos/personas?q=${encodeURIComponent(q)}`)
         .then((r) => (r.ok ? r.json() : []))
-        .then((d) => { if (n === pedidoBusqueda.current) { setEncontrados(Array.isArray(d) ? d : []); setBuscando(false); } })
-        .catch(() => { if (n === pedidoBusqueda.current) setBuscando(false); });
+        .then((d) => guardar(Array.isArray(d) ? d : []))
+        .catch(() => guardar([]));
     }, 300);
     return () => clearTimeout(t);
-  }, [busqueda]);
+  }, [q]);
+  const buscando = q.length >= 2 && respuestaBusqueda?.q !== q;
+  const encontrados = q.length >= 2 && respuestaBusqueda?.q === q ? respuestaBusqueda.lista : [];
 
   /* La MISMA validación que la ruta: el error aparece antes de mandar. */
   const validado = validarAviso(cuerpoDe(b));
@@ -209,6 +242,7 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
       const d = await r.json().catch(() => null);
       if (!r.ok) { setError(d?.error ?? "No se pudo guardar."); return; }
       setAvisos(d);
+      reloj.tic();
       setB(VACIO);
       setEditando(null);
     } catch {
@@ -233,7 +267,7 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
         body: cuerpo ? JSON.stringify(cuerpo) : undefined,
       });
       const d = await r.json().catch(() => null);
-      if (r.ok) setAvisos(d);
+      if (r.ok) { setAvisos(d); reloj.tic(); }
       else alert(d?.error ?? "No se pudo.");
     } catch {
       alert("No se pudo. Revisá la conexión.");
@@ -347,7 +381,7 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
                     <ul className="mt-2 grid gap-1">
                       {encontrados.map((p) => (
                         <li key={p.id}>
-                          <button type="button" onClick={() => { set("persona", p); setEncontrados([]); }}
+                          <button type="button" onClick={() => { set("persona", p); setBusqueda(""); }}
                             className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-white/5">
                             <span className="min-w-0">
                               <span className="block truncate text-sm text-white">{nombreDe(p)}</span>

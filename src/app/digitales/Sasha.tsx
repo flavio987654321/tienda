@@ -103,7 +103,6 @@ export default function Sasha() {
   useEffect(() => {
     if (!abierto || estado) return;
     let vivo = true;
-    setSinEstado(false);
     fetch("/api/digitales/sasha")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: Estado | null) => {
@@ -213,7 +212,9 @@ export default function Sasha() {
       >
         <button
           type="button"
-          onClick={() => { if (!arrastrando.current) setAbierto((v) => !v); }}
+          /* Al abrir se borra el "no pudimos abrir" de la vez anterior, así
+             vuelve a probar con el "cargando" y no con el error viejo. */
+          onClick={() => { if (!arrastrando.current) { setSinEstado(false); setAbierto((v) => !v); } }}
           aria-label={abierto ? "Cerrar el chat con Sasha" : "Abrir el chat con Sasha"}
           title="Sasha — arrastrala para moverla"
           className="h-14 w-14 rounded-full transition-transform hover:scale-110"
@@ -264,7 +265,7 @@ export default function Sasha() {
                 {sinEstado ? (
                   <>
                     <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">No pudimos abrir a Sasha.</p>
-                    <button type="button" onClick={() => { setAbierto(false); setTimeout(() => setAbierto(true), 0); }}
+                    <button type="button" onClick={() => { setSinEstado(false); setAbierto(false); setTimeout(() => setAbierto(true), 0); }}
                       className="rounded-xl px-4 py-2 text-sm font-bold text-orange-600 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10">
                       Probar de nuevo
                     </button>

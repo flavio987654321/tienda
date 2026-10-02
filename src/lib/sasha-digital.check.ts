@@ -262,7 +262,7 @@ const base = { userId: "u1", day: "2026-09-22", hora: 17 };
      la pantalla. La posición queda en ESTE navegador. Y soltarla no puede
      abrir el chat: el clic llega justo después de soltar. */
   check("SAS-AD2", /drag\n\s+dragMomentum=\{false\}/.test(burbuja) && /dragConstraints=\{limites\}/.test(burbuja)
-    && /onClick=\{\(\) => \{ if \(!arrastrando\.current\) setAbierto/.test(burbuja)
+    && /onClick=\{\(\) => \{ if \(!arrastrando\.current\) \{?[^}]*setAbierto/.test(burbuja)
     && /localStorage\.setItem\("sasha-digital-pos"/.test(burbuja)
     && /medir = \(\) => setLimites/.test(burbuja)
     && (burbuja.match(/catch \{ \/\* sin localStorage/g) ?? []).length >= 2,

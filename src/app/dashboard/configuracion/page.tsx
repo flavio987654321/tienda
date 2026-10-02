@@ -2443,14 +2443,6 @@ export default function ConfiguracionPage() {
   const [isMobile, setIsMobile] = useState(false);
   /** Cómo se mira la previa: la tienda de escritorio o la del celular. */
   const [ancho, setAncho] = useState<Ancho>("pc");
-  /* Al volver a la galería, la vista vuelve a computadora. El modo celular es
-     para acomodar textos del diseño que se está editando; arrastrarlo a la
-     galería mostraba el próximo diseño dentro de un teléfono sin que nadie lo
-     pidiera, y parecía que algo se había roto. En la previa se puede volver a
-     elegir celular con el mismo botón. Va acá y no en cada botón de "volver":
-     son tres caminos (cambiar diseño, salir sin guardar, borrar) y así
-     ninguno se olvida. */
-  useEffect(() => { if (mode === "gallery") setAncho("pc"); }, [mode]);
   /** Los textos que muestra el teléfono, para la lista del panel en vista celular. */
   const [indiceCelular, setIndiceCelular] = useState<ItemIndice[]>([]);
   /** Por campo: si alinearlo en el celular lo mueve de verdad. Lo mide el teléfono. */
@@ -2654,6 +2646,13 @@ export default function ConfiguracionPage() {
 
   /* Step 1 → 2 */
   const handlePreview = (t: TemplateInfo) => {
+    /* Un diseño se abre SIEMPRE en computadora. El modo celular es para
+       acomodar textos del que se estaba editando; si se arrastraba, el próximo
+       diseño aparecía dentro de un teléfono sin que nadie lo pidiera, y parecía
+       que algo se había roto. En la previa está el botón para pasar a celular.
+       Va en las dos salidas de la galería (ésta y `handleGoToEditing`) y no en
+       las tres entradas: así no hay que acordarse de cada "volver". */
+    setAncho("pc");
     setSelected(t);
     // Si es el mismo diseño que ya tenés guardado, restauramos la versión guardada
     // en vez de arrastrar ediciones sin guardar de una sesión anterior (esas quedaban
@@ -2686,6 +2685,7 @@ export default function ConfiguracionPage() {
 
   /* Gallery → editing (click on saved template) — restaura config guardado */
   const handleGoToEditing = (t: TemplateInfo) => {
+    setAncho("pc"); // ver `handlePreview`
     setSelected(t);
     if (savedConfig && savedConfig.template === t.id) setConfig(savedConfig);
     setIsDirty(false);
