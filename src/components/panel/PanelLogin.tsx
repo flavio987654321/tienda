@@ -1,7 +1,9 @@
 "use client";
 
 import { AppLogo } from "@/components/AppLogo";
+import { useState } from "react";
 import { useLoginForm } from "@/hooks/useLoginForm";
+import { EntrarConCodigo } from "@/components/EntrarConCodigo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 /* El login de un panel, dibujado POR el panel cuando no hay sesión.
@@ -59,6 +61,9 @@ export default function PanelLogin({
     faltaConfirmar, reenviando, reenviarConfirmacion,
     handleSubmit, handleForgotPassword,
   } = useLoginForm(() => window.location.reload());
+  /* Entrar con un código por mail. En la app del iPhone es la única puerta de
+     quien se registró con Google: ver `EntrarConCodigo`. */
+  const [conCodigo, setConCodigo] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 [color-scheme:light]">
@@ -73,6 +78,13 @@ export default function PanelLogin({
         <h1 className="text-4xl font-black text-gray-950 mb-2">{titulo}</h1>
         <p className="text-gray-600 mb-8">{subtitulo}</p>
 
+        {conCodigo ? (
+          <EntrarConCodigo
+            emailInicial={email}
+            alEntrar={() => window.location.reload()}
+            onVolver={() => setConCodigo(false)}
+          />
+        ) : (<>
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3.5 rounded-2xl text-sm mb-6">
             {error}
@@ -170,7 +182,22 @@ export default function PanelLogin({
             {loading ? "Ingresando..." : !captcha.ready ? "Verificando..." : "Ingresar"}
           </button>
         </form>
+
+        <BotonCodigo onClick={() => setConCodigo(true)} />
+        </>)}
       </div>
+    </div>
+  );
+}
+
+/** El acceso al código por mail, con la pista para quien entró con Google. */
+function BotonCodigo({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 text-center">
+      <p className="text-xs text-gray-500 mb-2">¿Te registraste con Google, o no te acordás la contraseña?</p>
+      <button type="button" onClick={onClick} className="text-sm font-bold text-orange-600 hover:text-orange-700">
+        Entrar con un código por mail
+      </button>
     </div>
   );
 }

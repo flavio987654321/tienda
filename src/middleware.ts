@@ -109,7 +109,7 @@ async function vigilarSesionAdmin(
   try {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     const estado = estadoDeLaSesion(aal);
-    if (!estado.conCodigo && !estado.faltaCodigo && !estado.conGoogle) return null;
+    if (!estado.conCodigo && !estado.faltaCodigo && !estado.sinContrasena) return null;
 
     const ahora = Date.now();
     const secreto = process.env.NEXTAUTH_SECRET;

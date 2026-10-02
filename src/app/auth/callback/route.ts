@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { destinoTrasGoogle, registroSinConfirmarConGoogle } from "@/lib/alta-google";
+import { destinoTrasGoogle, googleRecienConectado, registroSinConfirmarConGoogle } from "@/lib/alta-google";
+import { sendAvisoGoogleConectado } from "@/lib/resend";
 import { esElAdmin, tieneAltaPendiente } from "@/lib/alta-google-servidor";
 import { getClientIp } from "@/lib/request-ip";
 
@@ -53,7 +54,7 @@ async function regreso(req: NextRequest, a: (camino: string) => NextResponse) {
   if (await esElAdmin(user.id, user.email)) {
     console.warn("[google] intento de entrar al admin con Google", { userId: user.id, ip: getClientIp(req) });
     await supabase.auth.signOut({ scope: "local" }).catch(() => {});
-    return a("/login?vencida=google");
+    return a("/login?vencida=sin-contrasena");
   }
 
   if (registroSinConfirmarConGoogle(user)) {
@@ -64,6 +65,10 @@ async function regreso(req: NextRequest, a: (camino: string) => NextResponse) {
     console.warn("[google] cuenta sin confirmar tomada por Google: se anuló la contraseña", {
       userId: user.id, ok: !errClave,
     });
+  } else if (user.email && googleRecienConectado(user, Date.now())) {
+    // Ya tenía contraseña y se le sumó Google: se le avisa. Un fallo del mail no frena la entrada.
+    await sendAvisoGoogleConectado({ to: user.email }).catch((e) =>
+      console.error("[google] no salió el aviso de Google conectado:", e instanceof Error ? e.message : e));
   }
 
   return a(destinoTrasGoogle(await tieneAltaPendiente(user.id), next));

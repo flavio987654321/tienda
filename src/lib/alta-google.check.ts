@@ -65,13 +65,13 @@ const conGoogleYCodigo = estadoDeLaSesion({
   currentLevel: "aal2", nextLevel: "aal2",
   currentAuthenticationMethods: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }, { method: "oauth", timestamp: Math.floor(Date.now() / 1000) }],
 });
-check("GO-I", vencida(conGoogleYCodigo, Date.now(), Date.now()) === "google",
+check("GO-I", vencida(conGoogleYCodigo, Date.now(), Date.now()) === "sin-contrasena",
   "en el admin, una sesión de Google se corta aunque haya puesto el código");
 const cb = leer("src/app/auth/callback/route.ts");
 check("GO-J", cb.includes("esElAdmin(user.id, user.email)") && cb.includes('signOut({ scope: "local" })')
   && cb.indexOf("esElAdmin(") < cb.indexOf("destinoTrasGoogle("),
   "el regreso de Google le cierra la sesión al admin antes de mandarlo a ningún lado");
-check("GO-K", leer("src/middleware.ts").includes("!estado.conGoogle"), "el middleware mira Google también en las rutas del admin");
+check("GO-K", leer("src/middleware.ts").includes("!estado.sinContrasena"), "el middleware mira Google también en las rutas del admin");
 
 /* ── El alta con Google valida lo mismo que la de siempre ────────────────── */
 const g = leer("src/app/api/auth/registro/google/route.ts");

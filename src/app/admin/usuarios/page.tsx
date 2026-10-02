@@ -25,8 +25,24 @@ export default async function AdminUsuariosPage({
     },
   });
 
+  /* Cómo entra cada uno. Lo guarda Supabase en `auth.users`, no nuestra tabla:
+     se lee de una vez para toda la lista. Si no se puede leer, la lista sale
+     igual, sin la etiqueta. */
+  const entraCon = new Map<string, string[]>();
+  try {
+    const filas = await prisma.$queryRaw<{ id: string; providers: unknown }[]>`
+      SELECT id::text AS id, raw_app_meta_data->'providers' AS providers
+      FROM auth.users WHERE id::text = ANY(${users.map((u) => u.id)})`;
+    for (const f of filas) {
+      if (Array.isArray(f.providers)) entraCon.set(f.id, f.providers.filter((x): x is string => typeof x === "string"));
+    }
+  } catch (e) {
+    console.error("[admin usuarios] no se pudo leer cómo entra cada uno:", e instanceof Error ? e.message : e);
+  }
+
   const serialized = users.map(u => ({
     ...u,
+    entraCon: entraCon.get(u.id) ?? [],
     createdAt: u.createdAt.toISOString(),
     updatedAt: undefined,
     subscription: u.subscription

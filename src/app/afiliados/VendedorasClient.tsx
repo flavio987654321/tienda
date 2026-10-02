@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
+import { AgregarContrasena } from "@/components/AgregarContrasena";
 import { QRCodeCanvas } from "qrcode.react";
 import { textoPlano, textoPlanoCorto } from "@/lib/texto-plano";
 import { esAppInstalada } from "@/lib/pwa";
@@ -1437,6 +1438,9 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
               </div>
             </button>
           </div>
+
+          {/* Solo aparece si entra con Google y no tiene contraseña. */}
+          <AgregarContrasena />
 
           {/* Zona de peligro */}
           <div className="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50/60 dark:bg-red-500/5 overflow-hidden">

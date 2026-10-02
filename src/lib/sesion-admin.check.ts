@@ -41,8 +41,9 @@ check("SA-E", vencida(conCodigo(2 * 60 * MIN), null, AHORA) === "inactividad"
 check("SA-F", vencida(esperando(ESPERA_CODIGO_MS + MIN), null, AHORA) === "espera-codigo"
   && vencida(esperando(ESPERA_CODIGO_MS - MIN), null, AHORA) === null,
   "en la pantalla del código: a los diez minutos se corta, antes no");
-check("SA-G", vencida(esperando(ESPERA_CODIGO_MS + MIN, "magiclink"), null, AHORA) === "espera-codigo",
-  "la espera cuenta igual si entró con un link por mail en vez de contraseña");
+check("SA-G", vencida(esperando(MIN, "otp"), null, AHORA) === "sin-contrasena"
+  && vencida(esperando(MIN, "oauth"), null, AHORA) === "sin-contrasena",
+  "al admin no se entra sin contraseña (código por mail o Google): se corta en el acto");
 check("SA-H", vencida(estadoDeLaSesion({
   currentLevel: "aal1", nextLevel: "aal1",
   currentAuthenticationMethods: [{ method: "password", timestamp: seg(AHORA - 30 * 24 * 60 * MIN) }],

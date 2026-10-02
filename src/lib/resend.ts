@@ -412,6 +412,68 @@ export async function sendPasswordResetEmail({
   });
 }
 
+/**
+ * El código para entrar sin contraseña (ver `/api/auth/codigo`). Es la puerta
+ * de la app instalada en el iPhone, donde Google no puede devolver la sesión,
+ * y la de quien se registró con Google y no tiene contraseña.
+ */
+export async function sendCodigoDeIngreso({ to, codigo }: { to: string; codigo: string }) {
+  if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY no configurada: no se puede mandar el código");
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${codigo} es tu código para entrar — TiendaApps`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#ea580c;border-radius:16px;padding:28px 24px;margin-bottom:24px;text-align:center;">
+          <p style="color:#fed7aa;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Tu código para entrar</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin:0 0 16px;">Escribí este código en la pantalla donde lo pediste:</p>
+        <p style="font-size:34px;font-weight:900;letter-spacing:8px;text-align:center;margin:0 0 24px;color:#111827;">${escapeHtml(codigo)}</p>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#6b7280;margin:0;">
+            Sirve una sola vez. <strong>No se lo pases a nadie</strong>: nadie de TiendaApps te lo va a pedir.
+            Si no lo pediste vos, ignorá este mail — sin el código no se puede entrar a tu cuenta.
+          </p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps · soporte@tiendaapps.com</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * Se conectó Google a una cuenta que ya tenía contraseña. Si fue ella, no pasa
+ * nada; si no, se entera en el momento y no un mes después.
+ */
+export async function sendAvisoGoogleConectado({ to }: { to: string }) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Se conectó Google a tu cuenta — TiendaApps",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#ea580c;border-radius:16px;padding:28px 24px;margin-bottom:24px;text-align:center;">
+          <p style="color:#fed7aa;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Se conectó Google a tu cuenta</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin:0 0 16px;">
+          Alguien entró a tu cuenta de TiendaApps con <strong>Google</strong> por primera vez.
+          Desde ahora podés entrar con Google o con tu contraseña, como prefieras.
+        </p>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:14px;color:#9a3412;margin:0;">
+            <strong>¿No fuiste vos?</strong> Cambiá la contraseña de tu Gmail y escribinos a soporte@tiendaapps.com.
+          </p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps · soporte@tiendaapps.com</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendSubscriptionConfirmationEmail({
   to,
   userName,

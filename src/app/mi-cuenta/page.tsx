@@ -29,6 +29,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { AgregarContrasena } from "@/components/AgregarContrasena";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
 type Tab = "pedidos" | "favoritos" | "tiendas" | "resenas" | "perfil";
@@ -1173,6 +1174,11 @@ export default function MiCuentaPage() {
                   de arriba: la de arriba es la de todos los días, ésta es para
                   cuando pasó algo. Como botón grande al lado, la mitad de la
                   gente cerraría sesión en el celular sin querer. */}
+              {/* Solo aparece si entra con Google y no tiene contraseña. */}
+              <div className="mt-4">
+                <AgregarContrasena />
+              </div>
+
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => {

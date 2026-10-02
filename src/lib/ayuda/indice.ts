@@ -25,6 +25,7 @@ export const INDICE: { slug: string; titulo: string }[] = [
   { slug: "carritos-abandonados",                titulo: "Carritos abandonados" },
   { slug: "los-estados-de-un-pedido",            titulo: "Los estados de un pedido" },
   { slug: "verificar-tu-cuenta",                 titulo: "Verificar tu identidad" },
+  { slug: "entrar-con-google-o-con-un-codigo", titulo: "Entrar con Google o con un código por mail" },
   { slug: "medios-de-cobro",                     titulo: "Cómo cobrar" },
   { slug: "consultas",                           titulo: "Las consultas de tus vehículos" },
   { slug: "las-fotos-de-tus-productos",          titulo: "Las fotos: cuál va primera y por qué importa" },

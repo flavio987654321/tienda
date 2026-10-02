@@ -54,6 +54,8 @@ export type User = {
   subscription: Sub | null;
   store: { name: string; isPublished: boolean; closedAt: string | null } | null;
   _count: { orders: number };
+  /** Cómo entra: "email" (contraseña o código) y/o "google". Sale de Supabase. */
+  entraCon: string[];
 };
 
 /* ⚠️ `DIGITAL` tiene que estar. La fila cae en `ROLE_LABELS[u.role] ??
@@ -423,7 +425,19 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter, bu
                         </div>
                         <div>
                           <p className={`text-sm font-medium ${isDeleted ? "text-gray-500 line-through" : u.banned ? "text-red-400 line-through" : "text-white"}`}>{u.name ?? "—"}</p>
-                          <p className="text-gray-600 text-xs">{u.email}</p>
+                          <p className="text-gray-600 text-xs">
+                            {u.email}
+                            {/* Para cuando escriben "no puedo entrar": si entra con
+                                Google y no tiene contraseña, la respuesta es otra. */}
+                            {u.entraCon.includes("google") && (
+                              <span
+                                title={u.entraCon.includes("email") ? "Entra con Google o con contraseña" : "Entra solo con Google (sin contraseña)"}
+                                className="ml-1.5 inline-block rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-px text-[10px] font-semibold text-sky-300 align-middle"
+                              >
+                                {u.entraCon.includes("email") ? "Google + clave" : "Solo Google"}
+                              </span>
+                            )}
+                          </p>
                           {isDeleted
                             ? <p className="text-gray-500 text-xs font-semibold mt-0.5">ELIMINADO</p>
                             : u.banned && <p className="text-red-500 text-xs font-semibold mt-0.5">BANEADO</p>

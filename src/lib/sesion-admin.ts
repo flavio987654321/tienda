@@ -28,7 +28,7 @@ export const ESPERA_CODIGO_MS = 10 * 60 * 1000;
 
 export const COOKIE_ACTIVIDAD = "ta_admin_actividad";
 
-export type MotivoVencida = "inactividad" | "tope" | "espera-codigo" | "google";
+export type MotivoVencida = "inactividad" | "tope" | "espera-codigo" | "sin-contrasena";
 
 /** Lo que dice `getAuthenticatorAssuranceLevel()`, ya con los tiempos en ms. */
 export type EstadoSesion = {
@@ -40,8 +40,8 @@ export type EstadoSesion = {
   codigoDesde: number | null;
   /** Cuándo puso la contraseña (ms). */
   claveDesde: number | null;
-  /** Entró con Google (u otro proveedor): el admin no entra así. */
-  conGoogle: boolean;
+  /** Entró sin contraseña (Google, código por mail, link de recuperación): el admin no entra así. */
+  sinContrasena: boolean;
 };
 
 type Amr = { method?: unknown; timestamp?: unknown } | string;
@@ -71,7 +71,11 @@ export function estadoDeLaSesion(aal: {
     // El primer paso suele ser la contraseña, pero puede ser un link por mail o
     // Google: cualquier cosa que no sea el código cuenta como "ya entró".
     claveDesde: momentoDe(amr, (m) => m !== "totp"),
-    conGoogle: momentoDe(amr, (m) => m === "oauth") !== null,
+    // Solo con métodos legibles: si vinieran en otro formato no se corta a
+    // nadie (falla abierto, como el resto; el código de la app sigue pidiéndose).
+    sinContrasena:
+      momentoDe(amr, (m) => typeof m === "string") !== null &&
+      momentoDe(amr, (m) => m === "password") === null,
   };
 }
 
@@ -84,9 +88,9 @@ export function vencida(
   ultimaActividad: number | null,
   ahora: number,
 ): MotivoVencida | null {
-  // Solo se llama en las rutas del admin, y el admin no entra con Google: ni
-  // aunque después ponga el código. Ver `lib/alta-google`.
-  if (s.conGoogle) return "google";
+  // Solo se llama en las rutas del admin, y el admin entra con contraseña:
+  // ni con Google ni con código por mail, aunque después ponga el de la app.
+  if (s.sinContrasena) return "sin-contrasena";
   if (s.faltaCodigo) {
     if (s.claveDesde !== null && ahora - s.claveDesde > ESPERA_CODIGO_MS) return "espera-codigo";
     return null;

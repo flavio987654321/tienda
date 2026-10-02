@@ -1,4 +1,5 @@
 import type { Articulo } from "./tipos";
+import { INTENTOS_MAX, BLOQUEO_MS } from "@/lib/codigo-ingreso";
 
 /* Los artículos, como datos.
  *
@@ -2177,6 +2178,53 @@ export const ARTICULOS: Articulo[] = [
           "Estar abajo no significa nada por sí solo: hay gente que arrancó hace más tiempo o que vende en un rubro de tickets más altos. El número que te conviene mirar es el tuyo del mes pasado, no el de arriba.",
       },
       { t: "ruta", label: "Ver el ranking", href: "/afiliados/ranking" },
+    ],
+  },
+  // ───────────────────────────────────────────────────────────────── entrar
+  {
+    slug: "entrar-con-google-o-con-un-codigo",
+    titulo: "Entrar con Google o con un código por mail",
+    resumen:
+      "Cómo entrar si te registraste con Google, si no te acordás la contraseña, o desde la app instalada en el celular.",
+    grupo: "cuenta",
+    clase: "mecanica",
+    rol: "ambos",
+    actualizado: "2026-10-02",
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Hay tres formas de entrar a tu cuenta, y todas te llevan al mismo panel: tu **contraseña**, **Google** (si te registraste así) o un **código que te mandamos al mail**.",
+      },
+      { t: "h", texto: "Entrar con un código por mail" },
+      {
+        t: "pasos",
+        items: [
+          "En la pantalla de ingreso tocá **Entrar con un código por mail**.",
+          "Escribí tu mail y tocá **Mandarme el código**. Si te registraste con Google, usá tu Gmail.",
+          "Abrí el mail de TiendaApps (mirá también en spam) y escribí el código en la pantalla.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          `El código sirve una sola vez y es solo tuyo: **nadie de TiendaApps te lo va a pedir**. Si ponés ${INTENTOS_MAX} códigos equivocados, ese mail queda frenado ${BLOQUEO_MS / 60000} minutos.`,
+      },
+      { t: "h", texto: "Si te registraste con Google" },
+      {
+        t: "lista",
+        items: [
+          "En la computadora o en el navegador del celular, tocá **Continuar con Google**.",
+          "En la **app instalada**, entrá con un código por mail: Google no puede abrir la sesión adentro de la app del iPhone.",
+          "Si abriste el link desde Instagram o Facebook, abrilo en Chrome o Safari: desde adentro de esas apps Google no deja entrar.",
+        ],
+      },
+      {
+        t: "p",
+        texto:
+          "Si querés, también podés **agregar una contraseña**: está en la pantalla de tu cuenta, y aparece solo si todavía no tenés una. Te sirve de respaldo si un día perdés tu cuenta de Google.",
+      },
     ],
   },
 ];

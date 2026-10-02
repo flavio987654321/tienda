@@ -7,6 +7,7 @@ import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import { BotonGoogle, SeparadorO } from "@/components/BotonGoogle";
 import { caminoSeguro } from "@/lib/alta-google";
+import { EntrarConCodigo } from "@/components/EntrarConCodigo";
 import { VolverAtras } from "@/components/VolverAtras";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -34,6 +35,8 @@ function LoginForm() {
   const vencida = searchParams.get("vencida");
   /* Volvió de Google sin sesión (canceló, o falló). Ver `/auth/callback`. */
   const errorGoogle = searchParams.get("google");
+  /* Entrar con un código por mail en vez de la contraseña. Ver `EntrarConCodigo`. */
+  const [conCodigo, setConCodigo] = useState(false);
   const redirectTo = searchParams.get("redirect");
   const [inPwa, setInPwa] = useState(false);
 
@@ -202,8 +205,8 @@ function LoginForm() {
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-2xl text-sm mb-6">
               {vencida === "espera-codigo"
                 ? "Pasaron más de 10 minutos sin poner el código. Por seguridad cerramos la sesión: volvé a entrar."
-                : vencida === "google"
-                ? "El panel del admin no se usa con Google. Entrá con tu contraseña y el código."
+                : vencida === "sin-contrasena"
+                ? "Al panel del admin se entra solo con la contraseña y el código de la app."
                 : "Por seguridad cerramos tu sesión del admin. Volvé a entrar con tu contraseña y el código."}
             </div>
           )}
@@ -282,6 +285,13 @@ function LoginForm() {
             </motion.div>
           )}
 
+          {conCodigo ? (
+            <EntrarConCodigo
+              emailInicial={email}
+              alEntrar={() => { window.location.href = caminoSeguro(redirectTo) || "/panel"; }}
+              onVolver={() => setConCodigo(false)}
+            />
+          ) : (<>
           {/* Vuelve a donde iba (si es de este sitio); si no, a su panel. */}
           <BotonGoogle next={redirectTo ?? "/panel"} />
           <SeparadorO />
@@ -340,6 +350,14 @@ function LoginForm() {
               {loading ? "Ingresando..." : !captcha.ready ? "Verificando..." : "Ingresar a mi cuenta"}
             </button>
           </form>
+
+          <p className="mt-5 text-center text-xs text-gray-500">
+            ¿Te registraste con Google o no te acordás la contraseña?{" "}
+            <button type="button" onClick={() => setConCodigo(true)} className="font-bold text-orange-600 hover:text-orange-700">
+              Entrar con un código por mail
+            </button>
+          </p>
+          </>)}
 
           {/* Divider */}
           <div className="flex items-center gap-4 my-7">

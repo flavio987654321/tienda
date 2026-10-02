@@ -17,7 +17,11 @@ export const GOOGLE_PRENDIDO = process.env.NEXT_PUBLIC_GOOGLE_LOGIN === "1";
 type UsuarioDeSupabase = {
   email?: string | null;
   app_metadata?: { provider?: unknown; providers?: unknown } | null;
-  identities?: ReadonlyArray<{ provider?: unknown; identity_data?: Record<string, unknown> | null }> | null;
+  identities?: ReadonlyArray<{
+    provider?: unknown;
+    identity_data?: Record<string, unknown> | null;
+    created_at?: unknown;
+  }> | null;
 };
 
 /** ¿Esta cuenta tiene Google conectado? */
@@ -43,6 +47,23 @@ export function registroSinConfirmarConGoogle(u: UsuarioDeSupabase | null | unde
   return (u?.identities ?? []).some(
     (i) => i.provider === "email" && i.identity_data?.email_verified === false,
   );
+}
+
+/**
+ * ¿Se acaba de conectar Google a una cuenta que YA tenía contraseña (y el mail
+ * confirmado)? Es lo que dispara el mail "se conectó Google a tu cuenta": si
+ * fue ella, no pasa nada; si no, se entera en el momento.
+ *
+ * "Recién" es que Google se sumó en los últimos minutos: el regreso de Google
+ * llega segundos después, y una entrada cualquiera de otro día no avisa.
+ */
+export function googleRecienConectado(u: UsuarioDeSupabase | null | undefined, ahora: number): boolean {
+  const ids = u?.identities ?? [];
+  const google = ids.find((i) => i.provider === "google");
+  const conClave = ids.some((i) => i.provider === "email" && i.identity_data?.email_verified !== false);
+  if (!google || !conClave) return false;
+  const desde = typeof google.created_at === "string" ? Date.parse(google.created_at) : NaN;
+  return Number.isFinite(desde) && ahora - desde >= 0 && ahora - desde < 10 * 60 * 1000;
 }
 
 /** El perfil que hace falta para saber si la cuenta está a medio hacer. */

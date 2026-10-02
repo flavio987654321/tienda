@@ -9,6 +9,7 @@ import {
 } from "./piezas";
 import AvisosDeVenta from "./AvisosDeVenta";
 import ZonaDePeligro from "./ZonaDePeligro";
+import { AgregarContrasena } from "@/components/AgregarContrasena";
 import {
   LARGO_NOMBRE, LARGO_CHECKOUT, LARGO_EMAIL, LARGO_IA_PRODUCTO, LARGO_IA_DESCRIPCION,
   SLUG_MAXIMO,
@@ -432,6 +433,9 @@ export default function TabGeneral(p: Props) {
           Lo que tenía frenada esta zona —qué pasa con lo que ya se vendió—
           quedó decidido: quien compró conserva sus descargas, pase lo que
           pase con la cuenta. Ver `lib/cierre-digital`. */}
+      {/* Solo aparece si entra con Google y no tiene contraseña. */}
+      <AgregarContrasena />
+
       <ZonaDePeligro nombre={p.nombreOriginal} publicados={p.publicados} exportar={p.exportar} />
     </div>
   );
