@@ -9,8 +9,9 @@ import {
 import { PRECIOS_DIGITALES, COMISION_DIGITAL, DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { COPY_DIGITAL, featuresDigital, type TierDigital } from "@/lib/planes-digitales";
 import { validarTelefono, LARGO_MAXIMO as TELEFONO_MAXIMO } from "@/lib/telefono";
-import { pesoLegible, nombreDelMes, type UsoDeLaCuenta } from "@/lib/uso-digital";
+import { pesoLegible, type UsoDeLaCuenta } from "@/lib/uso-digital";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
+import { cuandoVuelven } from "@/lib/cupo-ia-texto";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 type Estado = "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
@@ -72,7 +73,9 @@ function CupoDeIA({ titulo, cupo, degrade, sinPlan }: { titulo: string; cupo: Es
   const usadas = total - cupo.quedan;
   const partes: string[] = [];
   if (cupo.topeDelMes > 0) {
-    partes.push(`${cupo.quedanDelMes} de este mes${cupo.proximoMes ? ` (vuelven en ${nombreDelMes(cupo.proximoMes)})` : ""}`);
+    /* Vuelven a los 30 días del pago, no el 1° (ver `cuentaDelCupo`). Sin
+       fecha es la prueba, o un plan esperando el pago: vuelven con él. */
+    partes.push(`${cupo.quedanDelMes} de este mes (vuelven ${cupo.renuevaEl ? cuandoVuelven(cupo.renuevaEl) : "con el próximo pago"})`);
   }
   if (cupo.topeDeBienvenida > 0) partes.push(`${cupo.quedanDeBienvenida} de bienvenida`);
   /* Sin cupo en este plan: el título y, abajo, que no viene. Al costado se

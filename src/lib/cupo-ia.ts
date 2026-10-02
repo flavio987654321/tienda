@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
-import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "@/lib/planLimits";
+import { getSubscriptionStatus, MONTHLY_DAYS } from "@/lib/subscription";
 
 /**
  * El cupo de generaciones de IA de una cuenta digital.
@@ -22,7 +22,7 @@ import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "@/lib/planLimits";
  *
  * | | Cuántas | ¿Vuelven? |
  * |---|---|---|
- * | **De este mes** | 5 Starter / 10 Pro | Sí, el 1° de cada mes |
+ * | **Del ciclo** | 5 Starter / 10 Pro | Sí, cada 30 días DESDE QUE PAGÓ |
  * | **De bienvenida** | 6 Starter / 12 Pro | **No.** Se dan una vez |
  *
  * El arranque existe porque **el mes 1 es cuando se necesita todo**: la persona
@@ -41,10 +41,26 @@ import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "@/lib/planLimits";
  *
  * ── Por qué no hay ningún cron ─────────────────────────────────────────────
  *
- * `mesClave` guarda "2026-09". Cuando llega un pedido y la clave no es la del
- * mes actual, el contador se pone en cero **en ese momento**. Así el reinicio no
- * depende de que un proceso nocturno corra — y en este plan de Vercel el cron es
- * uno solo por día.
+ * `mesClave` guarda la clave del CICLO (ver `cuentaDelCupo`). Cuando llega un
+ * pedido y la clave no es la del ciclo actual, el contador se pone en cero **en
+ * ese momento**. Así el reinicio no depende de que un proceso nocturno corra —
+ * y en este plan de Vercel el cron es uno solo por día.
+ *
+ * ── ⚠️ EL CICLO ES DESDE QUE PAGÓ, NO EL MES DEL CALENDARIO ────────────────
+ *
+ * Hasta el 03/10/26 la bolsa se llenaba el 1° de cada mes. Eso daba tres
+ * agujeros, encontrados con Flavio:
+ *   - Quien pagaba el 25 recibía la bolsa entera y el 1°, seis días después,
+ *     OTRA entera. Quien pagaba el 2 esperaba casi un mes.
+ *   - Una prueba que cruzaba el 1° se rellenaba sola: Pro sacaba 32
+ *     generaciones en vez de 22 sólo por empezar a fin de mes.
+ *   - Peor: la prueba vencida y sin pagar seguía siendo Starter o Pro hasta que
+ *     el cron diario la bajaba a Free (hasta un día). En ese rato ya no estaba
+ *     "en prueba", así que recibía la bolsa ENTERA de ebooks del plan pago —11
+ *     en Starter, 21 en Pro— sin haber pagado nunca. Cada ebook cuesta dólares.
+ *
+ * Ahora la cuenta sale de la suscripción, acá adentro, y no de lo que diga el
+ * que llama: el plan que vale, si está en prueba y desde cuándo pagó.
  */
 
 /**
@@ -171,6 +187,91 @@ export function topeDelCupo(
   };
 }
 
+/** Cada cuánto se rellena la bolsa del ciclo, contado desde el pago. */
+export const DIAS_DEL_CICLO = MONTHLY_DAYS;
+const DIA_MS = 86_400_000;
+
+/**
+ * Lo que el cupo necesita saber de una cuenta, sacado de su suscripción.
+ *
+ * - `tier`: el plan que VALE ahora. Una prueba o un plan pago vencidos valen
+ *   Free en el instante en que vencen, sin esperar al cron que los baja.
+ * - `enPrueba`: probando sin haber pagado. Ver `CUPO_DE_PRUEBA`.
+ * - `ciclo`: la clave de la bolsa que se está usando. Mientras es la misma,
+ *   la bolsa no se rellena.
+ * - `renuevaEl`: cuándo se rellena (ISO), o `null` si no se rellena sola.
+ */
+export type CuentaDelCupo = {
+  tier: TierDigital;
+  enPrueba: boolean;
+  ciclo: string;
+  renuevaEl: string | null;
+};
+
+type SuscripcionParaElCupo = {
+  role?: string | null;
+  tier?: string | null;
+  status: string;
+  trialEndsAt: Date;
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd: Date | null;
+  gracePeriodEndsAt: Date | null;
+};
+
+const SIN_CICLO: CuentaDelCupo = { tier: "FREE", enPrueba: false, ciclo: "free", renuevaEl: null };
+
+/**
+ * El plan y el ciclo de una cuenta, para el cupo. Pura: se prueba sola.
+ *
+ * ── Las reglas ─────────────────────────────────────────────────────────────
+ *
+ * - **Free, vencida o cancelada** → Free. Free no tiene bolsa por ciclo, así
+ *   que la clave da igual.
+ * - **En prueba** → el plan que prueba, con UNA sola clave para toda la prueba
+ *   ("prueba"): la bolsa no se rellena nunca mientras prueba, empiece el día
+ *   que empiece. Se rellena recién con el primer pago.
+ * - **Pagando** (activo, o en el período de gracia) → un ciclo cada
+ *   `DIAS_DEL_CICLO` desde el pago (`currentPeriodStart`). Un plan anual son
+ *   doce ciclos dentro del mismo pago. ⚠️ Con tope en los ciclos PAGADOS: en
+ *   la gracia —ya venció y todavía no pagó— no se abre un ciclo nuevo; el
+ *   próximo lo abre el pago.
+ */
+export function cuentaDelCupo(sub: SuscripcionParaElCupo | null, ahora: Date = new Date()): CuentaDelCupo {
+  if (!sub || !sub.tier || sub.tier === "FREE") return SIN_CICLO;
+  const tier = sub.tier as TierDigital;
+  const estado = getSubscriptionStatus({ ...sub, role: sub.role ?? "DIGITAL", tier: sub.tier }, ahora);
+
+  if (estado === "TRIAL") return { tier, enPrueba: true, ciclo: "prueba", renuevaEl: null };
+  if (estado !== "ACTIVE" && estado !== "GRACE") return SIN_CICLO;
+  if (!sub.currentPeriodEnd) return SIN_CICLO;
+
+  const fin = sub.currentPeriodEnd.getTime();
+  /* Las suscripciones viejas pueden no tener el inicio: se deduce del fin. */
+  const inicio = sub.currentPeriodStart?.getTime() ?? fin - DIAS_DEL_CICLO * DIA_MS;
+  const largo = DIAS_DEL_CICLO * DIA_MS;
+  const ciclos = Math.max(1, Math.round((fin - inicio) / largo));
+  const n = Math.min(ciclos - 1, Math.max(0, Math.floor((ahora.getTime() - inicio) / largo)));
+  const renueva = n < ciclos - 1 ? inicio + (n + 1) * largo : fin;
+  return {
+    tier,
+    enPrueba: false,
+    ciclo: `pago:${new Date(inicio).toISOString()}:${n}`,
+    renuevaEl: new Date(renueva).toISOString(),
+  };
+}
+
+/** `cuentaDelCupo` leyendo la suscripción de la base. */
+export async function cuentaDelCupoDe(userId: string, ahora: Date = new Date()): Promise<CuentaDelCupo> {
+  const sub = await prisma.subscription.findUnique({
+    where: { userId },
+    select: {
+      role: true, tier: true, status: true, trialEndsAt: true,
+      currentPeriodStart: true, currentPeriodEnd: true, gracePeriodEndsAt: true,
+    },
+  });
+  return cuentaDelCupo(sub, ahora);
+}
+
 export type EstadoDelCupo = {
   /** Lo que queda en total: el número grande, el que la persona busca. */
   quedan: number;
@@ -178,20 +279,12 @@ export type EstadoDelCupo = {
   quedanDeBienvenida: number;
   topeDelMes: number;
   topeDeBienvenida: number;
-  /** "2026-10": cuándo vuelven las del mes. `null` si el plan no tiene mensual. */
-  proximoMes: string | null;
+  /**
+   * Cuándo se rellena la bolsa del ciclo (ISO). `null` si no se rellena sola:
+   * Free, o en prueba. Para decirlo, `cuandoVuelven` de `cupo-ia-texto`.
+   */
+  renuevaEl: string | null;
 };
-
-/** El mes de Argentina, "2026-09". Sale del mismo reloj que el resto del panel. */
-export function claveDelMes(): string {
-  return getArgentinaDayKey().slice(0, 7);
-}
-
-/** El mes que viene, para poder decir cuándo vuelven. */
-export function mesSiguiente(clave: string): string {
-  const [anio, mes] = clave.split("-").map(Number);
-  return mes === 12 ? `${anio + 1}-01` : `${anio}-${String(mes + 1).padStart(2, "0")}`;
-}
 
 /**
  * Cuánto le queda, sin gastar nada.
@@ -201,14 +294,14 @@ export function mesSiguiente(clave: string): string {
  */
 export async function estadoDelCupo(
   userId: string,
-  tier: TierDigital,
   concepto: ConceptoIA = "EMBUDO",
-  /* ⚠️ Tiene que recibir lo MISMO que `consumirDelCupo`, o la pantalla dice un
-     número y el servidor entrega otro. Ver `CUPO_DE_PRUEBA`. */
-  enPrueba = false,
 ): Promise<EstadoDelCupo> {
-  const tope = topeDelCupo(tier, concepto, enPrueba);
-  const mes = claveDelMes();
+  /* El plan, la prueba y el ciclo salen de la suscripción, igual que en
+     `consumirDelCupo`: así la pantalla y el servidor no pueden decir números
+     distintos. */
+  const cuenta = await cuentaDelCupoDe(userId);
+  const tope = topeDelCupo(cuenta.tier, concepto, cuenta.enPrueba);
+  const mes = cuenta.ciclo;
 
   const fila = await prisma.cupoIA.findUnique({
     where: { userId_concepto: { userId, concepto } },
@@ -230,7 +323,7 @@ export async function estadoDelCupo(
     quedanDeBienvenida,
     topeDelMes: tope.mes,
     topeDeBienvenida: tope.bienvenida,
-    proximoMes: tope.mes > 0 ? mesSiguiente(mes) : null,
+    renuevaEl: tope.mes > 0 ? cuenta.renuevaEl : null,
   };
 }
 
@@ -250,13 +343,12 @@ export async function estadoDelCupo(
  */
 export async function consumirDelCupo(
   userId: string,
-  tier: TierDigital,
   concepto: ConceptoIA = "EMBUDO",
-  /* ⚠️ `true` mientras la cuenta no pagó nunca. Ver `CUPO_DE_PRUEBA`. */
-  enPrueba = false,
 ): Promise<Bolsa | null> {
-  const tope = topeDelCupo(tier, concepto, enPrueba);
-  const mes = claveDelMes();
+  /* ⚠️ Lo decide la suscripción, no el que llama: ver `cuentaDelCupo`. */
+  const cuenta = await cuentaDelCupoDe(userId);
+  const tope = topeDelCupo(cuenta.tier, concepto, cuenta.enPrueba);
+  const mes = cuenta.ciclo;
 
   /* Un plan que no tiene NADA de esto —Free y los ebooks— se contesta sin tocar
      la base. No es sólo ahorrarse una escritura: sin esto, cada clic de una
@@ -273,8 +365,8 @@ export async function consumirDelCupo(
     create: { userId, concepto, mesClave: mes },
   });
 
-  /* El reinicio del mes, sin cron: si la clave guardada no es la de este mes, se
-     pone en cero acá mismo. Con la clave vieja en el `where`, dos pedidos a la
+  /* El reinicio del ciclo, sin cron: si la clave guardada no es la del ciclo de
+     ahora, se pone en cero acá mismo. Con la clave vieja en el `where`, dos pedidos a la
      vez no lo reinician dos veces — el segundo ya no encuentra la clave vieja. */
   if (tope.mes > 0) {
     await prisma.cupoIA.updateMany({

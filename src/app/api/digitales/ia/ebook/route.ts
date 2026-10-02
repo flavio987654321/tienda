@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { anthropic } from "@/lib/anthropic";
 import { permitirGeneracion } from "@/lib/ia-digitales";
-import { consumirDelCupo, devolverAlCupo, estadoDelCupo, CUPO_EBOOK, type Bolsa } from "@/lib/cupo-ia";
+import { consumirDelCupo, devolverAlCupo, estadoDelCupo, CUPO_EBOOK, type Bolsa, cuentaDelCupo } from "@/lib/cupo-ia";
+import { cuandoVuelven } from "@/lib/cupo-ia-texto";
 import {
   INSTRUCCIONES_INDICE, ESQUEMA_DEL_INDICE, normalizarIndice,
   INSTRUCCIONES_INDICE_RECETARIO, esquemaDelIndiceRecetario,
@@ -16,7 +17,6 @@ import { sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import { estadoDelBorrador, CANDADO_MS } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
-import type { TierDigital } from "@/lib/planes-digitales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,12 +68,10 @@ export async function POST(req: NextRequest) {
   if (!sub || sub.role !== "DIGITAL") {
     return NextResponse.json({ error: "Tu cuenta no es de Productos Digitales." }, { status: 403 });
   }
-  const tier = (sub.tier ?? "FREE") as TierDigital;
+  /* El plan que VALE ahora: una prueba o un plan pago vencidos ya son Free,
+     aunque el cron todavía no los haya bajado. Ver `cuentaDelCupo`. */
+  const tier = cuentaDelCupo(sub).tier;
   const estado = getSubscriptionStatus(sub);
-  /* ⚠️ La cuenta todavía no pagó nunca: los días de prueba son sin tarjeta. El
-     regalo de bienvenida no se entrega hasta el primer cobro. Ver
-     `CUPO_DE_PRUEBA` en `cupo-ia`. */
-  const enPrueba = estado === "TRIAL";
 
   /* ⚠️ El plan sin ebooks se corta acá, con el motivo escrito. Antes de los
      topes y antes de leer el cuerpo: un pedido que no se va a atender no tiene
@@ -156,7 +154,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       retomado: true,
       ebook: estadoDelBorrador(yaHay),
-      cupo: await estadoDelCupo(user.id, tier, "EBOOK", enPrueba),
+      cupo: await estadoDelCupo(user.id, "EBOOK"),
     });
   }
 
@@ -213,12 +211,12 @@ export async function POST(req: NextRequest) {
      todavía— y generarían los ocho. Si la llamada falla, se devuelve. */
   let bolsa: Bolsa | null = null;
   if (!esGratis) {
-    bolsa = await consumirDelCupo(user.id, tier, "EBOOK", enPrueba);
+    bolsa = await consumirDelCupo(user.id, "EBOOK");
     if (!bolsa) {
-      const cupo = await estadoDelCupo(user.id, tier, "EBOOK", enPrueba);
+      const cupo = await estadoDelCupo(user.id, "EBOOK");
       return NextResponse.json({
         error: cupo.topeDelMes > 0
-          ? `Usaste todos tus ebooks con IA. El ${cupo.proximoMes ? "1° del mes que viene" : "mes que viene"} tenés ${cupo.topeDelMes} nuevos.`
+          ? `Usaste todos tus ebooks con IA. ${cupo.renuevaEl ? `${cuandoVuelven(cupo.renuevaEl).replace(/^el /, "El ")}` : "Con el próximo pago"} tenés ${cupo.topeDelMes} nuevos.`
           : "Usaste todos los ebooks con IA de tu plan.",
         sinCupo: true,
         cupo,
@@ -441,6 +439,6 @@ export async function POST(req: NextRequest) {
        están empezando a comer las de bienvenida, que no vuelven. */
     salioDe: bolsa,
     gratis: esGratis,
-    cupo: await estadoDelCupo(user.id, tier, "EBOOK", enPrueba),
+    cupo: await estadoDelCupo(user.id, "EBOOK"),
   });
 }

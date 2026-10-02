@@ -49,15 +49,15 @@ const TECHO_DE_FILAS =
  * Lo que la cuenta tiene contra lo que el plan permite. Sin `Store` todavía
  * —nunca guardó un producto— es todo cero, que es la verdad y no un caso aparte.
  *
- * `enPrueba` va al cupo de ebooks por el mismo motivo que en la pantalla de
- * productos: el número que se muestra tiene que ser el que aplica el servidor.
- * La cuenta en sí la hace `armarUso`, que es pura y está probada.
+ * El cupo de IA mira la prueba y el plan que vale adentro (`estadoDelCupo`),
+ * con la misma cuenta que la ruta que lo gasta. La cuenta en sí la hace
+ * `armarUso`, que es pura y está probada.
  */
-async function usoDeLaCuenta(userId: string, tier: TierDigital, enPrueba: boolean) {
+async function usoDeLaCuenta(userId: string, tier: TierDigital) {
   const [store, embudo, ebook] = await Promise.all([
     prisma.store.findUnique({ where: { ownerId: userId }, select: { id: true } }),
-    estadoDelCupo(userId, tier),
-    estadoDelCupo(userId, tier, "EBOOK", enPrueba),
+    estadoDelCupo(userId),
+    estadoDelCupo(userId, "EBOOK"),
   ]);
 
   const filas = store
@@ -113,7 +113,7 @@ export default async function MiCuentaPage() {
 
   /* Páginas, bonos, archivos y el cupo de IA, contados acá y bajados resueltos
      como todo lo demás de esta pantalla. */
-  const uso = await usoDeLaCuenta(user.id, tier, estado === "TRIAL");
+  const uso = await usoDeLaCuenta(user.id, tier);
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-8">

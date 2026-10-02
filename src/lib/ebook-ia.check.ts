@@ -937,7 +937,7 @@ check("PAN-N",
 /* El cupo de ebooks es una bolsa APARTE del de armar el embudo: gastar todas
    las páginas de venta no puede dejar a nadie sin poder escribir su ebook. */
 check("PAN-O",
-  /estadoDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(pantalla),
+  /estadoDelCupo\(user\.id, "EBOOK"\)/.test(pantalla),
   "la pantalla lee el cupo de ebooks aparte, y con el mismo criterio de prueba que el servidor");
 
 /* ── La cadena: que el ebook se escriba con la pestaña cerrada ──────────────

@@ -3,12 +3,12 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { anthropic } from "@/lib/anthropic";
 import { permitirGeneracion } from "@/lib/ia-digitales";
-import { consumirDelCupo, devolverAlCupo, estadoDelCupo } from "@/lib/cupo-ia";
+import { consumirDelCupo, devolverAlCupo, estadoDelCupo, cuentaDelCupo } from "@/lib/cupo-ia";
+import { cuandoVuelven } from "@/lib/cupo-ia-texto";
 import { esquemaDeLaPagina, INSTRUCCIONES_PAGINA, fusionarPaginaIA } from "@/lib/pagina-ia";
 import { normalizarContenido } from "@/lib/pagina-venta";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
-import type { TierDigital } from "@/lib/planes-digitales";
 import { laDireccionMuestraTuDiseno } from "@/lib/landing-del-producto";
 
 export const runtime = "nodejs";
@@ -61,7 +61,9 @@ export async function POST(req: NextRequest) {
   if (!sub || sub.role !== "DIGITAL") {
     return NextResponse.json({ error: "Tu cuenta no es de Productos Digitales." }, { status: 403 });
   }
-  const tier = (sub.tier ?? "FREE") as TierDigital;
+  /* El plan que VALE ahora: una prueba o un plan pago vencidos ya son Free,
+     aunque el cron todavía no los haya bajado. Ver `cuentaDelCupo`. */
+  const tier = cuentaDelCupo(sub).tier;
   const estado = getSubscriptionStatus(sub);
 
   /* Los topes primero, antes de leer el cuerpo y antes de tocar la base: un
@@ -169,12 +171,12 @@ export async function POST(req: NextRequest) {
    * El único ajuste fue del otro lado: Free pasó de 3 generaciones a 4, para que
    * un embudo completo —que ahora cuesta 2— entre dos veces. Ver `CUPO_EMBUDO`.
    */
-  const bolsa = await consumirDelCupo(user.id, tier);
+  const bolsa = await consumirDelCupo(user.id);
   if (!bolsa) {
-    const cupo = await estadoDelCupo(user.id, tier);
+    const cupo = await estadoDelCupo(user.id);
     return NextResponse.json({
       error: cupo.topeDelMes > 0
-        ? `Usaste todas tus generaciones. El 1° del mes que viene tenés ${cupo.topeDelMes} nuevas.`
+        ? `Usaste todas tus generaciones. ${cupo.renuevaEl ? `${cuandoVuelven(cupo.renuevaEl).replace(/^el /, "El ")}` : "Con el próximo pago"} tenés ${cupo.topeDelMes} nuevas.`
         : `Usaste las ${cupo.topeDeBienvenida} generaciones del plan gratis. En Starter tenés 6 al empezar y 5 por mes.`,
       sinCupo: true,
       cupo,
@@ -264,6 +266,6 @@ export async function POST(req: NextRequest) {
        diga cuál se gastó. Ya no puede ser `null`: desde que se sacó la primera
        gratis, escribir una página siempre sale de alguna. */
     salioDe: bolsa,
-    cupo: await estadoDelCupo(user.id, tier),
+    cupo: await estadoDelCupo(user.id),
   });
 }

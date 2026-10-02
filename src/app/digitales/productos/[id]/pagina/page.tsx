@@ -8,7 +8,6 @@ import Link from "next/link";
 import { LayoutTemplate, ArrowRight } from "lucide-react";
 import BotonVolver from "../../../BotonVolver";
 import { estadoDelCupo } from "@/lib/cupo-ia";
-import type { TierDigital } from "@/lib/planes-digitales";
 import EditorDePagina from "./EditorClient";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +67,7 @@ export default async function EditorPaginaPage({ params }: Props) {
     where: { userId: user.id },
     select: { tier: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true },
   });
-  const cupoIA = await estadoDelCupo(user.id, (sub?.tier ?? "FREE") as TierDigital);
+  const cupoIA = await estadoDelCupo(user.id);
 
   /* Qué está viendo de verdad quien entra a la dirección. NO es `estado.activa`
      a secas: con el interruptor prendido y el plan caído a Free, la dirección

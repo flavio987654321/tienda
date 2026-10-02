@@ -3,13 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { anthropic } from "@/lib/anthropic";
 import { permitirGeneracion } from "@/lib/ia-digitales";
-import { consumirDelCupo, devolverAlCupo, estadoDelCupo } from "@/lib/cupo-ia";
+import { consumirDelCupo, devolverAlCupo, estadoDelCupo, cuentaDelCupo } from "@/lib/cupo-ia";
+import { cuandoVuelven } from "@/lib/cupo-ia-texto";
 import {
   INSTRUCCIONES, esquemaDeUnaFicha, pedidoDeUnaFicha, normalizarUnaFicha,
 } from "@/lib/embudo-ia";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
-import type { TierDigital } from "@/lib/planes-digitales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +68,9 @@ export async function POST(req: NextRequest) {
   if (!sub || sub.role !== "DIGITAL") {
     return NextResponse.json({ error: "Tu cuenta no es de Productos Digitales." }, { status: 403 });
   }
-  const tier = (sub.tier ?? "FREE") as TierDigital;
+  /* El plan que VALE ahora: una prueba o un plan pago vencidos ya son Free,
+     aunque el cron todavía no los haya bajado. Ver `cuentaDelCupo`. */
+  const tier = cuentaDelCupo(sub).tier;
   const estado = getSubscriptionStatus(sub);
 
   /* Los topes ANTES de leer el cuerpo y de tocar la base. Y si Redis no
@@ -126,12 +128,12 @@ export async function POST(req: NextRequest) {
   /* ⚠️ EL CUPO SE GASTA ANTES DE LLAMAR AL MODELO. Después sería tarde: ocho
      pedidos en paralelo pasarían todos el control —porque ninguno gastó
      todavía— y generarían los ocho. Si la llamada falla, se devuelve. */
-  const bolsa = await consumirDelCupo(user.id, tier);
+  const bolsa = await consumirDelCupo(user.id);
   if (!bolsa) {
-    const cupo = await estadoDelCupo(user.id, tier);
+    const cupo = await estadoDelCupo(user.id);
     return NextResponse.json({
       error: cupo.topeDelMes > 0
-        ? `Usaste todas tus generaciones. El ${cupo.proximoMes ? "1° del mes que viene" : "mes que viene"} tenés ${cupo.topeDelMes} nuevas.`
+        ? `Usaste todas tus generaciones. ${cupo.renuevaEl ? `${cuandoVuelven(cupo.renuevaEl).replace(/^el /, "El ")}` : "Con el próximo pago"} tenés ${cupo.topeDelMes} nuevas.`
         : "Usaste todas las generaciones de tu plan.",
       sinCupo: true,
       cupo,
@@ -201,6 +203,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     ficha,
-    cupo: await estadoDelCupo(user.id, tier),
+    cupo: await estadoDelCupo(user.id),
   });
 }

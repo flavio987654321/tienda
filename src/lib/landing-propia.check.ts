@@ -489,8 +489,13 @@ check("PAN-E", panel.includes("if (estado.activa) void pedir({ activa: false });
   && /esos lugares se sacan de la página/.test(panel) && /Te falta cargar/.test(panel) && panel.includes("!enlaces[claveDeLink(t)] && !legalDelLink(t)"),
   "prender pide confirmación con el repaso de lo que falta y no deja prender con links sin guardar; apagar es inmediato; los legales no cuentan como links sin dirección");
 const editorClient = leer("src/app/digitales/productos/[id]/pagina/EditorClient.tsx");
-check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(editorPagina) && /edites acá no se ve/.test(editorPagina)
-  && /landingPrendida=\{leerEstadoDeLanding\(fila\.landingPropia\)\.activa\}/.test(editorPagina)
+/* Desde que la landing depende también del plan, la pantalla pregunta con
+   `laDireccionMuestraTuDiseno` (no con `leerEstadoDeLanding` a secas). Este
+   chequeo seguía buscando el nombre viejo y fallaba sin que nadie lo viera:
+   corre sólo con la base. Puesto al día el 03/10/26. */
+check("PAN-D", /const muestraTuDiseno = laDireccionMuestraTuDiseno\(fila\.landingPropia, sub\);/.test(editorPagina)
+  && /\{muestraTuDiseno \? \(/.test(editorPagina) && /edites acá no se ve/.test(editorPagina)
+  && /landingPrendida=\{muestraTuDiseno\}/.test(editorPagina)
   && /Apagada: tu dirección está mostrando tu propio diseño\./.test(editorClient) && /Así se vería · apagada/.test(editorClient)
   && editorClient.includes("landingPrendida ? `/p/${productoId}?previa=1` : `/p/${productoId}`") && /landingPrendida \? "Ver esta página" : "Abrirla"/.test(editorClient),
   "con la landing prendida, el editor de secciones lo avisa arriba, encima de la previa (sin desteñirla), y 'Abrirla' abre esta página y no la landing");
@@ -499,8 +504,8 @@ check("PAN-D", /leerEstadoDeLanding\(fila\.landingPropia\)\.activa \?/.test(edit
    venga de otro lado. Editar a mano sigue: es gratis y se guarda. */
 const apiPagina = leer("src/app/api/digitales/ia/pagina/route.ts");
 check("PAN-F", /landingPrendida \? \(\s*<button\s+type="button"\s+disabled/.test(editorClient) && /apagá tu propio diseño para escribirla con IA/.test(editorClient)
-  && apiPagina.includes("leerEstadoDeLanding(producto.landingPropia).activa") && /status: 409/.test(apiPagina)
-  && apiPagina.indexOf("leerEstadoDeLanding(producto.landingPropia).activa") < apiPagina.indexOf("consumirDelCupo(user.id, tier)"),
+  && apiPagina.includes("if (laDireccionMuestraTuDiseno(producto.landingPropia, sub))") && /status: 409/.test(apiPagina)
+  && apiPagina.indexOf("laDireccionMuestraTuDiseno(producto.landingPropia, sub)") < apiPagina.indexOf("consumirDelCupo(user.id)"),
   "con la landing prendida, escribir con IA está apagado en el panel y rechazado por la API antes de gastar cupo");
 
 check("BASE-A", /landingPropia String\?/.test(schema) && /model LandingDigital \{/.test(schema)

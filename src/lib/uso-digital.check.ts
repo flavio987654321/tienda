@@ -73,8 +73,8 @@ const pagina = readFileSync("src/app/digitales/mi-cuenta/page.tsx", "utf8").repl
 
 check("TARJ-A", /usoDeLaCuenta\(/.test(pagina) && /uso=\{uso\}/.test(pagina),
   "la página lee el uso en el servidor y se lo pasa a la tarjeta");
-check("TARJ-B", /usoDeLaCuenta\(user\.id, tier, estado === "TRIAL"\)/.test(pagina) && /estadoDelCupo\(userId, tier, "EBOOK", enPrueba\)/.test(pagina),
-  "el cupo de ebooks se lee con `enPrueba`, igual que la ruta que lo gasta");
+check("TARJ-B", /usoDeLaCuenta\(user\.id, tier\)/.test(pagina) && /estadoDelCupo\(userId, "EBOOK"\)/.test(pagina),
+  "el cupo de ebooks se lee con la misma función que la ruta que lo gasta (la prueba la mira adentro)");
 check("TARJ-C", /Tu uso/.test(cliente), "la tarjeta se llama Tu uso");
 check("TARJ-D", /uso\.paginas\.creadas/.test(cliente) && /uso\.paginas\.tope/.test(cliente) && /uso\.paginas\.publicadas/.test(cliente),
   "la barra de páginas muestra creadas, tope y publicadas");

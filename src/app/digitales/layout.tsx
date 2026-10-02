@@ -188,7 +188,7 @@ export default async function DigitalesLayout({ children }: { children: React.Re
         <Recibimiento
           pasos={recibimiento.pasos}
           productoId={recibimiento.productoId}
-          cupoIA={await estadoDelCupo(user.id, tier)}
+          cupoIA={await estadoDelCupo(user.id)}
           /* Sólo para saludar. Ya está en la sesión, así que no cuesta una
              consulta más — y de `user` no puede salir nada más que esto: lo que
              se le pasa a un componente de cliente termina escrito adentro del

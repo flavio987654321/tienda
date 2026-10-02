@@ -203,7 +203,7 @@ check("RUT-C",
    embudo sigue escribiendo la página, porque ése era el único motivo. */
 check("RUT-D",
   !/esLaPrimera/.test(ruta) &&
-  /const bolsa = await consumirDelCupo\(user\.id, tier\);/.test(ruta),
+  /const bolsa = await consumirDelCupo\(user\.id\);/.test(ruta),
   "escribir una página siempre gasta cupo, sin excepciones");
 
 /* Y cuando sí gasta, gasta antes de llamar al modelo y devuelve si falla. */

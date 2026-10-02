@@ -29,7 +29,7 @@ import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
   permitirGeneracion, RAFAGA_IA, GLOBAL_DIARIO, GLOBAL_PRUEBA_DIARIO,
 } from "./ia-digitales";
-import { CUPO_EMBUDO, CUPO_EBOOK, claveDelMes, mesSiguiente, topeDelCupo } from "./cupo-ia";
+import { CUPO_EMBUDO, CUPO_EBOOK, cuentaDelCupo, DIAS_DEL_CICLO, topeDelCupo } from "./cupo-ia";
 import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "./planLimits";
 
 let fallos = 0;
@@ -349,11 +349,57 @@ check("CUP-D",
   CUPO_EMBUDO.PRO.bienvenida > CUPO_EMBUDO.PRO.mes,
   "la bolsa de bienvenida es más grande que la del mes");
 
-/* La clave del mes es la de Argentina y tiene la forma que el `where` espera. */
-check("CUP-E", /^\d{4}-\d{2}$/.test(claveDelMes()), "la clave del mes tiene la forma AAAA-MM");
-check("CUP-F",
-  mesSiguiente("2026-09") === "2026-10" && mesSiguiente("2026-12") === "2027-01",
-  "el mes que viene se calcula bien, y en diciembre cambia de año");
+/* ══════════════════════════════════════════════════════════════════════════
+   EL CICLO ES DESDE QUE PAGÓ (03/10/26). Ver `cuentaDelCupo`.
+   ══════════════════════════════════════════════════════════════════════════ */
+{
+  const D = 86_400_000;
+  const dia = (s: string) => new Date(`${s}T15:00:00Z`);
+  const base = { role: "DIGITAL", gracePeriodEndsAt: null as Date | null };
+  const pago = (desde: string, dias = 30, extra: object = {}) => ({
+    ...base, tier: "PRO", status: "ACTIVE", trialEndsAt: dia(desde),
+    currentPeriodStart: dia(desde), currentPeriodEnd: new Date(dia(desde).getTime() + dias * D), ...extra,
+  });
+  const prueba = (hasta: string, tier = "PRO") => ({ ...base, tier, status: "TRIAL", trialEndsAt: dia(hasta), currentPeriodStart: null, currentPeriodEnd: null });
+
+  /* La prueba: una sola clave, cruce el 1° o no. Antes, empezar el 28 daba 32 en Pro. */
+  const p1 = cuentaDelCupo(prueba("2026-10-05"), dia("2026-09-29"));
+  const p2 = cuentaDelCupo(prueba("2026-10-05"), dia("2026-10-02"));
+  check("CIC-A", p1.enPrueba && p1.ciclo === p2.ciclo && p1.renuevaEl === null && p1.tier === "PRO",
+    "en la prueba la bolsa no se rellena nunca, aunque la prueba cruce el 1° del mes");
+
+  /* ⚠️ La prueba vencida vale Free al instante, sin esperar al cron. Antes
+     recibía la bolsa entera de ebooks del plan pago sin haber pagado nunca. */
+  const vencida = cuentaDelCupo(prueba("2026-10-05", "STARTER"), dia("2026-10-06"));
+  check("CIC-B", vencida.tier === "FREE" && !vencida.enPrueba && topeDelCupo(vencida.tier, "EBOOK", vencida.enPrueba).mes === 0
+    && topeDelCupo(vencida.tier, "EBOOK", vencida.enPrueba).bienvenida === 0,
+    "una prueba vencida y sin pagar es Free en el instante: cero ebooks, aunque el cron todavía no la bajó");
+
+  /* Paga el 25: la bolsa vuelve el 24 del mes siguiente (30 días), no el 1°. */
+  const c25 = cuentaDelCupo(pago("2026-10-25"), dia("2026-10-28"));
+  const c01 = cuentaDelCupo(pago("2026-10-25"), dia("2026-11-01"));
+  check("CIC-C", c25.ciclo === c01.ciclo && c25.renuevaEl === new Date(dia("2026-10-25").getTime() + DIAS_DEL_CICLO * D).toISOString(),
+    "quien paga el 25 no recibe otra bolsa el 1°: la suya vuelve a los 30 días del pago");
+
+  /* El anual: doce ciclos dentro del mismo pago, uno distinto cada 30 días. */
+  const a1 = cuentaDelCupo(pago("2026-01-10", 365), dia("2026-01-20"));
+  const a2 = cuentaDelCupo(pago("2026-01-10", 365), dia("2026-02-15"));
+  const aFin = cuentaDelCupo(pago("2026-01-10", 365), dia("2026-12-30"));
+  check("CIC-D", a1.ciclo !== a2.ciclo && aFin.ciclo.endsWith(":11") && aFin.renuevaEl === pago("2026-01-10", 365).currentPeriodEnd.toISOString(),
+    "el plan anual se rellena cada 30 días, y el último ciclo termina con el pago");
+
+  /* En la gracia (venció y todavía no pagó) no se abre un ciclo nuevo. */
+  const enGracia = cuentaDelCupo(pago("2026-09-01"), dia("2026-10-03"));
+  const antes = cuentaDelCupo(pago("2026-09-01"), dia("2026-09-20"));
+  check("CIC-E", enGracia.tier === "PRO" && enGracia.ciclo === antes.ciclo,
+    "en el período de gracia la bolsa no se rellena: el ciclo nuevo lo abre el pago");
+
+  /* Free, sin suscripción o cancelada: Free, sin ciclo. */
+  check("CIC-F", cuentaDelCupo(null).tier === "FREE"
+    && cuentaDelCupo({ ...base, tier: "FREE", status: "ACTIVE", trialEndsAt: dia("2026-01-01"), currentPeriodEnd: null }).tier === "FREE"
+    && cuentaDelCupo(pago("2026-10-01", 30, { status: "CANCELLED" }), dia("2026-10-05")).tier === "FREE",
+    "sin plan pago vigente, el cupo es el de Free");
+}
 
 /* ── Cómo se gasta ──────────────────────────────────────────────────────── */
 
@@ -432,7 +478,7 @@ check("CUP-N",
    3 en Free en vez de 0, o sea la IA cara abierta justo en el plan que no la
    paga—. Si vuelve a aparecer `CUPO_EMBUDO[tier]` suelto, es esa regresión. */
 check("CUP-O",
-  !/CUPO_EMBUDO\[tier\]/.test(cupo) && /topeDelCupo\(tier, concepto, enPrueba\)/.test(cupo),
+  !/CUPO_EMBUDO\[tier\]/.test(cupo) && (cupo.match(/topeDelCupo\(cuenta\.tier, concepto, cuenta\.enPrueba\)/g) ?? []).length === 2,
   "el tope se elige mirando el plan, el concepto y si la cuenta ya pagó");
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -489,11 +535,13 @@ check("CUP-R3",
    dice que no queda — que es peor que no darlo. */
 {
   const ruta = readFileSync("src/app/api/digitales/ia/ebook/route.ts", "utf8");
+  /* Desde el 03/10/26 la prueba no la decide la ruta: la mira `cuentaDelCupo`
+     adentro de `consumirDelCupo` y `estadoDelCupo`, de la suscripción. */
   check("CUP-S",
-    /const enPrueba = estado === "TRIAL";/.test(ruta) &&
-    /consumirDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(ruta) &&
-    /estadoDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(ruta),
-    "la ruta que gasta el cupo del ebook mira si la cuenta está en prueba");
+    /consumirDelCupo\(user\.id, "EBOOK"\)/.test(ruta) &&
+    /estadoDelCupo\(user\.id, "EBOOK"\)/.test(ruta) &&
+    /const cuenta = await cuentaDelCupoDe\(userId\);\s*const tope = topeDelCupo\(cuenta\.tier, concepto, cuenta\.enPrueba\);/.test(cupo),
+    "el cupo del ebook mira si la cuenta está en prueba, y lo mira de la suscripción");
 }
 
 /* Un plan sin nada de esto se contesta sin tocar la base. Sin este corte, cada

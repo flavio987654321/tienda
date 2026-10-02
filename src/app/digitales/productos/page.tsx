@@ -5,7 +5,6 @@ import { TOPES_DIGITALES } from "@/lib/planLimits";
 import BotonVolver from "../BotonVolver";
 import { estadoDelCupo } from "@/lib/cupo-ia";
 import { estadoDelBorrador } from "@/lib/ebook-borrador";
-import { getSubscriptionStatus } from "@/lib/subscription";
 import { laDireccionMuestraTuDiseno } from "@/lib/landing-del-producto";
 import { cuantosDe } from "@/lib/correos-compradores-db";
 import { primeraImagen } from "@/lib/productos-digitales";
@@ -97,16 +96,14 @@ export default async function ProductosPage({
   /* Cuánto le queda de IA, para que el botón lo diga sin tener que preguntar
      antes de abrirlo. Se lee, no se crea: una cuenta que nunca generó nada no
      necesita una fila para saber que tiene todo. */
-  const cupoIA = await estadoDelCupo(user.id, tier);
+  const cupoIA = await estadoDelCupo(user.id);
   /* Y el de ebooks, que es una bolsa APARTE: gastar todas las páginas de venta
      no puede dejar a nadie sin poder escribir su ebook. Ver `cupo-ia`.
 
-     ⚠️ Con `enPrueba`, igual que la ruta que lo gasta. Sin esto la pantalla
-     dibujaría el cupo del plan pagado a alguien que todavía está probando, y al
-     apretar el botón el servidor le diría que no le queda: el número de la
-     pantalla tiene que ser el mismo que aplica el servidor. */
-  const enPrueba = !!sub && getSubscriptionStatus(sub) === "TRIAL";
-  const cupoEbook = await estadoDelCupo(user.id, tier, "EBOOK", enPrueba);
+     La prueba y el plan que vale los mira `estadoDelCupo` adentro, con la
+     MISMA cuenta que la ruta que lo gasta: la pantalla no puede decir un número
+     y el servidor aplicar otro. */
+  const cupoEbook = await estadoDelCupo(user.id, "EBOOK");
 
   const filas = store
     ? await prisma.product.findMany({

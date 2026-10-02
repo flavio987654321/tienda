@@ -6,6 +6,7 @@ import {
   ListChecks, Trash2, Plus, ArrowUp, ArrowDown, Lock, Pencil,
 } from "lucide-react";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
+import { cuandoVuelven } from "@/lib/cupo-ia-texto";
 /* `import type` se borra al compilar, así que esto NO arrastra al navegador
    nada de lo que ese archivo importa —prisma incluido—. Es sólo la forma. */
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
@@ -1612,7 +1613,8 @@ function Temario({
  * Las dos bolsas del cupo, a la vista.
  *
  * Se muestran separadas porque son distintas y la diferencia importa: las del
- * mes vuelven el 1°, las de bienvenida se dan una vez y no vuelven nunca.
+ * mes vuelven a los 30 días del pago, las de bienvenida se dan una vez y no
+ * vuelven nunca.
  * Mostrando sólo el total, alguien gasta su reserva permanente creyendo que se
  * le renueva.
  */
@@ -1632,14 +1634,14 @@ function Cupo({ cupo }: { cupo: EstadoDelCupo }) {
 
       <p className="mt-0.5 text-[11.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
         <strong>{cupo.quedanDelMes} de este mes</strong>
-        {cupo.proximoMes && ` (vuelven a ser ${cupo.topeDelMes} el 1°)`}
+        {cupo.topeDelMes > 0 && ` (vuelven a ser ${cupo.topeDelMes} ${cupo.renuevaEl ? cuandoVuelven(cupo.renuevaEl) : "con el próximo pago"})`}
         {" · "}
         <strong>{cupo.quedanDeBienvenida} de bienvenida</strong> (no se renuevan)
       </p>
 
       {vacio && cupo.topeDelMes > 0 && (
         <p className="mt-1 text-[11.5px] text-gray-600 panel-oscuro:text-gray-400">
-          El 1° del mes que viene tenés {cupo.topeDelMes} nuevos.
+          {cupo.renuevaEl ? `${cuandoVuelven(cupo.renuevaEl).replace(/^el /, "El ")} tenés` : "Con el próximo pago tenés"} {cupo.topeDelMes} nuevos.
         </p>
       )}
     </div>

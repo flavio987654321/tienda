@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Loader2, Sparkles, X, AlertTriangle, RotateCcw, Check } from "lucide-react";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
+import { cuandoVuelven } from "@/lib/cupo-ia-texto";
 import {
   LARGO_DEL_NICHO, MINIMO_DEL_NICHO, LARGO_TITULO_IA, LARGO_BAJADA_IA, LARGO_TITULO_PROPIO,
   type EmbudoSugerido,
@@ -26,8 +27,8 @@ import {
  *
  * ── Por qué se muestran las dos bolsas del cupo ────────────────────────────
  *
- * Porque son distintas y la diferencia importa: las del mes vuelven el 1°, las
- * de bienvenida se dan una vez y no vuelven nunca. Mostrando sólo el total,
+ * Porque son distintas y la diferencia importa: las del mes vuelven a los 30
+ * días del pago, las de bienvenida se dan una vez y no vuelven nunca. Mostrando sólo el total,
  * alguien gasta su reserva permanente creyendo que se le renueva.
  *
  * Y por eso, cuando una generación sale de la bolsa de bienvenida, **se avisa**.
@@ -370,7 +371,9 @@ export default function EmbudoIA({
                   <span>
                     Se te acabaron las de este mes, así que ésta salió de las <strong>de bienvenida</strong>,
                     que no se renuevan.
-                    {cupo.proximoMes && ` Si podés esperar, el 1° del mes que viene tenés ${cupo.topeDelMes} nuevas.`}
+                    {cupo.topeDelMes > 0 && (cupo.renuevaEl
+                      ? ` Si podés esperar, ${cuandoVuelven(cupo.renuevaEl)} tenés ${cupo.topeDelMes} nuevas.`
+                      : ` Con el próximo pago tenés ${cupo.topeDelMes} nuevas.`)}
                   </span>
                 </p>
               )}
@@ -519,7 +522,7 @@ function Cupo({ cupo }: { cupo: EstadoDelCupo }) {
           ? `En el plan gratis son ${cupo.topeDeBienvenida} en total y no se renuevan.`
           : <>
               <strong>{cupo.quedanDelMes} de este mes</strong>
-              {cupo.proximoMes && ` (vuelven a ser ${cupo.topeDelMes} el 1°)`}
+              {cupo.topeDelMes > 0 && ` (vuelven a ser ${cupo.topeDelMes} ${cupo.renuevaEl ? cuandoVuelven(cupo.renuevaEl) : "con el próximo pago"})`}
               {" · "}
               <strong>{cupo.quedanDeBienvenida} de bienvenida</strong> (no se renuevan)
             </>}
@@ -527,7 +530,7 @@ function Cupo({ cupo }: { cupo: EstadoDelCupo }) {
 
       {vacio && cupo.topeDelMes > 0 && (
         <p className="mt-1 text-[11.5px] text-gray-600 panel-oscuro:text-gray-400">
-          El 1° del mes que viene tenés {cupo.topeDelMes} nuevas.
+          {cupo.renuevaEl ? `${cuandoVuelven(cupo.renuevaEl).replace(/^el /, "El ")} tenés` : "Con el próximo pago tenés"} {cupo.topeDelMes} nuevas.
         </p>
       )}
     </div>
