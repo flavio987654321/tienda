@@ -172,3 +172,32 @@ export function rutaDeRef(ref: unknown): string | null {
 export function nombreDeArchivo(valor: unknown): string | null {
   return limpiarTexto(valor, LARGO_NOMBRE_ARCHIVO);
 }
+
+/**
+ * Con qué nombre se GUARDA el archivo en el aparato de quien compró.
+ *
+ * El nombre del PRODUCTO, no el del archivo que subió quien vende: ése suele
+ * ser "guia final v3 OK.pdf" o "IMG_2034.pdf", y sin esto se guardaba con el
+ * nombre del depósito (`1759…-a3f9….pdf`), que no hay forma de reconocer en
+ * la carpeta de Descargas. Decidido con Flavio el 03/10/26.
+ *
+ * Se sacan los caracteres que rompen el guardado en algún sistema (/ \ : * ? "
+ * < > | y los de control) y los emojis, que algunos celulares no saben guardar
+ * en un nombre. Las tildes, la ñ y los espacios quedan.
+ *
+ * La extensión sale de la ruta real del depósito —hoy siempre .pdf— y nunca
+ * del nombre: es lo que le dice al celular con qué abrirlo.
+ */
+export function nombreParaDescargar(nombreProducto: string, ruta: string): string {
+  const ext = /\.([a-z0-9]{2,5})$/i.exec(ruta)?.[1]?.toLowerCase() ?? "pdf";
+  const base = nombreProducto
+    .normalize("NFC")
+    .replace(/[\u0000-\u001f\u007f<>:"/\\|?*]/g, " ")
+    .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[. ]+$/, "")
+    .slice(0, 80)
+    .trim();
+  return `${base || "archivo"}.${ext}`;
+}

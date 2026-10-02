@@ -78,10 +78,16 @@ export const MINUTOS_DEL_ENLACE = 5;
  * nuestra función. Un PDF de 50 MB atravesando `/api` choca contra el techo de
  * 4,5 MB de la plataforma, y aunque no chocara nos haría pagar el tránsito dos
  * veces. El servidor decide QUIÉN puede bajar; el archivo lo entrega Supabase.
+ *
+ * `descargarComo` hace que se BAJE como archivo con ese nombre (el `download`
+ * de Supabase, que pone `Content-Disposition: attachment`). Sin él, el PDF se
+ * abría en la pestaña y se guardaba con el nombre del depósito. La vista previa
+ * de quien vende no lo pasa: ella lo quiere mirar, no guardar.
  */
 export async function enlaceDeDescarga(
   { supabaseUrl, serviceRoleKey }: ConfigDeposito,
   ruta: string,
+  descargarComo?: string,
 ): Promise<string | null> {
   const res = await fetch(`${supabaseUrl}/storage/v1/object/sign/${BUCKET_DIGITALES}/${ruta}`, {
     method: "POST",
@@ -96,7 +102,9 @@ export async function enlaceDeDescarga(
   if (!res?.ok) return null;
   const datos = (await res.json().catch(() => null)) as { signedURL?: unknown } | null;
   if (typeof datos?.signedURL !== "string") return null;
-  return `${supabaseUrl}/storage/v1${datos.signedURL}`;
+  const enlace = `${supabaseUrl}/storage/v1${datos.signedURL}`;
+  if (!descargarComo) return enlace;
+  return `${enlace}${enlace.includes("?") ? "&" : "?"}download=${encodeURIComponent(descargarComo)}`;
 }
 
 /**

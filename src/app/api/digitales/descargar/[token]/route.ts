@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
-import { rutaDeRef } from "@/lib/subida-digital";
+import { rutaDeRef, nombreParaDescargar } from "@/lib/subida-digital";
 import { configDeposito, enlaceDeDescarga } from "@/lib/deposito-digital";
 
 export const runtime = "nodejs";
@@ -159,7 +159,7 @@ export async function GET(
     return falla(_req, "Este enlace ya no tiene descargas disponibles.", 429);
   }
 
-  const enlace = await enlaceDeDescarga(config, ruta);
+  const enlace = await enlaceDeDescarga(config, ruta, nombreParaDescargar(permiso.orderItem.product.name, ruta));
 
   if (!enlace) {
     /* ⚠️ Se devuelve la descarga que acabábamos de contar. Sin esto, un problema

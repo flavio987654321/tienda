@@ -497,6 +497,9 @@ check("CON-J",
   check("AUD-G", noEncontrado.includes("Este producto no está disponible") && errorP.includes("unstable_retry()")
     && errorP.includes("Sentry.captureException(error)"),
     "un producto que no está se dice en castellano, y un error se avisa y deja reintentar");
+  check("AUD-I", descarga.includes("nombreParaDescargar(permiso.orderItem.product.name, ruta)")
+    && leer("src/lib/deposito-digital.ts").includes("download=${encodeURIComponent(descargarComo)}"),
+    "el archivo se guarda con el nombre del producto, no con el del depósito");
   check("AUD-H", ["src/app/digitales/error.tsx", "src/app/dashboard/error.tsx", "src/app/mi-cuenta/error.tsx", "src/app/global-error.tsx"]
     .every((p) => { const t = leer(p); return t.includes("unstable_retry()") && !t.includes("onClick={reset}"); }),
     "\"Reintentar\" le vuelve a pedir la pantalla al servidor (reset sólo redibujaba lo que falló)");
