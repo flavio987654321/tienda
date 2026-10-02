@@ -28,6 +28,8 @@ function LoginForm() {
      que hay que decirlo y ofrecer el reenvío — callarlo la deja esperando un mail
      que nunca va a llegar. */
   const mailFallo = searchParams.get("mail") === "0";
+  /* La sesión del admin se cerró sola (ver `sesion-admin.ts`). */
+  const vencida = searchParams.get("vencida");
   const redirectTo = searchParams.get("redirect");
   const [inPwa, setInPwa] = useState(false);
 
@@ -187,6 +189,14 @@ function LoginForm() {
               <AppLogo size={72} />
               <span className="text-xl font-bold text-gray-950">TiendaApps</span>
             </Link>
+          )}
+
+          {vencida && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-2xl text-sm mb-6">
+              {vencida === "espera-codigo"
+                ? "Pasaron más de 10 minutos sin poner el código. Por seguridad cerramos la sesión: volvé a entrar."
+                : "Por seguridad cerramos tu sesión del admin. Volvé a entrar con tu contraseña y el código."}
+            </div>
           )}
 
           {/* Vuelve del mail: el correo quedó confirmado y ya puede entrar. */}

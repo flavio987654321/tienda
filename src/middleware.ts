@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { needsMfaChallenge } from "@/lib/mfa";
 import { esElSitioDeLaPlataforma } from "@/lib/hosts-plataforma";
+import {
+  COOKIE_ACTIVIDAD, TOPE_MS, cuentaComoActividad, estadoDeLaSesion, firmarActividad, leerActividad, vencida,
+} from "@/lib/sesion-admin";
 
 
 const PUBLIC_API = /^\/api\/public\//;
@@ -54,12 +57,19 @@ type SupabaseMiddleware = ReturnType<typeof createServerClient>;
 
 async function runSupabaseAuth(
   request: NextRequest
-): Promise<{ response: NextResponse; supabase: SupabaseMiddleware | null }> {
+): Promise<{
+  response: NextResponse;
+  supabase: SupabaseMiddleware | null;
+  userId: string | null;
+  /** Las cookies que Supabase escribió hasta ahora, incluidas las de un signOut posterior. */
+  cookiesDeSupabase: () => ReturnType<NextResponse["cookies"]["getAll"]>;
+}> {
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const cookiesDeSupabase = () => response.cookies.getAll();
 
-  if (!url || !key) return { response, supabase: null };
+  if (!url || !key) return { response, supabase: null, userId: null, cookiesDeSupabase };
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -74,8 +84,85 @@ async function runSupabaseAuth(
     },
   });
 
-  await supabase.auth.getUser();
-  return { response, supabase };
+  const { data } = await supabase.auth.getUser();
+  return { response, supabase, userId: data?.user?.id ?? null, cookiesDeSupabase };
+}
+
+/** Donde vive la sesión del admin: el panel, sus endpoints y la pantalla del código. */
+const RUTAS_DEL_ADMIN = /^\/(admin|api\/admin|verificar-2fa|api\/verificar-2fa)(\/|$)/;
+
+/**
+ * Corta la sesión del admin si se venció, o anota que se movió. Devuelve la
+ * respuesta de corte, o null para seguir de largo.
+ *
+ * El corte es de verdad: `signOut` revoca la sesión en Supabase, no solo borra
+ * las cookies de este navegador. Falla abierto como el resto del 2FA: un error
+ * acá no puede dejar al admin afuera de su propio panel.
+ */
+async function vigilarSesionAdmin(
+  request: NextRequest,
+  res: NextResponse,
+  supabase: SupabaseMiddleware,
+  userId: string,
+  cookiesDeSupabase: () => ReturnType<NextResponse["cookies"]["getAll"]>,
+): Promise<NextResponse | null> {
+  try {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const estado = estadoDeLaSesion(aal);
+    if (!estado.conCodigo && !estado.faltaCodigo) return null;
+
+    const ahora = Date.now();
+    const secreto = process.env.NEXTAUTH_SECRET;
+    const { pathname } = request.nextUrl;
+
+    // Sin secreto no se puede firmar la actividad: se aplica el tope y la
+    // espera del código, pero no la inactividad (si no, cortaría a la hora siempre).
+    let ultima: number | null = ahora;
+    if (estado.conCodigo && estado.codigoDesde !== null && secreto) {
+      ultima = await leerActividad(
+        secreto, userId, estado.codigoDesde, request.cookies.get(COOKIE_ACTIVIDAD)?.value, ahora,
+      );
+    }
+
+    const motivo = vencida(estado, ultima, ahora);
+    if (motivo) {
+      console.info("[admin] sesión vencida", { userId, motivo });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      const corte = pathname.startsWith("/api/")
+        ? NextResponse.json(
+            { error: "Tu sesión del admin venció. Volvé a entrar.", sesionVencida: true },
+            { status: 401 },
+          )
+        : NextResponse.redirect(new URL(`/login?vencida=${motivo}`, request.url));
+      for (const c of cookiesDeSupabase()) corte.cookies.set(c);
+      corte.cookies.delete(COOKIE_ACTIVIDAD);
+      return corte;
+    }
+
+    const prefetch =
+      request.headers.has("next-router-prefetch") ||
+      request.headers.get("purpose") === "prefetch" ||
+      request.headers.get("sec-purpose")?.includes("prefetch") === true;
+    const seMovio = cuentaComoActividad({ pathname, method: request.method, prefetch });
+    // Se reescribe como mucho cada medio minuto: no hace falta más precisión
+    // para un corte de una hora, y así no va un Set-Cookie en cada pedido.
+    if (
+      seMovio && estado.conCodigo && estado.codigoDesde !== null && secreto &&
+      (ultima === null || ahora - ultima > 30_000)
+    ) {
+      res.cookies.set(COOKIE_ACTIVIDAD, await firmarActividad(secreto, userId, estado.codigoDesde, ahora), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: TOPE_MS / 1000,
+      });
+    }
+    return null;
+  } catch (e) {
+    console.error("[admin] no se pudo revisar el vencimiento de la sesión; se deja pasar:", e);
+    return null;
+  }
 }
 
 /**
@@ -229,7 +316,14 @@ export async function middleware(request: NextRequest) {
   const corsRes = handleCors(request);
   if (corsRes) return corsRes;
 
-  const { response: res, supabase } = await runSupabaseAuth(request);
+  const { response: res, supabase, userId, cookiesDeSupabase } = await runSupabaseAuth(request);
+
+  // La sesión del admin vence por su cuenta (ver `sesion-admin.ts`): una hora
+  // sin moverse, doce horas de tope, diez minutos en la pantalla del código.
+  if (supabase && userId && RUTAS_DEL_ADMIN.test(pathname)) {
+    const cortada = await vigilarSesionAdmin(request, res, supabase, userId, cookiesDeSupabase);
+    if (cortada) return cortada;
+  }
 
   // Segundo factor para los ENDPOINTS del admin. El gate de las páginas vive en el
   // layout de /admin, pero los /api/admin no pasan por ese layout: sin esto, una

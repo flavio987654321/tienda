@@ -155,6 +155,13 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
     async function fetchCounts() {
       try {
         const d = await (await fetch("/api/admin/badges")).json();
+        // La sesión del admin venció (una hora quieto o doce de tope): el
+        // contador lo nota en menos de un minuto y lleva al login, en vez de
+        // dejar el panel a la vista hasta el próximo click.
+        if (d?.sesionVencida) {
+          window.location.assign("/login?vencida=1");
+          return;
+        }
         setBadges({
           pendingVerif: d.pendingVerif ?? 0,
           pendingReports: d.pendingReports ?? 0,

@@ -37,6 +37,12 @@ export default function Verificar2faClient() {
       });
       const data = await res.json().catch(() => ({}));
 
+      // Pasaron los diez minutos de espera: la sesión ya se cerró en el servidor.
+      if (data.sesionVencida) {
+        window.location.assign("/login?vencida=espera-codigo");
+        return;
+      }
+
       if (!res.ok) {
         setError(data.error ?? "No se pudo verificar. Intentá de nuevo.");
         if (data.bloqueado) setLocked(true);
