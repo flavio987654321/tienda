@@ -2443,6 +2443,14 @@ export default function ConfiguracionPage() {
   const [isMobile, setIsMobile] = useState(false);
   /** Cómo se mira la previa: la tienda de escritorio o la del celular. */
   const [ancho, setAncho] = useState<Ancho>("pc");
+  /* Al volver a la galería, la vista vuelve a computadora. El modo celular es
+     para acomodar textos del diseño que se está editando; arrastrarlo a la
+     galería mostraba el próximo diseño dentro de un teléfono sin que nadie lo
+     pidiera, y parecía que algo se había roto. En la previa se puede volver a
+     elegir celular con el mismo botón. Va acá y no en cada botón de "volver":
+     son tres caminos (cambiar diseño, salir sin guardar, borrar) y así
+     ninguno se olvida. */
+  useEffect(() => { if (mode === "gallery") setAncho("pc"); }, [mode]);
   /** Los textos que muestra el teléfono, para la lista del panel en vista celular. */
   const [indiceCelular, setIndiceCelular] = useState<ItemIndice[]>([]);
   /** Por campo: si alinearlo en el celular lo mueve de verdad. Lo mide el teléfono. */
@@ -3216,7 +3224,8 @@ export default function ConfiguracionPage() {
             <IndiceCelular items={indiceCelular} overrides={config.textOverrides}
               bloquesOcultos={config.hiddenSectionsCelular?.length ?? 0}
               onElegir={(field, label) => setActiveField(field, label)}
-              onDeshacer={deshacerCelular} />
+              onDeshacer={deshacerCelular}
+              onSalir={() => setAncho("pc")} />
           )}
         </EditContext.Provider>
 

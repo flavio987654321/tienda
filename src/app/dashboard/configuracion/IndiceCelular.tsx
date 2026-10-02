@@ -45,7 +45,7 @@ const TIPOS: { patron: RegExp; tipo: Tipo }[] = [
 const TIPO_TEXTO: Tipo = { nombre: "Texto", letra: "¶", color: "#0f766e", fondo: "#ccfbf1" };
 const tipoDe = (label: string) => TIPOS.find(t => t.patron.test(label))?.tipo ?? TIPO_TEXTO;
 
-export default function IndiceCelular({ items, overrides, bloquesOcultos, onElegir, onDeshacer }: {
+export default function IndiceCelular({ items, overrides, bloquesOcultos, onElegir, onDeshacer, onSalir }: {
   items: ItemIndice[];
   overrides: Record<string, TextOverride>;
   /** Cuántos bloques están ocultos sólo en el celular. */
@@ -53,6 +53,9 @@ export default function IndiceCelular({ items, overrides, bloquesOcultos, onEleg
   onElegir: (field: string, label: string) => void;
   /** Vuelve todo lo del celular (textos y bloques) a como se ve en computadora. */
   onDeshacer: () => void;
+  /** Vuelve a la vista de computadora. Sin esto, la única salida era el
+      iconito de pantalla de la barra de arriba, y no se encontraba. */
+  onSalir: () => void;
 }) {
   /* "Deshacer todo" pide confirmación en el mismo lugar: es un clic que borra
      el trabajo de un rato, y un botón suelto se aprieta sin querer. */
@@ -106,12 +109,18 @@ export default function IndiceCelular({ items, overrides, bloquesOcultos, onEleg
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.2)",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📱</span>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 800, letterSpacing: -0.2 }}>Editando el celular</p>
             <p style={{ margin: "2px 0 0", fontSize: 11, opacity: 0.9, lineHeight: 1.4 }}>
               Elegí un texto o tocalo en el teléfono
             </p>
           </div>
+          <button type="button" onClick={onSalir} aria-label="Volver a la vista de computadora" title="Volver a la vista de computadora"
+            style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, border: "none", cursor: "pointer",
+              background: "rgba(255,255,255,0.18)", color: "white", fontSize: 16, lineHeight: 1,
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+            ✕
+          </button>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
           <Chapa>{items.length} textos</Chapa>
