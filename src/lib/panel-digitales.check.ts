@@ -1740,6 +1740,21 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     /<main[^>]*overflow-y-auto/.test(armazon));
 }
 
+console.log("\n19) Cargando y sin conexión");
+{
+  /* Cada sección del menú tiene su "cargando": sin él, tocarla no mostraba
+     nada hasta que la pantalla nueva estaba entera, y parecía colgado.
+     Auditoría del 03/10/26. */
+  const secciones = ["", "productos", "productos/[id]", "ventas", "clientes", "carritos", "estadisticas", "marketing", "configuracion", "mi-cuenta"];
+  const faltan = secciones.filter((x) => !existsSync(`src/app/digitales/${x ? x + "/" : ""}loading.tsx`));
+  chequear("cada sección del panel muestra algo apenas se toca", faltan.length === 0, faltan);
+  const esqueleto = readFileSync("src/components/digitales/EsqueletoDelPanel.tsx", "utf8");
+  chequear("el esqueleto no titila para quien pidió menos movimiento, y no carga JavaScript",
+    esqueleto.includes("motion-safe:animate-pulse") && !esqueleto.includes('"use client"'));
+  chequear("con la señal cortada, el panel lo dice a la vista",
+    readFileSync("src/app/digitales/layout.tsx", "utf8").includes("<AvisoSinConexion />"));
+}
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

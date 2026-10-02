@@ -21,6 +21,7 @@ import { pausadosPorCierreDe } from "@/lib/cierre-digital";
 import { puedeVer } from "@/lib/estadisticas-digitales";
 /* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
 import SondaDePantalla from "./SondaDePantalla";
+import AvisoSinConexion from "@/components/digitales/AvisoSinConexion";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
@@ -267,6 +268,8 @@ export default async function DigitalesLayout({ children }: { children: React.Re
             panel para que la agarre el tema oscuro. No se dibuja con la
             cuenta cerrada: ahí arriba se corta antes de llegar acá. */}
         <Sasha />
+        {/* Con la señal cortada, se dice arriba y a la vista. Ver el componente. */}
+        <AvisoSinConexion />
       </ProveedorDeSalida>
     </div>
   );
