@@ -49,8 +49,10 @@ export default function AvisoSinConexion() {
       aria-live="polite"
       /* `inset-x-0 mx-auto w-fit` y no `left-1/2 -translate-x-1/2`: con eso el
          ancho disponible era la MITAD de la pantalla y en un celular el texto
-         quedaba en tres renglones. */
-      className={`fixed inset-x-0 top-[4.25rem] z-[70] mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl px-4 py-2 text-[13px] font-semibold shadow-lg lg:top-3 ${
+         quedaba en tres renglones. En computadora va DEBAJO de la barra de
+         atajos (\`lg:top-16\`): arriba de todo, a 1024 px, tapaba el botón de
+         "+ Nuevo producto". */
+      className={`fixed inset-x-0 top-[4.25rem] z-[70] mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl px-4 py-2 text-[13px] font-semibold shadow-lg lg:top-16 ${
         enLinea ? "bg-emerald-600 text-white" : "bg-gray-900 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900"
       }`}
     >
