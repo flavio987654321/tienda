@@ -121,8 +121,10 @@ export function CartelAviso({
  * El aviso del admin arriba del inicio de un panel. Va en los tres: tiendas,
  * afiliados y digitales. Sin aviso que mostrar no dibuja nada.
  *
- * Lo pide al servidor en vez de recibirlo de la página: así entra igual en un
- * panel armado en el servidor y en uno armado en el navegador, con una línea.
+ * Un panel armado en el servidor se lo pasa ya resuelto en `iniciales`
+ * (`avisosParaElPanel`), y el cartel sale en la misma carga que el panel. Sin
+ * eso salía un segundo después, empujando todo para abajo. Un panel armado en
+ * el navegador no le pasa nada y el cartel lo pide solo, como antes.
  *
  * ── En vivo, sin recargar ──────────────────────────────────────────────────
  *
@@ -135,26 +137,48 @@ export function CartelAviso({
  *     ya hace la campanita, por el mismo motivo. También cubre el aviso
  *     programado, que se prende solo a su hora sin que nadie anuncie nada.
  */
-export default function AvisoDelPanel({ className }: { className?: string } = {}) {
-  const [avisos, setAvisos] = useState<AvisoEnPantalla[]>([]);
+/* Lo que la persona cerró y votó en esta pestaña, FUERA del componente: sobrevive
+   a que el panel se desarme y se vuelva a armar. Hace falta por `iniciales`: al
+   volver con "atrás", Next reusa la página que ya tenía, con los avisos como
+   estaban al llegar, y sin esto reaparecía el aviso recién cerrado (o la manito
+   sin el voto). Sólo se escribe al tocar algo, así que en el servidor —donde
+   este archivo lo comparten todas las cuentas— queda siempre vacío. */
+const CERRADOS_EN_LA_PESTANA = new Set<string>();
+const VOTOS_EN_LA_PESTANA = new Map<string, number>();
+
+function conLoDeLaPestana(lista: AvisoEnPantalla[]): AvisoEnPantalla[] {
+  return lista
+    .filter((a) => !CERRADOS_EN_LA_PESTANA.has(a.id))
+    .map((a) => (VOTOS_EN_LA_PESTANA.has(a.id) ? { ...a, voto: VOTOS_EN_LA_PESTANA.get(a.id) } : a));
+}
+
+export default function AvisoDelPanel({ className, iniciales }: {
+  className?: string;
+  /** Lo que ya trajo la página. `undefined` es "no lo trajo": entonces se pide. */
+  iniciales?: AvisoEnPantalla[];
+} = {}) {
+  const [avisos, setAvisos] = useState<AvisoEnPantalla[]>(() => conLoDeLaPestana(iniciales ?? []));
   /* La hoja del libro que se está mirando. Se guarda el ID y no la posición:
      si llega uno nuevo en vivo, la persona sigue viendo el que estaba leyendo. */
   const [verId, setVerId] = useState<string | null>(null);
-  /* Los que ya se anotaron como vistos en esta pestaña, para no repetir el pedido. */
-  const vistos = useRef<Set<string>>(new Set());
+  /* Los que ya se anotaron como vistos en esta pestaña, para no repetir el pedido.
+     El primero de `iniciales` ya lo anotó el servidor al traerlo. */
+  const vistos = useRef<Set<string>>(new Set(iniciales?.[0] ? [iniciales[0].id] : []));
   const esperaVoto = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   /* El voto que todavía no salió (está en su medio segundo de espera). Si justo
      en ese momento el panel vuelve a preguntar, el servidor contesta el voto
      VIEJO: sin esto la manito se desmarcaba sola, aunque después se guardara
      bien. Mientras está acá, manda lo que tocó la persona. */
   const votoPendiente = useRef<Map<string, number>>(new Map());
-  /* Los que la persona cerró en esta pestaña. Por dos cosas: frena el doble
-     click en la ✕ (un `ref` y no estado: dos clicks seguidos leen el mismo
-     estado antes de que React vuelva a dibujar), y evita que una consulta que
-     salió ANTES de que el servidor anotara el cierre lo vuelva a mostrar. Es por
-     aviso: un freno único dejaba la ✕ trabada para el próximo que llegara. */
-  const cerrados = useRef<Set<string>>(new Set());
+  /* Los que la persona cerró en esta pestaña. Por tres cosas: frena el doble
+     click en la ✕ (no es estado: dos clicks seguidos leen el mismo estado antes
+     de que React vuelva a dibujar), evita que una consulta que salió ANTES de
+     que el servidor anotara el cierre lo vuelva a mostrar, y cubre el "atrás"
+     (ver `CERRADOS_EN_LA_PESTANA`). Es por aviso: un freno único dejaba la ✕
+     trabada para el próximo que llegara. */
+  const cerrados = useRef(CERRADOS_EN_LA_PESTANA);
   const ultimaConsulta = useRef(0);
+  const yaVinieron = useRef(iniciales !== undefined);
 
   const traer = useCallback(() => {
     ultimaConsulta.current = Date.now();
@@ -171,7 +195,26 @@ export default function AvisoDelPanel({ className }: { className?: string } = {}
       .catch(() => {});
   }, []);
 
-  useEffect(() => { traer(); }, [traer]);
+  useEffect(() => {
+    /* Si la página ya los trajo, cuenta como la consulta de recién: el foco que
+       llega al abrir la pestaña no tiene que volver a preguntar. */
+    if (!yaVinieron.current) { traer(); return; }
+    ultimaConsulta.current = Date.now();
+    /* Si el primero de la página ya estaba cerrado acá, el que se ve ahora es
+       otro, y ése el servidor no lo anotó como visto. */
+    const primero = avisos[0];
+    if (primero && !vistos.current.has(primero.id)) {
+      vistos.current.add(primero.id);
+      fetch(`/api/avisos/${encodeURIComponent(primero.id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "visto" }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+    // Sólo al montar: después, el "visto" lo anotan `ir` y la ✕.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [traer]);
 
   useEffect(() => {
     function alVolver() {
@@ -225,6 +268,7 @@ export default function AvisoDelPanel({ className }: { className?: string } = {}
     setAvisos((lista) => lista.map((a) => (a.id === id ? { ...a, voto: nuevo } : a)));
     clearTimeout(esperaVoto.current.get(id));
     votoPendiente.current.set(id, nuevo);
+    VOTOS_EN_LA_PESTANA.set(id, nuevo);
     esperaVoto.current.set(id, setTimeout(() => {
       votoPendiente.current.delete(id);
       fetch(`/api/avisos/${encodeURIComponent(id)}`, {

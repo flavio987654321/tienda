@@ -17,6 +17,7 @@ import PrimerosPasos from "./PrimerosPasos";
 import Direcciones from "./Direcciones";
 import MirandoAhora from "./MirandoAhora";
 import AvisoDelPanel from "@/components/AvisoDelPanel";
+import { avisosParaElPanel } from "@/lib/avisos-admin-servidor";
 
 /**
  * El panel.
@@ -108,6 +109,10 @@ export default async function DigitalesPage({
   const user = await getCurrentUser();
   if (!user) return null;
 
+  /* El aviso del admin sale ya resuelto, en paralelo con lo demás: así aparece
+     con el panel y no un segundo después. Si falla, el cartel lo pide solo. */
+  const avisosP = avisosParaElPanel(user).catch(() => undefined);
+
   const [store, sub] = await Promise.all([
     prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
     prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
@@ -177,6 +182,7 @@ export default async function DigitalesPage({
      Con varios y sin elegir no hay UNA dirección, así que no se muestra
      ninguna y las direcciones viven en las tarjetas de cada producto. */
   const paraElLink = elegido ?? (productos.length === 1 ? productos[0] : null);
+  const avisos = await avisosP;
 
   /* ── La primera vez ──────────────────────────────────────────────────────
      Sin un solo producto no hay panel que mostrar: mostrar tres ceros y una
@@ -186,7 +192,7 @@ export default async function DigitalesPage({
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-10">
         {/* El aviso del admin va también acá: es la pantalla que ve una cuenta
             recién llegada, justo a quien le habla "sólo los nuevos". */}
-        <AvisoDelPanel />
+        <AvisoDelPanel iniciales={avisos} />
         <div className="text-center">
           <div className="w-14 h-14 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <Sparkles className="h-7 w-7 text-orange-600" />
@@ -232,7 +238,7 @@ export default async function DigitalesPage({
        desplazamiento, una adentro de la otra. */
     <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8">
 
-      <AvisoDelPanel />
+      <AvisoDelPanel iniciales={avisos} />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">

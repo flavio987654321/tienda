@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { CANAL_AVISOS, CONDICIONES, ROLES_AVISO, type Audiencia, type CondicionAviso, type RolAviso } from "@/lib/avisos-admin";
+import { CANAL_AVISOS, CONDICIONES, ROLES_AVISO, candidatosEnOrden, conNombre, esCondicion, type Audiencia, type CondicionAviso, type RolAviso } from "@/lib/avisos-admin";
 
 const DIA = 24 * 60 * 60 * 1000;
 
@@ -123,4 +123,97 @@ export async function conLaPersona<A extends Audiencia>(a: A): Promise<{ ok: tru
     return { ok: false, error: "Esa persona no existe o no tiene panel." };
   }
   return { ok: true, aviso: { ...a, roles: [persona.role as RolAviso] } };
+}
+
+/** Cuántos avisos puede tener a la vez en el "libro" del panel. */
+const MAX_EN_PANTALLA = 3;
+
+export type AvisoParaElPanel = {
+  id: string; titulo: string; texto: string; botonTexto: string | null; botonLink: string | null; tono: string; voto: number;
+};
+
+/**
+ * Los avisos del admin que le tocan ver a esta cuenta ahora: hasta tres, en el
+ * orden en que se muestran. Lo usan `/api/avisos` y las páginas de inicio de
+ * los paneles, que lo traen junto con el resto y así el cartel aparece con el
+ * panel, no un segundo después.
+ *
+ * El orden y a quién le toca lo decide `candidatosEnOrden`, que se prueba solo;
+ * acá se busca, se confirma la condición en la base, se le pone el nombre y se
+ * anota que lo vio. Ver `lib/avisos-admin`.
+ */
+export async function avisosParaElPanel(user: { id: string; role: string }): Promise<AvisoParaElPanel[]> {
+  if (!(ROLES_AVISO as readonly string[]).includes(user.role)) return [];
+  const ahora = new Date();
+  const [cuenta, avisos, cerrados] = await Promise.all([
+    prisma.user.findUnique({ where: { id: user.id }, select: { createdAt: true, name: true } }),
+    /* La base ya filtra lo grueso —prendido, de este panel, en fecha, y que no
+       sea el aviso personal de OTRA persona— y `candidatosEnOrden` vuelve a
+       mirar todo: la regla vive en un solo lugar.
+
+       Los personales van en una consulta aparte y sin tope: con más de 20
+       generales al aire, el `take` los dejaba afuera, y son justo los que
+       tienen que salir primero. */
+    Promise.all([
+      prisma.avisoAdmin.findMany({
+        where: { activo: true, paraUserId: null, roles: { has: user.role as RolAviso }, desde: { lte: ahora }, OR: [{ hasta: null }, { hasta: { gt: ahora } }] },
+        orderBy: { desde: "desc" },
+        take: 20,
+      }),
+      prisma.avisoAdmin.findMany({
+        where: { activo: true, paraUserId: user.id, desde: { lte: ahora }, OR: [{ hasta: null }, { hasta: { gt: ahora } }] },
+      }),
+    ]).then(([generales, personales]) => [...personales, ...generales]),
+    prisma.avisoAdminVisto.findMany({
+      where: { userId: user.id, cerradoAt: { not: null } },
+      select: { avisoId: true },
+    }),
+  ]);
+  if (!cuenta) return [];
+
+  /* Los que le tocan, en orden, y que —si piden algo de la base (una
+     condición, o ser para una persona)— lo cumplan. La consulta es
+     `whereDeLaAudiencia`, la MISMA que usa el contador del admin.
+
+     Hasta `MAX_EN_PANTALLA`: el panel los muestra como un libro, uno a la vez
+     con "1 de 3" y flechas. Más que eso ya no es avisar, es empapelar. */
+  const candidatos = candidatosEnOrden(avisos, { id: user.id, role: user.role, createdAt: cuenta.createdAt }, new Set(cerrados.map((c) => c.avisoId)), ahora);
+  const elegidos: typeof candidatos = [];
+  for (const c of candidatos.slice(0, 10)) {
+    if (elegidos.length >= MAX_EN_PANTALLA) break;
+    if (!c.condicion && !c.paraUserId) { elegidos.push(c); continue; }
+    const where = whereDeLaAudiencia({
+      roles: c.roles.filter((r): r is RolAviso => (ROLES_AVISO as readonly string[]).includes(r)),
+      soloNuevosDias: c.soloNuevosDias,
+      condicion: esCondicion(c.condicion) ? c.condicion : null,
+      paraUserId: c.paraUserId,
+    }, ahora);
+    if (await prisma.user.count({ where: { AND: [{ id: user.id }, where] } })) elegidos.push(c);
+  }
+  if (elegidos.length === 0) return [];
+
+  /* "Lo vio" se anota para el PRIMERO, que es el que aparece. Los de atrás se
+     anotan cuando la persona pasa la hoja (`/api/avisos/:id` con "visto"): un
+     aviso que nunca miró no puede contar como visto. */
+  await prisma.avisoAdminVisto.upsert({
+    where: { avisoId_userId: { avisoId: elegidos[0].id, userId: user.id } },
+    create: { avisoId: elegidos[0].id, userId: user.id },
+    update: {},
+  }).catch((e) => console.error("[avisos] no se pudo anotar el visto:", e));
+
+  /* El voto que ya dejó en cada uno, para que la manito aparezca marcada. */
+  const votos = new Map((await prisma.avisoAdminVisto.findMany({
+    where: { userId: user.id, avisoId: { in: elegidos.map((a) => a.id) }, voto: { not: null } },
+    select: { avisoId: true, voto: true },
+  })).map((v) => [v.avisoId, v.voto]));
+
+  return elegidos.map((a) => ({
+    voto: votos.get(a.id) ?? 0,
+    id: a.id,
+    titulo: conNombre(a.titulo, cuenta.name),
+    texto: conNombre(a.texto, cuenta.name),
+    botonTexto: a.botonTexto ? conNombre(a.botonTexto, cuenta.name) : null,
+    botonLink: a.botonLink,
+    tono: a.tono,
+  }));
 }

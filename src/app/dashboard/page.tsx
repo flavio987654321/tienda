@@ -15,6 +15,7 @@ import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import { condicionesTienda } from "@/lib/avisos-tienda";
 import { statusLabel, statusClass } from "@/lib/orders";
 import AvisoDelPanel from "@/components/AvisoDelPanel";
+import { avisosParaElPanel } from "@/lib/avisos-admin-servidor";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -22,6 +23,10 @@ export default async function DashboardPage() {
   // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
   // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
   if (!user) return null;
+
+  /* El aviso del admin sale ya resuelto, en paralelo con lo demás: así aparece
+     con el panel y no un segundo después. Si falla, el cartel lo pide solo. */
+  const avisosP = avisosParaElPanel(user).catch(() => undefined);
 
   const userId = user.id;
 
@@ -234,6 +239,7 @@ export default async function DashboardPage() {
      necesita volver al tutorial de "publicá tu tienda" — necesita el aviso rojo
      de que se le cayó, y ese lo dan los triángulos. Ver lib/avisos-tienda. */
   const allDone = !!storeExtra?.onboardingCompletedAt || doneCount === onboardingSteps.length;
+  const avisos = await avisosP;
 
   return (
     <DashboardLayout
@@ -244,7 +250,7 @@ export default async function DashboardPage() {
       initialLowStockCount={initialLowStockCount}
     >
       <div>
-        <AvisoDelPanel />
+        <AvisoDelPanel iniciales={avisos} />
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
             Bienvenido, {user.name?.split(" ")[0]} 👋

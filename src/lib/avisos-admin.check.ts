@@ -83,7 +83,8 @@ check("AV-U", (() => {
 })(), "el aviso para una persona sólo lo ve ella, y le gana a los generales aunque sea más viejo");
 
 /* ── Las rutas: lo personal es de su dueña ─────────────────────────────── */
-const rutaGet = readFileSync("src/app/api/avisos/route.ts", "utf8");
+/* La consulta vive en `avisosParaElPanel`; la ruta y las páginas la llaman. */
+const rutaGet = readFileSync("src/lib/avisos-admin-servidor.ts", "utf8");
 const rutaAccion = readFileSync("src/app/api/avisos/[id]/route.ts", "utf8");
 check("AV-V", rutaGet.includes("paraUserId: null, roles: { has: user.role") && rutaGet.includes("paraUserId: user.id,"),
   "el panel trae los generales de su rol y SÓLO sus personales, en consultas aparte (un tope no los deja afuera)");
@@ -95,6 +96,18 @@ check("AV-P", conNombre("Hola {nombre}, bienvenido", "Jorge Sosa") === "Hola Jor
   "{nombre} pone sólo el primer nombre");
 check("AV-Q", conNombre("Hola {nombre}, bienvenido", null) === "Hola, bienvenido" && conNombre("¡Hola {nombre}!", "  ") === "¡Hola!",
   'sin nombre no queda "Hola ," ni la marca a la vista');
+
+const cartel = readFileSync("src/components/AvisoDelPanel.tsx", "utf8");
+check("AV-X", readFileSync("src/app/api/avisos/route.ts", "utf8").includes("avisosParaElPanel(user)")
+  && ["src/app/digitales/page.tsx", "src/app/dashboard/page.tsx"].every((p) => {
+    const pag = readFileSync(p, "utf8");
+    return pag.includes("avisosParaElPanel(user).catch(() => undefined)") && !pag.includes("<AvisoDelPanel />");
+  })
+  && cartel.includes("if (!yaVinieron.current) { traer(); return; }") && cartel.includes("conLoDeLaPestana(iniciales ?? [])"),
+  "el inicio de tiendas y de digitales trae el aviso con el panel (no aparece un segundo después); si falla, el cartel lo pide solo");
+check("AV-Y", /const CERRADOS_EN_LA_PESTANA = new Set/.test(cartel) && cartel.includes("useRef(CERRADOS_EN_LA_PESTANA)")
+  && cartel.includes("VOTOS_EN_LA_PESTANA.set(id, nuevo)"),
+  "al volver con \"atrás\" no reaparece el aviso recién cerrado ni se pierde el voto (la página vieja trae los avisos como estaban)");
 
 if (fallos) { console.log(`\n${fallos} fallo(s).`); process.exit(1); }
 console.log("\nok — los avisos le llegan a quien tienen que llegar, y nada más");
