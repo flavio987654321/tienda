@@ -462,7 +462,13 @@ function RegistroContent() {
      vacío. */
   /* Girando solo mientras se averigua. Si la consulta falló, cae en "ya tenés
      la sesión abierta", que ofrece ir al panel o salir: nunca queda trabada. */
-  if (modoGoogle && (cargando || (logueado && cuentaGoogle === null))) {
+  /* Vuelve de Google (`google=1` o `ya-tenia=1`): ahí SÍ se sabe que hay sesión,
+     así que se espera con la ruedita en vez de mostrar un segundo las cuatro
+     tarjetas del registro, que es lo que se veía antes de la pantalla de "ese
+     mail ya tenía una cuenta". Al resto se le sigue mostrando el formulario
+     al instante (ver el comentario del corte de abajo). */
+  const yaTenia = searchParams.get("ya-tenia") === "1";
+  if ((modoGoogle && (cargando || (logueado && cuentaGoogle === null))) || (yaTenia && cargando)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
@@ -471,7 +477,7 @@ function RegistroContent() {
   }
   const conGoogle = modoGoogle && logueado && !!cuentaGoogle?.pendiente;
   if (logueado && !conGoogle) {
-    return <SesionYaAbierta modo="registro" yaTeniaCuenta={searchParams.get("ya-tenia") === "1"} />;
+    return <SesionYaAbierta modo="registro" yaTeniaCuenta={yaTenia} />;
   }
 
   /* A dónde vuelve si toca Google en el formulario: acá mismo, con lo que ya
