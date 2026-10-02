@@ -411,7 +411,11 @@ check("TAPA-C", /<img src=\{u\.imagen\} alt="" className="h-auto max-h-32 w-24 s
   && /imagen=\{u\.imagen\}/.test(elCheckout),
   "la pantalla de pago dibuja la tapa del producto (grande) y la del upsell: el dato viajaba y no se usaba");
 
-check("TAPA-D", /<img src=\{u\.imagen\} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" \/>/.test(elGracias)
+/* Se compara contra la del CHECKOUT, no contra una clase escrita acá: el
+   01/10/26 se cambió la del pago y ésta quedó con la vieja, y la prueba —que
+   tenía la vieja copiada— no se enteró. */
+const tapaDelUpsell = (s: string) => (/<img src=\{u\.imagen\} alt="" className="([^"]+)" \/>/.exec(s) ?? [])[1];
+check("TAPA-D", !!tapaDelUpsell(elGracias) && tapaDelUpsell(elGracias) === tapaDelUpsell(elCheckout)
   && /imagen: primeraImagen\(u\.images\)/.test(leerTexto("src/app/p/[id]/gracias/page.tsx")),
   "la última oferta muestra la MISMA tapa que la pantalla de pago: la misma oferta no se ve distinta en cada lado");
 

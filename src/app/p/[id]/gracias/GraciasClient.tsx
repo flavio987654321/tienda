@@ -298,7 +298,7 @@ export default function GraciasClient(p: Props) {
               <div className="flex items-start gap-3">
                 {u.imagen && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={u.imagen} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                  <img src={u.imagen} alt="" className="h-auto max-h-32 w-24 shrink-0 rounded-lg object-contain" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-[color:var(--pv-tinta)]">{u.nombre}</p>
