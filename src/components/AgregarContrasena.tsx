@@ -31,14 +31,15 @@ export function AgregarContrasena() {
     let vivo = true;
     (async () => {
       try {
-        const { data } = await supabase.auth.getUser();
-        const providers = data?.user?.app_metadata?.providers;
-        const tieneClave = Array.isArray(providers) ? providers.includes("email") : true;
-        if (vivo && data?.user && !tieneClave) setSinContrasena(true);
+        // Al servidor, que mira la contraseña misma: la lista de proveedores
+        // de Supabase no siempre se entera de que se agregó una.
+        const r = await fetch("/api/auth/contrasena", { cache: "no-store", signal: AbortSignal.timeout(15_000) });
+        const d = await r.json().catch(() => ({ tiene: true }));
+        if (vivo && r.ok && d.tiene === false) setSinContrasena(true);
       } catch { /* sin red no se muestra; no es urgente */ }
     })();
     return () => { vivo = false; };
-  }, [supabase]);
+  }, []);
 
   if (!sinContrasena && !listo) return null;
 

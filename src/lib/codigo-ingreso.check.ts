@@ -51,8 +51,14 @@ check("CO-K", leer("src/components/panel/PanelLogin.tsx").includes("<EntrarConCo
 /* ── Agregar contraseña ──────────────────────────────────────────────────── */
 const agregar = leer("src/components/AgregarContrasena.tsx");
 check("CO-L", agregar.includes("validarContrasena(clave)") && agregar.includes("clave !== repetir")
-  && agregar.includes('providers.includes("email")'),
+  && agregar.includes('"/api/auth/contrasena"') && agregar.includes("d.tiene === false"),
   "agregar contraseña usa la regla de siempre, pide repetirla, y solo aparece a quien no tiene");
+const servidor = leer("src/lib/alta-google-servidor.ts");
+check("CO-L2", servidor.includes("encrypted_password") && /catch[\s\S]*return true;/.test(servidor)
+  && leer("src/app/dashboard/ajustes/page.tsx").includes("tieneContrasena(user.id)")
+  && leer("src/app/admin/usuarios/page.tsx").includes("con_clave"),
+  "si tiene contraseña se mira en la contraseña misma (no en la lista de proveedores, que no siempre se entera)");
+check("CO-H2", entrar.includes("suspendida?.banned"), "una cuenta suspendida no entra con un código viejo");
 for (const [id, archivo] of [
   ["CO-M1", "src/app/digitales/configuracion/TabGeneral.tsx"],
   ["CO-M2", "src/app/afiliados/VendedorasClient.tsx"],

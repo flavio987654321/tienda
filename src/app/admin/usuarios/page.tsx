@@ -30,11 +30,15 @@ export default async function AdminUsuariosPage({
      igual, sin la etiqueta. */
   const entraCon = new Map<string, string[]>();
   try {
-    const filas = await prisma.$queryRaw<{ id: string; providers: unknown }[]>`
-      SELECT id::text AS id, raw_app_meta_data->'providers' AS providers
+    /* La contraseña se mira en sí misma y no en la lista de proveedores: quien
+       entró con Google y después agregó una no siempre figura con "email". */
+    const filas = await prisma.$queryRaw<{ id: string; providers: unknown; con_clave: boolean }[]>`
+      SELECT id::text AS id, raw_app_meta_data->'providers' AS providers,
+             coalesce(encrypted_password, '') <> '' AS con_clave
       FROM auth.users WHERE id::text = ANY(${users.map((u) => u.id)})`;
     for (const f of filas) {
-      if (Array.isArray(f.providers)) entraCon.set(f.id, f.providers.filter((x): x is string => typeof x === "string"));
+      const lista = Array.isArray(f.providers) ? f.providers.filter((x): x is string => typeof x === "string") : [];
+      entraCon.set(f.id, [...lista.filter((x) => x !== "email"), ...(f.con_clave ? ["email"] : [])]);
     }
   } catch (e) {
     console.error("[admin usuarios] no se pudo leer cómo entra cada uno:", e instanceof Error ? e.message : e);

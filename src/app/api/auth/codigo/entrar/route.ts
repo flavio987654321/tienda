@@ -83,6 +83,12 @@ export async function POST(req: NextRequest) {
       await supabase.auth.signOut({ scope: "local" }).catch(() => {});
       return NextResponse.json({ error: "Esta cuenta entra con contraseña." }, { status: 403 });
     }
+    // Suspendida: `pedir` no le manda código, pero pudo tener uno de antes.
+    const suspendida = await prisma.user.findUnique({ where: { id: data.user.id }, select: { banned: true } });
+    if (suspendida?.banned) {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      return NextResponse.json({ error: "Esta cuenta está suspendida." }, { status: 403 });
+    }
 
     if (sinConfirmar) {
       const { error: errClave } = await createSupabaseAdminClient().auth.admin.updateUserById(data.user.id, {

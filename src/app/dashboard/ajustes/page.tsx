@@ -11,7 +11,7 @@ import { WhatsappCard, RedesCard, MonedaCard, SeoCard } from "./PreferenciasCard
 import LogoUploadCard from "@/components/LogoUploadCard";
 import ArchiveDownloadCard from "./ArchiveDownloadCard";
 import { AgregarContrasena } from "@/components/AgregarContrasena";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { tieneContrasena } from "@/lib/alta-google-servidor";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
 import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
@@ -32,13 +32,7 @@ export default async function AjustesPage({ searchParams }: Props) {
   const avisos = await todosLosAvisos(user.id);
   /* ¿Entra solo con Google? Entonces va la sección para agregar contraseña.
      Se decide acá para no dibujar una sección con título y sin nada adentro. */
-  const sinContrasena = await (async () => {
-    try {
-      const { data } = await (await createSupabaseServerClient()).auth.getUser();
-      const providers = data?.user?.app_metadata?.providers;
-      return Array.isArray(providers) && !providers.includes("email");
-    } catch { return false; }
-  })();
+  const sinContrasena = !(await tieneContrasena(user.id));
   const avisosDeEstaSeccion = avisosDeSeccion(avisos, "/dashboard/ajustes");
 
   const [sub, store] = await Promise.all([
