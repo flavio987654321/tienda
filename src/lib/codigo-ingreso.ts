@@ -28,7 +28,7 @@ export function normalizarEmail(email: unknown): string | null {
   return e;
 }
 
-/** Supabase lo manda de 6 dígitos por defecto; se acepta hasta 10 por si se cambia allá. */
+/** Supabase lo manda de 8 dígitos (configurable allá entre 6 y 10): no se escribe el largo en ningún texto. */
 export function normalizarCodigo(codigo: unknown): string | null {
   if (typeof codigo !== "string") return null;
   const c = codigo.replace(/\s+/g, "");

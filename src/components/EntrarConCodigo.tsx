@@ -81,7 +81,7 @@ export function EntrarConCodigo({
     if (enVuelo.current || bloqueado) return;
     const limpio = codigo.replace(/\s+/g, "");
     if (!/^\d{6,10}$/.test(limpio)) {
-      setError("El código son 6 números.");
+      setError("Escribí el código completo del mail: son solo números.");
       return;
     }
     enVuelo.current = true;
@@ -130,7 +130,7 @@ export function EntrarConCodigo({
           className="space-y-5"
         >
           <p className="text-sm text-gray-600">
-            Te mandamos un código de 6 números a tu mail. Sirve también si te registraste con Google: usá tu Gmail.
+            Te mandamos un código de números a tu mail. Sirve también si te registraste con Google: usá tu Gmail.
           </p>
           <div>
             <label htmlFor="codigo-email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
@@ -166,7 +166,7 @@ export function EntrarConCodigo({
               autoComplete="one-time-code"
               value={codigo}
               onChange={(e) => { setCodigo(e.target.value.replace(/[^\d]/g, "").slice(0, 10)); setError(""); }}
-              placeholder="123456"
+              placeholder="Código del mail"
               disabled={bloqueado}
               className={`${estiloInput} text-center text-2xl tracking-[0.4em] font-bold`}
             />
