@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Plus, Moon, Sun, UserRound, LogOut, Loader2, ChevronDown } from "lucide-react";
+import { Plus, Moon, Sun, UserRound, LogOut, Loader2, ChevronDown, ArrowUpRight } from "lucide-react";
 import { LinkDelPanel as Link } from "./SalidaSinGuardar";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuth } from "@/components/AuthProvider";
 import { useIsPwa } from "@/hooks/useIsPwa";
 import { ATRIBUTO_TEMA, EVENTO_TEMA, aplicarTema } from "@/lib/tema-digitales";
-import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
+import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 
 /**
  * Los atajos de arriba a la derecha del panel, en computadora.
@@ -30,21 +30,43 @@ import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
  */
 export const EVENTO_NUEVO_PRODUCTO = "digitales-nuevo-producto";
 
-export default function BarraDeAtajos({ userId, tier }: { userId: string; tier: TierDigital }) {
+export default function BarraDeAtajos({ userId, tier, productosLlenos }: {
+  userId: string;
+  tier: TierDigital;
+  /** Ya tiene todos los productos que le da su plan (lo cuenta el layout). */
+  productosLlenos: boolean;
+}) {
   const pathname = usePathname();
   return (
     <div className="hidden lg:flex justify-end items-center gap-1.5 px-4 pt-3 pb-0 shrink-0">
-      <Link
-        href="/digitales/productos?nuevo=1"
-        onClick={(e) => {
-          if (pathname !== "/digitales/productos") return;
-          e.preventDefault();
-          window.dispatchEvent(new Event(EVENTO_NUEVO_PRODUCTO));
-        }}
-        className="mr-1 inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-2 text-[13px] font-bold text-white transition-colors hover:bg-orange-500"
-      >
-        <Plus className="h-4 w-4" /> Nuevo producto
-      </Link>
+      {/* ⚠️ Con el plan lleno NO dice "+ Nuevo producto": tocarlo no abría nada
+          y parecía roto (visto por Flavio el 03/10/26 en una cuenta Free). En
+          vez de eso ofrece lo que sí destraba, que es mejorar el plan — y en el
+          plan más alto no hay a dónde ir, así que no muestra nada: mismo
+          criterio que el cartel de Productos (`esElPlanMasAlto`). */}
+      {productosLlenos ? (
+        !esElPlanMasAlto(tier) && (
+          <Link
+            href="/digitales/mi-cuenta"
+            title="Llegaste a la cantidad de productos de tu plan"
+            className="mr-1 inline-flex items-center gap-1.5 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 px-3.5 py-2 text-[13px] font-bold text-orange-700 panel-oscuro:text-orange-300 transition-colors hover:bg-orange-100 panel-oscuro:hover:bg-orange-500/20"
+          >
+            <ArrowUpRight className="h-4 w-4" /> Más productos: mejorá tu plan
+          </Link>
+        )
+      ) : (
+        <Link
+          href="/digitales/productos?nuevo=1"
+          onClick={(e) => {
+            if (pathname !== "/digitales/productos") return;
+            e.preventDefault();
+            window.dispatchEvent(new Event(EVENTO_NUEVO_PRODUCTO));
+          }}
+          className="mr-1 inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-2 text-[13px] font-bold text-white transition-colors hover:bg-orange-500"
+        >
+          <Plus className="h-4 w-4" /> Nuevo producto
+        </Link>
+      )}
       <NotificationBell userId={userId} />
       <BotonTema />
       <MenuDeCuenta tier={tier} />

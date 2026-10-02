@@ -11,6 +11,7 @@ import LoginGate from "@/components/panel/LoginGate";
 import { DIGITALES_VERSION } from "@/lib/app-versions";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { topeDe } from "@/lib/productos-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
 import Cierre from "./Cierre";
@@ -140,6 +141,15 @@ export default async function DigitalesLayout({ children }: { children: React.Re
     );
   }
 
+  /* ¿Le entra otro producto? Para el atajo de arriba: con el plan lleno no
+     ofrece "+ Nuevo producto", porque tocarlo no abriría nada. La MISMA cuenta
+     que hace Productos (principales vivos contra `topeDe`). No queda vieja:
+     guardar o borrar un producto recarga la página entera. */
+  const principales = cuenta
+    ? await prisma.product.count({ where: { storeId: cuenta.id, deletedAt: null, rolDigital: "PRINCIPAL" } })
+    : 0;
+  const productosLlenos = principales >= topeDe(tier, "PRINCIPAL");
+
   /* ══════════════════════════════════════════════════════════════════════════
      EL RECIBIMIENTO: HASTA QUE LA CUENTA NO ESTÁ ARMADA, EL PANEL NO EXISTE
      ══════════════════════════════════════════════════════════════════════════
@@ -260,7 +270,7 @@ export default async function DigitalesLayout({ children }: { children: React.Re
               recorta el overflow-hidden de la franja lateral. */}
           {/* Y desde el 03/10/26 no va sola: es la barra de atajos (crear un
               producto, la campanita, claro/oscuro y la cuenta). */}
-          <BarraDeAtajos userId={user.id} tier={tier} />
+          <BarraDeAtajos userId={user.id} tier={tier} productosLlenos={productosLlenos} />
           {children}
         </main>
         {/* Sasha. Va afuera del `main` porque es `fixed` y no tiene que

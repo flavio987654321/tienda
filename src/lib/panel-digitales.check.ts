@@ -1763,6 +1763,9 @@ console.log("\n19) Cargando y sin conexión");
   chequear("el atajo de crear respeta el tope del plan, por la dirección y estando ya en Productos",
     (productosPantalla.match(/if \(!llegoAlTope\) setEmbudoIA\(true\)/g) ?? []).length === 2
     && productosPantalla.includes("window.addEventListener(EVENTO_NUEVO_PRODUCTO"));
+  chequear("con el plan lleno el atajo no ofrece crear: ofrece mejorar, y en el plan más alto no muestra nada",
+    atajos.includes("productosLlenos ? (") && atajos.includes("!esElPlanMasAlto(tier) && (")
+    && readFileSync("src/app/digitales/layout.tsx", "utf8").includes('principales >= topeDe(tier, "PRINCIPAL")'));
   chequear("la luna y Apariencia escriben con la misma función y se enteran una de la otra",
     atajos.includes('aplicarTema(oscuro ? "claro" : "oscuro")')
     && readFileSync("src/app/digitales/configuracion/ConfiguracionClient.tsx", "utf8").includes("window.addEventListener(EVENTO_TEMA"));
