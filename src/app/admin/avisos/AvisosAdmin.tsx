@@ -50,6 +50,21 @@ const aLocal = (iso: string | null) => {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 };
 
+/* "jueves 1 de octubre de 2026, 22:10". Sólo se llama con algo que la persona
+   escribió en el navegador, así que no hay diferencia servidor/navegador. */
+const enPalabras = (local: string) => {
+  const d = new Date(local);
+  return Number.isNaN(d.getTime())
+    ? null
+    : d.toLocaleString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+};
+
+function fechasEnPalabras(desde: string, hasta: string): string {
+  const d = desde ? enPalabras(desde) : null;
+  const h = hasta ? enPalabras(hasta) : null;
+  return `${d ? `Sale el ${d}` : "Sale ya"} · ${h ? `termina el ${h}` : "sin fecha de fin"}.`;
+}
+
 function audienciaDe(b: Borrador) {
   return b.modo === "persona"
     ? { paraUserId: b.persona?.id ?? "__falta__", roles: [], soloNuevosDias: null, condicion: null }
@@ -434,6 +449,11 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
               <input id="av-hasta" type="datetime-local" className={`${campo} [color-scheme:dark]`} value={b.hasta} onChange={(e) => set("hasta", e.target.value)} />
             </div>
           </div>
+          {/* Las fechas, dichas en castellano. El campo de fecha lo dibuja el
+              navegador con SU formato: en uno configurado en inglés es mes/día,
+              y el 01/10/26 "07/10" se guardó como 10 de julio en vez de 7 de
+              octubre. Leído en palabras, el error se ve antes de publicar. */}
+          <p className="-mt-1 text-[12.5px] text-gray-400">{fechasEnPalabras(b.desde, b.hasta)}</p>
         </div>
 
         {/* ── La vista previa: el MISMO componente que ve el panel ── */}
