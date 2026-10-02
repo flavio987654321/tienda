@@ -224,6 +224,14 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
 
   /* La MISMA validación que la ruta: el error aparece antes de mandar. */
   const validado = validarAviso(cuerpoDe(b));
+  /* Las fechas se revisan solas, con el resto del aviso completo de mentira:
+     así su error se ve debajo de los campos aunque todavía falte el título.
+     Es la misma `validarAviso` que usa la ruta, no una copia. */
+  const soloFechas = validarAviso({
+    titulo: "x", texto: "x", roles: ["DIGITAL"],
+    desde: aIso(b.desde) || undefined, hasta: aIso(b.hasta) || null,
+  });
+  const errorDeFechas = soloFechas.ok ? null : soloFechas.error;
   const linkArmado = b.botonLink.trim() ? linkDelBoton(b.botonLink) : null;
 
   async function guardar() {
@@ -479,7 +487,17 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
               <input id="av-desde" type="datetime-local" className={`${campo} [color-scheme:dark]`} value={b.desde} onChange={(e) => set("desde", e.target.value)} />
             </div>
             <div>
-              <label htmlFor="av-hasta" className={etiqueta}>Hasta <span className="font-normal text-gray-600">(vacío = siempre)</span></label>
+              <div className="flex items-baseline justify-between gap-2">
+                <label htmlFor="av-hasta" className={etiqueta}>Hasta <span className="font-normal text-gray-600">(vacío = siempre)</span></label>
+                {/* El campo de fecha del navegador no tiene cómo vaciarse en todos
+                    lados: sin esto, quien puso una fecha por error no sabía
+                    cómo volver a "siempre". */}
+                {b.hasta && (
+                  <button type="button" onClick={() => set("hasta", "")} className="text-[11.5px] font-semibold text-gray-400 hover:text-white">
+                    Quitar
+                  </button>
+                )}
+              </div>
               <input id="av-hasta" type="datetime-local" className={`${campo} [color-scheme:dark]`} value={b.hasta} onChange={(e) => set("hasta", e.target.value)} />
             </div>
           </div>
@@ -487,7 +505,16 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
               navegador con SU formato: en uno configurado en inglés es mes/día,
               y el 01/10/26 "07/10" se guardó como 10 de julio en vez de 7 de
               octubre. Leído en palabras, el error se ve antes de publicar. */}
-          <p className="-mt-1 text-[12.5px] text-gray-400">{fechasEnPalabras(b.desde, b.hasta)}</p>
+          {/* Y si las fechas no cierran, se dice EN EL MOMENTO y en rojo, no recién
+              al tocar Publicar: el 02/10/26 un "Hasta" de esa misma medianoche
+              se leía en gris como si estuviera todo bien. */}
+          {errorDeFechas ? (
+            <p className="-mt-1 text-[12.5px] font-semibold text-red-400">
+              {fechasEnPalabras(b.desde, b.hasta)} {errorDeFechas} Si no querés que termine, tocá &quot;Quitar&quot;.
+            </p>
+          ) : (
+            <p className="-mt-1 text-[12.5px] text-gray-400">{fechasEnPalabras(b.desde, b.hasta)}</p>
+          )}
         </div>
 
         {/* ── La vista previa: el MISMO componente que ve el panel ── */}
