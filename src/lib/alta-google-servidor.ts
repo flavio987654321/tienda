@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { altaPendiente, type PerfilParaAlta } from "@/lib/alta-google";
+import { huellaDeMail, dominiosParaBuscar } from "@/lib/prueba-repetida";
 
 /** El perfil de esta cuenta, con lo justo para saber si le falta el alta. */
 export async function perfilParaAlta(userId: string): Promise<PerfilParaAlta> {
@@ -50,5 +51,30 @@ export async function tieneContrasena(userId: string): Promise<boolean> {
   } catch (e) {
     console.error("[cuenta] no se pudo saber si tiene contraseña:", e instanceof Error ? e.message : e);
     return true;
+  }
+}
+
+/**
+ * ¿Este mail (o un alias suyo) ya usó la prueba de este producto en una cuenta
+ * que después eliminó? Ver `lib/prueba-repetida`.
+ *
+ * Ante un error de la base, false: no se le niega la prueba a alguien porque
+ * la consulta se cayó. El costo de equivocarse para ese lado es una prueba.
+ */
+export async function pruebaUsadaAntes(email: string, tipo: "OWNER" | "DIGITAL"): Promise<boolean> {
+  try {
+    const huella = huellaDeMail(email);
+    const candidatos = await prisma.deletedAccountAudit.findMany({
+      where: {
+        subscriptionRole: tipo,
+        OR: dominiosParaBuscar(email).map((d) => ({ originalEmail: { endsWith: `@${d}`, mode: "insensitive" as const } })),
+      },
+      select: { originalEmail: true },
+      take: 5000,
+    });
+    return candidatos.some((c) => c.originalEmail && huellaDeMail(c.originalEmail) === huella);
+  } catch (e) {
+    console.error("[prueba] no se pudo revisar si ya la usó:", e instanceof Error ? e.message : e);
+    return false;
   }
 }

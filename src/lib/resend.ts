@@ -1142,6 +1142,7 @@ export async function sendWelcomeEmail({
   storeName,
   digitalPlan,
   confirmLink,
+  sinPrueba = false,
 }: {
   to: string;
   userName: string;
@@ -1153,6 +1154,9 @@ export async function sendWelcomeEmail({
   /** El link que confirma el correo. Sin esto la cuenta queda creada y sin poder
    *  entrar, así que este mail dejó de ser informativo: es la llave. */
   confirmLink?: string | null;
+  /** Ya usó la prueba con este mail en una cuenta que eliminó (`lib/prueba-repetida`):
+   *  el mail no puede prometerle 7 días que no tiene. */
+  sinPrueba?: boolean;
 }) {
   /* Antes esto era un `return` silencioso: sin clave configurada, no se manda y
      listo. Ahora el mail lleva el link de confirmación, así que callarse sería
@@ -1191,7 +1195,9 @@ export async function sendWelcomeEmail({
 
   if (role === "OWNER") {
     titular = "Tu tienda ya existe";
-    intro = `Creamos <strong>${escapeHtml(storeName) || "tu tienda"}</strong> y tenés <strong>7 días de prueba</strong>, sin tarjeta ni compromiso.`;
+    intro = sinPrueba
+      ? `Creamos <strong>${escapeHtml(storeName) || "tu tienda"}</strong>. Como ya usaste la prueba gratis con este mail, para usar el panel elegí un plan desde tu cuenta.`
+      : `Creamos <strong>${escapeHtml(storeName) || "tu tienda"}</strong> y tenés <strong>7 días de prueba</strong>, sin tarjeta ni compromiso.`;
     cuerpo = `
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px 18px;margin-bottom:24px;">
         <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6;">
@@ -1223,6 +1229,8 @@ export async function sendWelcomeEmail({
     titular = "Tu cuenta ya está lista";
     intro = digitalPlan && digitalPlan !== "FREE"
       ? `Estás probando <strong>${digitalPlan === "PRO" ? "Pro" : "Starter"}</strong> por 7 días, sin tarjeta. Al terminar, si no pagás, tu cuenta vuelve al plan Free — no se cierra nada.`
+      : sinPrueba
+      ? "Arrancás en el plan <strong>Free</strong>: es gratis y no vence. Como ya usaste la prueba de Starter y Pro con este mail, para pasarte a uno de esos planes lo hacés pagando desde tu panel."
       : "Arrancás en el plan <strong>Free</strong>: es gratis, no vence y no te pedimos ninguna tarjeta.";
     cuerpo = `
       <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px;">

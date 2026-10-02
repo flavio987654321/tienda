@@ -276,6 +276,19 @@ export function altaDigitalFree(now: Date = new Date()) {
 
 
 /**
+ * Free, pero con la prueba **ya gastada**: para quien vuelve con un mail que ya
+ * la usó en una cuenta que eliminó (ver `lib/prueba-repetida`).
+ *
+ * Usa la misma marca que `pruebaYaUsada` lee —`trialEndsAt` corrido siete
+ * días adelante del alta— así que el botón de "probar Starter" del panel
+ * tampoco se la ofrece. En Free esa fecha no se muestra en ningún lado: Free no
+ * vence, y la pantalla solo la lee en estado TRIAL.
+ */
+export function altaDigitalFreeSinPrueba(now: Date = new Date()) {
+  return { ...altaDigitalFree(now), trialEndsAt: new Date(now.getTime() + TRIAL_DAYS * 86400000) } as const;
+}
+
+/**
  * Los campos de una cuenta digital que arranca **probando** un plan pago.
  *
  * El estado es `TRIAL` y **nunca `ACTIVE`**, y eso no es un detalle de estilo: el

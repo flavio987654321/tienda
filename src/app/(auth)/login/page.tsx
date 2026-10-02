@@ -35,6 +35,10 @@ function LoginForm() {
   const vencida = searchParams.get("vencida");
   /* Volvió de Google sin sesión (canceló, o falló). Ver `/auth/callback`. */
   const errorGoogle = searchParams.get("google");
+  /* Se registró con un mail que ya había usado la prueba gratis en una cuenta
+     que eliminó (ver `lib/prueba-repetida`): se le dice ahora, no cuando entre
+     y encuentre el panel pidiéndole un plan. */
+  const sinPrueba = searchParams.get("prueba") === "0";
   /* Entrar con un código por mail en vez de la contraseña. Ver `EntrarConCodigo`. */
   const [conCodigo, setConCodigo] = useState(false);
   const redirectTo = searchParams.get("redirect");
@@ -208,6 +212,13 @@ function LoginForm() {
                 : vencida === "sin-contrasena"
                 ? "Al panel del admin se entra solo con la contraseña y el código de la app."
                 : "Por seguridad cerramos tu sesión del admin. Volvé a entrar con tu contraseña y el código."}
+            </div>
+          )}
+
+          {sinPrueba && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-2xl text-sm mb-6">
+              Ya usaste la prueba gratis con este mail en una cuenta anterior, así que esta arranca sin
+              prueba: para usar todo, elegí un plan desde tu panel.
             </div>
           )}
 

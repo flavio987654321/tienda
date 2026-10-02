@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { validarTelefono } from "@/lib/telefono";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
-import { altaDigitalFree, altaDigitalConPrueba } from "@/lib/subscription";
+import { altaDigitalFree, altaDigitalFreeSinPrueba, altaDigitalConPrueba } from "@/lib/subscription";
 import { TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
 import { estaLibre } from "@/lib/direccion-digital";
 import { DIGITALES_ABIERTO } from "@/lib/planLimits";
@@ -167,8 +167,17 @@ async function uniqueStoreSlug(storeName: string): Promise<string> {
  * suscripción que le tocan. Sirve tanto para `user.create` como para el
  * `update` que completa una cuenta de Google.
  */
-export async function perfilDeAlta(datos: DatosDeAlta, ip: string) {
-  const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+export async function perfilDeAlta(
+  datos: DatosDeAlta,
+  ip: string,
+  /* Este mail ya usó la prueba de este producto en una cuenta que eliminó
+     (ver `lib/prueba-repetida`): la tienda nace con la prueba vencida —para
+     usarla, elige un plan— y la cuenta digital nace en Free con la prueba
+     gastada. */
+  { sinPrueba = false }: { sinPrueba?: boolean } = {},
+) {
+  const now = Date.now();
+  const trialEndsAt = new Date(sinPrueba ? now : now + 7 * 24 * 60 * 60 * 1000);
   return {
     name: datos.name,
     role: datos.type,
@@ -203,8 +212,9 @@ export async function perfilDeAlta(datos: DatosDeAlta, ip: string) {
       : datos.type === "DIGITAL"
       ? {
           subscription: {
-            create:
-              datos.tierDigital === "FREE"
+            create: sinPrueba
+              ? { ...altaDigitalFreeSinPrueba() }
+              : datos.tierDigital === "FREE"
                 ? { ...altaDigitalFree() }
                 : { ...altaDigitalConPrueba(datos.tierDigital, datos.billing) },
           },

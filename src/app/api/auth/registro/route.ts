@@ -7,6 +7,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { validarDatosDeAlta, nombreDeTiendaTomado, perfilDeAlta } from "@/lib/alta-de-cuenta";
+import { pruebaUsadaAntes } from "@/lib/alta-google-servidor";
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,6 +64,10 @@ export async function POST(req: NextRequest) {
       if (tomado) return NextResponse.json({ error: tomado }, { status: 400 });
     }
 
+    // ¿Ya usó la prueba de este producto con este mail, en una cuenta que eliminó?
+    const sinPrueba = (datos.type === "OWNER" || datos.type === "DIGITAL")
+      && (await pruebaUsadaAntes(normalizedEmail, datos.type));
+
     const supabase = createSupabaseAdminClient();
 
     /* El alta y el link de confirmación, en un solo paso.
@@ -103,7 +108,7 @@ export async function POST(req: NextRequest) {
           id: authData.user.id,
           email: normalizedEmail,
           password: null,
-          ...(await perfilDeAlta(datos, ip)),
+          ...(await perfilDeAlta(datos, ip, { sinPrueba })),
         },
       });
 
@@ -124,15 +129,16 @@ export async function POST(req: NextRequest) {
           userName: datos.name,
           role: datos.type,
           storeName: datos.type === "OWNER" ? datos.storeName : null,
-          digitalPlan: datos.type === "DIGITAL" ? datos.tierDigital : null,
+          digitalPlan: datos.type === "DIGITAL" ? (sinPrueba ? "FREE" : datos.tierDigital) : null,
           confirmLink: linkDeConfirmacion,
+          sinPrueba,
         });
       } catch (err) {
         mailEnviado = false;
         console.error("REGISTRO: no se pudo mandar el mail de confirmación a", normalizedEmail, err);
       }
 
-      return NextResponse.json({ success: true, userId: user.id, mailEnviado });
+      return NextResponse.json({ success: true, userId: user.id, mailEnviado, ...(sinPrueba ? { sinPrueba } : {}) });
     } catch (dbError) {
       // Revertir usuario Supabase para no dejar registros huérfanos
       const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);

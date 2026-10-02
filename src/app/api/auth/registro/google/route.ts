@@ -7,7 +7,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { validarDatosDeAlta, nombreDeTiendaTomado, perfilDeAlta } from "@/lib/alta-de-cuenta";
 import { tieneGoogle } from "@/lib/alta-google";
-import { esElAdmin, tieneAltaPendiente } from "@/lib/alta-google-servidor";
+import { esElAdmin, tieneAltaPendiente, pruebaUsadaAntes } from "@/lib/alta-google-servidor";
 
 /**
  * El alta de quien entró con Google: el mismo formulario de `/registro`, sin
@@ -73,7 +73,10 @@ export async function POST(req: NextRequest) {
     }
 
     const email = user.email.toLowerCase().trim();
-    const perfil = await perfilDeAlta(datos, getClientIp(req));
+    // ¿Ya usó la prueba de este producto con este mail, en una cuenta que eliminó?
+    const sinPrueba = (datos.type === "OWNER" || datos.type === "DIGITAL")
+      && (await pruebaUsadaAntes(email, datos.type));
+    const perfil = await perfilDeAlta(datos, getClientIp(req), { sinPrueba });
 
     /* Una sola alta por cuenta, aunque lleguen dos a la vez (doble click, dos
        pestañas con planes distintos). Si ya existe el "comprador" vacío que
@@ -116,10 +119,11 @@ export async function POST(req: NextRequest) {
       userName: datos.name,
       role: datos.type,
       storeName: datos.type === "OWNER" ? datos.storeName : null,
-      digitalPlan: datos.type === "DIGITAL" ? datos.tierDigital : null,
+      digitalPlan: datos.type === "DIGITAL" ? (sinPrueba ? "FREE" : datos.tierDigital) : null,
+      sinPrueba,
     }).catch((err) => console.error("REGISTRO GOOGLE: no salió el mail de bienvenida a", email, err));
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, ...(sinPrueba ? { sinPrueba } : {}) });
   } catch (e) {
     console.error("REGISTRO GOOGLE ERROR:", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });

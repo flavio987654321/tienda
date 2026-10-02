@@ -407,14 +407,16 @@ function RegistroContent() {
     // Una cuenta digital también puede arrancar probando, si eligió Starter o
     // Pro en vez de Free. Sin esta rama esas altas no se contaban y las campañas
     // de digitales optimizaban contra nada.
-    if (accountType === "owner" || (accountType === "digital" && digitalTier !== "FREE")) {
+    // Sin la prueba (ya la usó con este mail en una cuenta que eliminó) no se
+    // cuenta: le diría a las campañas que arrancó una prueba que no existe.
+    if ((accountType === "owner" || (accountType === "digital" && digitalTier !== "FREE")) && !data?.sinPrueba) {
       trackEvent("StartTrial");
     }
 
     /* Si el mail de confirmación no salió, la cuenta existe pero no se puede
        usar. La pantalla de ingreso tiene que decirlo y ofrecer el reenvío, en vez
        de mandarla a esperar un mail que no viene. */
-    const sufijoMail = data?.mailEnviado === false ? "&mail=0" : "";
+    const sufijoMail = (data?.mailEnviado === false ? "&mail=0" : "") + (data?.sinPrueba ? "&prueba=0" : "");
 
     setRedirecting(true);
     /* Con Google ya está adentro y con el mail confirmado: derecho al panel,
