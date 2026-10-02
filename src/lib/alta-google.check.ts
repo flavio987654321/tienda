@@ -57,11 +57,11 @@ check("GO-F", destinoTrasGoogle(true, "/registro?google=1&plan=owner&tier=PREMIU
   && destinoTrasGoogle(true, "/dashboard") === "/registro?google=1"
   && destinoTrasGoogle(true, "//malo.com") === "/registro?google=1",
   "sin el alta terminada va al registro, con lo que ya había elegido");
-check("GO-G", destinoTrasGoogle(false, "/registro?google=1") === "/panel"
+check("GO-G", destinoTrasGoogle(false, "/registro?google=1") === "/registro?ya-tenia=1"
   && destinoTrasGoogle(false, "/dashboard/pedidos") === "/dashboard/pedidos"
   && destinoTrasGoogle(false, "https://malo.com") === "/panel"
   && destinoTrasGoogle(false, null) === "/panel",
-  "con la cuenta hecha va a donde iba, o a su panel");
+  "con la cuenta hecha va a donde iba, o a su panel; si venía a registrarse, se le dice que ese mail ya tenía cuenta");
 
 /* ── Navegadores de apps ─────────────────────────────────────────────────── */
 check("GO-H", esNavegadorDeApp("Mozilla/5.0 (iPhone) Instagram 300.0")

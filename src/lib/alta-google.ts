@@ -133,7 +133,13 @@ export function destinoTrasGoogle(pendiente: boolean, next: string | null | unde
     if (esRegistro) return seguro.includes("google=1") ? seguro : `${seguro}${seguro.includes("?") ? "&" : "?"}google=1`;
     return "/registro?google=1";
   }
-  if (seguro && !esRegistro && !seguro.startsWith("/login")) return seguro;
+  /* Venía a REGISTRARSE pero ese Google ya tenía cuenta: entró a la que tenía.
+     Se lo lleva al registro, que con la sesión abierta le dice "ese mail ya
+     tenía una cuenta" y le ofrece ir a su panel o salir y usar otro mail. Sin
+     esto aparecía en otro panel sin explicación (el 02/10/26: quería abrir una
+     tienda con el Gmail de su cuenta de afiliado). */
+  if (esRegistro) return "/registro?ya-tenia=1";
+  if (seguro && !seguro.startsWith("/login")) return seguro;
   return "/panel";
 }
 

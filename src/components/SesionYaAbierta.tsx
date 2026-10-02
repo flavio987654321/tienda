@@ -34,7 +34,15 @@ import { nombreDeCuenta } from "@/lib/panel-de-rol";
  * cierre primero. Es un paso más, y es el paso que hace que el resultado no
  * sorprenda a nadie.
  */
-export function SesionYaAbierta({ modo }: { modo: "registro" | "login" }) {
+export function SesionYaAbierta({
+  modo,
+  yaTeniaCuenta = false,
+}: {
+  modo: "registro" | "login";
+  /** Tocó "Registrarme con Google" y ese Gmail ya tenía cuenta: entró a la que
+   *  tenía, y hay que decírselo en vez de dejarlo creer que creó otra. */
+  yaTeniaCuenta?: boolean;
+}) {
   const { user, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const [saliendo, setSaliendo] = useState(false);
 
@@ -67,8 +75,13 @@ export function SesionYaAbierta({ modo }: { modo: "registro" | "login" }) {
         </div>
 
         <h1 className="text-2xl font-black text-gray-950 mb-2">
-          Ya tenés la sesión abierta
+          {yaTeniaCuenta ? "Ese mail ya tenía una cuenta" : "Ya tenés la sesión abierta"}
         </h1>
+        {yaTeniaCuenta && (
+          <p className="text-gray-500 text-sm mb-3">
+            No creamos nada nuevo: entraste a la cuenta que ya tenías con ese Google.
+          </p>
+        )}
         <p className="text-gray-500 text-sm mb-8">
           Entraste como{" "}
           <strong className="text-gray-900">{nombreMostrado ?? "tu cuenta"}</strong>

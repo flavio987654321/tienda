@@ -470,7 +470,9 @@ function RegistroContent() {
     );
   }
   const conGoogle = modoGoogle && logueado && !!cuentaGoogle?.pendiente;
-  if (logueado && !conGoogle) return <SesionYaAbierta modo="registro" />;
+  if (logueado && !conGoogle) {
+    return <SesionYaAbierta modo="registro" yaTeniaCuenta={searchParams.get("ya-tenia") === "1"} />;
+  }
 
   /* A dónde vuelve si toca Google en el formulario: acá mismo, con lo que ya
      eligió, para no perder la cuenta ni el plan en el ida y vuelta. */
