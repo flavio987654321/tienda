@@ -74,8 +74,12 @@ check("AVI-C",
 
 /* ⚠️ En la computadora no se veía ninguno: la campanita estaba sólo en la barra
    del celular, y armar un producto se hace en una computadora. */
+/* Desde el 03/10/26 vive en la barra de atajos (`BarraDeAtajos`), que el
+   layout dibuja adentro del contenido. */
+const atajos = readFileSync("src/app/digitales/BarraDeAtajos.tsx", "utf8");
 check("AVI-D",
-  /<NotificationBell userId=\{user\.id\} \/>/.test(layout) && /hidden lg:flex justify-end/.test(layout),
+  /<NotificationBell userId=\{userId\} \/>/.test(atajos) && /hidden lg:flex justify-end/.test(atajos)
+  && /<BarraDeAtajos userId=\{user\.id\}/.test(layout),
   "la campanita está en el panel de escritorio");
 
 check("AVI-E",
@@ -86,7 +90,7 @@ check("AVI-E",
    contenido en vez de taparle la esquina, y el desplegable no lo recorta el
    `overflow-hidden` de la franja lateral. */
 check("AVI-F",
-  layout.indexOf("hidden lg:flex justify-end") > layout.indexOf("<main"),
+  layout.indexOf("<BarraDeAtajos") > layout.indexOf("<main"),
   "la campanita de escritorio va adentro del contenido, no flotando encima");
 
 /* ══════════════════════════════════════════════════════════════════════════

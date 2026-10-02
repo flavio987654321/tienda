@@ -15,7 +15,7 @@ import TabGeneral, { MAX_LOGO_MB } from "./TabGeneral";
 import TabPagos from "./TabPagos";
 import TabMeta from "./TabMeta";
 import TabLegales, { type ClaveDoc, type Politica } from "./TabLegales";
-import { aplicarTema, temaGuardado, type Tema } from "@/lib/tema-digitales";
+import { aplicarTema, temaGuardado, EVENTO_TEMA, type Tema } from "@/lib/tema-digitales";
 
 type Props = {
   tier: TierDigital;
@@ -131,6 +131,11 @@ export default function ConfiguracionClient(p: Props) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con localStorage (sistema externo)
     setTemaEstado(temaGuardado());
+    /* Y sigue al día si se cambia desde la luna de la barra de arriba, que
+       puede estar a la vista al mismo tiempo que esta pantalla. */
+    const alCambiar = () => setTemaEstado(temaGuardado());
+    window.addEventListener(EVENTO_TEMA, alCambiar);
+    return () => window.removeEventListener(EVENTO_TEMA, alCambiar);
   }, []);
 
   function setTema(t: Tema) {

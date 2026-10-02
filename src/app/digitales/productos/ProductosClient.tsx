@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   RotateCcw,
@@ -28,6 +28,7 @@ import { MiniaturaDeEstilo } from "./MiniaturaDeEstilo";
 import { sePuedeEditarElTexto } from "@/lib/ebook-texto";
 import EmbudoIA from "./EmbudoIA";
 import FichaIA from "./FichaIA";
+import { EVENTO_NUEVO_PRODUCTO } from "../BarraDeAtajos";
 import EbookIA from "./EbookIA";
 import CampoAuto from "@/components/CampoAuto";
 /* El producto de ejemplo, para mirar la tarjeta terminada sin tener una. Se
@@ -1243,6 +1244,7 @@ export default function ProductosClient({
   cobroConectado,
   conEjemplo,
   lanzamiento,
+  abrirNuevo = false,
 }: {
   tier: TierDigital;
   /**
@@ -1264,6 +1266,8 @@ export default function ProductosClient({
    * (`?lanzado=`): el cartel de "avisales". Null si no hay nada que avisar.
    */
   lanzamiento: { id: string; nombre: string; clientes: number } | null;
+  /** `?nuevo=1`: llegó del atajo "+ Nuevo producto" de la barra de arriba. */
+  abrirNuevo?: boolean;
 }) {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   /** Si está abierta la ventana de armar el embudo con IA. */
@@ -1481,6 +1485,32 @@ export default function ProductosClient({
 
   const topePrincipales = topeDe(tier, "PRINCIPAL");
   const llegoAlTope = principales.length >= topePrincipales;
+
+  /* ── El atajo "+ Nuevo producto" de la barra de arriba ───────────────────
+     Trae acá con `?nuevo=1` y abre armar con IA, que es el camino principal
+     (el de "Producto nuevo" a mano queda atrás, a la vista). Con el plan lleno
+     NO abre nada: la pantalla ya dice arriba "Llegaste al tope de tu plan", y
+     abrir la ventana sería dejarlo armar algo que el servidor no va a guardar.
+     El `?nuevo` se saca de la dirección enseguida: si no, recargar o volver
+     con "atrás" la abría de nuevo. Tocar el atajo estando YA en Productos no
+     pasa por acá: va por el evento de abajo. */
+  useEffect(() => {
+    if (!abrirNuevo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("nuevo");
+    window.history.replaceState(null, "", url);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responde a la dirección, que es externa
+    if (!llegoAlTope) setEmbudoIA(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sólo cuando llega el pedido, no cuando cambia el tope
+  }, [abrirNuevo]);
+
+  /* El mismo atajo tocado estando ya acá: llega por un evento, no por la
+     dirección (ver `EVENTO_NUEVO_PRODUCTO`). Misma regla del tope. */
+  useEffect(() => {
+    const abrir = () => { if (!llegoAlTope) setEmbudoIA(true); };
+    window.addEventListener(EVENTO_NUEVO_PRODUCTO, abrir);
+    return () => window.removeEventListener(EVENTO_NUEVO_PRODUCTO, abrir);
+  }, [llegoAlTope]);
 
   /* La pantalla usa la MISMA función que valida el servidor. No la reemplaza
      —lo que valida el navegador no protege nada— pero dice qué está mal al lado

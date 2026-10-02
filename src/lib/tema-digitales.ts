@@ -14,6 +14,15 @@ export type Tema = (typeof TEMAS)[number];
 /** Dónde se guarda. Sólo el navegador: es una preferencia de ESTE aparato. */
 export const CLAVE_TEMA = "tema_digitales";
 
+/**
+ * El aviso de "cambió el tema", para que se enteren los que lo muestran.
+ *
+ * Hay dos lugares que lo eligen —la luna de la barra de arriba y Apariencia en
+ * Configuración— y pueden estar a la vista a la vez. Sin esto, tocar la luna
+ * estando en Configuración dejaba marcada la opción vieja.
+ */
+export const EVENTO_TEMA = "tema-digitales";
+
 /** El atributo que lee la variante `panel-oscuro:` de `globals.css`. */
 export const ATRIBUTO_TEMA = "data-panel-tema";
 
@@ -87,6 +96,12 @@ export function aplicarTema(t: Tema): void {
   } catch {
     /* Almacenamiento bloqueado: el tema vale para esta visita y se pierde al
        recargar. Es mejor que no poder cambiarlo. */
+  }
+  try {
+    window.dispatchEvent(new Event(EVENTO_TEMA));
+  } catch {
+    /* Sin eventos, el otro selector no se entera hasta que se vuelva a dibujar;
+       el tema igual quedó aplicado y guardado. */
   }
 }
 

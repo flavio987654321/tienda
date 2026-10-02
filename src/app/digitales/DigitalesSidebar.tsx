@@ -7,6 +7,7 @@ import { useIsPwa } from "@/hooks/useIsPwa";
 import { AppLogo } from "@/components/AppLogo";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
+import { BotonTema } from "./BarraDeAtajos";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
   Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone, BarChart3, Users,
@@ -272,6 +273,8 @@ export default function DigitalesSidebar({ tier }: Props) {
         </Link>
 
         <div className="flex items-center gap-1">
+          {/* Claro/oscuro a un toque, también en el celular (ver `BarraDeAtajos`). */}
+          <BotonTema />
           {/* La campanita SÍ tiene qué mostrar: el cron diario avisa acá cuando un
               plan pago se termina y la cuenta vuelve a Free. */}
           {user?.id && <NotificationBell userId={user.id} />}

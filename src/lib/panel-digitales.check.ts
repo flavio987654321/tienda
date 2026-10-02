@@ -1755,6 +1755,19 @@ console.log("\n19) Cargando y sin conexión");
   chequear("en Ventas lo cobrado es la tarjeta y lo sin pagar o cancelado un renglón que igual lleva al detalle",
     ventasPantalla.includes('if (v.estado !== "COBRADA") return <VentaChica v={v} />;')
     && ventasPantalla.slice(ventasPantalla.indexOf("function VentaChica")).includes("href={`/digitales/ventas/${v.id}`}"));
+  const atajos = readFileSync("src/app/digitales/BarraDeAtajos.tsx", "utf8");
+  const productosPantalla = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+  chequear("los atajos de arriba: crear un producto, campanita, claro/oscuro y la cuenta",
+    atajos.includes('href="/digitales/productos?nuevo=1"') && atajos.includes("<NotificationBell")
+    && atajos.includes("<BotonTema />") && atajos.includes("<MenuDeCuenta"));
+  chequear("el atajo de crear respeta el tope del plan, por la dirección y estando ya en Productos",
+    (productosPantalla.match(/if \(!llegoAlTope\) setEmbudoIA\(true\)/g) ?? []).length === 2
+    && productosPantalla.includes("window.addEventListener(EVENTO_NUEVO_PRODUCTO"));
+  chequear("la luna y Apariencia escriben con la misma función y se enteran una de la otra",
+    atajos.includes('aplicarTema(oscuro ? "claro" : "oscuro")')
+    && readFileSync("src/app/digitales/configuracion/ConfiguracionClient.tsx", "utf8").includes("window.addEventListener(EVENTO_TEMA"));
+  chequear("cerrar sesión desde el menú corta el doble click",
+    atajos.includes("if (enVuelo.current) return;"));
   chequear("con la señal cortada, el panel lo dice a la vista",
     readFileSync("src/app/digitales/layout.tsx", "utf8").includes("<AvisoSinConexion />"));
 }

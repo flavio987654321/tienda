@@ -215,6 +215,7 @@ export default async function ProductosPage({
         lanzamiento={await lanzamientoDe(lanzadoId, filas, store?.id ?? null)}
         tier={tier}
         paginaInicial={paginaInicial}
+        abrirNuevo={consulta.nuevo === "1"}
         productos={productos}
         cupoIA={cupoIA}
         cupoEbook={cupoEbook}

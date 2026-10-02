@@ -8,7 +8,6 @@ import Recibimiento from "./Recibimiento";
 import PanelSplash from "@/components/panel/PanelSplash";
 import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
-import NotificationBell from "@/components/NotificationBell";
 import { DIGITALES_VERSION } from "@/lib/app-versions";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
@@ -21,6 +20,7 @@ import { pausadosPorCierreDe } from "@/lib/cierre-digital";
 import { puedeVer } from "@/lib/estadisticas-digitales";
 /* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
 import SondaDePantalla from "./SondaDePantalla";
+import BarraDeAtajos from "./BarraDeAtajos";
 import AvisoSinConexion from "@/components/digitales/AvisoSinConexion";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
@@ -258,9 +258,9 @@ export default async function DigitalesLayout({ children }: { children: React.Re
               el molde de DashboardLayout: como es un renglón de verdad, empuja
               al contenido en vez de taparle la esquina, y el desplegable no lo
               recorta el overflow-hidden de la franja lateral. */}
-          <div className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
-            <NotificationBell userId={user.id} />
-          </div>
+          {/* Y desde el 03/10/26 no va sola: es la barra de atajos (crear un
+              producto, la campanita, claro/oscuro y la cuenta). */}
+          <BarraDeAtajos userId={user.id} tier={tier} />
           {children}
         </main>
         {/* Sasha. Va afuera del `main` porque es `fixed` y no tiene que
