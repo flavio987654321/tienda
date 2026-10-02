@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { panelDeRol } from "@/lib/panel-de-rol";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { tieneGoogle } from "@/lib/alta-google";
-import { tieneAltaPendiente } from "@/lib/alta-google-servidor";
+import { tieneAltaPendiente, entraSinContrasena } from "@/lib/alta-google-servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +13,9 @@ export default async function PanelPage() {
 
   // Entró con Google y no terminó el alta: le falta elegir cuenta, plan,
   // teléfono y aceptar los términos. Ver `lib/alta-google`.
-  if (user.role === "BUYER" && (await tieneAltaPendiente(user.id))) {
+  if (user.role === "BUYER" && (await tieneAltaPendiente(user.id, user.email))) {
     const { data } = await (await createSupabaseServerClient()).auth.getUser();
-    if (tieneGoogle(data?.user)) redirect("/registro?google=1");
+    if (data?.user && (await entraSinContrasena(data.user))) redirect("/registro?google=1");
   }
 
   const store = await prisma.store.findUnique({

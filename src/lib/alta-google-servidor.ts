@@ -1,14 +1,28 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { altaPendiente, type PerfilParaAlta } from "@/lib/alta-google";
+import { altaPendiente, tieneGoogle, type PerfilParaAlta } from "@/lib/alta-google";
 import { huellaDeMail, dominiosParaBuscar } from "@/lib/prueba-repetida";
 
-/** El perfil de esta cuenta, con lo justo para saber si le falta el alta. */
-export async function perfilParaAlta(userId: string): Promise<PerfilParaAlta> {
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
+/**
+ * El perfil de esta cuenta, con lo justo para saber si le falta el alta.
+ *
+ * Se busca por id O por mail, igual que `getCurrentUser`, y no es un detalle:
+ * quien compró un producto digital (o en una tienda como invitado) tiene un
+ * perfil de comprador SIN cuenta de acceso, con otro id. Cuando después entra
+ * con Google o con el código, Supabase le da un id nuevo; buscando solo por id
+ * no se encontraba su perfil, el alta intentaba crear otro con el mismo mail,
+ * chocaba, y quedaba en un círculo sin salida. Google y el código prueban que
+ * el mail es suyo, así que ese perfil es suyo.
+ */
+export async function perfilParaAlta(userId: string, email?: string | null): Promise<PerfilParaAlta & { id: string } | null> {
+  const mail = email?.trim().toLowerCase();
+  const u = await prisma.user.findFirst({
+    where: mail ? { OR: [{ id: userId }, { email: mail }] } : { id: userId },
+    // Si hubiera los dos, el del id de la sesión primero.
+    orderBy: { createdAt: "desc" },
     select: {
+      id: true,
       role: true,
       termsAcceptedAt: true,
       store: { select: { id: true } },
@@ -17,6 +31,7 @@ export async function perfilParaAlta(userId: string): Promise<PerfilParaAlta> {
   });
   if (!u) return null;
   return {
+    id: u.id,
     role: u.role,
     termsAcceptedAt: u.termsAcceptedAt,
     tieneTienda: !!u.store,
@@ -24,8 +39,8 @@ export async function perfilParaAlta(userId: string): Promise<PerfilParaAlta> {
   };
 }
 
-export async function tieneAltaPendiente(userId: string): Promise<boolean> {
-  return altaPendiente(await perfilParaAlta(userId));
+export async function tieneAltaPendiente(userId: string, email?: string | null): Promise<boolean> {
+  return altaPendiente(await perfilParaAlta(userId, email));
 }
 
 /** ¿Es el admin? Por el mail configurado o por el rol en la base. */
@@ -116,4 +131,16 @@ export async function anularClaveYReabrir(
   let { error: errSesion } = await supabase.auth.verifyOtp({ email, token: codigo, type: "email" });
   if (errSesion) ({ error: errSesion } = await supabase.auth.verifyOtp({ email, token: codigo, type: "magiclink" }));
   return !errSesion;
+}
+
+/**
+ * ¿Esta cuenta entra sin contraseña? Con Google, o creada al entrar con el
+ * código por mail (quien compró como invitado y después entró así).
+ *
+ * Es la condición para el formulario de "completá tu cuenta": antes era solo
+ * Google, y quien entraba con el código quedaba como comprador sin términos
+ * ni datos, sin que nada lo llevara a completarlos.
+ */
+export async function entraSinContrasena(user: Parameters<typeof tieneGoogle>[0] & { id: string }): Promise<boolean> {
+  return tieneGoogle(user) || !(await tieneContrasena(user.id));
 }

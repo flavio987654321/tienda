@@ -91,7 +91,7 @@ check("GO-L", g.includes("validarDatosDeAlta(body)") && r.includes("validarDatos
   && g.includes("nombreDeTiendaTomado(") && r.includes("nombreDeTiendaTomado(")
   && g.includes("perfilDeAlta(") && r.includes("perfilDeAlta("),
   "las dos puertas usan las mismas validaciones y arman el mismo perfil");
-check("GO-M", g.includes("tieneGoogle(user)") && g.includes("tieneAltaPendiente(user.id)") && g.includes("esElAdmin(")
+check("GO-M", g.includes("entraSinContrasena(user)") && g.includes("tieneAltaPendiente(user.id, user.email)") && g.includes("esElAdmin(")
   && g.includes("checkRateLimit("),
   "el alta con Google solo sirve a una cuenta de Google, sin terminar, que no es el admin, y con límite");
 check("GO-N", leer("src/components/BotonGoogle.tsx").includes("if (!GOOGLE_PRENDIDO"),
@@ -115,7 +115,7 @@ check("GO-S", boton.includes('addEventListener("pageshow"') && boton.includes("i
   "el botón de Google se destraba al volver atrás, y no sale dos veces");
 check("GO-T", cb.includes("return await regreso(req, a);") && /catch \(e\)[\s\S]*signOut\(\{ scope: "local" \}\)[\s\S]*google=error/.test(cb),
   "si el regreso de Google falla, cierra la sesión y vuelve al login, nunca una pantalla de error");
-check("GO-U", g.includes("$transaction(") && g.includes('where: { id: user.id, role: "BUYER", termsAcceptedAt: null }')
+check("GO-U", g.includes("$transaction(") && g.includes('where: { id: existe.id, role: "BUYER", termsAcceptedAt: null }')
   && g.includes("reclamo.count === 0") && g.includes("existe?.banned"),
   "dos altas a la vez: la segunda no pisa a la primera; y una cuenta suspendida no se completa");
 const auth = leer("src/components/AuthProvider.tsx");

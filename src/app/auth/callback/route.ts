@@ -67,5 +67,5 @@ async function regreso(req: NextRequest, a: (camino: string) => NextResponse) {
       console.error("[google] no salió el aviso de Google conectado:", e instanceof Error ? e.message : e));
   }
 
-  return a(destinoTrasGoogle(await tieneAltaPendiente(user.id), next));
+  return a(destinoTrasGoogle(await tieneAltaPendiente(user.id, user.email), next));
 }

@@ -865,7 +865,7 @@ function RegistroContent() {
 
             {conGoogle ? (
               <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-                Con tu cuenta de Google: <strong className="text-gray-900 break-all">{cuentaGoogle?.email}</strong>
+                Tu cuenta: <strong className="text-gray-900 break-all">{cuentaGoogle?.email}</strong>
               </div>
             ) : (
               <>

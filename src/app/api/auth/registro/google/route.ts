@@ -6,8 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { validarDatosDeAlta, nombreDeTiendaTomado, perfilDeAlta } from "@/lib/alta-de-cuenta";
-import { tieneGoogle } from "@/lib/alta-google";
-import { esElAdmin, tieneAltaPendiente, pruebaUsadaAntes } from "@/lib/alta-google-servidor";
+import { esElAdmin, tieneAltaPendiente, pruebaUsadaAntes, entraSinContrasena } from "@/lib/alta-google-servidor";
 
 /**
  * El alta de quien entró con Google: el mismo formulario de `/registro`, sin
@@ -26,7 +25,8 @@ async function quienEs() {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
   const user = data?.user;
-  if (!user?.email || !tieneGoogle(user)) return null;
+  // Google, o una cuenta sin contraseña creada al entrar con el código por mail.
+  if (!user?.email || !(await entraSinContrasena(user))) return null;
   return user;
 }
 
@@ -38,7 +38,7 @@ export async function GET() {
     ? user.user_metadata.full_name
     : typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "";
   return NextResponse.json({
-    pendiente: await tieneAltaPendiente(user.id),
+    pendiente: await tieneAltaPendiente(user.id, user.email),
     email: user.email,
     nombre: nombre.slice(0, 100),
   });
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     if (await esElAdmin(user.id, user.email)) {
       return NextResponse.json({ error: "Esta cuenta no se puede crear con Google." }, { status: 403 });
     }
-    if (!(await tieneAltaPendiente(user.id))) {
+    if (!(await tieneAltaPendiente(user.id, user.email))) {
       return NextResponse.json({ error: "Tu cuenta ya está creada.", yaCreada: true }, { status: 409 });
     }
 
@@ -86,15 +86,23 @@ export async function POST(req: NextRequest) {
        id repetido. */
     try {
       await prisma.$transaction(async (tx) => {
-        const existe = await tx.user.findUnique({ where: { id: user.id }, select: { banned: true } });
+        /* Por id O por mail, como `getCurrentUser`: quien compró antes como
+           invitado (o un producto digital) ya tiene un perfil de comprador con
+           OTRO id, y es suyo — Google probó el mail. Se completa ese, con sus
+           compras, en vez de intentar otro con el mismo mail y chocar. */
+        const existe = await tx.user.findFirst({
+          where: { OR: [{ id: user.id }, { email }] },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, banned: true },
+        });
         if (existe?.banned) throw new AltaRechazada("Esta cuenta está suspendida.", 403);
         if (existe) {
           const reclamo = await tx.user.updateMany({
-            where: { id: user.id, role: "BUYER", termsAcceptedAt: null },
+            where: { id: existe.id, role: "BUYER", termsAcceptedAt: null },
             data: { termsAcceptedAt: new Date() },
           });
           if (reclamo.count === 0) throw new AltaRechazada("Tu cuenta ya está creada.", 409);
-          await tx.user.update({ where: { id: user.id }, data: perfil });
+          await tx.user.update({ where: { id: existe.id }, data: perfil });
         } else {
           await tx.user.create({ data: { id: user.id, email, password: null, ...perfil } });
         }
@@ -105,7 +113,7 @@ export async function POST(req: NextRequest) {
       }
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
         // Llegaron dos a la vez y la otra ganó; o el mail es de otra cuenta.
-        if (!(await tieneAltaPendiente(user.id))) return NextResponse.json({ error: "Tu cuenta ya está creada.", yaCreada: true }, { status: 409 });
+        if (!(await tieneAltaPendiente(user.id, user.email))) return NextResponse.json({ error: "Tu cuenta ya está creada.", yaCreada: true }, { status: 409 });
         return NextResponse.json({ error: "Ya existe una cuenta con ese email. Iniciá sesión con tu contraseña." }, { status: 400 });
       }
       throw e;

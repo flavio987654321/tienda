@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { tieneGoogle } from "@/lib/alta-google";
-import { tieneAltaPendiente } from "@/lib/alta-google-servidor";
+import { tieneAltaPendiente, entraSinContrasena } from "@/lib/alta-google-servidor";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -13,9 +12,9 @@ export async function GET() {
   let altaPendiente = false;
   if (user?.role === "BUYER") {
     try {
-      if (await tieneAltaPendiente(user.id)) {
+      if (await tieneAltaPendiente(user.id, user.email)) {
         const { data } = await (await createSupabaseServerClient()).auth.getUser();
-        altaPendiente = tieneGoogle(data?.user);
+        altaPendiente = !!data?.user && (await entraSinContrasena(data.user));
       }
     } catch { /* si no se puede saber, no se lo frena */ }
   }

@@ -55,6 +55,17 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = String(email).toLowerCase().trim();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    /* Compró antes con este mail (un producto digital, o como invitado) y por
+       eso tiene un perfil de comprador sin cuenta de acceso. "Ya existe una
+       cuenta" no le decía nada: nunca creó ninguna. La salida es probar que el
+       mail es suyo —código o Google— y ahí completa ESE perfil, con sus
+       compras. No se le crea uno nuevo acá porque el mail todavía no está
+       probado: cualquiera podría registrarse con el mail de otra persona. */
+    if (existing && existing.role === "BUYER" && !existing.termsAcceptedAt) {
+      return NextResponse.json({
+        error: "Ya compraste antes con este mail. Para crear tu cuenta, entrá con \"Entrar con un código por mail\" (o con Google) desde Ingresar, y ahí completás tus datos.",
+      }, { status: 400 });
+    }
     if (existing) {
       return NextResponse.json({ error: "Ya existe una cuenta con ese email. Iniciá sesión o usá otro email." }, { status: 400 });
     }
