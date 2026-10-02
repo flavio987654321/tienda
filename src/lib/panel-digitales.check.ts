@@ -279,7 +279,11 @@ console.log("\n8) Los dos campos que se escriben a mano");
    lo edita y la pantalla. Estaba nada más que en el alta, así que el número que
    el registro rechazaba se guardaba igual entrando por `/api/perfil`. Es el mismo
    error que ya había pasado con la contraseña (ver `password-policy`). */
-chequear("el registro usa la regla compartida", /validarTelefono\(phone\)/.test(registro));
+/* Desde que existe el alta con Google, la validación del registro vive en
+   `alta-de-cuenta`, compartida por las dos puertas. */
+chequear("el registro usa la regla compartida",
+  /validarTelefono\(phone\)/.test(soloCodigo(readFileSync("src/lib/alta-de-cuenta.ts", "utf8")))
+  && /validarDatosDeAlta\(body\)/.test(registro));
 chequear("la ruta que lo edita usa la MISMA", /validarTelefono\(data\.phone\)/.test(perfil));
 chequear("y la pantalla también", /validarTelefono\(telefono\)/.test(miCuenta));
 

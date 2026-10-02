@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
+import { BotonGoogle, SeparadorO } from "@/components/BotonGoogle";
 import { VolverAtras } from "@/components/VolverAtras";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -30,6 +31,8 @@ function LoginForm() {
   const mailFallo = searchParams.get("mail") === "0";
   /* La sesión del admin se cerró sola (ver `sesion-admin.ts`). */
   const vencida = searchParams.get("vencida");
+  /* Volvió de Google sin sesión (canceló, o falló). Ver `/auth/callback`. */
+  const errorGoogle = searchParams.get("google");
   const redirectTo = searchParams.get("redirect");
   const [inPwa, setInPwa] = useState(false);
 
@@ -195,7 +198,17 @@ function LoginForm() {
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-2xl text-sm mb-6">
               {vencida === "espera-codigo"
                 ? "Pasaron más de 10 minutos sin poner el código. Por seguridad cerramos la sesión: volvé a entrar."
+                : vencida === "google"
+                ? "El panel del admin no se usa con Google. Entrá con tu contraseña y el código."
                 : "Por seguridad cerramos tu sesión del admin. Volvé a entrar con tu contraseña y el código."}
+            </div>
+          )}
+
+          {errorGoogle && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3.5 rounded-2xl text-sm mb-6">
+              {errorGoogle === "cancelado"
+                ? "No se completó el ingreso con Google. Podés probar de nuevo o entrar con tu email."
+                : "No pudimos entrar con Google. Probá de nuevo o entrá con tu email."}
             </div>
           )}
 
@@ -264,6 +277,10 @@ function LoginForm() {
               {info}
             </motion.div>
           )}
+
+          {/* Vuelve a donde iba (si es de este sitio); si no, a su panel. */}
+          <BotonGoogle next={redirectTo ?? "/panel"} />
+          <SeparadorO />
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

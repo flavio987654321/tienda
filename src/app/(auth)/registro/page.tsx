@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
+import { BotonGoogle, SeparadorO } from "@/components/BotonGoogle";
 import { useTurnstile } from "@/components/Turnstile";
 import { VolverAtras } from "@/components/VolverAtras";
 import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
@@ -153,18 +154,21 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-function validate(form: { name: string; email: string; password: string; storeName: string; phone: string }, accountType: AccountType) {
+function validate(form: { name: string; email: string; password: string; storeName: string; phone: string }, accountType: AccountType, conGoogle = false) {
   if (!form.name.trim() || form.name.trim().length < 2)
     return "El nombre debe tener al menos 2 caracteres.";
   if (/\d/.test(form.name))
     return "El nombre no puede contener números.";
-  if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-    return "Ingresá un email válido.";
-  /* La misma regla que aplica el servidor, no una copia parecida: si acá
-     dijera algo distinto, el formulario dejaría pasar contraseñas que la API
-     rechaza —o al revés— y la persona vería un error recién al enviar. */
-  const problemaContrasena = validarContrasena(form.password);
-  if (problemaContrasena) return problemaContrasena;
+  // Con Google, el mail y la contraseña los pone Google: no hay campos.
+  if (!conGoogle) {
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      return "Ingresá un email válido.";
+    /* La misma regla que aplica el servidor, no una copia parecida: si acá
+       dijera algo distinto, el formulario dejaría pasar contraseñas que la API
+       rechaza —o al revés— y la persona vería un error recién al enviar. */
+    const problemaContrasena = validarContrasena(form.password);
+    if (problemaContrasena) return problemaContrasena;
+  }
   if (accountType === "owner") {
     if (!form.storeName.trim() || form.storeName.trim().length < 3)
       return "El nombre de tu tienda debe tener al menos 3 caracteres.";
@@ -179,7 +183,7 @@ function RegistroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   /* Sólo `logueado`, no `cargando`: ver el comentario del corte, más abajo. */
-  const { logueado } = useSesion();
+  const { logueado, cargando } = useSesion();
 
   useEffect(() => {
     if (isPwa()) router.replace("/login");
@@ -241,6 +245,29 @@ function RegistroContent() {
   const [verPlanesDigitales, setVerPlanesDigitales] = useState(arrancaEnPlanesDigitales);
   const [digitalTier, setDigitalTier] = useState<TierDigital>(tierDigitalParam);
   const captcha = useTurnstile("registro");
+
+  /* Volvió de Google sin la cuenta terminada (ver `lib/alta-google`). Es el
+     mismo formulario, sin mail ni contraseña: los puso Google. Qué le falta a
+     la cuenta se le pregunta al servidor, que es quien sabe. */
+  const modoGoogle = searchParams.get("google") === "1";
+  const [cuentaGoogle, setCuentaGoogle] = useState<{ pendiente: boolean; email?: string; nombre?: string } | null>(null);
+  useEffect(() => {
+    if (!modoGoogle || !logueado) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/auth/registro/google", { cache: "no-store" });
+        const d = await r.json().catch(() => ({ pendiente: false }));
+        if (!vivo) return;
+        if (!d.pendiente) { window.location.replace("/panel"); return; }
+        setCuentaGoogle(d);
+        if (d.nombre) setForm((p) => (p.name ? p : { ...p, name: d.nombre }));
+      } catch {
+        if (vivo) setCuentaGoogle({ pendiente: false });
+      }
+    })();
+    return () => { vivo = false; };
+  }, [modoGoogle, logueado]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -306,7 +333,8 @@ function RegistroContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const err = validate(form, accountType);
+    const conGoogle = modoGoogle && !!cuentaGoogle?.pendiente;
+    const err = validate(form, accountType, conGoogle);
     if (err) { setError(err); return; }
     if (!ageConfirmed) {
       setError("Debés confirmar que tenés 18 años o más para registrarte.");
@@ -318,13 +346,28 @@ function RegistroContent() {
     }
     setLoading(true);
     setError("");
-    const res = await fetch("/api/auth/registro", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, digitalTier, phone: form.phone.trim(), termsAccepted, ageConfirmed, turnstileToken: captcha.token }),
-    });
-    const data = await res.json();
-    captcha.reset();
+    const datosDelAlta = { name: form.name, storeName: form.storeName, accountType, billing, tier: ownerTier, digitalTier, phone: form.phone.trim(), termsAccepted, ageConfirmed };
+    let res: Response;
+    try {
+      res = conGoogle
+        ? await fetch("/api/auth/registro/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datosDelAlta),
+          })
+        : await fetch("/api/auth/registro", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...datosDelAlta, email: form.email, password: form.password, turnstileToken: captcha.token }),
+          });
+    } catch {
+      setError("Error de conexión. Intentá de nuevo.");
+      setLoading(false);
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!conGoogle) captcha.reset();
+    if (conGoogle && data?.yaCreada) { window.location.href = "/panel"; return; }
     if (!res.ok) {
       setError(data.error || "Error al registrarse");
       setLoading(false);
@@ -358,6 +401,12 @@ function RegistroContent() {
     const sufijoMail = data?.mailEnviado === false ? "&mail=0" : "";
 
     setRedirecting(true);
+    /* Con Google ya está adentro y con el mail confirmado: derecho al panel,
+       con navegación completa para que todo lea el perfil nuevo. */
+    if (conGoogle) {
+      window.location.href = redirectParam ?? "/panel";
+      return;
+    }
     if (accountType === "buyer") {
       router.push(`/login?registered=buyer${sufijoMail}${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
     } else if (accountType === "seller") {
@@ -393,7 +442,23 @@ function RegistroContent() {
      resulta que hay alguien adentro la pantalla se reemplaza. El que ve ese
      cambio es el caso raro, y no perdió nada: el formulario todavía estaba
      vacío. */
-  if (logueado) return <SesionYaAbierta modo="registro" />;
+  /* Girando solo mientras se averigua. Si la consulta falló, cae en "ya tenés
+     la sesión abierta", que ofrece ir al panel o salir: nunca queda trabada. */
+  if (modoGoogle && (cargando || (logueado && cuentaGoogle === null))) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+  const conGoogle = modoGoogle && logueado && !!cuentaGoogle?.pendiente;
+  if (logueado && !conGoogle) return <SesionYaAbierta modo="registro" />;
+
+  /* A dónde vuelve si toca Google en el formulario: acá mismo, con lo que ya
+     eligió, para no perder la cuenta ni el plan en el ida y vuelta. */
+  const vueltaDeGoogle = `/registro?google=1&plan=${accountType}&billing=${billing === "ANNUAL" ? "annual" : "monthly"}${
+    accountType === "digital" ? `&tier=${digitalTier}` : accountType === "owner" ? `&tier=${ownerTier}` : ""
+  }${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`;
 
   const selected = TYPES.find((t) => t.key === accountType)!;
   const colors = COLOR_MAP[selected.color];
@@ -778,6 +843,17 @@ function RegistroContent() {
               </motion.div>
             )}
 
+            {conGoogle ? (
+              <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                Con tu cuenta de Google: <strong className="text-gray-900 break-all">{cuentaGoogle?.email}</strong>
+              </div>
+            ) : (
+              <>
+                <BotonGoogle next={vueltaDeGoogle} texto="Registrarme con Google" />
+                <SeparadorO />
+              </>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre completo</label>
@@ -828,6 +904,7 @@ function RegistroContent() {
                 </div>
               )}
 
+              {!conGoogle && (<>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input
@@ -859,6 +936,8 @@ function RegistroContent() {
                   : <p className="text-xs text-gray-500 mt-1">{`Mínimo ${LARGO_MINIMO} caracteres.`}</p>
                 }
               </div>
+
+              </>)}
 
               <div className="space-y-3 pt-1">
                 <label className="flex items-start gap-3 cursor-pointer group">
@@ -918,11 +997,11 @@ function RegistroContent() {
                 </label>
               </div>
 
-              {captcha.widget}
+              {!conGoogle && captcha.widget}
 
               <button
                 type="submit"
-                disabled={loading || !ageConfirmed || !termsAccepted || !captcha.ready}
+                disabled={loading || !ageConfirmed || !termsAccepted || (!conGoogle && !captcha.ready)}
                 className={`w-full text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] disabled:hover:scale-100 ${colors.btn}`}
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -930,12 +1009,12 @@ function RegistroContent() {
               </button>
             </form>
 
-            <p className="text-center text-sm text-gray-500 mt-7">
+            {!conGoogle && <p className="text-center text-sm text-gray-500 mt-7">
               ¿Ya tenés cuenta?{" "}
               <Link href="/login" className="text-orange-600 font-bold hover:text-orange-700 transition-colors">
                 Iniciar sesión →
               </Link>
-            </p>
+            </p>}
           </motion.div>
         </div>
       </div>
