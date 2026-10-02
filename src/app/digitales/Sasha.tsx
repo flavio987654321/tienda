@@ -58,6 +58,9 @@ export default function Sasha() {
   /* Cuando el tope del día cortó: el cuadro de escribir se apaga hasta
      mañana, así no se manda un pedido que ya sabemos que se rechaza. */
   const [cortado, setCortado] = useState(false);
+  /* El estado no se pudo traer (sin conexión, o la ruta falló). Sin esto el
+     cajón se quedaba en "cargando" para siempre. */
+  const [sinEstado, setSinEstado] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const cajaRef = useRef<HTMLDivElement>(null);
@@ -100,14 +103,16 @@ export default function Sasha() {
   useEffect(() => {
     if (!abierto || estado) return;
     let vivo = true;
+    setSinEstado(false);
     fetch("/api/digitales/sasha")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: Estado | null) => {
-        if (!vivo || !d) return;
+        if (!vivo) return;
+        if (!d) { setSinEstado(true); return; }
         setEstado(d);
         setMensajes(d.mensajes ?? []);
       })
-      .catch(() => {});
+      .catch(() => { if (vivo) setSinEstado(true); });
     return () => { vivo = false; };
   }, [abierto, estado]);
 
@@ -248,7 +253,27 @@ export default function Sasha() {
               </button>
             </div>
 
-            {esFree ? (
+            {estado === null ? (
+              /* Todavía no se sabe el plan. Antes acá se dibujaba el chat
+                 entero —saludo, sugerencias y cuadro para escribir— y a una
+                 cuenta Free le aparecía un segundo un chat que no podía usar,
+                 hasta que llegaba el estado y saltaba al candado. El servidor
+                 igual rechaza a Free antes de llamar al modelo; esto es para
+                 que no se vea lo que no hay. */
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                {sinEstado ? (
+                  <>
+                    <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">No pudimos abrir a Sasha.</p>
+                    <button type="button" onClick={() => { setAbierto(false); setTimeout(() => setAbierto(true), 0); }}
+                      className="rounded-xl px-4 py-2 text-sm font-bold text-orange-600 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10">
+                      Probar de nuevo
+                    </button>
+                  </>
+                ) : (
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-300" aria-label="Cargando" />
+                )}
+              </div>
+            ) : esFree ? (
               /* Free: no hay chat que abrir. Se cuenta qué hace y con qué plan
                  viene; no se manda ningún pedido, así que no hay nada que
                  contar ni que pagar. */
