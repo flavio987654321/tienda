@@ -424,12 +424,13 @@ const THEMES: Record<string, Theme> = {
 
      Los valores salen de `Aurora.tsx` uno por uno, no unos parecidos: BG #06070d,
      S #0e0f1a, T #f2f2f7 y el violeta #8b5cf6 de fábrica (que igual lo pisa el
-     acento que haya elegido la dueña). Los bordes van con el dorado del template
-     —rgba(201,168,76,…)—, que es su hilo fino de siempre. */
+     acento que haya elegido la dueña). Los bordes son el filo de vidrio neutro
+     de Aurora —rgba(242,242,247,…)—: hasta el 03/10/26 eran el dorado de
+     Fashion Noir, que había quedado de cuando Aurora nació de ese template. */
   "aurora": {
     BG:"#06070d", S:"#0e0f1a", T:"#f2f2f7", G:"#8b5cf6", MID:"#8b8f9a",
-    border:"rgba(201,168,76,0.18)", borderFaint:"rgba(242,242,247,0.07)",
-    inputBorder:"rgba(201,168,76,0.25)", inputBg:"rgba(255,255,255,0.05)",
+    border:"rgba(242,242,247,0.14)", borderFaint:"rgba(242,242,247,0.07)",
+    inputBorder:"rgba(242,242,247,0.18)", inputBg:"rgba(255,255,255,0.05)",
     serif:"Georgia, serif", sans:"'Helvetica Neue', Arial, sans-serif", dark:true,
     tabStyle:"vidrio", cardRadius:18, titleStyle:"editorial", inputRadius:14,
   },

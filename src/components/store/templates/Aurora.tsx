@@ -9,14 +9,13 @@ import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext, textoSobre } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, contrasteWCAG, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { catalogoTieneGeneros } from "@/lib/generos";
 import { opcionesVisibles } from "@/lib/opciones";
-import {  } from "@/hooks/useStorefront";
 import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -63,6 +62,16 @@ const announcementMessages_DEFAULT = [
 ];
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
+
+/** Un color con transparencia. El acento lo elige la dueña y casi siempre es
+ *  un hex; si viniera en otro formato, `color-mix` lo resuelve igual. */
+function conAlfa(color: string, a: number): string {
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
+  if (!hex) return `color-mix(in srgb, ${color} ${Math.round(a * 100)}%, transparent)`;
+  const h = hex[1].length === 3 ? hex[1].split("").map(c => c + c).join("") : hex[1];
+  const n = parseInt(h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 
 /* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
 const CART_ICON_OPTIONS: React.ReactNode[] = [
@@ -129,9 +138,6 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
 // Sin "au-categorias": las categorías ya no son una sección propia con tres
 // baldosas elegidas a mano, son el segundo mazo de la vidriera del hero — y
 // entran todas las que la tienda tenga, no tres.
-/* Nosotros y Contacto NO están: dejaron de ser secciones de la portada para ser
-   pantallas propias, como en Aire. Una pantalla no se reordena ni se oculta desde
-   el editor — se entra a ella. */
 /* Nosotros y Contacto NO estan: son pantallas propias, y una pantalla no se
    reordena ni se oculta desde el editor — se entra a ella.
    Tampoco estan el banner horizontal, las ofertas, lo mas visto ni la prueba
@@ -619,7 +625,42 @@ export default function Aurora() {
   const accentText = textoSobre(G);
   const textoSobreAcento = accentText;
 
-  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
+  /* ── Filos y luces ──────────────────────────────────────────────────────────
+     Aurora nació de Fashion Noir y le quedaron cuarenta restos de su dorado
+     —rgba(201,168,76,…)— y de su blanco crema. En una tienda violeta se veían
+     amarillentos. Ahora hay dos cosas distintas:
+       · el FILO: la línea fina de estructura (bordes, divisores). Es neutro,
+         como el canto de las piezas de vidrio, y no compite con el acento.
+       · la LUZ: los estados (lo elegido, el hover, los rótulos). Sale del acento
+         que eligió la dueña, así que cambia con él. */
+  const LINEA        = "rgba(242,242,247,0.08)";
+  const LINEA_FUERTE = "rgba(242,242,247,0.14)";
+  const luz = (a: number) => conAlfa(G, a);
+  /** El acento usado como TEXTO sobre la escena. Si la dueña eligió un color
+   *  oscuro, sobre el casi-negro de Aurora no se lee: ahí cae a la tinta.
+   *  Se mide con el contraste real (3:1, el de WCAG para texto grande y
+   *  rótulos) y no con `getReadableAccentText`: esa compara "claro u oscuro"
+   *  y manda a blanco hasta el violeta de fábrica, que se lee perfecto. */
+  const GT = contrasteWCAG(G, BG) >= 3 ? G : T;
+  /* El precio rebajado y el tachado, iguales en la grilla y en la ficha. En la
+     ficha eran #dc2626 y #444 —colores de un template CLARO—: el tachado, gris
+     oscuro sobre casi negro, no se veía, y el "% OFF" era una pastilla verde
+     clara pegada en la escena oscura. */
+  const REBAJA  = "#f87171";
+  /* Un botón que no se puede apretar se ve apagado, no "violeta clarito con
+     letra negra": eso parecía otro color de botón, no uno deshabilitado. */
+  const APAGADO_FONDO = "rgba(242,242,247,0.08)";
+  const APAGADO_TEXTO = "rgba(242,242,247,0.38)";
+  const TACHADO = "rgba(242,242,247,0.42)";
+  /** Los menús que se abren arriba de la página: vidrio OSCURO. El de las
+   *  tarjetas es casi transparente y sobre una foto el texto no se lee. */
+  const vidrioMenu: React.CSSProperties = {
+    background:"rgba(14,15,26,0.9)", backdropFilter:"blur(18px) saturate(150%)",
+    WebkitBackdropFilter:"blur(18px) saturate(150%)", border:`1px solid ${LINEA_FUERTE}`,
+    borderRadius:14, overflow:"hidden", boxShadow:"0 18px 50px rgba(0,0,0,0.55)",
+  };
+
+  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(242,242,247,0.1)", accent:G, accentText, serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
@@ -627,7 +668,13 @@ export default function Aurora() {
   const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
 
   const nosotrosImageOv  = storeConfig?.imageOverrides?.["nosotrosImage"];
-  const nosotrosImageUrl = nosotrosImageOv?.url ?? "https://picsum.photos/seed/aurora-about/900/700";
+  /* La misma regla que la foto del hero: si la dueña no subió una, va una de
+     SUS productos (la segunda con foto, para no repetir la del hero). Antes caía
+     en una foto de stock de picsum, o sea un desconocido haciéndose pasar por la
+     historia de la marca. Sin ninguna foto, el panel muestra la luz de la
+     escena en vez de una imagen. */
+  const nosotrosImageUrl: string | null = nosotrosImageOv?.url
+    ?? (() => { const fotos = products.map(p => p.images[0]).filter((u): u is string => !!u); return fotos[1] ?? fotos[0] ?? null; })();
   const nosotrosPosX     = nosotrosImageOv?.posX ?? 50;
   const nosotrosPosY     = nosotrosImageOv?.posY ?? 50;
 
@@ -739,7 +786,7 @@ export default function Aurora() {
   const footerText     = footerBgImg?.url
     ? (footerBgImg.overlayType === "light" ? "#06070d" : T)
     : (getContrastColor(footerBg) === "light" ? T : "#06070d");
-  const footerSubtleBorder = footerText === T ? "rgba(240,235,227,0.15)" : "rgba(0,0,0,0.15)";
+  const footerSubtleBorder = footerText === T ? "rgba(242,242,247,0.15)" : "rgba(0,0,0,0.15)";
   const footerInputBg  = footerText === T ? S : "rgba(0,0,0,0.06)";
   const productosBg    = scn["bgProductos"]   ?? BG;
   const productosText  = getContrastColor(productosBg)  === "light" ? T : "#06070d";
@@ -749,7 +796,7 @@ export default function Aurora() {
     ? (contactoBgImg.overlayType === "light" ? "#06070d" : T)
     : (getContrastColor(contactoBg) === "light" ? T : "#06070d");
   const contactoInputBg     = contactoText === T ? S : "rgba(0,0,0,0.06)";
-  const contactoInputBorder = contactoText === T ? "rgba(201,168,76,0.2)" : "rgba(0,0,0,0.12)";
+  const contactoInputBorder = contactoText === T ? LINEA_FUERTE : "rgba(0,0,0,0.12)";
 
   return (
     /* `data-template-raiz`: de acá arranca `useVistaTemplate` para encontrar quién
@@ -774,25 +821,25 @@ export default function Aurora() {
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {showAnnouncement && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>
+          <span style={{ fontSize:12, fontWeight:600, color:textoSobreAcento, letterSpacing:1 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
           {/* Dots */}
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
             {announcementMessages.map((_, i) => (
               <button key={i} onClick={() => setAnnouncementIdx(i)}
-                style={{ width: i === announcementIdx ? 16 : 6, height:4, border:"none", borderRadius:2, background: i === announcementIdx ? BG : "rgba(10,10,10,0.35)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
+                style={{ width: i === announcementIdx ? 16 : 6, height:4, border:"none", borderRadius:2, background: i === announcementIdx ? textoSobreAcento : conAlfa(textoSobreAcento, 0.35), cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
             ))}
           </div>
           {/* Close */}
           <button onClick={() => setAnnouncementVisible(false)}
-            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:BG, cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.7 }}>×</button>
+            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:textoSobreAcento, cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.7 }}>×</button>
         </div>
       )}
 
       {/* ── TOAST ──────────────────────────────────────────── */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:G, color:BG, padding:"12px 28px", fontSize:13, fontWeight:700, zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
+        <div style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:G, color:textoSobreAcento, padding:"12px 28px", fontSize:13, fontWeight:700, zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
           ✓ {toastMsg}
         </div>
       )}
@@ -829,7 +876,7 @@ export default function Aurora() {
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
                 {searchResults.map(p => (
                   <button key={p.id} onClick={() => openModal(p)}
-                    style={{ background:"none", border:`1px solid rgba(201,168,76,0.2)`, cursor:"pointer", textAlign:"left", padding:0, color:T }}>
+                    style={{ background:"none", border:`1px solid ${LINEA_FUERTE}`, cursor:"pointer", textAlign:"left", padding:0, color:T }}>
                     <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S }}>
                       {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 33vw, 200px" style={{ objectFit:"cover" }}/>}
                     </div>
@@ -844,7 +891,7 @@ export default function Aurora() {
             </div>
           )}
           {searchQuery.trim().length > 0 && searchResults.length === 0 && (
-            <p style={{ color:"rgba(240,235,227,0.4)", marginTop:32, fontSize:14 }}>Sin resultados para &quot;{searchQuery}&quot;</p>
+            <p style={{ color:"rgba(242,242,247,0.4)", marginTop:32, fontSize:14 }}>Sin resultados para &quot;{searchQuery}&quot;</p>
           )}
         </div>
       )}
@@ -882,16 +929,16 @@ export default function Aurora() {
                 const activeCat = hoveredNavCat === "__open__" ? (categoryList[0] ?? null) : hoveredNavCat;
                 const activeSubs = activeCat ? (subcategoriesFor[activeCat] || []) : [];
                 return (
-                  <div style={{ position:"absolute", top:"100%", left:0, display:"flex", background:"#111", border:`1px solid rgba(201,168,76,0.15)`, zIndex:CAPAS.panel, boxShadow:"0 12px 40px rgba(0,0,0,0.6)" }}>
+                  <div style={{ position:"absolute", top:"100%", left:0, display:"flex", ...vidrioMenu, zIndex:CAPAS.panel }}>
                     {/* columna izquierda: categorías */}
-                    <div style={{ minWidth:200, padding:"10px 0", borderRight: activeSubs.length > 0 ? `1px solid rgba(201,168,76,0.12)` : "none" }}>
+                    <div style={{ minWidth:200, padding:"10px 0", borderRight: activeSubs.length > 0 ? `1px solid ${LINEA}` : "none" }}>
                       {categoryList.map(cat => {
                         const subs = subcategoriesFor[cat] || [];
                         return (
                           <button key={cat}
                             onMouseEnter={() => setHoveredNavCat(cat)}
                             onClick={() => { abrirCatalogo({ categoria: cat }); setHoveredNavCat(null); }}
-                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: activeCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color: activeCat===cat ? G : T, padding:"9px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
+                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: activeCat===cat ? luz(0.08) : "none", border:"none", color: activeCat===cat ? GT : T, padding:"9px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
                             {cat}
                             {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
                           </button>
@@ -901,11 +948,11 @@ export default function Aurora() {
                     {/* columna derecha: subcategorías de la categoría activa */}
                     {activeSubs.length > 0 && (
                       <div style={{ minWidth:190, padding:"10px 0" }}>
-                        <p style={{ margin:0, padding:"4px 18px 8px", fontSize:9, letterSpacing:2, textTransform:"uppercase", color:"rgba(201,168,76,0.55)" }}>{activeCat}</p>
+                        <p style={{ margin:0, padding:"4px 18px 8px", fontSize:9, letterSpacing:2, textTransform:"uppercase", color:luz(0.55) }}>{activeCat}</p>
                         {activeSubs.map(sub => (
                           <button key={sub} onClick={() => { abrirCatalogo({ categoria: activeCat ?? "", subcategoria: sub }); setHoveredNavCat(null); }}
                             style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
-                            onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                            onMouseEnter={e => (e.currentTarget.style.background=luz(0.08))}
                             onMouseLeave={e => (e.currentTarget.style.background="none")}>
                             {sub}
                           </button>
@@ -920,14 +967,14 @@ export default function Aurora() {
               <>
                 {/* MUJER */}
                 <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); irASeccion("productos"); }}
-                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8, ...esperandoGeneros }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? GT : T, opacity: activeGender==="mujer" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
                   Mujer
                 </button>
                 {/* HOMBRE */}
                 <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); irASeccion("productos"); }}
-                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8, ...esperandoGeneros }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? GT : T, opacity: activeGender==="hombre" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
                   Hombre
@@ -989,7 +1036,7 @@ export default function Aurora() {
             {/* Favorites icon */}
             {!isMobile && <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} aria-label="Favoritos" style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? G : "none"} stroke={favorites.length > 0 ? G : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              {favorites.length > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+              {favorites.length > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:textoSobreAcento, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
             </button>}
             {/* User icon */}
             <div ref={userDropdownRef} style={{ position:"relative" }}>
@@ -997,17 +1044,17 @@ export default function Aurora() {
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userDropdownOpen && (
-                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:190, zIndex:CAPAS.nav, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
+                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, ...vidrioMenu, minWidth:190, zIndex:CAPAS.nav }}>
                   {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                     <>
-                      <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:luz(0.6), padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {nombreMostrado}
                       </p>
                       <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
-                        onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                        onMouseEnter={e => (e.currentTarget.style.background=luz(0.08))}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>{panelLabel}</a>
-                      <div style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, margin:"4px 0" }}/>
+                      <div style={{ borderTop:`1px solid ${LINEA}`, margin:"4px 0" }}/>
                       <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                         style={{ display:"block", width:"100%", background:"none", border:"none", color:"#f87171", padding:"10px 16px", fontSize:13, textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1, transition:"background 0.2s" }}
                         onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(248,113,113,0.08)"; }}
@@ -1015,14 +1062,14 @@ export default function Aurora() {
                     </>
                   ) : (
                     <>
-                      <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0 }}>Mi cuenta</p>
+                      <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:luz(0.6), padding:"10px 16px 4px", margin:0 }}>Mi cuenta</p>
                       <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", cursor: isPreview ? "default" : "pointer", transition:"background 0.2s" }}
-                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(201,168,76,0.08)"; }}
+                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background=luz(0.08); }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Iniciar sesión</a>
                       <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", cursor: isPreview ? "default" : "pointer", transition:"background 0.2s" }}
-                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(201,168,76,0.08)"; }}
+                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background=luz(0.08); }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Registrarse</a>
                     </>
                   )}
@@ -1045,7 +1092,7 @@ export default function Aurora() {
           {categoryList.length > 0 && (
             <>
               <button onClick={() => setMobileCatsOpen(o => !o)}
-                style={{ display:"flex", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color:T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                style={{ display:"flex", width:"100%", background:"none", border:"none", borderBottom:`1px solid ${LINEA}`, color:T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
                 Categorías
                 <span style={{ fontSize:10, opacity:0.55, transition:"transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display:"inline-block" }}>▾</span>
               </button>
@@ -1060,13 +1107,13 @@ export default function Aurora() {
                         abrirCatalogo({ categoria: cat });
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
-                    }} style={{ display:"flex", width:"100%", background:"rgba(201,168,76,0.03)", border:"none", borderBottom:`1px solid rgba(201,168,76,0.07)`, color: activeCategory===cat ? G : T, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                    }} style={{ display:"flex", width:"100%", background:luz(0.03), border:"none", borderBottom:`1px solid ${LINEA}`, color: activeCategory===cat ? GT : T, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
                       {cat}
                       {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
                       <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
-                        style={{ display:"block", width:"100%", background:"rgba(201,168,76,0.05)", border:"none", borderBottom:`1px solid rgba(201,168,76,0.05)`, color: activeSubcategory===sub ? G : "rgba(240,235,227,0.7)", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                        style={{ display:"block", width:"100%", background:luz(0.05), border:"none", borderBottom:`1px solid ${LINEA}`, color: activeSubcategory===sub ? GT : "rgba(242,242,247,0.7)", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {sub}
                       </button>
                     ))}
@@ -1077,18 +1124,18 @@ export default function Aurora() {
           )}
           {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); irASeccion("productos"); setMobileMenuOpen(false); }}
-              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color: activeGender===g ? G : T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid ${LINEA}`, color: activeGender===g ? GT : T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
               {label}
             </button>
           ))}
           {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
             <button key={target} onClick={() => { irAPantalla(target); setMobileMenuOpen(false); }}
-              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color:"rgba(240,235,227,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid ${LINEA}`, color:"rgba(242,242,247,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
               {label}
             </button>
           ))}
           <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); setUserDropdownOpen(false); setCartOpen(false); }}
-            style={{ display:"block", width:"100%", background:"none", border:"none", color:"rgba(240,235,227,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+            style={{ display:"block", width:"100%", background:"none", border:"none", color:"rgba(242,242,247,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
             Favoritos {favorites.length > 0 && `(${favorites.length})`}
           </button>
         </div>
@@ -1177,15 +1224,15 @@ export default function Aurora() {
       <div style={{ display:"flex", flexDirection:"column" }}>
       <SectionBlock id="au-garantias" label="Garantías" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
-      <section data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)`, background:garantiasBg, position:"relative" }}>
+      <section data-reveal style={{ borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, background:garantiasBg, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => {
             const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % AU_STRIP_ICONS[i].length;
             const nextIdx = (iconIdx + 1) % AU_STRIP_ICONS[i].length;
             return (
-              <div key={i} style={{ padding: isMobile ? "16px 14px" : "28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid rgba(201,168,76,0.1)` : "none" }}>
-                <span style={{ color:G, flexShrink:0, position:"relative" }}>
+              <div key={i} style={{ padding: isMobile ? "16px 14px" : "28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid ${LINEA}` : "none" }}>
+                <span style={{ color:GT, flexShrink:0, position:"relative" }}>
                   {AU_STRIP_ICONS[i][iconIdx]}
                   {editMode && (
                     <button onClick={() => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) })} title="Cambiar ícono"
@@ -1207,17 +1254,17 @@ export default function Aurora() {
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
       <SectionBlock id="au-mayorista" label="Mayorista" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {isWholesale && (
-        <section data-reveal style={{ background:S, borderTop:`1px solid rgba(201,168,76,0.2)`, borderBottom:`1px solid rgba(201,168,76,0.2)` }}>
+        <section data-reveal style={{ background:S, borderTop:`1px solid ${LINEA_FUERTE}`, borderBottom:`1px solid ${LINEA_FUERTE}` }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 32px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:24 }}>
-            <span style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", fontWeight:700, border:`1px solid ${G}`, padding:"4px 12px", borderRadius:2 }}>Tienda mayorista</span>
+            <span style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", fontWeight:700, border:`1px solid ${G}`, padding:"4px 12px", borderRadius:2 }}>Tienda mayorista</span>
             <h2 style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:300, color:T, margin:0, letterSpacing:"-0.5px", fontFamily:"Georgia, 'Times New Roman', serif", lineHeight:1.2 }}>
-              Solicitá tu lista<br/><em style={{ color:G }}>de precios</em>
+              Solicitá tu lista<br/><em style={{ color:GT }}>de precios</em>
             </h2>
-            <p style={{ fontSize:14, color:"rgba(240,235,227,0.55)", maxWidth:480, margin:0, lineHeight:1.7 }}>
+            <p style={{ fontSize:14, color:"rgba(242,242,247,0.55)", maxWidth:480, margin:0, lineHeight:1.7 }}>
               Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
             </p>
             <button onClick={vista.irAContacto}
-              style={{ background:G, color:BG, border:"none", padding:"14px 40px", fontSize:11, fontWeight:700, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
+              style={{ background:G, color:textoSobreAcento, border:"none", padding:"14px 40px", fontSize:11, fontWeight:700, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
               Consultar ahora →
             </button>
           </div>
@@ -1227,7 +1274,7 @@ export default function Aurora() {
 
       <SectionBlock id="au-statement" label="Frase de marca" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── STATEMENT ──────────────────────────────────────── */}
-      <section data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
+      <section data-reveal style={{ borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgStatement" />
         <EditableSectionBg field="bgStatement" label="Fondo frase" />
         {statementBgImg?.url && statementBgImg.overlayType !== "none" && (
@@ -1316,7 +1363,7 @@ export default function Aurora() {
                   style={{ position:"absolute", top:12, right:12, background:"rgba(6,7,13,0.55)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,.12)", borderRadius:"50%", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
                   onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-                  <svg width={15} height={15} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? G : "none"} stroke={favorites.includes(product.id) ? G : T} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  <svg width={15} height={15} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? G : "none"} stroke={favorites.includes(product.id) ? GT : T} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </button>
               </div>
               <div style={{ padding:"16px 18px 20px" }}>
@@ -1324,10 +1371,10 @@ export default function Aurora() {
                 <p style={{ fontSize:15, color:productosText, margin:"0 0 10px", fontWeight:400, letterSpacing:"-0.01em" }}>{product.name}</p>
                 <div style={{ display:"flex", gap:10, alignItems:"baseline", flexWrap:"wrap" }}>
                   {ocultarPrecios ? (
-                    <span style={{ fontSize:16, fontWeight:600, color:G }}>Consultá precio</span>
+                    <span style={{ fontSize:16, fontWeight:600, color:GT }}>Consultá precio</span>
                   ) : promo.hasPriceDrop ? (
                     <>
-                      <span style={{ fontSize:16, fontWeight:600, color:"#f87171" }}>{fmt(promo.effectivePrice)}</span>
+                      <span style={{ fontSize:16, fontWeight:600, color:REBAJA }}>{fmt(promo.effectivePrice)}</span>
                       <span style={{ fontSize:12, color:productosMid, textDecoration:"line-through" }}>{fmt(promo.originalPrice)}</span>
                     </>
                   ) : (
@@ -1355,7 +1402,7 @@ export default function Aurora() {
             {/* Botón y no `<a href>`: el link iba a otra página y recargaba todo.
                 Queda al lado del "Ver más", que ya era un botón. */}
             <button onClick={() => abrirCatalogo()}
-              style={{ background:G, color:BG, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"inline-block", transition:"opacity 0.2s" }}
+              style={{ background:G, color:textoSobreAcento, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"inline-block", transition:"opacity 0.2s" }}
               onMouseEnter={e => { e.currentTarget.style.opacity="0.85"; }}
               onMouseLeave={e => { e.currentTarget.style.opacity="1"; }}>
               Ver toda la colección →
@@ -1381,7 +1428,7 @@ export default function Aurora() {
         <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
             <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
-              S={S} LN="rgba(201,168,76,0.2)" T={T} G={G} />
+              S={S} LN={LINEA_FUERTE} T={T} G={G} />
           </div>
           <CatalogoGenerico key={claveCatalogo} embebido={{ ...filtroEfectivo, slug: storeConfig?.slug ?? "", template: "aurora",
             sinPie: true, sinBarra: true, enEditor: isPreview, acento: G,
@@ -1399,13 +1446,15 @@ export default function Aurora() {
         <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
             <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
-              S={S} LN="rgba(201,168,76,0.2)" T={T} G={G} />
+              S={S} LN={LINEA_FUERTE} T={T} G={G} />
           </div>
       {/* ── NOSOTROS ───────────────────────────────────────── */}
-      <section id="nosotros" data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+      <section id="nosotros" data-reveal style={{ borderTop:`1px solid ${LINEA}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
           <div style={{ position:"relative", minHeight: isMobile ? 280 : 560, overflow:"hidden" }}>
-            <FadeImage src={nosotrosImageUrl} alt="Nuestra historia" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%` }}/>
+            {nosotrosImageUrl
+              ? <FadeImage src={nosotrosImageUrl} alt="Nuestra historia" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%` }}/>
+              : <div aria-hidden style={{ position:"absolute", inset:0, background:`radial-gradient(60% 70% at 30% 35%, ${luz(0.38)}, transparent 70%), radial-gradient(50% 60% at 75% 75%, ${luz(0.18)}, transparent 70%), ${S}` }} />}
             <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
             {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (ov?.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov?.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.25})` : `rgba(10,10,10,${ov?.overlayOpacity ?? 0.25})` }} />; })()}
@@ -1413,7 +1462,7 @@ export default function Aurora() {
           <div style={{ padding: isMobile ? "40px 20px" : "80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24, background:nosotrosPanelBg, position:"relative" }}>
             <EditableSectionBg field="bgNosotrosPanel" label="Fondo nosotros" />
             <div>
-              <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", marginBottom:16 }}>
+              <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", marginBottom:16 }}>
                 <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">Nuestra historia</EditableZone>
               </p>
               <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(28px,3vw,42px)", lineHeight:1.2, margin:"0 0 24px", color:nosotrosPanelText }}>
@@ -1429,7 +1478,7 @@ export default function Aurora() {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:8 }}>
               {([["aboutStat1","aboutStatLabel1","2018","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Producción local"],["aboutStat3","aboutStatLabel3","30+","Artesanos"],["aboutStat4","aboutStatLabel4","8 años","De trayectoria"]] as const).map(([fv,fl,n,label]) => (
                 <div key={label}>
-                  <p style={{ fontFamily:"Georgia, serif", fontSize:32, color:G, margin:"0 0 4px", fontWeight:700 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                  <p style={{ fontFamily:"Georgia, serif", fontSize:32, color:GT, margin:"0 0 4px", fontWeight:700 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
                   <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
                 </div>
               ))}
@@ -1448,17 +1497,17 @@ export default function Aurora() {
         <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
             <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
-              S={S} LN="rgba(201,168,76,0.2)" T={T} G={G} />
+              S={S} LN={LINEA_FUERTE} T={T} G={G} />
           </div>
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
+      <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid ${LINEA}`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactoBgImg.overlayType === "light" ? `rgba(255,255,255,${contactoBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactoBgImg.overlayOpacity ?? 0.45})` }} />
         )}
         <div style={{ padding:"80px 32px", maxWidth:640, margin:"0 auto", position:"relative", zIndex:1 }}>
-          <p style={{ fontSize:10, letterSpacing:5, color:G, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
+          <p style={{ fontSize:10, letterSpacing:5, color:GT, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
           <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
           </h2>
@@ -1482,14 +1531,14 @@ export default function Aurora() {
               gap: 16,
               placeholders: { nombre: "Tu nombre", email: "tu@email.com", mensaje: "¿En qué podemos ayudarte?" },
               buttonLabel: "Enviar Mensaje",
-              buttonStyle: { background:G, color:BG, padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase" },
+              buttonStyle: { background:G, color:textoSobreAcento, padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase" },
             }}
             renderSent={reset => (
               <div style={{ textAlign:"center", padding:"60px 0" }}>
                 <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
                 <p style={{ fontFamily:"Georgia, serif", fontSize:22, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
                 <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
-                <button onClick={reset} style={{ marginTop:24, background:"transparent", color:G, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
+                <button onClick={reset} style={{ marginTop:24, background:"transparent", color:GT, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
               </div>
             )}
           />
@@ -1498,7 +1547,7 @@ export default function Aurora() {
         </div>
       )}
 
-      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
+      <footer style={{ borderTop:`1px solid ${LINEA}`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
@@ -1528,7 +1577,7 @@ export default function Aurora() {
                 costado: medido, 39px a 1100 de ancho. Ahora se parte antes que romper la
                 pagina. Un nombre largo va a quedar en dos renglones, que es feo pero se lee;
                 arrastrar la pagina para el costado no se lee. */}
-            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "AURORA"}</EditableZone></span>
+            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:GT, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "AURORA"}</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
               <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
             </p>
@@ -1597,7 +1646,7 @@ export default function Aurora() {
             ] },
           ] as { title: string; links: [string, () => void][] }[]).map(col => (
             <div key={col.title}>
-              <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>{col.title}</p>
+              <p style={{ fontSize:10, letterSpacing:4, color:GT, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>{col.title}</p>
               {/* Botones y no párrafos con clic: un <p> no se alcanza con el
                   teclado y un lector de pantalla no lo anuncia como algo que se
                   puede apretar. Se ven igual que antes. */}
@@ -1613,7 +1662,7 @@ export default function Aurora() {
             </div>
           ))}
           <div>
-            <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>Newsletter</p>
+            <p style={{ fontSize:10, letterSpacing:4, color:GT, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>Newsletter</p>
             <p style={{ fontSize:12, opacity:0.45, marginBottom:16, lineHeight:1.6 }}>
               <EditableZone field="newsletterText" label="Texto newsletter">Suscribite y recibí novedades antes que nadie. Sin spam.</EditableZone>
             </p>
@@ -1624,7 +1673,7 @@ export default function Aurora() {
                 theme={{
                   form:  { display:"flex" },
                   input: { flex:1, minWidth:0, background:footerInputBg, border:`1px solid ${footerSubtleBorder}`, borderRight:"none", color:footerText, padding:"11px 14px", fontSize:12, outline:"none" },
-                  boton: { flexShrink:0, background:G, color:BG, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 },
+                  boton: { flexShrink:0, background:G, color:textoSobreAcento, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 },
                   colorMensaje: footerText,
                   colorError: G,
                 }}
@@ -1634,7 +1683,7 @@ export default function Aurora() {
         </div>
         {isMobile ? (
           /* ── MOBILE: 2 filas centradas ── */
-          <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:20, paddingBottom:80, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
+          <div style={{ borderTop:`1px solid rgba(242,242,247,0.05)`, paddingTop:20, paddingBottom:80, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", justifyContent:"center" }}>
               {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
@@ -1675,7 +1724,7 @@ export default function Aurora() {
           </div>
         ) : (
           /* ── DESKTOP: fila izq/der original ── */
-          <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, paddingLeft: hasWA ? 110 : 0, paddingRight:110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+          <div style={{ borderTop:`1px solid rgba(242,242,247,0.05)`, paddingTop:24, paddingLeft: hasWA ? 110 : 0, paddingRight:110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
               {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
@@ -1756,14 +1805,14 @@ export default function Aurora() {
                   <>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                       aria-label="Imagen anterior"
-                      style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
+                      style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(242,242,247,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
                       onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
                       onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                     </button>
                     <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
                       aria-label="Imagen siguiente"
-                      style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
+                      style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(242,242,247,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
                       onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
                       onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1776,7 +1825,7 @@ export default function Aurora() {
               </div>
               {/* Miniaturas */}
               {modalProduct.images.length > 1 && (
-                <div style={{ display:"flex", gap:8, padding:"12px 16px", background:"#0d0d0d", overflowX:"auto" }}>
+                <div style={{ display:"flex", gap:8, padding:"12px 16px", background:"rgba(0,0,0,0.22)", overflowX:"auto" }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => setModalImg(i)}
                       style={{ position:"relative", width:56, height:56, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${G}` : "2px solid transparent", background:"none", cursor:"pointer", transition:"border-color 0.2s" }}>
@@ -1787,18 +1836,18 @@ export default function Aurora() {
                 </div>
               )}
               {modalProduct.reelUrls.length > 0 && (
-                <div style={{ padding:"12px 14px 16px", borderTop:`1px solid rgba(240,235,227,0.08)`, background:"#0d0d0d" }}>
+                <div style={{ padding:"12px 14px 16px", borderTop:`1px solid ${LINEA}`, background:"rgba(0,0,0,0.22)" }}>
                   <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:T, opacity:0.4, margin:"0 0 10px" }}>Videos</p>
                   <StoreProductReels
                     reelUrls={modalProduct.reelUrls}
-                    theme={{ accent: G, text: T, border: "rgba(240,235,227,0.15)", radius: 4 }}
+                    theme={{ accent: G, text: T, border: "rgba(242,242,247,0.15)", radius: 4 }}
                   />
                 </div>
               )}
             </div>
             <div style={{ padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:20 }}>
               <div>
-                <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:8, opacity:0.8 }}>
+                <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:8, opacity:0.8 }}>
                   {modalProduct.category}
                   {modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
@@ -1806,8 +1855,8 @@ export default function Aurora() {
               </div>
               <div style={{ display:"flex", gap:6, marginTop:8 }}>
                 <button onClick={() => shareProduct(modalProduct)}
-                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(240,235,227,0.15)", color:"rgba(240,235,227,0.5)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.color=T)} onMouseLeave={e=>(e.currentTarget.style.color="rgba(240,235,227,0.5)")}>
+                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(242,242,247,0.15)", color:"rgba(242,242,247,0.5)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
+                  onMouseEnter={e=>(e.currentTarget.style.color=T)} onMouseLeave={e=>(e.currentTarget.style.color="rgba(242,242,247,0.5)")}>
                   <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                   Copiar link
                 </button>
@@ -1822,17 +1871,17 @@ export default function Aurora() {
               </div>
               <div style={{ display:"flex", gap:12, alignItems:"baseline", flexWrap:"wrap" }}>
                 {ocultarPrecios ? (
-                  <span style={{ fontSize:24, fontWeight:700, color:G }}>Consultá precio</span>
+                  <span style={{ fontSize:24, fontWeight:700, color:GT }}>Consultá precio</span>
                 ) : modalPromo?.hasPriceDrop ? (
                   <>
-                    <span style={{ fontSize:24, fontWeight:700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
-                    <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
-                    {modalPromo.pctOff != null && <span style={{ fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4 }}>{modalPromo.pctOff}% OFF</span>}
+                    <span style={{ fontSize:24, fontWeight:700, color:REBAJA }}>{fmt(modalPromo.effectivePrice)}</span>
+                    <span style={{ fontSize:15, color:TACHADO, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    {modalPromo.pctOff != null && <span style={{ fontSize:11, fontWeight:800, letterSpacing:1, color:"#4ade80", background:"rgba(74,222,128,0.1)", border:"1px solid rgba(74,222,128,0.3)", padding:"3px 10px", borderRadius:999 }}>{modalPromo.pctOff}% OFF</span>}
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize:24, fontWeight:700, color:G }}>{fmt(displayPrice)}</span>
-                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                    <span style={{ fontSize:24, fontWeight:700, color:GT }}>{fmt(displayPrice)}</span>
+                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:15, color:TACHADO, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   </>
                 )}
               </div>
@@ -1843,8 +1892,8 @@ export default function Aurora() {
                   <span>{modalProduct.offerNote}</span>
                 </div>
               )}
-              <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>
-                <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:"rgba(240,235,227,0.35)", margin:"0 0 8px", fontWeight:600 }}>Descripción</p>
+              <div style={{ borderTop:`1px solid rgba(242,242,247,0.08)`, paddingTop:16 }}>
+                <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:"rgba(242,242,247,0.35)", margin:"0 0 8px", fontWeight:600 }}>Descripción</p>
                 <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, opacity:0.58, lineHeight:1.75 }} />
               </div>
 
@@ -1859,12 +1908,12 @@ export default function Aurora() {
                 return (
                   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     {condicionAttr && (
-                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:G, border:`1px solid ${G}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
+                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${G}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
                     )}
                     {otherAttrs.length > 0 && (
-                      <div style={{ borderRadius:4, overflow:"hidden", border:`1px solid rgba(240,235,227,0.08)` }}>
+                      <div style={{ borderRadius:4, overflow:"hidden", border:`1px solid rgba(242,242,247,0.08)` }}>
                         {otherAttrs.map((a, i) => (
-                          <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 12px", background: i%2===0 ? "rgba(240,235,227,0.04)" : "transparent", borderBottom: i < otherAttrs.length-1 ? `1px solid rgba(240,235,227,0.07)` : "none" }}>
+                          <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 12px", background: i%2===0 ? "rgba(242,242,247,0.04)" : "transparent", borderBottom: i < otherAttrs.length-1 ? `1px solid rgba(242,242,247,0.07)` : "none" }}>
                             <span style={{ fontSize:10, fontWeight:700, color:T, opacity:0.4, textTransform:"uppercase", letterSpacing:0.5 }}>{a.key}</span>
                             <span style={{ fontSize:12, color:T, fontWeight:500 }}>{a.value}</span>
                           </div>
@@ -1874,7 +1923,7 @@ export default function Aurora() {
                     {servicios.length > 0 && (
                       <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                         {servicios.map(k => (
-                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid rgba(201,168,76,0.3)`, color:G }}>✓ {k}</span>
+                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${luz(0.3)}`, color:GT }}>✓ {k}</span>
                         ))}
                       </div>
                     )}
@@ -1903,12 +1952,12 @@ export default function Aurora() {
                         const swatch = conMuestra ? colorToSwatch(valor) : null;
                         return (
                           <button key={valor} onClick={() => setOpcion(op.nombre, valor)}
-                            style={{ fontSize: conMuestra ? 11 : 12, border: elegido ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: elegido ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s",
+                            style={{ fontSize: conMuestra ? 11 : 12, border: elegido ? `1px solid ${G}` : "1px solid rgba(242,242,247,0.18)", background: elegido ? luz(0.12) : "transparent", color:T, cursor:"pointer", transition:"all 0.2s",
                               opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
                               ...(conMuestra
                                 ? { display:"flex", alignItems:"center", gap:7, padding:"7px 16px" }
                                 : { width:46, height:46, fontWeight:600 }) }}>
-                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(240,235,227,0.3)", flexShrink:0 }} />}
+                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(242,242,247,0.3)", flexShrink:0 }} />}
                             {valor}
                           </button>
                         );
@@ -1920,7 +1969,7 @@ export default function Aurora() {
 
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, margin:0 }}>Cantidad</p>
-                <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(240,235,227,0.18)` }}>
+                <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(242,242,247,0.18)` }}>
                   <button onClick={() => setQty(q => Math.max(isWholesale && modalProduct.cantMinMayorista ? modalProduct.cantMinMayorista : 1, q-1))} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>−</button>
                   <span style={{ width:38, textAlign:"center", fontSize:14 }}>{qty}</span>
                   <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>+</button>
@@ -1950,16 +1999,16 @@ export default function Aurora() {
               )}
 
               {!isMobile && (
-                <div style={{ borderTop:`1px solid rgba(240,235,227,0.1)`, marginTop:4, paddingTop:16 }}>
+                <div style={{ borderTop:`1px solid rgba(242,242,247,0.1)`, marginTop:4, paddingTop:16 }}>
                   {isInquiryMode ? (
                 <button onClick={() => openInquiry(modalProduct)}
-                  style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
+                  style={{ background:G, color:textoSobreAcento, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
                   Consultar disponibilidad
                 </button>
               ) : (
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
-                  style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
+                  style={{ background: selectedVariantStock === 0 ? APAGADO_FONDO : G, color: selectedVariantStock === 0 ? APAGADO_TEXTO : textoSobreAcento, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
                   {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                 </button>
               )}
@@ -1967,7 +2016,7 @@ export default function Aurora() {
               )}
 
               {/* Reseñas — D-04 */}
-              <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:24, marginTop:20 }}>
+              <div style={{ borderTop:`1px solid rgba(242,242,247,0.08)`, paddingTop:24, marginTop:20 }}>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 20px" }}>
                   Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
@@ -1997,14 +2046,14 @@ export default function Aurora() {
                           <div style={{ textAlign:"center", minWidth:56 }}>
                             <p style={{ fontSize:34, fontWeight:800, color:T, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : "rgba(240,235,227,0.15)" }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : "rgba(242,242,247,0.15)" }}>★</span>)}
                             </div>
                             <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasProd.total} reseña{resenasProd.total !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                <span style={{ fontSize:9, color:G, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
+                                <span style={{ fontSize:9, color:GT, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.08)", borderRadius:2, overflow:"hidden" }}>
                                   <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:G, borderRadius:2 }} />
                                 </div>
@@ -2017,8 +2066,8 @@ export default function Aurora() {
                     })()}
                     <div style={{ display:"flex", flexDirection:"column" }}>
                       {resenasProd.lista.slice(0, resenasProd.mostradas).map((r, i) => (
-                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(resenasProd.mostradas, resenasProd.lista.length) - 1 ? `1px solid rgba(240,235,227,0.06)` : "none" }}>
-                          <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:G }}>
+                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(resenasProd.mostradas, resenasProd.lista.length) - 1 ? `1px solid rgba(242,242,247,0.06)` : "none" }}>
+                          <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:GT }}>
                             {r.reviewer.charAt(0).toUpperCase()}
                           </div>
                           <div style={{ flex:1 }}>
@@ -2032,7 +2081,7 @@ export default function Aurora() {
                               <span style={{ fontSize:10, opacity:0.3 }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}</span>
                             </div>
                             <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? G : "rgba(240,235,227,0.12)" }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? G : "rgba(242,242,247,0.12)" }}>★</span>)}
                             </div>
                             {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.65 }}>{r.comment}</p>}
                           </div>
@@ -2040,7 +2089,7 @@ export default function Aurora() {
                       ))}
                     </div>
                     {resenasProd.hayMas && (
-                      <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas} style={{ marginTop:14, background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:G, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                      <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas} style={{ marginTop:14, background:"none", border:`1px solid rgba(242,242,247,0.15)`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
                         {resenasProd.cargandoMas ? "Cargando…" : `Ver más (${resenasProd.faltan})`}
                       </button>
                     )}
@@ -2051,7 +2100,7 @@ export default function Aurora() {
                 {isOwner ? (
                   <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                 ) : reviewDone ? (
-                  <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
+                  <p style={{ fontSize:12, color:GT, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 ) : (
                   <div style={{ position:"relative" }}>
                     {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
@@ -2064,27 +2113,27 @@ export default function Aurora() {
                       <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
                       <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                         placeholder="Tu nombre" readOnly={isPreview}
-                        style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
+                        style={{ background:"rgba(242,242,247,0.06)", border:"1px solid rgba(242,242,247,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
                       <div>
                         <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
                           placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
-                          style={{ width:"100%", boxSizing:"border-box", background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
-                        <p style={{ fontSize:10, color:"rgba(240,235,227,0.3)", margin:"3px 0 0", lineHeight:1.4 }}>
+                          style={{ width:"100%", boxSizing:"border-box", background:"rgba(242,242,247,0.06)", border:"1px solid rgba(242,242,247,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
+                        <p style={{ fontSize:10, color:"rgba(242,242,247,0.3)", margin:"3px 0 0", lineHeight:1.4 }}>
                           Si compraste en esta tienda, tu reseña aparecerá con el badge &ldquo;✓ Compra verificada&rdquo;. No se muestra públicamente.
                         </p>
                       </div>
                       <div style={{ display:"flex", gap:4 }}>
                         {[1,2,3,4,5].map(s => (
                           <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
-                            style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? G : "rgba(240,235,227,0.2)", padding:"2px" }}>★</button>
+                            style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? G : "rgba(242,242,247,0.2)", padding:"2px" }}>★</button>
                         ))}
                       </div>
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
-                        style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
+                        style={{ background:"rgba(242,242,247,0.06)", border:"1px solid rgba(242,242,247,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
                       {!isPreview && reviewCaptcha.widget}
                       <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? APAGADO_FONDO : G, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? APAGADO_TEXTO : textoSobreAcento, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
                         {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
                     </form>
@@ -2096,7 +2145,7 @@ export default function Aurora() {
             {(() => {
               if (similarProducts.length === 0) return null;
               return (
-                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop: 24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:"1px solid rgba(240,235,227,0.08)" }}>
+                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop: 24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:"1px solid rgba(242,242,247,0.08)" }}>
                   <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similarProducts.map(p => (
@@ -2115,20 +2164,20 @@ export default function Aurora() {
             })()}
             </div>
             {isMobile && (
-              <div style={{ borderTop:`1px solid rgba(201,168,76,0.2)`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
+              <div style={{ borderTop:`1px solid ${LINEA_FUERTE}`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
-                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
-                  {qty > 1 && <span style={{ fontSize:11, color:"rgba(240,235,227,0.4)" }}>× {qty}</span>}
+                  <span style={{ fontSize:20, fontWeight:700, color:GT }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
+                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(242,242,247,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  {qty > 1 && <span style={{ fontSize:11, color:"rgba(242,242,247,0.4)" }}>× {qty}</span>}
                 </div>
                 {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
-                    style={{ width:"100%", background:G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    style={{ width:"100%", background:G, color:textoSobreAcento, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                     Consultar disponibilidad
                   </button>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                    style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? APAGADO_FONDO : G, color: selectedVariantStock === 0 ? APAGADO_TEXTO : textoSobreAcento, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                     {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
                   </button>
                 )}
@@ -2150,7 +2199,7 @@ export default function Aurora() {
       <div style={{ position:"fixed", inset:0, overflow:"hidden", zIndex: isPreview ? CAPAS.previaModal : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
-          <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(242,242,247,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>{"Favoritos"} <span style={{ fontSize:13, color:"#555" }}>({favorites.length})</span></p>
             <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
           </div>
@@ -2161,7 +2210,7 @@ export default function Aurora() {
                   <p style={{ fontSize:13, lineHeight:1.8 }}>No tenés favoritos aún.<br/>Guardá piezas que te gusten.</p>
                 </div>
               : favoriteProducts.map(product => (
-                <div key={product.id} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid rgba(240,235,227,0.06)` }}>
+                <div key={product.id} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid rgba(242,242,247,0.06)` }}>
                   {product.images[0] ? <FadeImage src={product.images[0]} alt={product.name} width={70} height={93} style={{ objectFit:"cover", flexShrink:0 }}/> : <div style={{ width:70, height:93, flexShrink:0, background:S }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500 }}>{product.name}</p>
@@ -2170,11 +2219,11 @@ export default function Aurora() {
                       gap={8} style={{ marginBottom:10 }} />
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
-                        style={{ background:G, color:BG, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
+                        style={{ background:G, color:textoSobreAcento, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
                         Ver producto
                       </button>
                       <button onClick={() => toggleFavorite(product.id)}
-                        style={{ background:"transparent", color:"#666", border:"1px solid rgba(240,235,227,0.15)", padding:"7px 14px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
+                        style={{ background:"transparent", color:"#666", border:"1px solid rgba(242,242,247,0.15)", padding:"7px 14px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
                         onMouseEnter={e => (e.currentTarget.style.color=T)}
                         onMouseLeave={e => (e.currentTarget.style.color="#666")}>
                         Quitar
