@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // El hero: una foto a sangre, el texto a la izquierda.
@@ -16,22 +17,44 @@ import { useCallback, useEffect, useRef, useState } from "react";
 //   · El texto no va sobre la foto pelada. Va sobre un velo que se apaga hacia
 //     la derecha: la izquierda queda legible sin ensuciar la foto entera, que es
 //     lo que pasa cuando se le tira una capa negra pareja encima.
-//   · El titulo va en serif y el resto en sans. Es el contraste que separa una
-//     portada de revista de una plantilla — y no cuesta una fuente nueva: la
-//     serif del sistema alcanza.
+//   · El titulo va en la letra de titulos del template (Aurora: Unbounded) y el
+//     resto en la de texto. Ese contraste es lo que separa una portada de una
+//     plantilla.
 //
 // LO QUE NO PUEDE PASAR
 //
 //   · Que la foto tape el texto. Si la tienda sube una foto clara, el velo
 //     igual sostiene el contraste porque va de color base y no de negro puro.
 //   · Que rote sola si alguien pidio menos movimiento. Con
-//     `prefers-reduced-motion` no hay acercamiento ni cambio automatico: las
-//     flechas siguen funcionando, la decision es de la persona.
-//   · Que las flechas aparezcan con una sola diapositiva. Un control que no
+//     `prefers-reduced-motion` no hay acercamiento ni cambio automatico: los
+//     cuadraditos siguen funcionando, la decision es de la persona.
+//   · Que los controles aparezcan con una sola diapositiva. Un control que no
 //     controla nada es ruido.
+//
+// LOS CONTROLES (03/10/26)
+//
+//   Eran dos flechas redondas y unos puntitos: los de cualquier carrusel de la
+//   web. A Flavio no lo convencían. Ahora son las fotos mismas: una columna de
+//   cuadraditos de vidrio a la derecha (en el celular, una fila abajo). El que
+//   se está viendo brilla, y adentro tiene una línea de luz que se llena como
+//   una historia de Instagram; cuando se llena, pasa al siguiente. El tiempo lo
+//   marca esa misma animación —no un `setInterval` aparte—, así la línea y el
+//   cambio nunca se desfasan, y pausarla (mouse encima) pausa las dos cosas.
+//
+//   Si la foto es de un producto (`piezas`), en la compu aparece además una
+//   tarjeta de vidrio con su nombre, precio y "Ver", que entra deslizándose
+//   cada vez que cambia: la portada deja de sólo decorar y empieza a vender.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MS_AUTO = 7000;
+
+/** El producto detrás de una foto del hero, si lo hay. */
+export type PiezaHero = {
+  titulo: string;
+  precio?: string;
+  /** Recibe el evento de la tarjeta: adentro está la foto (`data-foto`) de la que vuela la ficha. */
+  onVer: (e: React.MouseEvent) => void;
+} | null;
 
 export function HeroFoto({
   nav,
@@ -48,7 +71,13 @@ export function HeroFoto({
   imagenCelular,
   posicionCelular,
   margenNav = 0,
+  piezas,
+  celular = false,
 }: {
+  /** Uno por foto, en el mismo orden. `null` (o sin la lista): esa foto no es de un producto. */
+  piezas?: PiezaHero[];
+  /** Cambia los cuadraditos de columna a la derecha a fila abajo, y saca la tarjeta. */
+  celular?: boolean;
   nav?: React.ReactNode;
   /**
    * Las fotos que rota el hero. Es una lista de imágenes y NO una lista de
@@ -91,7 +120,9 @@ export function HeroFoto({
   const [activa, setActiva] = useState(0);
   const [quieto, setQuieto] = useState(false);
   const total = imagenes.length;
-  const pausa = useRef(false);
+  /* Con el mouse encima no se cambia sola: nada peor que estar leyendo y que el
+     texto se te vaya. Es estado (no ref) porque pausa la ANIMACIÓN de la línea. */
+  const [pausado, setPausado] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -106,23 +137,21 @@ export function HeroFoto({
     (paso: number) => setActiva((i) => (i + paso + total) % total),
     [total],
   );
+  const swipe = useTouchSwipe(() => ir(1), () => ir(-1));
 
-  useEffect(() => {
-    if (quieto || total < 2) return;
-    const t = setInterval(() => {
-      // Si el mouse está encima, no se cambia sola: nada peor que estar leyendo
-      // y que el texto se te vaya solo.
-      if (!pausa.current) setActiva((i) => (i + 1) % total);
-    }, MS_AUTO);
-    return () => clearInterval(t);
-  }, [quieto, total]);
+  const pieza = piezas?.[activa] ?? null;
 
   return (
     <header
-      onPointerEnter={() => (pausa.current = true)}
-      onPointerLeave={() => (pausa.current = false)}
+      onPointerEnter={e => { if (e.pointerType === "mouse") setPausado(true); }}
+      onPointerLeave={() => setPausado(false)}
+      {...(total > 1 ? swipe : {})}
       style={{ position: "relative", height: alto, minHeight: 520, background: base, overflow: "hidden" }}
     >
+      <style>{`
+        @keyframes hf-llenar { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+        @keyframes hf-entra { from { opacity: 0; transform: translateX(46px) } to { opacity: 1; transform: none } }
+      `}</style>
       {/* Las fotos: todas montadas, se cruzan por opacidad. Montarlas y
           desmontarlas haria que cada cambio empiece con la imagen sin cargar. */}
       {imagenes.map((src, i) => (
@@ -254,62 +283,74 @@ export function HeroFoto({
             {acciones && <div style={{ marginTop: 28, display: "flex", gap: 14, flexWrap: "wrap" }}>{acciones}</div>}
           </div>
 
-          {/* Las flechas sólo existen si hay algo entre lo que moverse. */}
-          {total > 1 && (
-            <div style={{ marginLeft: "auto", display: "flex", gap: 10, flexShrink: 0 }}>
-              {([["Anterior", -1], ["Siguiente", 1]] as const).map(([etiqueta, paso]) => (
-                <button
-                  key={etiqueta}
-                  type="button"
-                  aria-label={etiqueta}
-                  onClick={() => ir(paso)}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 999,
-                    display: "grid",
-                    placeItems: "center",
-                    cursor: "pointer",
-                    color: tinta,
-                    background: "rgba(255,255,255,.07)",
-                    border: "1px solid rgba(255,255,255,.22)",
-                    backdropFilter: "blur(10px)",
-                    WebkitBackdropFilter: "blur(10px)",
-                  }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d={paso < 0 ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+      </div>
 
-        {total > 1 && (
-          <div style={{ display: "flex", gap: 7, justifyContent: "center", paddingBottom: 26 }}>
-            {imagenes.map((src, i) => (
-              <button
-                key={src}
-                type="button"
-                aria-label={`Ver la foto ${i + 1} de ${total}`}
-                aria-current={i === activa}
+      {/* ── Los cuadraditos ───────────────────────────────────────────────
+          Las fotos mismas son el control. En la compu, columna a la derecha;
+          en el celular, fila abajo. El activo brilla y su línea de luz marca
+          cuánto falta: al terminar de llenarse (`onAnimationEnd`) pasa al
+          siguiente. Con menos movimiento pedido, no hay línea ni cambio solo. */}
+      {total > 1 && (
+        <div role="tablist" aria-label="Fotos de la portada"
+          style={celular
+            ? { position: "absolute", left: 0, right: 0, bottom: 18, zIndex: 3, display: "flex", justifyContent: "center", gap: 10 }
+            : { position: "absolute", right: 32, top: "50%", transform: "translateY(-50%)", zIndex: 3, display: "flex", flexDirection: "column", gap: 12, marginTop: margenNav / 2 }}>
+          {imagenes.map((src, i) => {
+            const es = i === activa;
+            const lado = celular ? 52 : 70;
+            return (
+              <button key={src} type="button" role="tab" aria-selected={es} aria-label={`Ver la foto ${i + 1} de ${total}`}
                 onClick={() => setActiva(i)}
                 style={{
-                  width: i === activa ? 26 : 7,
-                  height: 7,
-                  padding: 0,
-                  borderRadius: 999,
-                  border: 0,
-                  cursor: "pointer",
-                  background: i === activa ? acento : "rgba(255,255,255,.28)",
-                  transition: "width .35s ease, background .35s ease",
-                }}
-              />
-            ))}
+                  position: "relative", width: lado, height: celular ? 64 : 88, padding: 0, borderRadius: 14, overflow: "hidden", cursor: "pointer",
+                  border: `1.5px solid ${es ? acento : "rgba(255,255,255,.18)"}`,
+                  boxShadow: es ? `0 0 26px ${acento}88, 0 10px 24px rgba(0,0,0,.45)` : "0 8px 20px rgba(0,0,0,.35)",
+                  opacity: es ? 1 : 0.55,
+                  transform: es ? "scale(1.06)" : "scale(1)",
+                  transition: "opacity .35s, transform .35s, box-shadow .35s, border-color .35s",
+                  background: base,
+                }}>
+                <span aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${src})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                {/* La línea de luz. La `key` la reinicia cada vez que le toca. */}
+                {es && !quieto && (
+                  <span key={`${activa}`} aria-hidden onAnimationEnd={() => ir(1)}
+                    style={{ position: "absolute", left: 6, right: 6, bottom: 6, height: 3, borderRadius: 3, background: acento,
+                      boxShadow: `0 0 10px ${acento}`, transformOrigin: "left center",
+                      animation: `hf-llenar ${MS_AUTO}ms linear forwards`, animationPlayState: pausado ? "paused" : "running" }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── La tarjeta del producto (sólo compu) ─────────────────────────
+          Entra deslizándose cada vez que cambia la foto (`key`). Se toca entera:
+          abre la ficha, que vuela desde la foto chiquita de la tarjeta. */}
+      {pieza && !celular && (
+        <div key={`tarjeta-${activa}`} role="button" tabIndex={0} onClick={pieza.onVer}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pieza.onVer(e as unknown as React.MouseEvent); } }}
+          style={{
+            position: "absolute", right: total > 1 ? 130 : 32, bottom: 64, zIndex: 3, width: 300,
+            display: "flex", alignItems: "center", gap: 14, padding: 10, paddingRight: 18, cursor: "pointer",
+            borderRadius: 20, background: "rgba(10,11,20,.55)", border: "1px solid rgba(255,255,255,.16)",
+            backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)",
+            boxShadow: "0 24px 50px rgba(0,0,0,.45)", color: tinta,
+            animation: quieto ? undefined : "hf-entra .7s cubic-bezier(.16,.84,.32,1) both",
+          }}>
+          <div data-foto style={{ position: "relative", width: 60, height: 80, flexShrink: 0, borderRadius: 12, overflow: "hidden",
+            backgroundImage: `url(${imagenes[activa]})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase", color: acento, fontWeight: 700 }}>En portada</p>
+            <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pieza.titulo}</p>
+            {pieza.precio && <p style={{ margin: 0, fontFamily: "var(--au-titulo, inherit)", fontSize: 16 }}>{pieza.precio}</p>}
           </div>
-        )}
-      </div>
+          <span aria-hidden style={{ width: 34, height: 34, borderRadius: 999, flexShrink: 0, display: "grid", placeItems: "center", background: acento, color: base, boxShadow: `0 0 18px ${acento}99` }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </span>
+        </div>
+      )}
     </header>
   );
 }

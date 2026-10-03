@@ -598,10 +598,16 @@ export default function Aurora() {
      sus propios productos. Nunca una foto de stock — una imagen de un
      desconocido haciéndose pasar por la colección es peor que no tener foto. */
   const heroUrl = heroBgImg?.url;
-  const heroFotos = useMemo(() => {
-    if (heroUrl) return [heroUrl];
-    return products.map(p => p.images[0]).filter((u): u is string => !!u).slice(0, 3);
-  }, [heroUrl, products]);
+  /* Sin foto propia, las de hasta cuatro productos: cada una lleva su producto
+     detrás, que el hero muestra en una tarjeta con nombre, precio y "Ver". */
+  const heroProductos = useMemo(
+    () => heroUrl ? [] : products.filter(p => p.images[0]).slice(0, 4),
+    [heroUrl, products],
+  );
+  const heroFotos = useMemo(
+    () => heroUrl ? [heroUrl] : heroProductos.map(p => p.images[0]),
+    [heroUrl, heroProductos],
+  );
 
   /* Los dos mazos del coverflow. Antes esto eran TRES baldosas de categoría
      elegidas a mano en el editor; ahora entran todas las que la tienda tenga de
@@ -1088,6 +1094,15 @@ export default function Aurora() {
           // que hay que dejarle su alto libre. En el editor va `sticky` y ocupa
           // su lugar en el flujo: reservarlo otra vez sería un hueco de 72px.
           margenNav={isPreview ? 0 : 72}
+          celular={isMobile}
+          piezas={heroUrl ? undefined : heroProductos.map(p => {
+            const promoHero = resolveProductPromo(p, promotions);
+            return {
+              titulo: p.name,
+              precio: ocultarPrecios ? undefined : fmt(promoHero.hasPriceDrop ? promoHero.effectivePrice : p.price),
+              onVer: (e: React.MouseEvent) => abrirFicha(p, e),
+            };
+          })}
           kicker={<EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>}
           titulo={<EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>}
           texto={<EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad.</EditableZone>}
