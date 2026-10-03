@@ -16,7 +16,7 @@ import {
   LANDING_MAX_BYTES,
 } from "./landing-propia";
 import { revisarLanding, tieneTraba } from "./landing-revision";
-import { leerInventario, leerEstadoDeLanding, acomodarEnlace, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING } from "./landing-estado";
+import { leerInventario, leerEstadoDeLanding, acomodarEnlace, MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, versionEnVivo, conEnVivoFijo, hayVersionSinPoner } from "./landing-estado";
 import { instruccionesParaClaude, pedidoDeConversion, pedidoDeCambios, HUECOS_EXPLICADOS } from "./landing-instrucciones";
 import { EFECTOS_DE_LA_LANDING, ESTILO_DE_LA_CAPSULA } from "./landing-efectos";
 
@@ -445,14 +445,14 @@ check("RUTA-D", /const crudo = await req\.text\(\)[\s\S]*?crudo\.length > CUERPO
 check("RUTA-E", /skip: LANDING_VERSIONES[\s\S]*?deleteMany/.test(ruta), "se guardan las últimas versiones y las viejas se borran");
 check("RUTA-F", /\.\.\.estado, versionId: creada\.id/.test(ruta) && !/fotos: \{\}/.test(ruta),
   "subir una versión nueva NO borra las fotos ni los links: se guardan por nombre de hueco");
-check("RUTA-G", /b\.activa && !nuevo\.versionId/.test(ruta) && /\^https:\\\/\\\//.test(ruta)
+check("RUTA-G", /if \(ponerEnVivo\) \{[\s\S]*?if \(!nuevo\.versionId\) return NextResponse\.json\(\{ error: "Primero subí tu archivo\." \}/.test(ruta) && /\^https:\\\/\\\//.test(ruta)
   && /const r = acomodarEnlace\(url \?\? ""\);/.test(ruta) && /if \(!r\.error && r\.url\.length <= 600\)/.test(ruta),
   "no se prende sin nada subido; una foto sólo por https, y el link pasa por el mismo acomodo que la pantalla");
 
 const reglaLanding = leer("src/lib/landing-del-producto.ts");
-check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !estado\.versionId\) return null;/.test(publica)
+check("PUB-A", /if \(\(!estado\.activa && !previa\) \|\| !cual\) return null;/.test(publica)
   && /elPlanMuestraDisenos\(fila\.store\.owner\.subscription\)/.test(publica)
-  && /return estado\.activa && !!estado\.versionId && elPlanMuestraDisenos\(sub\);/.test(reglaLanding),
+  && /return estado\.activa && !!versionEnVivo\(estado\) && elPlanMuestraDisenos\(sub\);/.test(reglaLanding),
   "la landing se muestra sólo si está prendida y el plan la incluye; si vence, vuelve la página de secciones");
 /* El link del pago lo mira PAGO-B, que es donde se explica por qué. */
 check("PUB-B", /nombre: fila\.name,[\s\S]{0,400}?precio: viva \? viva\.precio : fila\.price,\n\s+precioAnterior: viva \? viva\.precioNormal : fila\.comparePrice,/.test(publica)
@@ -485,7 +485,7 @@ check("PAN-C2", /pedidoDeConversion\(producto, indicaciones\)/.test(panel) && /Y
    Apagar sigue siendo inmediato: vuelve nuestra página. */
 check("PAN-E", panel.includes("if (estado.activa) void pedir({ activa: false }); else setVaAPrender(true)")
   && /Antes de prenderla, así está:/.test(panel) && /Sí, prenderla/.test(panel) && /Todavía no/.test(panel)
-  && /onClick=\{\(\) => \{ setVaAPrender\(false\); void pedir\(\{ activa: true \}\); \}\}\s+disabled=\{sinGuardar\}/.test(panel)
+  && /onClick=\{\(\) => \{ setVaAPrender\(false\); void pedir\(estado\.activa \? \{ ponerEnVivo: true \} : \{ activa: true \}\); \}\}\s+disabled=\{sinGuardar \|\| trabada\}/.test(panel)
   && /esos lugares se sacan de la página/.test(panel) && /Te falta cargar/.test(panel) && panel.includes("!enlaces[claveDeLink(t)] && !legalDelLink(t)"),
   "prender pide confirmación con el repaso de lo que falta y no deja prender con links sin guardar; apagar es inmediato; los legales no cuentan como links sin dirección");
 const editorClient = leer("src/app/digitales/productos/[id]/pagina/EditorClient.tsx");
@@ -862,9 +862,50 @@ check("SAL-F", !/onBlur=\{\(\) => void guardar/.test(panel),
 check("SAL-G", /pedir\(\{ enlaces: acomodados \}\)/.test(panel) && /b\.enlaces !== undefined/.test(ruta),
   "y van los cuatro en un solo pedido, no uno por campo");
 
+/* ── Una versión nueva no sale sola a la dirección (03/10/26) ─────────────
+   Con el diseño prendido, subir otra versión la ponía en vivo en el acto, sin
+   el repaso y sin el freno de "no tiene botón de pago". Ahora queda en la
+   previa y va a la dirección con "Usar esta versión". */
+{
+  const V1 = "c" + "a".repeat(24), V2 = "c" + "b".repeat(24);
+  const viejo = leerEstadoDeLanding(JSON.stringify({ activa: true, versionId: V1 }));
+  check("VIVO-A", viejo.enVivo === null && versionEnVivo(viejo) === V1 && !hayVersionSinPoner(viejo),
+    "un estado de antes (sin enVivo) sigue mostrando la elegida, como siempre");
+  const fijo = conEnVivoFijo(viejo);
+  const conNueva = { ...fijo, versionId: V2 };
+  check("VIVO-B", fijo.enVivo === V1 && versionEnVivo(conNueva) === V1 && hayVersionSinPoner(conNueva),
+    "subir otra con el diseño prendido: la dirección sigue con la anterior y la nueva queda para poner");
+  const apagado = leerEstadoDeLanding(JSON.stringify({ activa: false, versionId: V1 }));
+  check("VIVO-C", conEnVivoFijo(apagado).enVivo === null && !hayVersionSinPoner({ ...apagado, versionId: V2 }),
+    "apagado no hay nada en vivo que cuidar");
+  check("VIVO-D", leerEstadoDeLanding(JSON.stringify({ activa: true, versionId: V1, enVivo: "<script>" })).enVivo === null,
+    "un enVivo con forma rara no entra");
+
+  check("VIVO-E", /const estado: EstadoDeLanding = leido\.activa \? leido : \{ \.\.\.leido, enVivo: null \};/.test(ruta) &&
+    /conEnVivoFijo\(leerEstadoDeLanding\(producto\.landingPropia\)\)/.test(ruta),
+    "el POST fija la versión en vivo antes de elegir la nueva");
+  check("VIVO-F", /\.filter\(\(v\) => v\.id !== estado\.enVivo\)/.test(ruta),
+    "la versión que está en la dirección no se borra aunque sea vieja");
+  check("VIVO-G", /const ponerEnVivo = b\.activa === true \|\| b\.ponerEnVivo === true;/.test(ruta) &&
+    /tieneTraba\(leerInventario\(elegida\.inventario\)\.hallazgos\)/.test(ruta) && /nuevo\.enVivo = nuevo\.versionId;/.test(ruta),
+    "prender y \"usar esta versión\" pasan por el mismo freno del botón de pago");
+  const pagina = leer("src/app/p/[id]/page.tsx");
+  check("VIVO-H", /const cual = previa \? estado\.versionId : versionEnVivo\(estado\);/.test(pagina) && /laVersion\(cual, fila\.id\)/.test(pagina),
+    "el público ve la que está en vivo; la previa de la dueña, la elegida");
+  const pantalla = leer("src/app/digitales/productos/[id]/landing/LandingClient.tsx");
+  check("VIVO-I", /Usar esta versión/.test(pantalla) && /pedir\(estado\.activa \? \{ ponerEnVivo: true \} : \{ activa: true \}\)/.test(pantalla) &&
+    /todavía no la ve nadie/.test(pantalla),
+    "la pantalla dice que la nueva no la ve nadie y la pone con el repaso");
+  check("VIVO-J", /laDireccionMuestraTuDiseno[\s\S]*?versionEnVivo\(estado\)/.test(leer("src/lib/landing-del-producto.ts")),
+    "\"tu dirección muestra tu diseño\" mira la versión en vivo");
+}
+
 /* ── Las dependencias ────────────────────────────────────────────────────── */
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { dependencies: Record<string, string> };
 check("DEP-A", ["sanitize-html", "htmlparser2", "domhandler", "domutils", "dom-serializer"].every((d) => d in pkg.dependencies), "lo que se importa está declarado, no heredado de otro paquete");
 
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
+/* ⚠️ Con código de salida: sin esto `npm run check` lo daba por bueno aunque
+   fallara (pasó el 03/10/26 con tres chequeos rotos que nadie vio). */
+process.exit(fallos === 0 ? 0 : 1);

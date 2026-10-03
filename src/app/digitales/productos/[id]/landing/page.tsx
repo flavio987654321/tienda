@@ -43,7 +43,9 @@ export default async function LandingPage({ params }: Props) {
            5 sólo servía para mostrar restos si alguna vez bajamos el número. */
         landingsDigital: {
           orderBy: { createdAt: "desc" },
-          take: LANDING_VERSIONES,
+          /* +1: la que está en vivo no se borra aunque sea más vieja que las
+             últimas cinco (ver el POST), y tiene que aparecer en la lista. */
+          take: LANDING_VERSIONES + 1,
           select: { id: true, bytes: true, titulo: true, inventario: true, quitado: true, createdAt: true },
         },
       },

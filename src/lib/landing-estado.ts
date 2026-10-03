@@ -98,15 +98,53 @@ export function leerQuitado(raw: string | null | undefined): QuitadoDeLanding {
 export type EstadoDeLanding = {
   /** Prendida: la dirección del producto muestra la landing en vez de las secciones. */
   activa: boolean;
-  /** Qué versión se muestra. Null: ninguna subida todavía. */
+  /**
+   * La versión ELEGIDA: la que se mira en la previa y la que se corrige. Null:
+   * ninguna subida todavía.
+   */
   versionId: string | null;
+  /**
+   * La versión que ve el PÚBLICO mientras está prendida.
+   *
+   * ⚠️ Existe desde el 03/10/26. Antes la que se mostraba era siempre la
+   * elegida, así que subir una versión nueva con el diseño prendido la ponía
+   * en la dirección en el acto: sin el repaso de "antes de prenderla" y sin el
+   * freno de "no tiene botón de pago". Una página que no cobra podía quedar a
+   * la vista sin que nadie se enterara. Ahora la nueva queda en la previa y
+   * se pone en vivo con "Usar esta versión", que pasa por el mismo repaso.
+   *
+   * Null en los estados de antes: ahí la que se ve es la elegida, como
+   * siempre (ver `versionEnVivo`).
+   */
+  enVivo: string | null;
   /** Nombre del hueco (`nombreDeFoto`) → dirección de la foto subida. */
   fotos: Record<string, string>;
   /** Texto del link normalizado (`claveDeLink`) → dirección. */
   enlaces: Record<string, string>;
 };
 
-export const ESTADO_DE_FABRICA: EstadoDeLanding = { activa: false, versionId: null, fotos: {}, enlaces: {} };
+export const ESTADO_DE_FABRICA: EstadoDeLanding = { activa: false, versionId: null, enVivo: null, fotos: {}, enlaces: {} };
+
+/** La versión que ve quien entra a la dirección (si está prendida). */
+export function versionEnVivo(e: EstadoDeLanding): string | null {
+  return e.enVivo ?? e.versionId;
+}
+
+/**
+ * El estado con la versión en vivo escrita, si estaba implícita.
+ *
+ * Se llama ANTES de cambiar la elegida: en un estado de antes del 03/10/26 la
+ * que se ve es la elegida, y cambiar la elegida sin fijar ésta la pondría en
+ * vivo de rebote — justo lo que se quiere evitar.
+ */
+export function conEnVivoFijo(e: EstadoDeLanding): EstadoDeLanding {
+  return e.activa && !e.enVivo && e.versionId ? { ...e, enVivo: e.versionId } : e;
+}
+
+/** Está prendida y la elegida no es la que ve la gente: hay algo para poner en vivo. */
+export function hayVersionSinPoner(e: EstadoDeLanding): boolean {
+  return e.activa && !!e.versionId && versionEnVivo(e) !== e.versionId;
+}
 
 const ID_RE = /^c[a-z0-9]{20,30}$/;
 const CLAVE_RE = /^[a-z0-9-]{1,40}$/;
@@ -121,6 +159,7 @@ export function leerEstadoDeLanding(raw: string | null | undefined): EstadoDeLan
   return {
     activa: o.activa === true,
     versionId: typeof o.versionId === "string" && ID_RE.test(o.versionId) ? o.versionId : null,
+    enVivo: typeof o.enVivo === "string" && ID_RE.test(o.enVivo) ? o.enVivo : null,
     fotos: mapaLimpio(o.fotos, MAX_FOTOS_DE_LANDING, (v) => /^https:\/\//.test(v)),
     enlaces: mapaLimpio(o.enlaces, MAX_ENLACES_DE_LANDING, (v) => /^(https?:\/\/|mailto:|tel:)/i.test(v)),
   };

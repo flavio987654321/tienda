@@ -9,7 +9,7 @@ import VisitaDigital from "./VisitaDigital";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { medicionDelProducto, MONEDA_DIGITAL } from "@/lib/medicion-digital";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
-import { leerEstadoDeLanding, leerInventario } from "@/lib/landing-estado";
+import { leerEstadoDeLanding, leerInventario, versionEnVivo } from "@/lib/landing-estado";
 import { armarLanding } from "@/lib/landing-propia";
 import { primeraImagen } from "@/lib/productos-digitales";
 import { documentosPublicados, type FilaPoliticas } from "@/lib/politicas-tienda";
@@ -247,14 +247,18 @@ async function laLanding(fila: {
   store: FilaPoliticas & { owner: { subscription: { tier: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null } };
 }, previa: boolean, bienvenida: BienvenidaDeLaVisita, opiniones: OpinionPublicada[]): Promise<{ html: string; fuentes: string[] } | null> {
   const estado = leerEstadoDeLanding(fila.landingPropia);
-  if ((!estado.activa && !previa) || !estado.versionId) return null;
+  /* La previa de la dueña mira la ELEGIDA —la que está corrigiendo—; el
+     público, la que está en vivo. Son distintas mientras haya una versión
+     nueva sin poner. Ver `EstadoDeLanding.enVivo`. */
+  const cual = previa ? estado.versionId : versionEnVivo(estado);
+  if ((!estado.activa && !previa) || !cual) return null;
   /* La MISMA regla que mira el panel (`elPlanMuestraDisenos`). Estaba escrita
      a mano acá y el panel se sabía sólo la mitad, así que le decía a quien
      cayó a Free que su dirección mostraba su diseño cuando esta línea ya
      estaba sirviendo nuestra página. */
   if (!elPlanMuestraDisenos(fila.store.owner.subscription)) return null;
 
-  const version = await laVersion(estado.versionId, fila.id);
+  const version = await laVersion(cual, fila.id);
   if (!version) return null;
 
   const viva = bienvenida?.estado === "viva" ? bienvenida : null;

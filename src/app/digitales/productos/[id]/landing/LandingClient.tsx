@@ -13,7 +13,7 @@ import { CLAVE_ARREPENTIMIENTO } from "@/lib/politicas-tienda";
 /* `claveDeLink` y `acomodarEnlace` son las mismas del servidor, a propósito:
    si la pantalla calculara la clave por su cuenta, un acento de más guardaría
    el link en un cajón que nadie lee después. */
-import { LANDING_MAX_BYTES, LANDING_VERSIONES, acomodarEnlace, claveDeLink, leerInventario, leerQuitado } from "@/lib/landing-estado";
+import { LANDING_MAX_BYTES, LANDING_VERSIONES, acomodarEnlace, claveDeLink, leerInventario, leerQuitado, hayVersionSinPoner, versionEnVivo } from "@/lib/landing-estado";
 import { instruccionesParaClaude, pedidoDeConversion, pedidoDeCambios, INDICACIONES_MAX, type ProductoParaInstrucciones } from "@/lib/landing-instrucciones";
 import { tieneTraba } from "@/lib/landing-revision";
 import ConsejoDeUso from "../../../ConsejoDeUso";
@@ -105,6 +105,12 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
 
   const version = versiones.find((v) => v.id === estado.versionId) ?? null;
   const inv = version?.inventario ?? null;
+  /* Prendida, la que ve la gente puede no ser la que se está mirando: una
+     versión recién subida queda en la previa hasta "Usar esta versión". */
+  const sinPoner = hayVersionSinPoner(estado);
+  const idEnVivo = estado.activa ? versionEnVivo(estado) : null;
+  const laDeEnVivo = versiones.find((v) => v.id === idEnVivo) ?? null;
+  const fecha = (iso: string) => new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "America/Argentina/Buenos_Aires" });
   const fotosFaltan = inv ? inv.fotos.filter((f) => !estado.fotos[f]) : [];
   /* Los legales no cuentan como "sin dirección": van solos a nuestra página. */
   const linksFaltan = inv ? inv.linksVacios.filter((t) => !enlaces[claveDeLink(t)] && !legalDelLink(t)) : [];
@@ -171,7 +177,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
        que aparece de a uno para que se pueda seguir. Mientras aparecen, el
        botón sigue ocupado: si volviera a estar libre antes de terminar de
        contar lo que hizo, parecería que no pasó nada. */
-    const pasos = pasosDeLaSubida(d, estado.fotos);
+    const pasos = pasosDeLaSubida(d, estado.fotos, estado.activa);
     setSubiendo("revisando");
     setInforme({ pasos, visibles: 0 });
     for (let i = 1; i <= pasos.length; i++) {
@@ -829,6 +835,32 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                       No se puede prender todavía: mirá lo que está marcado en rojo más arriba.
                     </p>
                   )}
+                  {/* ⚠️ La versión nueva NO sale sola a la dirección: hasta el
+                      03/10/26 sí, sin repaso y sin el freno del botón de pago. */}
+                  {sinPoner && (
+                    <div className="mt-3 rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 p-3.5">
+                      <p className="text-[13px] font-bold text-amber-900 panel-oscuro:text-amber-200">
+                        La versión que estás mirando todavía no la ve nadie
+                      </p>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-amber-900/90 panel-oscuro:text-amber-200/90">
+                        Quien entra a tu dirección sigue viendo {laDeEnVivo ? `la versión del ${fecha(laDeEnVivo.cuando)}` : "la anterior"}.
+                        Mirala en la previa y, cuando te guste, ponela.
+                      </p>
+                      {trabada ? (
+                        <p className="mt-2 text-[12.5px] font-semibold text-red-700 panel-oscuro:text-red-300">
+                          Ésta no se puede poner: mirá lo que está marcado en rojo más arriba.
+                        </p>
+                      ) : !vaAPrender && (
+                        <button
+                          type="button"
+                          onClick={() => { setMirando(null); setVaAPrender(true); }}
+                          className="mt-2.5 inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-orange-500"
+                        >
+                          Usar esta versión
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {!publicado && <p className="mt-1.5 text-[12.5px] text-amber-700 panel-oscuro:text-amber-300">Ojo: el producto todavía no está publicado, así que la dirección no la ve nadie.</p>}
                 </div>
                 <button
@@ -844,9 +876,9 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   <span className={`block h-6 w-6 rounded-full bg-white transition-transform ${estado.activa ? "translate-x-5" : ""}`} />
                 </button>
               </div>
-              {vaAPrender && !estado.activa && (
+              {vaAPrender && (!estado.activa || sinPoner) && (
                 <div className="mt-4 rounded-2xl border border-orange-200 panel-oscuro:border-orange-900/50 bg-orange-50 panel-oscuro:bg-orange-500/10 p-4">
-                  <p className="text-sm font-bold text-orange-900 panel-oscuro:text-orange-200">Antes de prenderla, así está:</p>
+                  <p className="text-sm font-bold text-orange-900 panel-oscuro:text-orange-200">{estado.activa ? "Antes de ponerla en tu dirección, así está:" : "Antes de prenderla, así está:"}</p>
                   {/* Cada renglón es un número que ya se calculó arriba; acá
                       sólo se junta para que lo vea de una, antes de que lo vea
                       el público. Lo que no está bien no frena —salvo los
@@ -863,12 +895,12 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => { setVaAPrender(false); void pedir({ activa: true }); }}
-                      disabled={sinGuardar}
-                      title={sinGuardar ? "Primero guardá los links" : undefined}
+                      onClick={() => { setVaAPrender(false); void pedir(estado.activa ? { ponerEnVivo: true } : { activa: true }); }}
+                      disabled={sinGuardar || trabada}
+                      title={sinGuardar ? "Primero guardá los links" : trabada ? "Primero arreglá lo que está marcado en rojo" : undefined}
                       className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <Check className="h-4 w-4" /> Sí, prenderla
+                      <Check className="h-4 w-4" /> {estado.activa ? "Sí, usar esta versión" : "Sí, prenderla"}
                     </button>
                     <button
                       type="button"
@@ -890,7 +922,8 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                     subir una nueva, la más vieja se borra sola. Se dice acá
                     para que no busque la de hace dos semanas. */}
                 <p className="mt-1 text-[12.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  Guardamos las últimas {LANDING_VERSIONES}. Cuando subís una nueva, la más vieja se borra.
+                  Guardamos las últimas {LANDING_VERSIONES}. Cuando subís una nueva, la más vieja se borra
+                  {estado.activa ? " (menos la que está en tu dirección). Elegir otra la muestra en la previa: a tu dirección va recién con «Usar esta versión»." : "."}
                 </p>
                 <ul className="mt-3 space-y-2">
                   {versiones.map((v, i) => (
@@ -902,13 +935,20 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
                             volvió a una vieja, esto le dice cuál era la última. */}
                         {i === 0 && v.id !== estado.versionId ? " · la última que subiste" : ""}
                       </span>
+                      <span className="flex items-center gap-2">
+                      {v.id === idEnVivo && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 panel-oscuro:bg-green-500/15 px-2 py-0.5 text-[10.5px] font-bold text-green-800 panel-oscuro:text-green-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> En tu dirección
+                        </span>
+                      )}
                       {v.id === estado.versionId ? (
-                        <span className="text-[12px] font-bold text-gray-400">La que estás usando</span>
+                        <span className="text-[12px] font-bold text-gray-400">{sinPoner ? "La que estás mirando" : "La que estás usando"}</span>
                       ) : (
                         <button type="button" onClick={() => { setMirando(null); void pedir({ versionId: v.id }); }} className="inline-flex items-center gap-1 text-[12px] font-bold text-orange-600 hover:text-orange-500">
-                          <RotateCcw className="h-3 w-3" /> Volver a esta
+                          <RotateCcw className="h-3 w-3" /> {estado.activa ? "Mirar esta" : "Volver a esta"}
                         </button>
                       )}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -996,7 +1036,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
           ) : (
             <>
           <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">Así queda</p>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">{sinPoner ? "Así queda · todavía no la ve nadie" : "Así queda"}</p>
             <div role="tablist" aria-label="Dónde se ve" className="inline-flex rounded-full border border-gray-200 panel-oscuro:border-gray-700 p-0.5">
               {([["pc", Monitor, "Computadora"], ["celular", Smartphone, "Celular"]] as const).map(([clave, Icono, texto]) => (
                 <button
@@ -1122,7 +1162,7 @@ function quitadoEnPalabras(q: QuitadoDeLanding): string[] {
 
 type Paso = { titulo: string; detalle: string; estado: "ok" | "aviso" | "traba" };
 
-function pasosDeLaSubida(d: Record<string, unknown>, cargadas: Record<string, string>): Paso[] {
+function pasosDeLaSubida(d: Record<string, unknown>, cargadas: Record<string, string>, yaPrendida = false): Paso[] {
   /* Lo que contesta el servidor se vuelve a leer con los mismos validadores
      que usa la base: en el navegador nada es de fiar por venir de una
      respuesta. */
@@ -1178,13 +1218,15 @@ function pasosDeLaSubida(d: Record<string, unknown>, cargadas: Record<string, st
       detalle: inv.hallazgos.length ? `${cuenta(inv.hallazgos.length, "cosa", "cosas")} para mirar, acá abajo.` : "Nada que marcarte.",
     },
     trabada
-      ? { estado: "traba", titulo: "Todavía no se puede prender", detalle: "Mirá lo que está en rojo, arreglalo y volvé a subirla." }
+      ? { estado: "traba", titulo: yaPrendida ? "Ésta no se puede poner" : "Todavía no se puede prender", detalle: yaPrendida ? "Tu dirección sigue con la anterior. Mirá lo que está en rojo, arreglalo y volvé a subirla." : "Mirá lo que está en rojo, arreglalo y volvé a subirla." }
       : {
         estado: faltan ? "aviso" : "ok",
         titulo: "Lista para mirar",
         detalle: faltan
           ? `Te ${faltan === 1 ? "falta 1 foto" : `faltan ${faltan} fotos`}. Cargalas acá abajo y mirala en la previa.`
-          : "Mirala en la previa de al lado y prendela cuando te guste.",
+          : yaPrendida
+            ? "Todavía no la ve nadie: tu dirección sigue con la anterior. Mirala en la previa y, si te gusta, tocá «Usar esta versión»."
+            : "Mirala en la previa de al lado y prendela cuando te guste.",
       },
   ];
 }

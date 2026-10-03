@@ -1,5 +1,5 @@
 import { isSubscriptionActive } from "@/lib/subscription";
-import { leerEstadoDeLanding } from "@/lib/landing-estado";
+import { leerEstadoDeLanding, versionEnVivo } from "@/lib/landing-estado";
 
 /**
  * Una sola respuesta a "¿qué está viendo quien entra a la dirección del
@@ -60,5 +60,5 @@ export function laDireccionMuestraTuDiseno(
   sub: SubParaDiseno,
 ): boolean {
   const estado = leerEstadoDeLanding(landingPropia);
-  return estado.activa && !!estado.versionId && elPlanMuestraDisenos(sub);
+  return estado.activa && !!versionEnVivo(estado) && elPlanMuestraDisenos(sub);
 }

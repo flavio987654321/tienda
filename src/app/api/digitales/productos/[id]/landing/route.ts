@@ -6,7 +6,7 @@ import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { limpiarLanding } from "@/lib/landing-propia";
 import { tieneTraba } from "@/lib/landing-revision";
 import {
-  leerEstadoDeLanding, leerInventario, LANDING_MAX_BYTES, LANDING_VERSIONES,
+  leerEstadoDeLanding, leerInventario, LANDING_MAX_BYTES, LANDING_VERSIONES, conEnVivoFijo,
   MAX_FOTOS_DE_LANDING, MAX_ENLACES_DE_LANDING, acomodarEnlace, type EstadoDeLanding,
 } from "@/lib/landing-estado";
 
@@ -104,7 +104,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   if (!r.ok) return NextResponse.json({ error: r.problema }, { status: 400 });
   const L = r.landing;
 
-  const estado = leerEstadoDeLanding(producto.landingPropia);
+  /* ⚠️ Con la que está en vivo ESCRITA: la nueva queda elegida —en la previa—
+     pero la dirección sigue mostrando la de antes hasta "Usar esta versión".
+     Ver `EstadoDeLanding.enVivo`. */
+  const leido = conEnVivoFijo(leerEstadoDeLanding(producto.landingPropia));
+  /* Apagada, la de en vivo no significa nada —prenderla pone la elegida— y
+     no se arrastra: si no, guardaría una versión vieja para siempre. */
+  const estado: EstadoDeLanding = leido.activa ? leido : { ...leido, enVivo: null };
   const version = await prisma.$transaction(async (tx) => {
     const creada = await tx.landingDigital.create({
       data: {
@@ -119,13 +125,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     });
     /* Se guardan las últimas: "volver a la anterior" es un botón, pero el
        historial entero no le sirve a nadie y son medio mega cada una. */
-    const viejas = await tx.landingDigital.findMany({
+    const viejas = (await tx.landingDigital.findMany({
       where: { productId: producto.id },
       orderBy: { createdAt: "desc" },
       skip: LANDING_VERSIONES,
       select: { id: true },
       take: 50,
-    });
+    /* ⚠️ La que está en vivo NO se borra aunque sea vieja: si subió cinco
+       versiones sin poner ninguna, la de la dirección es la sexta, y borrarla
+       dejaría la dirección mostrando nuestra página sin que nadie lo pida. */
+    })).filter((v) => v.id !== estado.enVivo);
     if (viejas.length) await tx.landingDigital.deleteMany({ where: { id: { in: viejas.map((v) => v.id) } } });
     /* La nueva queda elegida; prenderla es otro paso, para que pueda mirar
        la previa antes de que la vea nadie. Las fotos y los links, intactos. */
@@ -156,7 +165,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!b) return NextResponse.json({ error: "No entendimos el pedido." }, { status: 400 });
 
-  const estado = leerEstadoDeLanding(producto.landingPropia);
+  /* Con la que está en vivo escrita, ANTES de tocar la elegida: elegir otra
+     versión del historial cambia la previa, no la dirección. */
+  const estado = conEnVivoFijo(leerEstadoDeLanding(producto.landingPropia));
   const nuevo: EstadoDeLanding = { ...estado, fotos: { ...estado.fotos }, enlaces: { ...estado.enlaces } };
 
   if (typeof b.versionId === "string") {
@@ -214,20 +225,27 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
   }
 
-  if (typeof b.activa === "boolean") {
+  /* Prenderla, o poner en vivo la elegida estando prendida ("Usar esta
+     versión"): las dos ponen la ELEGIDA en la dirección, así que las dos pasan
+     por el mismo freno. */
+  const ponerEnVivo = b.activa === true || b.ponerEnVivo === true;
+  if (ponerEnVivo) {
     /* Prenderla sin nada subido dejaría la dirección en blanco. */
-    if (b.activa && !nuevo.versionId) return NextResponse.json({ error: "Primero subí tu archivo." }, { status: 409 });
+    if (!nuevo.versionId) return NextResponse.json({ error: "Primero subí tu archivo." }, { status: 409 });
+    if (b.ponerEnVivo === true && !nuevo.activa && b.activa !== true) {
+      return NextResponse.json({ error: "Tu diseño está apagado: prendelo para que se vea." }, { status: 409 });
+    }
     /* Y lo que traba, traba también acá: la pantalla ya lo dice, pero quien
        manda el pedido a mano no pasa igual. Hoy es una sola cosa —que no
        haya botón de compra—, y publicar eso es gastar visitas. */
-    if (b.activa && nuevo.versionId) {
-      const elegida = await prisma.landingDigital.findFirst({ where: { id: nuevo.versionId, productId: producto.id }, select: { inventario: true } });
-      if (elegida && tieneTraba(leerInventario(elegida.inventario).hallazgos)) {
-        return NextResponse.json({ error: "Tu página no tiene ningún botón que lleve al pago. Arreglá eso y volvé a subirla." }, { status: 409 });
-      }
+    const elegida = await prisma.landingDigital.findFirst({ where: { id: nuevo.versionId, productId: producto.id }, select: { inventario: true } });
+    if (!elegida) return NextResponse.json({ error: "Esa versión no existe." }, { status: 404 });
+    if (tieneTraba(leerInventario(elegida.inventario).hallazgos)) {
+      return NextResponse.json({ error: "Tu página no tiene ningún botón que lleve al pago. Arreglá eso y volvé a subirla." }, { status: 409 });
     }
-    nuevo.activa = b.activa;
+    nuevo.enVivo = nuevo.versionId;
   }
+  if (typeof b.activa === "boolean") nuevo.activa = b.activa;
 
   await prisma.product.update({ where: { id: producto.id }, data: { landingPropia: JSON.stringify(nuevo) } });
   return NextResponse.json({ ok: true, estado: nuevo });
