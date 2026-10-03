@@ -13,6 +13,7 @@ import { buscarVariante } from "@/lib/variantMatch";
 import type { ActivePromotion } from "@/lib/pricing";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
+import { useFiltrosCatalogo } from "@/hooks/useFiltrosCatalogo";
 // Las fotos pasan por `next/image` (vía `FadeImage`, el mismo que usan los diez
 // templates) y no por `<img>` sueltos: así el celular baja una versión del tamaño
 // que va a mostrar y en WebP, en vez del JPG original de la cámara. Esta página
@@ -663,11 +664,8 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   const catParam     = embebido ? (embebido.categoria ?? null)    : (searchParams?.get("categoria") ?? null);
   const subCatParam  = embebido ? (embebido.subcategoria ?? null) : (searchParams?.get("subcategoria") ?? null);
   const ofertaParam  = embebido ? !!embebido.soloOfertas    : searchParams?.get("oferta") === "true";
-  const [onlyOfertas, setOnlyOfertas] = useState(ofertaParam);
   const destacadoParam  = embebido ? !!embebido.masVistos      : searchParams?.get("destacado") === "true";
-  const [onlyDestacados, setOnlyDestacados] = useState(destacadoParam);
   const promoParam   = embebido ? !!embebido.soloPromos     : searchParams?.get("promo") === "true";
-  const [onlyPromos, setOnlyPromos] = useState(promoParam);
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
@@ -878,19 +876,27 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   }, [loading]);
 
   // ── Filtros y ordenamiento ──────────────────────────────────────────────────
-  const [search,            setSearch]            = useState("");
-  const [activeCategory,    setActiveCategory]    = useState(catParam ?? "Todos");
-  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(subCatParam);
+  /* Las REGLAS (qué se ve, en qué orden, en qué página) viven en
+     `useFiltrosCatalogo`, que comparte con el catálogo propio de Aurora. Acá
+     queda sólo lo que es de esta pantalla: menús abiertos, cajones, anchos. */
+  const filtros = useFiltrosCatalogo({
+    products, promotions, porPagina: PAGE_SIZE,
+    inicial: { categoria: catParam, subcategoria: subCatParam, soloOfertas: ofertaParam, masVistos: destacadoParam, soloPromos: promoParam },
+  });
+  const {
+    onlyOfertas, setOnlyOfertas, onlyDestacados, setOnlyDestacados, onlyPromos, setOnlyPromos,
+    search, setSearch, activeCategory, activeSubcategory,
+    sortBy, setSortBy, page, setPage, activeAttrFilters, priceRange, setPriceRange,
+    CATEGORIES, hayOfertas, availableAttrFilters,
+    toggleAttrFilter, clearAttrFilters, priceBounds, effectivePriceRange, subcategoriesFor,
+    filtered, totalPages, paginated,
+  } = filtros;
   const [hoveredCatMenu,    setHoveredCatMenu]    = useState<string | null>(null);
   // Posición del desplegable de subcategorías, calculada en pantalla (no relativa al
   // contenedor con scroll horizontal de las pestañas) para que no quede recortado por
   // su overflow-x. Se guarda al abrir, leyendo el tab que se clickeó.
   const [catMenuPos, setCatMenuPos] = useState<{ top: number; left: number } | null>(null);
   const catTabRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [sortBy,            setSortBy]            = useState("newest");
-  const [page,              setPage]              = useState(1);
-  const [activeAttrFilters, setActiveAttrFilters] = useState<Record<string, string[]>>({});
-  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   // Tech Nova y Urban Pulse usan sidebar de filtros a la izquierda (solo desktop).
   // En mobile caen al layout minimal (dropdown) que funciona bien en touch.
   const isSidebarTemplate = template === "tech-nova" || template === "urban-pulse";
@@ -963,141 +969,8 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
     return next;
   });
 
-  const categoryList = useMemo(() => [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))], [products]);
-  const CATEGORIES   = useMemo(() => ["Todos", ...categoryList], [categoryList]);
-
-  // ── Filtro dinámico por atributos: solo se muestran los que el dueño cargó de verdad,
-  // y solo si hay más de un valor distinto (sino el filtro no aporta nada) ──────
-  const productsInCategory = useMemo(
-    () => products.filter(p =>
-      (activeCategory === "Todos" || p.category === activeCategory) &&
-      (!activeSubcategory || p.subcategory === activeSubcategory)
-    ),
-    [products, activeCategory, activeSubcategory]
-  );
-
-  // ¿Hay al menos un producto con precio anterior? De eso depende que se muestre
-  // el filtro "En oferta" — se mira sobre TODO el catálogo y no sobre la categoría
-  // abierta, para que el botón no aparezca y desaparezca al navegar entre
-  // categorías, que se lee como un parpadeo y no como una decisión.
-  const hayOfertas = useMemo(
-    () => products.some(p => p.comparePrice != null && p.comparePrice > p.price),
-    [products]
-  );
-
-  const availableAttrFilters = useMemo(() => {
-    // En "Todos" se mezclan productos de rubros muy distintos (heladeras, sillones,
-    // celulares...) y mostrar specs como Pulgadas o Potencia ahí no tiene sentido —
-    // recién aparecen cuando el usuario elige una categoría puntual.
-    if (activeCategory === "Todos") return [];
-    const map: Record<string, Set<string>> = {};
-    productsInCategory.forEach(p => {
-      p.attributes.forEach(({ key, value }) => {
-        if (!key || !value) return;
-        if (!map[key]) map[key] = new Set();
-        map[key].add(value);
-      });
-    });
-    // Orden fijo: Marca y Modelo primero (lo que más ayuda a decidir),
-    // el resto de specs en el medio, y Garantía al final (es un dato de
-    // confianza, no algo por lo que normalmente se filtra primero).
-    const PRIORITY = ["marca", "modelo"];
-    const LAST = ["garantia", "garantía"];
-    const rank = (key: string) => {
-      const k = key.toLowerCase();
-      if (PRIORITY.includes(k)) return PRIORITY.indexOf(k);
-      if (LAST.includes(k)) return 100;
-      return 10;
-    };
-    return Object.entries(map)
-      .filter(([, values]) => values.size > 1)
-      .map(([key, values]) => ({ key, values: [...values].sort() }))
-      .sort((a, b) => rank(a.key) - rank(b.key) || a.key.localeCompare(b.key));
-  }, [productsInCategory, activeCategory]);
-
-  const toggleAttrFilter = (key: string, value: string) => {
-    setActiveAttrFilters(prev => {
-      const current = prev[key] ?? [];
-      const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
-      const updated = { ...prev, [key]: next };
-      if (next.length === 0) delete updated[key];
-      return updated;
-    });
-    setPage(1);
-  };
-
-  const clearAttrFilters = () => setActiveAttrFilters({});
-
-  // Tope real de precios para la categoría actual — se recalcula cuando cambiás
-  // de categoría, y reseteamos la selección manual para no dejar un rango viejo
-  // que ya no tiene sentido con los productos nuevos.
-  const priceBounds = useMemo<[number, number]>(() => {
-    if (productsInCategory.length === 0) return [0, 0];
-    const prices = productsInCategory.map(p => p.price);
-    return [Math.min(...prices), Math.max(...prices)];
-  }, [productsInCategory]);
-
-  // Si cambiás de categoría, el rango de precio anterior ya no tiene sentido —
-  // lo reseteamos durante el render (no en un efecto) para evitar un re-render extra.
-  const catKey = `${activeCategory}|${activeSubcategory ?? ""}`;
-  const [prevCatKey, setPrevCatKey] = useState(catKey);
-  if (catKey !== prevCatKey) {
-    setPrevCatKey(catKey);
-    setPriceRange(null);
-  }
-
-  const effectivePriceRange = priceRange ?? priceBounds;
-
-  const subcategoriesFor = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    products.forEach(p => {
-      if (p.subcategory && p.category) {
-        if (!map[p.category]) map[p.category] = [];
-        if (!map[p.category].includes(p.subcategory)) map[p.category].push(p.subcategory);
-      }
-    });
-    return map;
-  }, [products]);
-
-  const filtered = useMemo(() => {
-    let r = productsInCategory.filter(p => {
-      if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase()) &&
-          !(p.subcategory ?? "").toLowerCase().includes(search.toLowerCase()) &&
-          !p.category.toLowerCase().includes(search.toLowerCase())) return false;
-      for (const [key, values] of Object.entries(activeAttrFilters)) {
-        if (values.length === 0) continue;
-        const productValue = p.attributes.find(a => a.key === key)?.value;
-        if (!productValue || !values.includes(productValue)) return false;
-      }
-      if (priceRange && (p.price < priceRange[0] || p.price > priceRange[1])) return false;
-      if (onlyOfertas && !(p.comparePrice && p.comparePrice > p.price)) return false;
-      if (onlyPromos) {
-        // "En promoción" = alguna promo de TIENDA vigente alcanza al producto (precio
-        // tachado, N×M, envío gratis o descuento condicional). Reusa el mismo resolver
-        // que pinta el badge, para que filtro y cartel coincidan.
-        const d = resolveProductPromo(p, promotions);
-        if (!(d.hasPriceDrop || d.nxm || d.freeShipping || d.pctOff != null)) return false;
-      }
-      return true;
-    });
-    // "Lo más buscado" ordena por vistas reales de compradores (mayor a menor)
-    if (onlyDestacados) return [...r].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
-    if (sortBy === "price_asc")  r = [...r].sort((a, b) => a.price - b.price);
-    if (sortBy === "price_desc") r = [...r].sort((a, b) => b.price - a.price);
-    if (sortBy === "name_az")    r = [...r].sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === "discount")   r = [...r].sort((a, b) => {
-      const da = a.comparePrice ? (a.comparePrice - a.price) / a.comparePrice : 0;
-      const db = b.comparePrice ? (b.comparePrice - b.price) / b.comparePrice : 0;
-      return db - da;
-    });
-    return r;
-  }, [productsInCategory, activeAttrFilters, priceRange, search, sortBy, onlyOfertas, onlyDestacados, onlyPromos, promotions]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   const changeCategory = (cat: string, sub: string | null = null) => {
-    setActiveCategory(cat); setActiveSubcategory(sub); setPage(1); setActiveAttrFilters({});
+    filtros.changeCategory(cat, sub);
     // Los acordeones de specs (Marca, Modelo, etc.) son específicos de cada categoría —
     // si quedan "abiertos" al cambiar de rubro, dan la falsa sensación de que el filtro
     // sigue activo aunque ya se haya limpiado arriba (activeAttrFilters).

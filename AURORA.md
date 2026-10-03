@@ -115,6 +115,34 @@ Funcionan, pero son los mismos bloques que tienen los templates clásicos, con o
 Son los candidatos a rehacerse con el lenguaje de Aurora (luz, vidrio, profundidad,
 movimiento). No hace falta cambiar qué dicen, sino cómo se ven.
 
+## Lo que le falta a la portada (estudio del 03/10/26)
+
+Hoy la portada es: portada con carrusel 3D, Garantías, Mayorista (solo mayoristas), frase de
+marca y la grilla de productos. Una tienda de moda de verdad necesita contar más cosas, y hoy
+Aurora no tiene dónde. Lo que falta, por orden de importancia para vender:
+
+| # | Bloque | Para qué | Cómo sería en Aurora |
+|---|---|---|---|
+| B-1 | **Colección en foco** | Mostrar UNA colección o categoría ("Otoño", "Denim") con su portada y sus productos, en vez de todo mezclado | La colección como una escena propia: su foto de fondo con la luz de Aurora y los productos de esa colección entrando en profundidad. La dueña elige qué categoría. |
+| B-2 | **Producto en foco** | Empujar UN producto (el más vendido, el lanzamiento) | Un solo producto enorme, la luz sigue al mouse (en el celular, al inclinar), precio y talles flotando en paneles de vidrio, y "agregar al carrito" ahí mismo. |
+| B-3 | **Recién llegado** | Que el cliente que vuelve vea lo nuevo sin buscar | Automático (los últimos que entraron), en una franja que se desliza con profundidad. |
+| B-4 | **Lo que dicen** (reseñas de la tienda) | Confianza: hoy las reseñas solo están adentro de cada ficha | Las mejores reseñas como tarjetas de vidrio en órbita. Solo aparece si hay reseñas reales. |
+| B-5 | **Preguntas frecuentes** | Envíos, cambios, talles, medios de pago: lo que todos preguntan por WhatsApp | Acordeón de vidrio; las respuestas salen de lo que la tienda ya cargó (envíos, políticas) para no escribirlo dos veces. |
+| B-6 | **Lanzamiento** | Generar expectativa por algo que sale en una fecha | Cuenta regresiva en vidrio; después de la fecha se convierte en "Ya disponible". |
+| B-7 | **Lookbook** | Looks completos, comprables desde la foto | Fotos de looks en la pista 3D con los productos marcados. |
+
+B-1 y B-2 son los dos que pidió Flavio y los que más faltan. Todos se pueden ocultar y
+reordenar desde el editor, como los bloques de hoy.
+
+## Tipografía propia
+
+Hoy Aurora usa Georgia (títulos) y Helvetica (texto). **Ningún template tiene tipografía
+propia**: casi todos usan la del sistema o Georgia, así que se parecen también por la letra.
+Para Aurora: **Unbounded** en los títulos (geométrica, ancha, futurista sin ser de juguete) y
+**Sora** en el texto (limpia, técnica, muy legible chica). Se cargan con `next/font` (desde
+nuestro dominio, sin pegarle a Google) y solo en las tiendas con Aurora. Cada template tiene
+que tener su par propio; Aurora es el primero.
+
 ## Ideas de bloques nuevos (propios de Aurora)
 
 Para elegir, no para hacer todos:
