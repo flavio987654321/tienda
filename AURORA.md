@@ -22,7 +22,7 @@ Se tacha cada ítem al terminarlo, no al final.
 | ~~AU-5~~ | ~~Tipografía Georgia (serif clásica) en un template futurista~~ | Media (diseño) | **hecho** |
 | AU-6 | Mezcla de botones redondos y cuadrados | Media (diseño) | pendiente |
 | AU-7 | Redes sociales como letras ("IG", "FB") en vez de íconos | Baja | pendiente |
-| AU-8 | En el celular, el precio de abajo de la ficha confunde con cantidad > 1 | Baja | pendiente |
+| ~~AU-8~~ | ~~En el celular, el precio de abajo de la ficha confunde con cantidad > 1~~ | Baja | **hecho** (ficha nueva) |
 | AU-9 | Arrastre lateral de 39px en Contacto entre 1099 y 1101 de ancho | Baja (heredado) | pendiente |
 | AU-10 | Código muerto y restos | Fantasma | pendiente |
 
@@ -111,6 +111,10 @@ portada promete una tienda futurista y el catálogo la deja de cumplir. Flavio: 
 2. Dibujar un **catálogo propio de Aurora** con ese cerebro: las mismas piezas de vidrio de
    la portada que llegan en profundidad (`GrillaProfunda`), filtros como luz y vidrio, y la
    **ficha de Aurora** con su vuelo, en vez de la genérica.
+
+## ~~AU-12~~ — La ficha del producto era la de todos ✅
+
+**Hecha el 03/10/26** en `aurora/FichaAurora.tsx`, a pedido de Flavio ("el modal es siempre el mismo que los otros templates"). El fondo es la foto del producto difuminada con la luz; foto en marco redondeado con flechas de vidrio, contador y miniaturas que se encienden; talles en cápsulas y colores en esferas con anillo de luz; cantidad y comprar en una fila de vidrio (en el celular, barra fija abajo con el total y las unidades); detalles y reseñas en paneles, el formulario se despliega cuando se pide; "También te puede gustar" con `TarjetaAurora`. La lógica no cambió (opciones, stock, promos, 3×2 y reseñas salen de los mismos hooks) y el vuelo desde la tarjeta sigue andando. Probada a 1280, 768 y 360.
 
 ## Bloques heredados que no son futuristas
 

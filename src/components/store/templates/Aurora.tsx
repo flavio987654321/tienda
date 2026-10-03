@@ -4,6 +4,7 @@ import type { CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGen
 import { CatalogoAurora, type EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
 import { ColeccionEnFoco } from "@/components/store/templates/aurora/ColeccionEnFoco";
 import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFoco";
+import { FichaAurora } from "@/components/store/templates/aurora/FichaAurora";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -11,22 +12,17 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, contrasteWCAG, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
-import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { catalogoTieneGeneros } from "@/lib/generos";
-import { opcionesVisibles } from "@/lib/opciones";
-import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
-import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
-import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
+import { PromoPrice } from "@/components/store/PromoDisplay";
+import { resolveProductPromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
@@ -38,26 +34,9 @@ import { TarjetaAurora, type TintaTarjeta } from "@/components/store/templates/a
 import { CLASES_LETRA, TITULO, TEXTO } from "@/components/store/templates/aurora/fuentes";
 import { calcularVuelo, tarjetaVisible, MS_IDA, MS_VUELTA } from "@/components/store/templates/shared/vueloDeFicha";
 import { vidrio, sombra } from "@/components/store/templates/shared/Materia";
-import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
-import { colorToSwatch } from "@/lib/colorSwatch";
-import { discountPercent } from "@/lib/discount";
-import { resolveVariantPrice } from "@/lib/variantPrice";
-import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
-
-
-/* Las reseñas de EJEMPLO de la vista rápida, para el editor. Sin esto el bloque
-   aparecía vacío mientras el dueño acomoda la tienda y no había forma de ver cómo
-   queda lleno. Nunca se publican: el hook las muestra sólo con `isPreview`, y son
-   propias de este template para que las previews no se vean clonadas. */
-const RESENAS_EJEMPLO_FN: ResenaProducto[] = [
-  { id:"au-ej-1", rating:5, comment:"La caída de la tela es impecable y el negro es negro de verdad. Lo usé para una boda y me preguntaron de dónde era.", reviewer:"Victoria S.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
-  { id:"au-ej-2", rating:5, comment:"Las terminaciones son de otra categoría. Se nota que no es una prenda de producción masiva.", reviewer:"Federico L.", verified:false, verifiedBy:null,   createdAt:"2026-07-11T14:00:00.000Z" },
-  { id:"au-ej-3", rating:4, comment:"Hermoso y muy bien embalado. Le saco una estrella porque tardó un par de días más de lo previsto.", reviewer:"Renata M.", verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
-];
-const PASO_RESENAS_FN = 5;
 
 
 const announcementMessages_DEFAULT = [
@@ -165,14 +144,6 @@ export default function Aurora() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
-  const reviewCaptcha = useTurnstile("review");
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewDone,     setReviewDone]     = useState(false);
-  const [reviewHoneypot, setReviewHoneypot] = useState("");
-  const [reviewError,    setReviewError]    = useState<string | null>(null);
-  /** Corta el doble envio en la misma vuelta, antes de que el estado se entere. */
-  const enviandoResenaProd = useRef(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
@@ -324,23 +295,16 @@ export default function Aurora() {
   const cart = useCartLogic(storefront);
   const {
     setCartOpen,
-    modalProduct, setModalProduct, modalImg, setModalImg,
-    seleccion, setOpcion,
-    qty, setQty, selectedVariantStock, sinStock,
+    modalProduct, setModalProduct,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart, modalScrollRef,
+    fmt, showToast, openModal,
     toggleFavorite,
   } = cart;
-  const imgSwipe = useTouchSwipe(
-    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
-    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
-  );
-
   /* ── El vuelo de la ficha ──────────────────────────────────────────────────
      La cuenta vive en `vueloDeFicha`; acá sólo están los tres nodos que hacen
      falta para hacerla: de qué foto sale, cuál es la foto de la ficha, y cuál es
@@ -436,53 +400,6 @@ export default function Aurora() {
     if (found) openModal(found);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
-
-  // Las reseñas del producto abierto: carga, paginado, promedio y total. Antes
-  // esto estaba escrito acá a mano —igual que en los otros tres templates de moda
-  // y en la página de listado— y traía los tres bugs que describe el hook: sin
-  // paginar (con 200 reseñas se llegaba a la 50 y las demás no existían), el
-  // promedio calculado sobre las que habían llegado, y las reseñas del producto
-  // anterior pegadas en la ficha si abrías dos seguidos.
-  const resenasProd = useResenasProducto({
-    slug: storeConfig?.slug, productId: modalProduct?.id,
-    paso: PASO_RESENAS_FN, ejemplos: RESENAS_EJEMPLO_FN, isPreview,
-  });
-
-  useEffect(() => {
-    if (!modalProduct) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de una interacción (abrir otra ficha), no se puede calcular durante el render
-    setReviewDone(false);
-    setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalProduct?.id]);
-
-  async function submitReview(e: React.FormEvent) {
-    e.preventDefault();
-    if (isPreview || isOwner || reviewHoneypot || enviandoResenaProd.current) return;
-    const slug = storeConfig?.slug;
-    if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
-    enviandoResenaProd.current = true;
-    setReviewSubmitting(true);
-    try {
-      const res = await fetch(`/api/public/${slug}/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        resenasProd.agregar(data.review);
-        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
-        setReviewError(null);
-        setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
-      } else {
-        const d = await res.json().catch(() => null);
-        setReviewError(d?.error || "No se pudo publicar tu resena. Proba de nuevo en un momento.");
-      }
-    } catch {
-      setReviewError("No se pudo conectar. Revisa tu internet y proba de nuevo.");
-    } finally { enviandoResenaProd.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
-  }
 
   const ANNOUNCEMENT_BAR_H = 36;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
@@ -606,15 +523,6 @@ export default function Aurora() {
   }), [products, hayGeneros, activeGender, activeCategory, activeSubcategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
 
-  const similarProducts = useMemo(() => {
-    if (!modalProduct) return [];
-    const others = products.filter(p => p.id !== modalProduct.id);
-    const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
-    const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
-    const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
-    return [...sameSub, ...sameCat, ...rest].slice(0, 4);
-  }, [products, modalProduct]);
-
   /* ─ Colores base ─ */
   const G  = storeConfig?.colors.accent ?? "#8b5cf6";  // violeta de la escena
   const BG = "#06070d";  // el fondo de la escena
@@ -667,12 +575,6 @@ export default function Aurora() {
   };
 
   const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(242,242,247,0.1)", accent:G, accentText, serif:TITULO };
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
-  const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
-  const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
-  // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
-  const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
-
   const nosotrosImageOv  = storeConfig?.imageOverrides?.["nosotrosImage"];
   /* La misma regla que la foto del hero: si la dueña no subió una, va una de
      SUS productos (la segunda con foto, para no repetir la del hero). Antes caía
@@ -1739,420 +1641,17 @@ export default function Aurora() {
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
       )}
 
-      {/* ── MODAL PRODUCTO ─────────────────────────────────── */}
+      {/* ── LA FICHA (ver `aurora/FichaAurora`) ───────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={cerrarFicha}>
-          {/* El fondo entra con la ficha, no de golpe: si aparece negro entero en
-              el primer cuadro, tapa la tarjeta justo cuando la foto sale de ella
-              y el pase deja de leerse. */}
-          <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)", opacity: panelListo ? 1 : 0, transition:`opacity ${MS_IDA}ms ease` }}/>
-          <div ref={fichaRef} style={{ position:"relative", background:S, borderRadius:18, maxWidth:960, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:sombra("oscuro",3), willChange:"transform" }} onClick={e => e.stopPropagation()}>
-            <button onClick={cerrarFicha} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", borderRadius:999, opacity: panelListo ? 1 : 0, transition:"opacity .3s ease" }}>×</button>
-            {/* El ref lo manda arriba `openModal` al abrir otra ficha: los
-                "productos similares" están al final, así que el que toca uno está
-                siempre abajo de todo y la ficha nueva abría por el pie. */}
-            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
-            <div>
-              {/* Imagen principal con flechas.
-                  Es el ancla del vuelo: la misma proporción 3/4 que la foto de
-                  la tarjeta, así la escala es una sola y la imagen no se estira
-                  en el camino. */}
-              <div ref={fotoFichaRef} style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
-                {modalProduct.images[modalImg] && (
-                  <FadeImage src={modalProduct.images[modalImg]} alt="" fill sizes="(max-width: 768px) 100vw, 480px" style={{ objectFit:"cover", cursor:"zoom-in" }}
-                    onError={e => { e.currentTarget.style.opacity="0"; }}
-                    onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
-                )}
-                {(() => {
-                  if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
-                  const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
-                  if (!hasOffer) return null;
-                  return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
-                })()}
-                {modalProduct.images.length > 1 && (
-                  <>
-                    <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
-                      aria-label="Imagen anterior"
-                      style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(242,242,247,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
-                      onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
-                      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                    </button>
-                    <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
-                      aria-label="Imagen siguiente"
-                      style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(242,242,247,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
-                      onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
-                      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                    <div style={{ position:"absolute", bottom:12, right:12, background:"rgba(10,10,10,0.65)", color:T, fontSize:11, letterSpacing:1, padding:"4px 10px", backdropFilter:"blur(4px)" }}>
-                      {modalImg + 1} / {modalProduct.images.length}
-                    </div>
-                  </>
-                )}
-              </div>
-              {/* Miniaturas */}
-              {modalProduct.images.length > 1 && (
-                <div style={{ display:"flex", gap:8, padding:"12px 16px", background:"rgba(0,0,0,0.22)", overflowX:"auto" }}>
-                  {modalProduct.images.map((img, i) => (
-                    <button key={i} onClick={() => setModalImg(i)}
-                      style={{ position:"relative", width:56, height:56, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${G}` : "2px solid transparent", background:"none", cursor:"pointer", transition:"border-color 0.2s" }}>
-                      <FadeImage src={img} alt="" fill sizes="56px" style={{ objectFit:"cover" }}
-                        onError={e => { e.currentTarget.style.opacity="0.3"; }}/>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {modalProduct.reelUrls.length > 0 && (
-                <div style={{ padding:"12px 14px 16px", borderTop:`1px solid ${LINEA}`, background:"rgba(0,0,0,0.22)" }}>
-                  <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:T, opacity:0.4, margin:"0 0 10px" }}>Videos</p>
-                  <StoreProductReels
-                    reelUrls={modalProduct.reelUrls}
-                    theme={{ accent: G, text: T, border: "rgba(242,242,247,0.15)", radius: 4 }}
-                  />
-                </div>
-              )}
-            </div>
-            <div style={{ padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:20 }}>
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:8, opacity:0.8 }}>
-                  {modalProduct.category}
-                  {modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
-                </p>
-                <h2 style={{ fontFamily:TITULO, fontSize:22, fontWeight:400, letterSpacing:"-0.01em", margin:0, lineHeight:1.25 }}>{modalProduct.name}</h2>
-              </div>
-              <div style={{ display:"flex", gap:6, marginTop:8 }}>
-                <button onClick={() => shareProduct(modalProduct)}
-                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(242,242,247,0.15)", color:"rgba(242,242,247,0.5)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.color=T)} onMouseLeave={e=>(e.currentTarget.style.color="rgba(242,242,247,0.5)")}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                  Copiar link
-                </button>
-                {hasWA && (
-                <button onClick={() => whatsappShare(modalProduct)}
-                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(37,211,102,0.25)", color:"rgba(37,211,102,0.6)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.color="#25D366")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(37,211,102,0.6)")}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
-                  WhatsApp
-                </button>
-                )}
-              </div>
-              <div style={{ display:"flex", gap:12, alignItems:"baseline", flexWrap:"wrap" }}>
-                {ocultarPrecios ? (
-                  <span style={{ fontSize:24, fontWeight:700, color:GT }}>Consultá precio</span>
-                ) : modalPromo?.hasPriceDrop ? (
-                  <>
-                    <span style={{ fontSize:24, fontWeight:700, color:REBAJA }}>{fmt(modalPromo.effectivePrice)}</span>
-                    <span style={{ fontSize:15, color:TACHADO, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
-                    {modalPromo.pctOff != null && <span style={{ fontSize:11, fontWeight:800, letterSpacing:1, color:"#4ade80", background:"rgba(74,222,128,0.1)", border:"1px solid rgba(74,222,128,0.3)", padding:"3px 10px", borderRadius:999 }}>{modalPromo.pctOff}% OFF</span>}
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize:24, fontWeight:700, color:GT }}>{fmt(displayPrice)}</span>
-                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:15, color:TACHADO, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
-                  </>
-                )}
-              </div>
-              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />}
-              {!ocultarPrecios && modalProduct.offerNote && (
-                <div style={{ fontSize:12, color:"#4ade80", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
-                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>{modalProduct.offerNote}</span>
-                </div>
-              )}
-              <div style={{ borderTop:`1px solid rgba(242,242,247,0.08)`, paddingTop:16 }}>
-                <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:"rgba(242,242,247,0.35)", margin:"0 0 8px", fontWeight:600 }}>Descripción</p>
-                <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, opacity:0.58, lineHeight:1.75 }} />
-              </div>
-
-              {(() => {
-                const attrs = modalProduct.attributes ?? [];
-                const condicionAttr = attrs.find(a => a.key === "Condición");
-                const serviciosAttr = attrs.find(a => a.key === "Servicios");
-                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
-                let servicios: string[] = [];
-                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
-                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
-                return (
-                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {condicionAttr && (
-                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${G}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
-                    )}
-                    {otherAttrs.length > 0 && (
-                      <div style={{ borderRadius:4, overflow:"hidden", border:`1px solid rgba(242,242,247,0.08)` }}>
-                        {otherAttrs.map((a, i) => (
-                          <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 12px", background: i%2===0 ? "rgba(242,242,247,0.04)" : "transparent", borderBottom: i < otherAttrs.length-1 ? `1px solid rgba(242,242,247,0.07)` : "none" }}>
-                            <span style={{ fontSize:10, fontWeight:700, color:T, opacity:0.4, textTransform:"uppercase", letterSpacing:0.5 }}>{a.key}</span>
-                            <span style={{ fontSize:12, color:T, fontWeight:500 }}>{a.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {servicios.length > 0 && (
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                        {servicios.map(k => (
-                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${luz(0.3)}`, color:GT }}>✓ {k}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Un bloque por opción, con el nombre que le puso quien cargó el
-                  producto. Antes eran dos fijos —Color primero, Talle después— y
-                  sin guarda, así que un producto sin colores dibujaba el rótulo
-                  "Color:" con la fila vacía debajo. */}
-              {opcionesVisibles(modalProduct.opciones).map(op => {
-                if (op.tipo === "dato") return (
-                  <div key={op.nombre}>
-                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>{op.nombre}: <strong style={{ color:T, opacity:1 }}>{op.valor}</strong></p>
-                  </div>
-                );
-                const conMuestra = esOpcionDeColor(op.nombre);
-                return (
-                  <div key={op.nombre}>
-                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>{op.nombre}: <strong style={{ color:T, opacity:1 }}>{seleccion[op.nombre]}</strong></p>
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                      {op.valores.map(valor => {
-                        const elegido = seleccion[op.nombre] === valor;
-                        const agotado = sinStock(op.nombre, valor);
-                        const swatch = conMuestra ? colorToSwatch(valor) : null;
-                        return (
-                          <button key={valor} onClick={() => setOpcion(op.nombre, valor)}
-                            style={{ fontSize: conMuestra ? 11 : 12, border: elegido ? `1px solid ${G}` : "1px solid rgba(242,242,247,0.18)", background: elegido ? luz(0.12) : "transparent", color:T, cursor:"pointer", transition:"all 0.2s",
-                              opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
-                              ...(conMuestra
-                                ? { display:"flex", alignItems:"center", gap:7, padding:"7px 16px" }
-                                : { width:46, height:46, fontWeight:600 }) }}>
-                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(242,242,247,0.3)", flexShrink:0 }} />}
-                            {valor}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, margin:0 }}>Cantidad</p>
-                <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(242,242,247,0.18)` }}>
-                  <button onClick={() => setQty(q => Math.max(isWholesale && modalProduct.cantMinMayorista ? modalProduct.cantMinMayorista : 1, q-1))} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>−</button>
-                  <span style={{ width:38, textAlign:"center", fontSize:14 }}>{qty}</span>
-                  <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>+</button>
-                </div>
-              </div>
-
-              {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}
-              {modalPromo?.nxm && nxmPaid != null && (() => {
-                const { n, m } = modalPromo.nxm;
-                const free = qty - nxmPaid;
-                const toNext = (n - (qty % n)) % n;
-                return (
-                  <div style={{ fontSize:12.5, fontWeight:700, padding:"9px 12px", borderRadius:6, background: free > 0 ? "rgba(22,163,74,0.12)" : "rgba(249,115,22,0.12)", border:`1px solid ${free > 0 ? "rgba(22,163,74,0.35)" : "rgba(249,115,22,0.35)"}`, color: free > 0 ? "#4ade80" : "#fb923c" }}>
-                    {free > 0
-                      ? `🎉 Llevás ${qty}, pagás ${nxmPaid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
-                      : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
-                  </div>
-                );
-              })()}
-
-              {/* Stock por variante (D-06) */}
-              {selectedVariantStock !== null && selectedVariantStock === 0 && (
-                <p style={{ fontSize:12, color:"#888", fontWeight:500, margin:0 }}>Sin stock en esta combinación</p>
-              )}
-              {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-                <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
-              )}
-
-              {!isMobile && (
-                <div style={{ borderTop:`1px solid rgba(242,242,247,0.1)`, marginTop:4, paddingTop:16 }}>
-                  {isInquiryMode ? (
-                <button onClick={() => openInquiry(modalProduct)}
-                  style={{ background:G, color:textoSobreAcento, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
-                  Consultar disponibilidad
-                </button>
-              ) : (
-                <button onClick={addToCart}
-                  disabled={selectedVariantStock === 0}
-                  style={{ background: selectedVariantStock === 0 ? APAGADO_FONDO : G, color: selectedVariantStock === 0 ? APAGADO_TEXTO : textoSobreAcento, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
-                </button>
-              )}
-                </div>
-              )}
-
-              {/* Reseñas — D-04 */}
-              <div style={{ borderTop:`1px solid rgba(242,242,247,0.08)`, paddingTop:24, marginTop:20 }}>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 20px" }}>
-                  Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
-                </p>
-                {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
-                    Dice que son de mentira ANTES de que el dueño las lea. */}
-                {resenasProd.usandoEjemplos && enEditor && (
-                  <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"rgba(253,230,138,0.12)", border:"1px solid rgba(253,230,138,0.35)" }}>
-                    <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
-                    <p style={{ margin:0, fontSize:11.5, color:"#fde68a", lineHeight:1.55 }}>
-                      <strong>Estas reseñas son de ejemplo.</strong> Este producto todavía no tiene ninguna:
-                      están para que veas cómo queda el bloque. No se publican y desaparecen solas en cuanto
-                      llegue la primera de verdad.
-                    </p>
-                  </div>
-                )}
-                {resenasProd.cargando ? (
-                  <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
-                ) : resenasProd.lista.length > 0 ? (
-                  <div style={{ marginBottom:24 }}>
-                    {(() => {
-                      // El promedio, el total y las barras salen de la base, no de
-                      // las reseñas que llegaron (ver `useResenasProducto`).
-                      const avg = resenasProd.promedio;
-                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasProd.distribucion[s] ?? 0 }));
-                      return (
-                        <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background:"rgba(255,255,255,0.04)", borderRadius:4 }}>
-                          <div style={{ textAlign:"center", minWidth:56 }}>
-                            <p style={{ fontSize:34, fontWeight:800, color:T, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
-                            <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : "rgba(242,242,247,0.15)" }}>★</span>)}
-                            </div>
-                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasProd.total} reseña{resenasProd.total !== 1 ? "s" : ""}</p>
-                          </div>
-                          <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
-                            {dist.map(d => (
-                              <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                <span style={{ fontSize:9, color:GT, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
-                                <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.08)", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:G, borderRadius:2 }} />
-                                </div>
-                                <span style={{ fontSize:9, opacity:0.3, minWidth:12, textAlign:"right" }}>{d.count}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    <div style={{ display:"flex", flexDirection:"column" }}>
-                      {resenasProd.lista.slice(0, resenasProd.mostradas).map((r, i) => (
-                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(resenasProd.mostradas, resenasProd.lista.length) - 1 ? `1px solid rgba(242,242,247,0.06)` : "none" }}>
-                          <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:GT }}>
-                            {r.reviewer.charAt(0).toUpperCase()}
-                          </div>
-                          <div style={{ flex:1 }}>
-                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                                <span style={{ fontSize:13, fontWeight:600, color:T }}>{r.reviewer}</span>
-                                {r.verified && (
-                                  <span style={{ fontSize:10, fontWeight:700, color:"#34d399", background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.2)", padding:"1px 6px", borderRadius:20, letterSpacing:0.5 }}>✓ Verificada</span>
-                                )}
-                              </div>
-                              <span style={{ fontSize:10, opacity:0.3 }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}</span>
-                            </div>
-                            <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? G : "rgba(242,242,247,0.12)" }}>★</span>)}
-                            </div>
-                            {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.65 }}>{r.comment}</p>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {resenasProd.hayMas && (
-                      <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas} style={{ marginTop:14, background:"none", border:`1px solid rgba(242,242,247,0.15)`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                        {resenasProd.cargandoMas ? "Cargando…" : `Ver más (${resenasProd.faltan})`}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
-                )}
-                {isOwner ? (
-                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
-                ) : reviewDone ? (
-                  <p style={{ fontSize:12, color:GT, fontWeight:600 }}>¡Gracias por tu reseña!</p>
-                ) : (
-                  <div style={{ position:"relative" }}>
-                    {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
-                    <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
-                      {reviewError && (
-                        <p style={{ margin:0, fontSize:11.5, color:"#fca5a5", background:"rgba(220,38,38,0.12)", border:"1px solid rgba(220,38,38,0.35)", padding:"9px 12px", lineHeight:1.5 }}>
-                          ⚠ {reviewError}
-                        </p>
-                      )}
-                      <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
-                      <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                        placeholder="Tu nombre" readOnly={isPreview}
-                        style={{ background:"rgba(242,242,247,0.06)", border:"1px solid rgba(242,242,247,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
-                      <div>
-                        <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                          placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
-                          style={{ width:"100%", boxSizing:"border-box", background:"rgba(242,242,247,0.06)", border:"1px solid rgba(242,242,247,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
-                        <p style={{ fontSize:10, color:"rgba(242,242,247,0.3)", margin:"3px 0 0", lineHeight:1.4 }}>
-                          Si compraste en esta tienda, tu reseña aparecerá con el badge &ldquo;✓ Compra verificada&rdquo;. No se muestra públicamente.
-                        </p>
-                      </div>
-                      <div style={{ display:"flex", gap:4 }}>
-                        {[1,2,3,4,5].map(s => (
-                          <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
-                            style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? G : "rgba(242,242,247,0.2)", padding:"2px" }}>★</button>
-                        ))}
-                      </div>
-                      <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                        placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
-                        style={{ background:"rgba(242,242,247,0.06)", border:"1px solid rgba(242,242,247,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
-                      {!isPreview && reviewCaptcha.widget}
-                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? APAGADO_FONDO : G, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? APAGADO_TEXTO : textoSobreAcento, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                        {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
-                      </button>
-                    </form>
-                    {isPreview && <p style={{ fontSize:10, opacity:0.4, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
-                  </div>
-                )}
-              </div>
-            </div>
-            {(() => {
-              if (similarProducts.length === 0) return null;
-              return (
-                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop: 24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:"1px solid rgba(242,242,247,0.08)" }}>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>Productos similares</p>
-                  <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
-                    {similarProducts.map(p => (
-                      <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
-                        <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S }}>
-                          {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} onError={e => { e.currentTarget.style.opacity="0"; }} />}
-                        </div>
-                        <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={G}
-                          priceSize={13} weight={700} ocultarPrecios={ocultarPrecios} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-            </div>
-            {isMobile && (
-              <div style={{ borderTop:`1px solid ${LINEA_FUERTE}`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
-                <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:700, color:GT }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
-                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(242,242,247,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
-                  {qty > 1 && <span style={{ fontSize:11, color:"rgba(242,242,247,0.4)" }}>× {qty}</span>}
-                </div>
-                {isInquiryMode ? (
-                  <button onClick={() => openInquiry(modalProduct)}
-                    style={{ width:"100%", background:G, color:textoSobreAcento, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-                    Consultar disponibilidad
-                  </button>
-                ) : (
-                  <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                    style={{ width:"100%", background: selectedVariantStock === 0 ? APAGADO_FONDO : G, color: selectedVariantStock === 0 ? APAGADO_TEXTO : textoSobreAcento, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <FichaAurora producto={modalProduct} cart={cart} products={products} promotions={promotions}
+          slug={storeConfig?.slug} ocultarPrecios={ocultarPrecios} isMobile={isMobile} isPreview={isPreview}
+          enEditor={enEditor} isOwner={isOwner} modoConsulta={isInquiryMode} isWholesale={isWholesale} hasWA={hasWA}
+          escena={escenaAurora} tinta={tintaTarjeta} rebaja={REBAJA} tachado={TACHADO}
+          apagadoFondo={APAGADO_FONDO} apagadoTexto={APAGADO_TEXTO}
+          fichaRef={fichaRef} fotoFichaRef={fotoFichaRef} panelListo={panelListo}
+          capa={isPreview ? CAPAS.previaModal : 600}
+          onCerrar={cerrarFicha} onAmpliar={setLightboxSrc} onConsultar={openInquiry}
+          onCopiarLink={shareProduct} onWhatsapp={whatsappShare} />
       )}
 
       <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
