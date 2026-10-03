@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
-import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
+import type { CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
+import { CatalogoAurora } from "@/components/store/templates/aurora/CatalogoAurora";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -30,9 +31,10 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { HeroFoto } from "@/components/store/templates/shared/HeroFoto";
 import { Coverflow } from "@/components/store/templates/shared/Coverflow";
-import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
+import { GrillaProfunda } from "@/components/store/templates/shared/GrillaProfunda";
+import { TarjetaAurora, type TintaTarjeta } from "@/components/store/templates/aurora/TarjetaAurora";
 import { calcularVuelo, tarjetaVisible, MS_IDA, MS_VUELTA } from "@/components/store/templates/shared/vueloDeFicha";
-import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/Materia";
+import { vidrio, sombra } from "@/components/store/templates/shared/Materia";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { colorToSwatch } from "@/lib/colorSwatch";
@@ -157,7 +159,6 @@ export default function Aurora() {
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
   const [mobileOpenCat,      setMobileOpenCat]      = useState<string | null>(null);
-  const [hoveredId,          setHoveredId]          = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
@@ -791,6 +792,8 @@ export default function Aurora() {
   const productosBg    = scn["bgProductos"]   ?? BG;
   const productosText  = getContrastColor(productosBg)  === "light" ? T : "#06070d";
   const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
+  /** Los colores de la pieza de producto, iguales en la portada y en el catálogo. */
+  const tintaTarjeta: TintaTarjeta = { G, GT, T, S, texto: productosText, mid: productosMid, rebaja: REBAJA };
   const contactoBg     = scn["bgContacto"]    ?? BG;
   const contactoText   = contactoBgImg?.url
     ? (contactoBgImg.overlayType === "light" ? "#06070d" : T)
@@ -1323,73 +1326,12 @@ export default function Aurora() {
             tira infinita. */}
         <div style={{ marginBottom:48 }}>
         <GrillaProfunda min={isMobile ? 140 : 260} hueco={isMobile ? 12 : 24}>
-          {!loadingProducts && filtered.map((product, indiceEnGrilla) => {
-            const promo = resolveProductPromo(product, promotions);
-            return (
-            /* La tarjeta es UNA pieza de vidrio: la foto y el texto van adentro
-               del mismo cuerpo, no la foto arriba y el texto suelto abajo como en
-               Fashion Noir. Es lo que hace que se lea como un objeto apoyado sobre
-               la escena en vez de un recorte pegado al fondo.
-
-               `Inclinable` sólo hace algo con mouse; en celular la tarjeta queda
-               quieta y el resto funciona igual. */
-            <PiezaQueLlega key={product.id} indice={indiceEnGrilla}>
-            <Inclinable grados={5} style={{ borderRadius:18 }}>
-            <div onClick={e => abrirFicha(product, e)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
-              style={{ ...vidrio("oscuro"), borderRadius:18, overflow:"hidden", cursor:"pointer", position:"relative" }}>
-              {(() => {
-                if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />;
-                const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
-                if (!hasOffer) return null;
-                return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
-              })()}
-              {/* `data-foto` marca de dónde sale el vuelo. Va en la foto y no en
-                  la tarjeta entera: es la foto la que crece, y tiene que salir
-                  del rectángulo exacto donde ya se estaba viendo. */}
-              <div data-foto style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S }}>
-                {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover", transition:"transform 0.6s cubic-bezier(.2,.8,.2,1)", transform: hoveredId===product.id ? "scale(1.06)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>}
-                {(() => {
-                  const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
-                  if (!isSoldOut) return null;
-                  return <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(6,7,13,0.78)", display:"flex", alignItems:"center", justifyContent:"center", padding:"9px 0", zIndex:2 }}><span style={{ color:"#fff", fontSize:9, fontWeight:800, letterSpacing:4, textTransform:"uppercase" }}>Sin stock</span></div>;
-                })()}
-                <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"flex-end", justifyContent:"center", padding:16, opacity: hoveredId===product.id ? 1 : 0, transition:"opacity 0.3s", background:"linear-gradient(to top, rgba(6,7,13,0.7) 30%, transparent)", pointerEvents:"none" }}>
-                  <span style={{ color:T, fontSize:10, letterSpacing:3, textTransform:"uppercase", borderBottom:`1px solid ${G}`, paddingBottom:3 }}>Ver detalle</span>
-                </div>
-                {/* Favorite button */}
-                <button
-                  onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
-                  aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Guardar en favoritos"}
-                  style={{ position:"absolute", top:12, right:12, background:"rgba(6,7,13,0.55)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", border:"1px solid rgba(255,255,255,.12)", borderRadius:"50%", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
-                  onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-                  onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-                  <svg width={15} height={15} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? G : "none"} stroke={favorites.includes(product.id) ? GT : T} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                </button>
-              </div>
-              <div style={{ padding:"16px 18px 20px" }}>
-                <p style={{ fontSize:9, color:productosMid, letterSpacing:2.5, textTransform:"uppercase", margin:"0 0 7px" }}>{product.category}</p>
-                <p style={{ fontSize:15, color:productosText, margin:"0 0 10px", fontWeight:400, letterSpacing:"-0.01em" }}>{product.name}</p>
-                <div style={{ display:"flex", gap:10, alignItems:"baseline", flexWrap:"wrap" }}>
-                  {ocultarPrecios ? (
-                    <span style={{ fontSize:16, fontWeight:600, color:GT }}>Consultá precio</span>
-                  ) : promo.hasPriceDrop ? (
-                    <>
-                      <span style={{ fontSize:16, fontWeight:600, color:REBAJA }}>{fmt(promo.effectivePrice)}</span>
-                      <span style={{ fontSize:12, color:productosMid, textDecoration:"line-through" }}>{fmt(promo.originalPrice)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize:16, fontWeight:600, color:T }}>{fmt(product.price)}</span>
-                      {product.comparePrice && <span style={{ fontSize:12, color:productosMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-            </Inclinable>
-            </PiezaQueLlega>
-            );
-          })}
+          {!loadingProducts && filtered.map((product, indiceEnGrilla) => (
+            <TarjetaAurora key={product.id} product={product} indice={indiceEnGrilla}
+              promotions={promotions} fmt={fmt} ocultarPrecios={ocultarPrecios}
+              favorito={favorites.includes(product.id)} onFavorito={() => toggleFavorite(product.id)}
+              onAbrir={e => abrirFicha(product, e)} tinta={tintaTarjeta} />
+          ))}
         </GrillaProfunda>
         </div>
 
@@ -1426,15 +1368,19 @@ export default function Aurora() {
           acá sobran —su barra y su pie— que ya están puestas arriba y abajo. */}
       {vista.enCatalogo && (
         <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
-          <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
-            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
-              S={S} LN={LINEA_FUERTE} T={T} G={G} />
-          </div>
-          <CatalogoGenerico key={claveCatalogo} embebido={{ ...filtroEfectivo, slug: storeConfig?.slug ?? "", template: "aurora",
-            sinPie: true, sinBarra: true, enEditor: isPreview, acento: G,
-            /* Los modales del catálogo comparten pantalla con la barra de este
-               template, así que tienen que quedar por encima de ella. */
-            capaModal: isPreview ? CAPAS.previaModal : CAPAS.modalTemplate }} />
+          {/* El catálogo PROPIO de Aurora (ver `CatalogoAurora`). Con los productos,
+              el carrito, los favoritos y la ficha de esta misma pantalla: tocar una
+              pieza abre la ficha de Aurora con su vuelo, no la genérica. */}
+          <CatalogoAurora key={claveCatalogo}
+            products={products} promotions={promotions} cargando={loadingProducts}
+            inicial={{ categoria: filtroEfectivo.categoria, subcategoria: filtroEfectivo.subcategoria,
+              soloOfertas: filtroEfectivo.soloOfertas, masVistos: filtroEfectivo.masVistos, soloPromos: filtroEfectivo.soloPromos }}
+            fmt={fmt} ocultarPrecios={ocultarPrecios}
+            favorites={favorites} onFavorito={toggleFavorite} onAbrir={abrirFicha} onVolver={vista.irALaPortada}
+            tinta={tintaTarjeta}
+            escena={{ BG, T, G, GT, LINEA, LINEA_FUERTE, luz, textoSobreAcento }}
+            isMobile={isMobile} topeBarra={72 + announcementBarHeight}
+            capaPanel={isPreview ? CAPAS.previaModal : CAPAS.modalTemplate} />
         </div>
       )}
 

@@ -86,7 +86,14 @@ página se arrastra 39px de costado. No se encontró la causa.
 - ~~Comentario de "Nosotros y Contacto NO están" repetido dos veces~~ (sacado).
 - `GARANTIAS[i].svg` no se usa: los íconos salen de `AU_STRIP_ICONS`.
 
-## AU-11 — El catálogo es el de todos, con otros colores
+## ~~AU-11~~ — El catálogo es el de todos, con otros colores ✅
+
+**Hecho el 03/10/26.** El cerebro salió a `useFiltrosCatalogo` (verificado: el catálogo compartido quedó idéntico píxel por píxel en 9 templates, a 1280 y 360). Aurora dibuja el suyo en `aurora/CatalogoAurora.tsx`: escena de luz con el título de lo que se mira, barra de vidrio pegada debajo del menú (buscar, ordenar, filtros), categorías y subcategorías como cápsulas que se encienden, las mismas piezas de la portada (`aurora/TarjetaAurora.tsx`), una línea de luz con "Mostrar más" en vez de páginas, y los filtros finos en un panel de vidrio (al costado en la compu, desde abajo en el celular). Tocar una pieza abre la ficha de Aurora con su vuelo y el carrito es el mismo de la portada.
+
+Queda para después:
+- En `CatalogoGenerico` quedó sin uso el acomodo "muro" y el tema `aurora`: Aurora ya no pasa por ahí. Sacarlos.
+- El carrito y el checkout (`CartDrawer`, `CheckoutModal`) siguen siendo los compartidos con la paleta de Aurora.
+- `BotonVolver` en Nosotros y Contacto es el compartido; el catálogo ya tiene el suyo.
 
 Al tocar "Ver colección", Aurora muestra `CatalogoGenerico` (el catálogo compartido, 3.262
 líneas). Tiene un acomodo propio, el "muro" (sin título, más ancho y con la barra de filtros
