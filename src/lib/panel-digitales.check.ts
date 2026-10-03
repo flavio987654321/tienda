@@ -1776,6 +1776,21 @@ console.log("\n19) Cargando y sin conexión");
     readFileSync("src/app/digitales/layout.tsx", "utf8").includes("<AvisoSinConexion />"));
 }
 
+/* ── Cambiar el estilo del ebook (03/10/26) ──────────────────────────────
+   No mostraba que estaba trabajando, y al terminar recargaba la página entera:
+   el "pestañazo". Ahora marca el estilo con una ruedita, lo dice, y refresca
+   la lista sin tirar la pantalla. */
+{
+  const i = pantallaProductos.indexOf("async function rehacerPDF");
+  const rehacer = pantallaProductos.slice(i, pantallaProductos.indexOf("async function publicar", i));
+  chequear("rehacer el PDF refresca la lista, no recarga la página",
+    i > 0 && rehacer.includes("router.refresh()") && !rehacer.includes("window.location.reload()"));
+  chequear("y la ruedita se apaga cuando termina el refresco, no antes",
+    /useTransition\(\)/.test(pantallaProductos) && /if \(refrescando \|\| !esperandoLista\.current\) return;/.test(pantallaProductos));
+  chequear("el estilo que se está poniendo se marca y se dice",
+    /const poniendo = ocupado && acc\.estiloArmando === x;/.test(pantallaProductos) && /Rehaciendo el PDF con el estilo/.test(pantallaProductos));
+}
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

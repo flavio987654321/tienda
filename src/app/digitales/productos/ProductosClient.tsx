@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   RotateCcw,
@@ -202,6 +203,8 @@ type Acciones = {
   /** Si la cuenta ya conectó Mercado Pago. Sin eso no se publica. */
   cobroConectado: boolean;
   trabajando: string | null;
+  /** El estilo que se está poniendo mientras se rehace el PDF, para marcar ESE botón. */
+  estiloArmando: EstiloDeEbook | null;
   /** El id del producto cuyo archivo se está subiendo, o `null`. */
   subiendoArchivo: string | null;
   setBorrador: (b: Borrador) => void;
@@ -612,6 +615,9 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   <div className="mt-1.5 grid grid-cols-4 gap-1.5 sm:max-w-[280px]">
                     {ESTILOS.map((x) => {
                       const puesto = (p.ebook?.opciones.estilo ?? "libro") === x;
+                      /* El que se acaba de tocar, mientras se rehace el PDF: se
+                         marca ése, con la ruedita, y no el viejo. */
+                      const poniendo = ocupado && acc.estiloArmando === x;
                       return (
                         <button
                           key={x}
@@ -620,12 +626,20 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                           disabled={ocupado || acc.deMentira || puesto}
                           title={acc.deMentira ? porQueApagado : queHace(x)}
                           aria-pressed={puesto}
-                          className={`rounded-lg border p-1 text-left transition-colors disabled:cursor-not-allowed ${
-                            puesto
+                          aria-busy={poniendo}
+                          className={`relative rounded-lg border p-1 text-left transition-colors disabled:cursor-not-allowed ${
+                            poniendo
+                              ? "border-orange-400 bg-orange-50 panel-oscuro:bg-orange-500/10"
+                              : puesto
                               ? "border-orange-400 bg-orange-50 panel-oscuro:bg-orange-500/10"
                               : "border-gray-200 panel-oscuro:border-gray-700 hover:bg-white panel-oscuro:hover:bg-gray-800 disabled:opacity-50"
                           }`}
                         >
+                          {poniendo && (
+                            <span className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60 panel-oscuro:bg-gray-900/60">
+                              <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                            </span>
+                          )}
                           <span className="block overflow-hidden rounded ring-1 ring-black/10 panel-oscuro:ring-white/10">
                             <MiniaturaDeEstilo
                               estilo={x}
@@ -642,6 +656,12 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                       );
                     })}
                   </div>
+                  {ocupado && acc.estiloArmando && (
+                    <p role="status" className="mt-2 flex items-center gap-1.5 text-[11.5px] font-medium text-orange-700 panel-oscuro:text-orange-300">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Rehaciendo el PDF con el estilo {QUE_ES_CADA_ESTILO[acc.estiloArmando].nombre}. Tarda unos segundos.
+                    </p>
+                  )}
                 </div>
                 );
               })()}
@@ -1279,6 +1299,9 @@ export default function ProductosClient({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [trabajando, setTrabajando] = useState<string | null>(null);
+  const [estiloArmando, setEstiloArmando] = useState<EstiloDeEbook | null>(null);
+  const router = useRouter();
+  const [refrescando, refrescar] = useTransition();
   const [subiendo, setSubiendo] = useState(false);
   /* Aparte de `subiendo`, que es el de la portada adentro del modal: los dos
      pueden estar prendidos a la vez y son botones distintos. Guarda el ID del
@@ -1301,6 +1324,16 @@ export default function ProductosClient({
    * legítimas escribiendo a la vez.
    */
   const enVuelo = useRef(false);
+  /* Hay un rehacer esperando que llegue la lista nueva: la ruedita se suelta
+     cuando la transición del refresco termina, no cuando la pedimos. */
+  const esperandoLista = useRef(false);
+  useEffect(() => {
+    if (refrescando || !esperandoLista.current) return;
+    esperandoLista.current = false;
+    enVuelo.current = false;
+    setTrabajando(null);
+    setEstiloArmando(null);
+  }, [refrescando]);
 
   /**
    * La portada, subida por `/api/upload`.
@@ -1458,7 +1491,7 @@ export default function ProductosClient({
      hacia abajo: las funciones se declaran en el cuerpo del componente, así que
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
   const acc: Acciones = {
-    tier, cobroConectado, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
+    tier, cobroConectado, trabajando, estiloArmando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
     rehacerPDF,
     abrirEbook: setEbookDe,
     pedirFicha: (padre, rol) => setFichaIA({ padre, rol }),
@@ -1601,6 +1634,8 @@ export default function ProductosClient({
     if (enVuelo.current) return;
     enVuelo.current = true;
     setTrabajando(p.id);
+    setEstiloArmando(estilo ?? null);
+    const soltar = () => { enVuelo.current = false; setTrabajando(null); setEstiloArmando(null); };
     try {
       const r = await fetch("/api/digitales/ia/ebook/armar", {
         method: "POST",
@@ -1610,8 +1645,7 @@ export default function ProductosClient({
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         setError(data.error ?? "No pudimos rehacer el PDF.");
-        enVuelo.current = false;
-        setTrabajando(null);
+        soltar();
         return;
       }
       /* ⚠️ Si volvió a salir sin fotos se dice, en vez de recargar y dejar el
@@ -1619,15 +1653,20 @@ export default function ProductosClient({
          libera por hora: puede seguir lleno un rato. */
       if (data.sinFotos === true) {
         setError("El banco de fotos sigue al tope. El PDF se rehizo igual, pero todavía sin fotos: probá de nuevo en un rato.");
-        enVuelo.current = false;
-        setTrabajando(null);
+        soltar();
         return;
       }
-      window.location.reload();
+      /* ⚠️ `router.refresh()` y no `window.location.reload()`: recargar la
+         página entera era el "pestañazo" — pantalla en blanco y todo vuelve a
+         aparecer — por algo que cambia un botón y el peso del archivo. La lista
+         llega por props desde el servidor, así que refrescar la trae nueva sin
+         tirar la pantalla. La ruedita se suelta cuando termina el refresco
+         (ver `esperandoLista`): así se apaga recién cuando ya se ve lo nuevo. */
+      esperandoLista.current = true;
+      refrescar(() => router.refresh());
     } catch {
       setError("No pudimos conectarnos.");
-      enVuelo.current = false;
-      setTrabajando(null);
+      soltar();
     }
   }
 
