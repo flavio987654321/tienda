@@ -115,13 +115,13 @@ export default async function AplicacionesPage() {
             <h1 className="mt-4 text-3xl sm:text-4xl font-black text-white tracking-tight">
               Aplicaciones
             </h1>
-            <p className="mt-3 text-sm sm:text-base text-slate-300 panel-oscuro:text-gray-600 leading-relaxed max-w-2xl">
+            <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
               Las aplicaciones conectan tu tienda con los lugares donde ya está tu gente: Facebook,
               Instagram, WhatsApp y Google. Tus productos aparecen ahí solos, sin que tengas que
               volver a cargarlos ni saber nada técnico.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400 panel-oscuro:text-gray-500">
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 {APPS_REGISTRY.length} aplicaciones disponibles

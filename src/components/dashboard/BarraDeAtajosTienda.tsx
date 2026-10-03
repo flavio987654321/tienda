@@ -20,9 +20,10 @@ import { ATRIBUTO_TEMA, EVENTO_TEMA_TIENDAS, OSCURO_TIENDAS_LISTO, aplicarTemaTi
  * pedido por Flavio el 03/10/26: lo que se usa todos los días, a un toque y
  * sin entrar a ninguna pantalla. Lo que cambia respecto de digitales, y por qué:
  *
- *   - "Ver mi tienda" en vez del botón de tema: el panel de tiendas no tiene
- *     modo oscuro, y lo que una dueña de tienda mira todo el tiempo es cómo
- *     quedó su tienda.
+ *   - "Ver mi tienda", que digitales no tiene: lo que una dueña de tienda
+ *     mira todo el tiempo es cómo quedó su tienda. El botón de tema
+ *     (`BotonTemaTiendas`) está también, pero solo con el modo oscuro de
+ *     tiendas prendido.
  *   - Sin la variante de "plan lleno": el tope de productos de Tienda Pro es
  *     1.000 (`PRO_MAX_PRODUCTS`) y la tienda más grande tiene decenas. Un botón
  *     para un caso que no pasa sería código que nadie prueba.

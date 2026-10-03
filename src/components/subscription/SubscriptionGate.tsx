@@ -42,7 +42,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
           </span>
           <button
             onClick={() => setPayModal(true)}
-            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-200 panel-oscuro:bg-yellow-500/25 hover:bg-yellow-300 text-yellow-900 panel-oscuro:text-yellow-200 transition-colors"
+            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-200 panel-oscuro:bg-yellow-500/25 hover:bg-yellow-300 panel-oscuro:hover:bg-yellow-500/35 text-yellow-900 panel-oscuro:text-yellow-200 transition-colors"
           >
             Renovar
           </button>
@@ -81,7 +81,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
             className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
               isGrace
                 ? "bg-red-100 panel-oscuro:bg-red-500/15 hover:bg-red-200 panel-oscuro:hover:bg-red-500/25 text-red-800 panel-oscuro:text-red-300"
-                : "bg-amber-200 panel-oscuro:bg-amber-500/25 hover:bg-amber-300 text-amber-900 panel-oscuro:text-amber-200"
+                : "bg-amber-200 panel-oscuro:bg-amber-500/25 hover:bg-amber-300 panel-oscuro:hover:bg-amber-500/35 text-amber-900 panel-oscuro:text-amber-200"
             }`}
           >
             Suscribirme

@@ -51,10 +51,11 @@ export const LIMITE_DIARIO = 30;
  * probando, está haciendo otra cosa. */
 export const LIMITE_DIARIO_PRUEBA = 15;
 
-/* TODAS las cuentas en prueba juntas, en un día. Diez cuentas en prueba
- * usando el asistente a fondo el mismo día ya es mucho más de lo que pasa un
- * día normal; si se alcanza, o hubo un pico de altas real —y entonces este
- * número hay que subirlo— o alguien está registrando cuentas en serie. */
+/* TODAS las cuentas en prueba juntas, en un día. Unas veintiséis cuentas en
+ * prueba usando el asistente a fondo el mismo día (eran diez cuando el tope
+ * por cuenta era 40) ya es mucho más de lo que pasa un día normal; si se
+ * alcanza, o hubo un pico de altas real —y entonces este número hay que
+ * subirlo— o alguien está registrando cuentas en serie. */
 export const LIMITE_GLOBAL_PRUEBA_DIARIO = 400;
 
 /* El corta-corriente: TODA la plataforma, en un día, pague o no.

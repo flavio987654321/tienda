@@ -258,7 +258,7 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
               </div>
               <button
                 onClick={() => setAppliedCoupon(availableCoupon)}
-                className="text-xs font-semibold text-amber-700 panel-oscuro:text-amber-300 bg-amber-200 panel-oscuro:bg-amber-500/25 hover:bg-amber-300 px-3 py-1 rounded-lg transition-colors"
+                className="text-xs font-semibold text-amber-700 panel-oscuro:text-amber-300 bg-amber-200 panel-oscuro:bg-amber-500/25 hover:bg-amber-300 panel-oscuro:hover:bg-amber-500/35 px-3 py-1 rounded-lg transition-colors"
               >
                 Aplicar
               </button>

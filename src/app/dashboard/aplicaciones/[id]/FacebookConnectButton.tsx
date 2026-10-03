@@ -98,11 +98,11 @@ export default function FacebookConnectButton({ configured }: { configured: bool
       <div>
         <button
           disabled
-          className="inline-flex items-center gap-2 bg-slate-200 panel-oscuro:bg-gray-700 text-slate-400 panel-oscuro:text-gray-500 font-bold px-8 py-2.5 rounded-lg text-sm cursor-not-allowed"
+          className="inline-flex items-center gap-2 bg-slate-200 text-slate-400 font-bold px-8 py-2.5 rounded-lg text-sm cursor-not-allowed"
         >
           <Clock className="h-4 w-4" /> Muy pronto
         </button>
-        <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-2">
+        <p className="text-[11px] text-slate-400 mt-2">
           Estamos terminando de habilitar la conexión con Meta. Vas a poder instalarla en breve.
         </p>
       </div>

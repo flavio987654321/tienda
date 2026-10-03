@@ -27,7 +27,7 @@ export const OSCURO_TIENDAS_LISTO = process.env.NEXT_PUBLIC_TIENDAS_OSCURO === "
 /** Dónde se guarda. Sólo el navegador: es una preferencia de ESTE aparato. */
 export const CLAVE_TEMA_TIENDAS = "tema_tiendas";
 
-/** El aviso de "cambió el tema", para la luna y para el selector de Ajustes. */
+/** El aviso de "cambió el tema", para que la luna se entere. */
 export const EVENTO_TEMA_TIENDAS = "tema-tiendas";
 
 /** El script que pinta antes del primer dibujo. Ver `SCRIPT_TEMA` en digitales. */
