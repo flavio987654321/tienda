@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ArrowRight, Check, DoorOpen, Monitor, Smartphone } from "lucide-react";
+import { Lock, ArrowRight, DoorOpen, Monitor, Smartphone } from "lucide-react";
 import {
   validarOfertaSalida, textoDeHoras, esPlazoCorto, HORAS_DE_OFERTA, HORAS_MINIMAS_DEL_MAIL, PORCENTAJE_MINIMO, PORCENTAJE_MAXIMO_SALIDA,
   TITULO_MAX, TEXTO_MAX, BOTON_MAX, type OfertaSalida, type HorasDeOferta,
@@ -14,6 +14,7 @@ import CartelDeSalida, { type ParteDelCartel } from "@/components/digitales/Cart
 import ConsejoDeUso from "../../ConsejoDeUso";
 import ProductoElegido from "../ProductoElegido";
 import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
+import { InterruptorDeOferta, BotonGuardarOferta } from "../Interruptor";
 
 export type ProductoDeSalida = {
   id: string;
@@ -157,15 +158,14 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_500px] xl:grid-cols-[minmax(0,1fr)_540px] items-start">
         {/* ── El formulario ─────────────────────────────────────────────── */}
         <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm space-y-4">
-          <label className="flex items-center justify-between gap-3">
-            <span>
-              <span className="block text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Prendida</span>
-              <span className="block text-[12px] text-gray-500 panel-oscuro:text-gray-400">
-                {o.activa ? "Se muestra a quien se va del pago, y va en el mail de carrito." : "Apagada: no se muestra a nadie. Podés dejarla armada."}
-              </span>
-            </span>
-            <input type="checkbox" checked={o.activa} disabled={!esPago} onChange={(e) => tocar("activa", e.target.checked)} className="h-5 w-5 accent-orange-600" />
-          </label>
+          <InterruptorDeOferta
+            titulo="Oferta de salida"
+            explica={o.activa ? "Se muestra a quien se va del pago, y va en el mail de carrito." : "Apagada: no se muestra a nadie. Podés dejarla armada."}
+            activa={o.activa}
+            guardadaActiva={!!elegido.oferta.activa}
+            disabled={!esPago}
+            onCambiar={(v) => tocar("activa", v)}
+          />
 
           <div>
             <p className={CLASE_LABEL}>Qué se ofrece</p>
@@ -238,16 +238,17 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
           {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
+            <BotonGuardarOferta
               onClick={guardar}
+              guardando={guardando}
+              hecho={listo && !cambio}
               disabled={!esPago || guardando || !!problema || !cambio}
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
-              {listo && !cambio && <Check className="h-4 w-4" />}
-              {listo && !cambio ? "Guardado" : "Guardar"}
-            </button>
+            />
+            {listo && !cambio && (
+              <span role="status" className="text-[12.5px] font-semibold text-green-700 panel-oscuro:text-green-400">
+                {elegido.oferta.activa ? "Listo, quedó prendida: ya se muestra a quien se va del pago." : "Listo, quedó apagada."}
+              </span>
+            )}
             {!elegido.publicado && (
               <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Este producto está sin publicar: el cartel se va a mostrar cuando lo publiques.</span>
             )}

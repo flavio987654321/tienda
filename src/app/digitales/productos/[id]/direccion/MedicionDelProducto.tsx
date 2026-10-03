@@ -110,7 +110,10 @@ export default function MedicionDelProducto({ productoId, actual, delaCuenta }: 
           type="button"
           onClick={guardar}
           disabled={guardando || !cambio || !!problema}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          /* "Guardado" en verde y sin apagarse, igual que en Configuración. */
+          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-colors disabled:cursor-not-allowed ${
+            listo && !cambio ? "bg-green-600 disabled:opacity-100" : "bg-orange-600 hover:bg-orange-500 disabled:opacity-40"
+          }`}
         >
           {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
           {listo && !cambio && <Check className="h-4 w-4" />}

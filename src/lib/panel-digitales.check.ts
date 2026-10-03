@@ -1791,6 +1791,34 @@ console.log("\n19) Cargando y sin conexión");
     /const poniendo = ocupado && acc\.estiloArmando === x;/.test(pantallaProductos) && /Rehaciendo el PDF con el estilo/.test(pantallaProductos));
 }
 
+/* ── Prender una oferta se nota (03/10/26) ───────────────────────────────
+   Era una casilla que sólo cambiaba la pantalla, y al guardar el botón quedaba
+   gris: no había ninguna señal de que la oferta estuviera andando. */
+{
+  const pieza = readFileSync("src/app/digitales/marketing/Interruptor.tsx", "utf8");
+  chequear("el interruptor de oferta es un switch y dice si falta guardar",
+    /role="switch"/.test(pieza) && /Falta guardar/.test(pieza) && /guardadaActiva/.test(pieza));
+  chequear("y \"Guardado\" va en verde, no apagado en gris",
+    pieza.includes(`? "bg-green-600 disabled:opacity-100"`));
+  for (const archivo of [
+    "src/app/digitales/marketing/salida/SalidaClient.tsx",
+    "src/app/digitales/marketing/bienvenida/BienvenidaClient.tsx",
+    "src/app/digitales/marketing/upsells/UpsellsClient.tsx",
+  ]) {
+    const src = readFileSync(archivo, "utf8");
+    chequear(`${archivo.split("/").pop()} usa el interruptor, el botón verde y confirma al guardar`,
+      /<InterruptorDeOferta/.test(src) && /<BotonGuardarOferta/.test(src) &&
+      /Listo, quedó prendid/.test(src) && !/type="checkbox"/.test(src));
+  }
+  for (const archivo of [
+    "src/app/digitales/configuracion/piezas.tsx",
+    "src/app/digitales/productos/[id]/direccion/MedicionDelProducto.tsx",
+  ]) {
+    chequear(`${archivo.split("/").pop()}: "Guardado" en verde`,
+      readFileSync(archivo, "utf8").includes(`? "bg-green-600 disabled:opacity-100"`));
+  }
+}
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

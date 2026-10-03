@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ArrowRight, Check, Timer } from "lucide-react";
+import { Lock, ArrowRight, Timer } from "lucide-react";
 import {
   validarBienvenida, precioDeBienvenida, MINUTOS_DE_BIENVENIDA, PORCENTAJE_MINIMO, PORCENTAJE_MAXIMO_BIENVENIDA,
   TEXTO_BIENVENIDA_MAX, BIENVENIDA_DE_FABRICA, type Bienvenida, type MinutosDeBienvenida,
@@ -13,6 +13,7 @@ import BarraDeBienvenida from "@/components/digitales/BarraDeBienvenida";
 import ConsejoDeUso from "../../ConsejoDeUso";
 import ProductoElegido from "../ProductoElegido";
 import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
+import { InterruptorDeOferta, BotonGuardarOferta } from "../Interruptor";
 
 export type ProductoDeBienvenida = {
   id: string;
@@ -124,15 +125,15 @@ export default function BienvenidaClient({ esPago, productos, elegidoId, estilo 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_460px] items-start">
         {/* ── El formulario ─────────────────────────────────────────────── */}
         <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm space-y-4">
-          <label className="flex items-center justify-between gap-3">
-            <span>
-              <span className="block text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Prendido</span>
-              <span className="block text-[12px] text-gray-500 panel-oscuro:text-gray-400">
-                {b.activa ? "Quien entra a la página ve el precio con descuento y el reloj." : "Apagado: la página muestra el precio de siempre. Podés dejarlo armado."}
-              </span>
-            </span>
-            <input type="checkbox" checked={b.activa} disabled={!esPago} onChange={(e) => tocar("activa", e.target.checked)} className="h-5 w-5 accent-orange-600" />
-          </label>
+          <InterruptorDeOferta
+            titulo="Precio de bienvenida"
+            explica={b.activa ? "Quien entra a la página ve el precio con descuento y el reloj." : "Apagado: la página muestra el precio de siempre. Podés dejarlo armado."}
+            activa={b.activa}
+            guardadaActiva={!!elegido.bienvenida.activa}
+            disabled={!esPago}
+            onCambiar={(v) => tocar("activa", v)}
+            femenino={false}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -168,16 +169,17 @@ export default function BienvenidaClient({ esPago, productos, elegidoId, estilo 
           {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
+            <BotonGuardarOferta
               onClick={guardar}
+              guardando={guardando}
+              hecho={listo && !cambio}
               disabled={!esPago || guardando || !!problema || !cambio}
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
-              {listo && !cambio && <Check className="h-4 w-4" />}
-              {listo && !cambio ? "Guardado" : "Guardar"}
-            </button>
+            />
+            {listo && !cambio && (
+              <span role="status" className="text-[12.5px] font-semibold text-green-700 panel-oscuro:text-green-400">
+                {elegido.bienvenida.activa ? "Listo, quedó prendido: quien entra a la página ya ve el descuento." : "Listo, quedó apagado."}
+              </span>
+            )}
             {!elegido.publicado && (
               <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Este producto está sin publicar: se va a ver cuando lo publiques.</span>
             )}

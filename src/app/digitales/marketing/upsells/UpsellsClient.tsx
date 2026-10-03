@@ -3,13 +3,14 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ArrowRight, Check, Clock, Plus, TrendingUp } from "lucide-react";
+import { Lock, ArrowRight, Clock, Plus, TrendingUp } from "lucide-react";
 import {
   validarOfertaUpsell, entraEnLaOferta, MINUTOS_DE_UPSELL, TEXTO_UPSELL_MAX,
   OFERTA_UPSELL_DE_FABRICA, type OfertaUpsell, type MinutosDeUpsell,
 } from "@/lib/oferta-upsell";
 import ProductoElegido from "../ProductoElegido";
 import { useAvisoSinGuardar } from "../../useAvisoSinGuardar";
+import { InterruptorDeOferta, BotonGuardarOferta } from "../Interruptor";
 
 export type UpsellDelProducto = {
   id: string;
@@ -213,17 +214,14 @@ export default function UpsellsClient({ esPago, productos, elegidoId }: {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] items-start">
           {/* ── El formulario ───────────────────────────────────────────── */}
           <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 shadow-sm space-y-4">
-            <label className="flex items-center justify-between gap-3">
-              <span className="min-w-0">
-                <span className="block text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Oferta por tiempo limitado</span>
-                <span className="block text-[12px] text-gray-500 panel-oscuro:text-gray-400">
-                  {o.activa
-                    ? "El extra sale más barato mientras corre el reloj, y después vuelve a su precio."
-                    : "Apagado: el extra se ofrece siempre al mismo precio. Podés dejarlo armado."}
-                </span>
-              </span>
-              <input type="checkbox" checked={o.activa} disabled={!esPago} onChange={(e) => tocar("activa", e.target.checked)} className="h-5 w-5 shrink-0 accent-orange-600" />
-            </label>
+            <InterruptorDeOferta
+              titulo="Oferta por tiempo limitado"
+              explica={o.activa ? "El extra sale más barato mientras corre el reloj, y después vuelve a su precio." : "Apagado: el extra se ofrece siempre al mismo precio. Podés dejarlo armado."}
+              activa={o.activa}
+              guardadaActiva={!!elegido.oferta?.activa}
+              disabled={!esPago}
+              onCambiar={(v) => tocar("activa", v)}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -312,16 +310,17 @@ export default function UpsellsClient({ esPago, productos, elegidoId }: {
             {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
 
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
+              <BotonGuardarOferta
                 onClick={guardar}
+                guardando={guardando}
+                hecho={listo && !cambio}
                 disabled={!esPago || guardando || !!problema || !cambio}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
-                {listo && !cambio && <Check className="h-4 w-4" />}
-                {listo && !cambio ? "Guardado" : "Guardar"}
-              </button>
+              />
+              {listo && !cambio && (
+                <span role="status" className="text-[12.5px] font-semibold text-green-700 panel-oscuro:text-green-400">
+                  {elegido.oferta?.activa ? "Listo, quedó prendida: ya corre el reloj en el pago." : "Listo, quedó apagada."}
+                </span>
+              )}
               {!elegido.publicado && (
                 <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Este producto está sin publicar: se va a ver cuando lo publiques.</span>
               )}

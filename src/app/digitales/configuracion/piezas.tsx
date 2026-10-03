@@ -117,7 +117,11 @@ export function BotonGuardar({
     <button
       onClick={onClick}
       disabled={disabled || guardando !== null}
-      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      /* ⚠️ "Guardado" va en verde y sin apagarse: en gris parecía un botón roto
+         justo cuando tenía que decir que salió bien. */
+      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-colors disabled:cursor-not-allowed ${
+        hecho ? "bg-green-600 disabled:opacity-100" : "bg-orange-600 hover:bg-orange-500 disabled:opacity-40"
+      }`}
     >
       {guardando === id && <Loader2 className="h-4 w-4 animate-spin" />}
       {hecho && <Check className="h-4 w-4" />}
