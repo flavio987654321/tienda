@@ -221,11 +221,13 @@ export function HeroFoto({
             <h1
               style={{
                 margin: 0,
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                fontSize: "clamp(42px, 7vw, 86px)",
-                lineHeight: 1.02,
-                letterSpacing: "-0.03em",
-                fontWeight: 400,
+                // La letra la pone el template (Aurora: Unbounded, ver
+                // `aurora/fuentes`); Georgia queda de respaldo.
+                fontFamily: "var(--au-titulo, Georgia, 'Times New Roman', serif)",
+                fontSize: "clamp(36px, 6vw, 76px)",
+                lineHeight: 1.04,
+                letterSpacing: "-0.02em",
+                fontWeight: 300,
                 color: tinta,
                 // La sombra no es un efecto: es el seguro de que el titulo se
                 // lea aunque la tienda suba una foto clara justo detras.

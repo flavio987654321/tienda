@@ -19,7 +19,7 @@ Se tacha cada ítem al terminarlo, no al final.
 | ~~AU-2~~ | ~~El precio con promo en la ficha es ilegible~~ | Alta | **hecho** |
 | ~~AU-3~~ | ~~Si la dueña elige un acento oscuro, la mitad de los botones quedan ilegibles~~ | Alta | **hecho** |
 | ~~AU-4~~ | ~~Foto de stock en Nosotros~~ | Media | **hecho** |
-| AU-5 | Tipografía Georgia (serif clásica) en un template futurista | Media (diseño) | pendiente |
+| ~~AU-5~~ | ~~Tipografía Georgia (serif clásica) en un template futurista~~ | Media (diseño) | **hecho** |
 | AU-6 | Mezcla de botones redondos y cuadrados | Media (diseño) | pendiente |
 | AU-7 | Redes sociales como letras ("IG", "FB") en vez de íconos | Baja | pendiente |
 | AU-8 | En el celular, el precio de abajo de la ficha confunde con cantidad > 1 | Baja | pendiente |
@@ -58,7 +58,9 @@ llevan `color: BG` fijo. Con el violeta de fábrica se lee; si la dueña pone un
 de stock: una imagen de un desconocido haciéndose pasar por la colección es peor que no tener
 foto". Nosotros tiene que seguir la misma regla.
 
-### AU-5 — Georgia en un template futurista
+### ~~AU-5~~ — Georgia en un template futurista ✅
+**Hecho el 03/10/26.** Unbounded en los títulos y Sora en el texto (`aurora/fuentes.ts`), con `preload: false` para que sólo las bajen las tiendas con Aurora. Tamaños y pesos ajustados porque Unbounded es más ancha; la frase de marca dejó la cursiva.
+
 Los títulos de la frase de marca, Nosotros, Mayorista, Contacto, el título de la ficha, el pie y
 Favoritos van en Georgia (serif de diario). Es lo más "clásico" que tiene la tienda y es lo que
 más la aleja de futurista. Una sola familia moderna (geométrica o grotesca, de Google Fonts).
@@ -141,7 +143,7 @@ Aurora no tiene dónde. Lo que falta, por orden de importancia para vender:
 B-1 y B-2 son los dos que pidió Flavio y los que más faltan. Todos se pueden ocultar y
 reordenar desde el editor, como los bloques de hoy.
 
-## Tipografía propia
+## Tipografía propia ✅ (hecha, ver AU-5)
 
 Hoy Aurora usa Georgia (títulos) y Helvetica (texto). **Ningún template tiene tipografía
 propia**: casi todos usan la del sistema o Georgia, así que se parecen también por la letra.

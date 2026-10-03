@@ -33,6 +33,7 @@ import { HeroFoto } from "@/components/store/templates/shared/HeroFoto";
 import { Coverflow } from "@/components/store/templates/shared/Coverflow";
 import { GrillaProfunda } from "@/components/store/templates/shared/GrillaProfunda";
 import { TarjetaAurora, type TintaTarjeta } from "@/components/store/templates/aurora/TarjetaAurora";
+import { CLASES_LETRA, TITULO, TEXTO } from "@/components/store/templates/aurora/fuentes";
 import { calcularVuelo, tarjetaVisible, MS_IDA, MS_VUELTA } from "@/components/store/templates/shared/vueloDeFicha";
 import { vidrio, sombra } from "@/components/store/templates/shared/Materia";
 import StoreProductReels from "@/components/store/ProductReels";
@@ -661,7 +662,7 @@ export default function Aurora() {
     borderRadius:14, overflow:"hidden", boxShadow:"0 18px 50px rgba(0,0,0,0.55)",
   };
 
-  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(242,242,247,0.1)", accent:G, accentText, serif:"Georgia, serif" };
+  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(242,242,247,0.1)", accent:G, accentText, serif:TITULO };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
@@ -806,7 +807,7 @@ export default function Aurora() {
        scrollea de verdad. En la tienda es la ventana; en el EDITOR el template vive
        adentro de un panel con scroll propio, y sin esto el catálogo aparecía a
        mitad de página, con el título arriba fuera de vista. */
-    <div data-template-raiz style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
+    <div data-template-raiz className={CLASES_LETRA} style={{ fontFamily:TEXTO, background:BG, color:T, minHeight:"100vh",
       /* Dos toques seguidos en un botón que cambia de pantalla terminaban adentro
          de cualquier cosa: la pantalla cambia al instante y abajo del dedo queda
          otra. Ver el candado en `useVistaTemplate`. */
@@ -871,7 +872,7 @@ export default function Aurora() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={"Buscar productos..."}
-              style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${G}`, color:T, fontSize:24, padding:"12px 0", outline:"none", fontFamily:"'Helvetica Neue', Arial, sans-serif", boxSizing:"border-box" }}
+              style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${G}`, color:T, fontSize:24, padding:"12px 0", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
             />
           </div>
           {searchResults.length > 0 && (
@@ -906,7 +907,7 @@ export default function Aurora() {
             misma decisión para los tres templates. */}
         <div style={{ padding: navApretada ? "0 14px" : "0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <button onClick={() => irASeccion("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", fontSize: navApretada ? 17 : 22, fontWeight:300, letterSpacing: navApretada ? 3 : 7, color:T, maxWidth: navApretada ? 150 : 220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <button onClick={() => irASeccion("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:TITULO, fontSize: navApretada ? 15 : 18, fontWeight:400, letterSpacing: navApretada ? 2 : 5, color:T, maxWidth: navApretada ? 150 : 220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "AURORA"}</EditableZone>
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
@@ -1260,7 +1261,7 @@ export default function Aurora() {
         <section data-reveal style={{ background:S, borderTop:`1px solid ${LINEA_FUERTE}`, borderBottom:`1px solid ${LINEA_FUERTE}` }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 32px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:24 }}>
             <span style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", fontWeight:700, border:`1px solid ${G}`, padding:"4px 12px", borderRadius:2 }}>Tienda mayorista</span>
-            <h2 style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:300, color:T, margin:0, letterSpacing:"-0.5px", fontFamily:"Georgia, 'Times New Roman', serif", lineHeight:1.2 }}>
+            <h2 style={{ fontSize:"clamp(24px,3.4vw,40px)", fontWeight:300, color:T, margin:0, letterSpacing:"-0.02em", fontFamily:TITULO, lineHeight:1.2 }}>
               Solicitá tu lista<br/><em style={{ color:GT }}>de precios</em>
             </h2>
             <p style={{ fontSize:14, color:"rgba(242,242,247,0.55)", maxWidth:480, margin:0, lineHeight:1.7 }}>
@@ -1284,7 +1285,7 @@ export default function Aurora() {
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: statementBgImg.overlayType === "light" ? `rgba(255,255,255,${statementBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${statementBgImg.overlayOpacity ?? 0.45})` }} />
         )}
         <div style={{ position:"relative", zIndex:1, padding:"72px 32px" }}>
-          <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:statementText, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
+          <p style={{ fontFamily:TITULO, fontSize:"clamp(18px,2.8vw,32px)", fontWeight:300, letterSpacing:"-0.01em", color:statementText, opacity:0.9, maxWidth:820, margin:"0 auto", lineHeight:1.45 }}>
             <EditableZone field="quoteText" label="Frase destacada">&quot;No compramos ropa. Compramos la versión de nosotros mismos que queremos ser.&quot;</EditableZone>
           </p>
           <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
@@ -1303,10 +1304,10 @@ export default function Aurora() {
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
-          <p style={{ fontFamily:"Georgia, serif", fontSize:28, color:productosText, margin:0 }}>
+          <p style={{ fontFamily:TITULO, fontSize:24, fontWeight:300, letterSpacing:"-0.01em", color:productosText, margin:0 }}>
             {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
-            {activeSubcategory && <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", opacity:0.6 }}> › {activeSubcategory}</span>}
-            <span style={{ fontSize:14, color:productosMid, fontFamily:"sans-serif", fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
+            {activeSubcategory && <span style={{ opacity:0.6 }}> › {activeSubcategory}</span>}
+            <span style={{ fontSize:13, color:productosMid, fontFamily:TEXTO, fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
           </p>
         </div>
 
@@ -1411,7 +1412,7 @@ export default function Aurora() {
               <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", marginBottom:16 }}>
                 <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">Nuestra historia</EditableZone>
               </p>
-              <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(28px,3vw,42px)", lineHeight:1.2, margin:"0 0 24px", color:nosotrosPanelText }}>
+              <h2 style={{ fontFamily:TITULO, fontSize:"clamp(24px,2.6vw,36px)", fontWeight:300, letterSpacing:"-0.02em", lineHeight:1.2, margin:"0 0 24px", color:nosotrosPanelText }}>
                 <EditableZone field="aboutHeading" label="Título 'Nosotros'">Creados para quienes eligen con intención.</EditableZone>
               </h2>
             </div>
@@ -1424,7 +1425,7 @@ export default function Aurora() {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:8 }}>
               {([["aboutStat1","aboutStatLabel1","2018","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Producción local"],["aboutStat3","aboutStatLabel3","30+","Artesanos"],["aboutStat4","aboutStatLabel4","8 años","De trayectoria"]] as const).map(([fv,fl,n,label]) => (
                 <div key={label}>
-                  <p style={{ fontFamily:"Georgia, serif", fontSize:32, color:GT, margin:"0 0 4px", fontWeight:700 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                  <p style={{ fontFamily:TITULO, fontSize:26, color:GT, margin:"0 0 4px", fontWeight:500 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
                   <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
                 </div>
               ))}
@@ -1454,7 +1455,7 @@ export default function Aurora() {
         )}
         <div style={{ padding:"80px 32px", maxWidth:640, margin:"0 auto", position:"relative", zIndex:1 }}>
           <p style={{ fontSize:10, letterSpacing:5, color:GT, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
-          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
+          <h2 style={{ fontFamily:TITULO, fontSize:"clamp(22px,2.6vw,32px)", fontWeight:300, letterSpacing:"-0.02em", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
           </h2>
           <p style={{ fontSize:14, opacity:0.5, textAlign:"center", marginBottom:48, lineHeight:1.7 }}>
@@ -1482,7 +1483,7 @@ export default function Aurora() {
             renderSent={reset => (
               <div style={{ textAlign:"center", padding:"60px 0" }}>
                 <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
-                <p style={{ fontFamily:"Georgia, serif", fontSize:22, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
+                <p style={{ fontFamily:TITULO, fontSize:20, fontWeight:400, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
                 <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
                 <button onClick={reset} style={{ marginTop:24, background:"transparent", color:GT, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
               </div>
@@ -1523,7 +1524,7 @@ export default function Aurora() {
                 costado: medido, 39px a 1100 de ancho. Ahora se parte antes que romper la
                 pagina. Un nombre largo va a quedar en dos renglones, que es feo pero se lee;
                 arrastrar la pagina para el costado no se lee. */}
-            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:GT, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "AURORA"}</EditableZone></span>
+            <span style={{ fontFamily:TITULO, fontSize:22, fontWeight:500, letterSpacing:4, color:GT, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "AURORA"}</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
               <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
             </p>
@@ -1797,7 +1798,7 @@ export default function Aurora() {
                   {modalProduct.category}
                   {modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
-                <h2 style={{ fontFamily:"Georgia, serif", fontSize:26, margin:0, lineHeight:1.2 }}>{modalProduct.name}</h2>
+                <h2 style={{ fontFamily:TITULO, fontSize:22, fontWeight:400, letterSpacing:"-0.01em", margin:0, lineHeight:1.25 }}>{modalProduct.name}</h2>
               </div>
               <div style={{ display:"flex", gap:6, marginTop:8 }}>
                 <button onClick={() => shareProduct(modalProduct)}
@@ -2146,7 +2147,7 @@ export default function Aurora() {
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(242,242,247,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>{"Favoritos"} <span style={{ fontSize:13, color:"#555" }}>({favorites.length})</span></p>
+            <p style={{ fontFamily:TITULO, fontSize:16, fontWeight:400, margin:0 }}>{"Favoritos"} <span style={{ fontSize:13, color:"#555" }}>({favorites.length})</span></p>
             <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"16px 24px" }}>
