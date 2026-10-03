@@ -23,8 +23,10 @@ type Props = {
   estado: Estado;
   /** Días que quedan de prueba o de gracia. En Free no significa nada. */
   dias: number;
-  /** La próxima renovación, ya escrita. Sólo cuando hay un plan pago andando. */
+  /** Hasta cuándo está pago, ya escrito. Sólo cuando hay un plan pago andando. */
   renovacion: string | null;
+  /** Ya se puede renovar el mismo plan: está en los últimos días. */
+  puedeRenovar: boolean;
   /** Si los 7 días de prueba siguen sin usar. */
   pruebaDisponible: boolean;
   /** Lo que tiene contra lo que el plan permite. Contado en el servidor. */
@@ -138,7 +140,7 @@ const ESTADO_CFG: Record<Estado, { label: string; texto: string; fondo: string; 
  * ésta tiene que sacar el miedo, porque el miedo acá sería mentira. Por eso el
  * cartel de abajo está en los cinco estados.
  */
-export default function MiCuentaClient({ tier, billing, estado, dias, renovacion, pruebaDisponible, uso, cuenta }: Props) {
+export default function MiCuentaClient({ tier, billing, estado, dias, renovacion, puedeRenovar, pruebaDisponible, uso, cuenta }: Props) {
   const inPwa = useIsPwa();
   const [pagar, setPagar] = useState<{ plan: "DIGITAL_STARTER" | "DIGITAL_PRO"; billing: Billing } | null>(null);
   const [probando, setProbando] = useState<TierDigital | null>(null);
@@ -337,10 +339,19 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
 
             {estado === "ACTIVE" && renovacion && (
               <div className="mt-5 bg-white panel-oscuro:bg-gray-900/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
-                <p className="text-white/70 text-xs mb-0.5">Próxima renovación</p>
+                {/* ⚠️ "Vence", no "Próxima renovación": acá no hay débito
+                    automático, cada período se paga a mano. Decía "renovación"
+                    y se leía como que se cobraba solo: alguien podía creerse
+                    cubierto y quedarse sin plan. Auditoría 03/10/26. */}
+                <p className="text-white/70 text-xs mb-0.5">Tu plan está pago hasta el</p>
                 <p className="text-white font-bold text-sm">
                   {renovacion}
-                  {dias <= 5 && <span className="ml-2 text-yellow-200">· {dias} día{dias !== 1 ? "s" : ""}</span>}
+                  {puedeRenovar && <span className="ml-2 text-yellow-200">· {dias} día{dias !== 1 ? "s" : ""}</span>}
+                </p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-white/75">
+                  {puedeRenovar
+                    ? "Renovalo antes de esa fecha para no cortar: el mes nuevo se suma al final, no perdés ningún día."
+                    : "No se cobra solo: unos días antes te avisamos por mail para que lo renueves."}
                 </p>
               </div>
             )}
@@ -594,8 +605,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                   </button>
                 )}
 
-                {/* Con el plan pago caído o por caerse: renovar. */}
-                {!esFree && (estado === "GRACE" || estado === "EXPIRED" || estado === "CANCELLED") && (
+                {/* Con el plan pago caído o por caerse: renovar. "Por caerse"
+                    incluye los últimos días con el plan andando (`puedeRenovar`):
+                    ahí renovar suma el mes al final, sin perder días. */}
+                {!esFree && (puedeRenovar || estado === "GRACE" || estado === "EXPIRED" || estado === "CANCELLED") && (
                   <button
                     onClick={() => setPagar({ plan: PLAN_KEY[tier], billing })}
                     className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 hover:bg-orange-100 transition-colors"

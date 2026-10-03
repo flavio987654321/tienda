@@ -565,7 +565,7 @@ export async function sendSubscriptionConfirmationEmail({
               <span style="font-size:15px;font-weight:800;color:#ea580c;">${fmt(amount)}</span>
             </div>
             <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-size:13px;color:#15803d;font-weight:600;">Próxima renovación</span>
+              <span style="font-size:13px;color:#15803d;font-weight:600;">Tu plan está pago hasta el</span>
               <span style="font-size:13px;font-weight:700;color:#15803d;">${nextRenewal}</span>
             </div>
           </div>
@@ -1729,6 +1729,80 @@ export async function sendCaidaAFreeEmail({
         ${boton}
         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
           ¿Problemas con el pago, o el plan te quedó grande? Respondé este email y lo vemos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * El vencimiento de un plan digital pago: unos días antes, y el día que vence.
+ *
+ * ⚠️ No existía. Acá no hay débito automático —cada período se paga a mano con
+ * Mercado Pago— y el único mail llegaba cuando la cuenta YA había vuelto a
+ * Free. Alguien que pagaba y se olvidaba perdía el plan sin un solo aviso. Las
+ * tiendas tienen los suyos desde siempre. Auditoría 03/10/26.
+ *
+ * Un mail con dos momentos, en una sola función: si se separan, uno cambia de
+ * texto y el otro no.
+ */
+export async function sendVencimientoDigitalEmail({
+  to,
+  userName,
+  plan,
+  momento,
+  fecha,
+}: {
+  to: string;
+  userName: string | null;
+  /** "Starter" o "Pro". */
+  plan: string;
+  /** "por-vencer": todavía anda. "vencido": está en los días de gracia. */
+  momento: "por-vencer" | "vencido";
+  /** Por vencer: cuándo vence. Vencido: hasta cuándo sigue andando (la gracia). */
+  fecha: Date;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const hola = escapeHtml(userName?.trim()) || "ahí";
+  const dia = fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
+  const porVencer = momento === "por-vencer";
+
+  const subject = porVencer
+    ? `Tu plan ${plan} vence el ${dia} — renovalo para no cortar`
+    : `Tu plan ${plan} venció — tenés hasta el ${dia} para renovarlo`;
+  const titulo = porVencer ? `Tu plan ${escapeHtml(plan)} vence pronto` : `Tu plan ${escapeHtml(plan)} venció`;
+  const cuerpo = porVencer
+    ? `Tu plan <strong>${escapeHtml(plan)}</strong> está pago hasta el <strong>${escapeHtml(dia)}</strong>. No se cobra
+       solo: para seguir sin cortar, renovalo desde Mi cuenta. El mes nuevo se suma al final, así que
+       no perdés ningún día por renovarlo antes.`
+    : `Tu plan <strong>${escapeHtml(plan)}</strong> venció, pero no se apagó nada: seguís con todo hasta el
+       <strong>${escapeHtml(dia)}</strong>. Si para esa fecha no llega el pago, tu cuenta vuelve a
+       <strong>Free</strong>: no perdés tus productos ni tus ventas, pero sube la comisión por venta y
+       se apagan las funciones pagas.`;
+
+  const boton = APP_URL
+    ? `<div style="text-align:center;margin-bottom:24px;">
+         <a href="${APP_URL}/digitales/mi-cuenta" style="display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Renovar mi plan</a>
+       </div>`
+    : "";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:${porVencer ? "#ea580c" : "#9a3412"};border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fed7aa;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${titulo}</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${hola}</strong>,</p>
+        <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:24px;">${cuerpo}</p>
+        ${boton}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          ¿Problemas con el pago? Respondé este email y lo vemos.
         </p>
         <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
       </div>

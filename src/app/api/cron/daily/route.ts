@@ -9,13 +9,14 @@ import {
   sendTermsUpdatedEmail,
   sendCaidaAFreeEmail,
   sendDominioEnFreeEmail,
+  sendVencimientoDigitalEmail,
 } from "@/lib/resend";
 import { CURRENT_TERMS_VERSION, CURRENT_TERMS_SUMMARY } from "@/lib/legal";
 import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
 import { limpiar } from "@/app/api/cron/cleanup/route";
 import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
-import { closureDeadline, CLOSURE_WARNING_DAYS, getSubscriptionStatus, caidaAFree } from "@/lib/subscription";
+import { closureDeadline, CLOSURE_WARNING_DAYS, getSubscriptionStatus, caidaAFree, DIAS_DE_AVISO_ANTES_DE_VENCER, GRACE_DAYS } from "@/lib/subscription";
 import { PLANES, planDeSuscripcion, TOPES_DIGITALES } from "@/lib/planLimits";
 import { despublicarLasDeMas, type ResultadoDeLaCaida } from "@/lib/caida-a-free";
 import {
@@ -576,6 +577,50 @@ export async function GET(req: NextRequest) {
   }
 
   result.vencimientos = { revisadas: vencibles.length, cerradas, avisosVencida, avisosUltimos };
+
+  // ── 7 bis A. PRODUCTOS DIGITALES: LOS AVISOS DE VENCIMIENTO ───────────────
+  //
+  // ⚠️ No existían: el único mail llegaba cuando la cuenta ya había vuelto a
+  // Free. Acá no hay débito automático, así que quien pagaba y se olvidaba
+  // perdía el plan sin aviso. Dos mails, cada uno una vez por período:
+  //   - unos días antes de vencer (`closingNotifiedAt`), y
+  //   - el día que vence, con hasta cuándo sigue andando (`expiredNotifiedAt`).
+  // Se reusan las dos marcas de las tiendas, que `periodFor` pone en null con
+  // cada pago: así el período siguiente vuelve a avisar. Auditoría 03/10/26.
+  //
+  // La prueba no entra: no hay nada que renovar, y "Mi cuenta" ya dice cuántos
+  // días le quedan.
+  const digitalesPagos = await prisma.subscription.findMany({
+    where: { role: "DIGITAL", tier: { not: "FREE" }, status: { in: ["ACTIVE", "GRACE"] }, currentPeriodEnd: { not: null } },
+    select: {
+      id: true, role: true, tier: true, status: true, trialEndsAt: true,
+      currentPeriodEnd: true, gracePeriodEndsAt: true, expiredNotifiedAt: true, closingNotifiedAt: true,
+      user: { select: { email: true, name: true } },
+    },
+  });
+  let avisosPorVencerDigital = 0;
+  let avisosVencidoDigital = 0;
+  for (const sub of digitalesPagos) {
+    if (!sub.user?.email || !sub.currentPeriodEnd) continue;
+    const estado = getSubscriptionStatus(sub, now);
+    const clave = planDeSuscripcion(sub);
+    const plan = clave ? PLANES[clave].label : "pago";
+    const faltan = (sub.currentPeriodEnd.getTime() - now.getTime()) / 86400000;
+
+    if (estado === "ACTIVE" && !sub.closingNotifiedAt && faltan <= DIAS_DE_AVISO_ANTES_DE_VENCER) {
+      await sendVencimientoDigitalEmail({ to: sub.user.email, userName: sub.user.name, plan, momento: "por-vencer", fecha: sub.currentPeriodEnd })
+        .catch((e) => console.error("[cron] mail por vencer digital:", sub.user?.email, e));
+      await prisma.subscription.update({ where: { id: sub.id }, data: { closingNotifiedAt: now } });
+      avisosPorVencerDigital++;
+    } else if (estado === "GRACE" && !sub.expiredNotifiedAt) {
+      const hasta = sub.gracePeriodEndsAt ?? new Date(sub.currentPeriodEnd.getTime() + GRACE_DAYS * 86400000);
+      await sendVencimientoDigitalEmail({ to: sub.user.email, userName: sub.user.name, plan, momento: "vencido", fecha: hasta })
+        .catch((e) => console.error("[cron] mail vencido digital:", sub.user?.email, e));
+      await prisma.subscription.update({ where: { id: sub.id }, data: { expiredNotifiedAt: now } });
+      avisosVencidoDigital++;
+    }
+  }
+  result.vencimientosDigitales = { revisadas: digitalesPagos.length, porVencer: avisosPorVencerDigital, vencidos: avisosVencidoDigital };
 
   // ── 7 bis. PRODUCTOS DIGITALES: LA CAÍDA A FREE ────────────────────────────
   //

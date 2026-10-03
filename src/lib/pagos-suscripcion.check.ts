@@ -20,7 +20,7 @@
 
 import { readFileSync } from "node:fs";
 import { PLANES, planDe, ecosistemaDeRol, tierDelMismoEcosistema, planesDelEcosistema } from "./planLimits";
-import { getSubscriptionStatus } from "./subscription";
+import { getSubscriptionStatus, yaEstaPago, inicioDelPeriodoNuevo, DIAS_PARA_RENOVAR_ANTES, DIAS_DE_AVISO_ANTES_DE_VENCER } from "./subscription";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -278,6 +278,63 @@ chequear("la etiqueta del plan sale del registro y no de adivinar el tier",
   /planDeSuscripcion\(sub\)/.test(adminPantalla) &&
   !/tier === "PREMIUM" \? "Tienda Premium" : "Tienda Pro"/.test(adminPantalla) &&
   /DIGITAL: \{ label: "Digital"/.test(adminPantalla));
+
+console.log("\nAuditoría del 03/10/26: devoluciones, renovar y avisos");
+{
+  const D = 86_400_000;
+  const hoy = new Date("2026-10-12T15:00:00Z");
+  const pro = (finEnDias: number, extra: object = {}) => ({
+    role: "DIGITAL", tier: "PRO", plan: "MONTHLY", status: "ACTIVE",
+    trialEndsAt: new Date("2026-09-01T00:00:00Z"),
+    currentPeriodEnd: new Date(hoy.getTime() + finEnDias * D), gracePeriodEndsAt: null, ...extra,
+  });
+
+  /* Pagó el 2, vuelve a pagar el 12 el mismo plan: se rechaza, con la fecha. */
+  chequear("pagar de nuevo el mismo plan con el mes andando se rechaza",
+    yaEstaPago(pro(20), "DIGITAL_PRO", "MONTHLY", hoy) !== null);
+  chequear("en los últimos días sí se puede renovar",
+    yaEstaPago(pro(5), "DIGITAL_PRO", "MONTHLY", hoy) === null);
+  chequear("cambiar de plan o de ciclo nunca se rechaza por esto",
+    yaEstaPago(pro(20), "DIGITAL_STARTER", "MONTHLY", hoy) === null && yaEstaPago(pro(20), "DIGITAL_PRO", "ANNUAL", hoy) === null);
+  chequear("en la gracia (ya venció) se puede renovar",
+    yaEstaPago(pro(-1), "DIGITAL_PRO", "MONTHLY", hoy) === null);
+
+  /* Renovar antes SUMA: el período nuevo arranca donde termina el actual. */
+  const fin = pro(5).currentPeriodEnd;
+  chequear("renovar el mismo plan con días por delante suma el mes al final",
+    inicioDelPeriodoNuevo(pro(5), "DIGITAL_PRO", "MONTHLY", hoy).getTime() === fin.getTime());
+  chequear("cambiar de plan, o renovar ya vencido, arranca hoy",
+    inicioDelPeriodoNuevo(pro(5), "DIGITAL_STARTER", "MONTHLY", hoy).getTime() === hoy.getTime()
+    && inicioDelPeriodoNuevo(pro(-1), "DIGITAL_PRO", "MONTHLY", hoy).getTime() === hoy.getTime()
+    && inicioDelPeriodoNuevo(null, "DIGITAL_PRO", "MONTHLY", hoy).getTime() === hoy.getTime());
+  chequear("el plazo para renovar antes es de unos días, no del mes entero",
+    DIAS_PARA_RENOVAR_ANTES > 0 && DIAS_PARA_RENOVAR_ANTES < 15 && DIAS_DE_AVISO_ANTES_DE_VENCER <= DIAS_PARA_RENOVAR_ANTES);
+
+  const webhook = readFileSync("src/app/api/suscripcion/webhook/route.ts", "utf8");
+  const pref = readFileSync("src/app/api/suscripcion/preferencia/route.ts", "utf8");
+  chequear("una devolución o un contracargo cortan el plan de ESE pago, antes de mirar si está aprobado",
+    /payment\.status === "refunded" \|\| payment\.status === "charged_back"/.test(webhook)
+    && webhook.includes("where: { userId, mpPaymentId: String(payment.id) }")
+    && webhook.indexOf('payment.status === "refunded"') < webhook.indexOf('payment.status !== "approved"'));
+  chequear("el webhook y el pago en cero usan la misma regla para desde cuándo corre el período",
+    webhook.includes("periodFor(billing, inicioDelPeriodoNuevo(subActual, plan, billing, now))")
+    && pref.includes("periodFor(billing, inicioDelPeriodoNuevo(subActual, plan, billing, now))")
+    /* Sin los comentarios: el del webhook cita la línea vieja para explicar el bug. */
+    && !/periodFor\(billing, now\)/.test(soloCodigo(webhook)) && !/periodFor\(billing, now\)/.test(soloCodigo(pref)));
+  chequear("la ruta que cobra rechaza el mismo plan ya pago, antes de cotizar",
+    pref.indexOf("yaEstaPago(subActual, plan, billing)") > 0
+    && pref.indexOf("yaEstaPago(subActual, plan, billing)") < pref.indexOf("cotizarCambioDePlan(subActual"));
+
+  const cron = readFileSync("src/app/api/cron/daily/route.ts", "utf8");
+  chequear("digitales recibe un mail antes de vencer y otro al vencer, una vez por período",
+    cron.includes('momento: "por-vencer"') && cron.includes('momento: "vencido"')
+    && cron.includes("data: { closingNotifiedAt: now }") && cron.includes("data: { expiredNotifiedAt: now }")
+    && cron.indexOf("7 bis A.") < cron.indexOf("7 bis. PRODUCTOS DIGITALES: LA CAÍDA A FREE"));
+  const cuenta = readFileSync("src/app/digitales/mi-cuenta/MiCuentaClient.tsx", "utf8");
+  chequear("Mi cuenta no promete un cobro automático que no existe",
+    !cuenta.includes(">Próxima renovación<") && cuenta.includes("Tu plan está pago hasta el")
+    && readFileSync("src/lib/resend.ts", "utf8").includes(">Tu plan está pago hasta el<"));
+}
 
 console.log(fallos === 0
   ? "\nok — los frenos de las rutas de pago siguen en su lugar"

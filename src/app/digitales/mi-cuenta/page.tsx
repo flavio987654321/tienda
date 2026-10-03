@@ -5,6 +5,7 @@ import {
   getSubscriptionStatus,
   daysRemaining,
   pruebaYaUsada,
+  DIAS_PARA_RENOVAR_ANTES,
 } from "@/lib/subscription";
 import type { TierDigital } from "@/lib/planes-digitales";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
@@ -92,7 +93,7 @@ export default async function MiCuentaPage() {
        horarias distintas, y una fecha armada en los dos lados es un aviso de
        hidratación seguro. */
     alta: perfil?.createdAt
-      ? perfil.createdAt.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+      ? perfil.createdAt.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
       : "",
   };
 
@@ -129,11 +130,16 @@ export default async function MiCuentaPage() {
         billing={sub?.plan === "ANNUAL" ? "ANNUAL" : "MONTHLY"}
         estado={estado}
         dias={fechaClave ? daysRemaining(fechaClave) : 0}
+        /* Con la zona de Argentina: el servidor corre en UTC y, cerca de la
+           medianoche, sin esto decía un día de más o de menos. */
         renovacion={
           sub && estado === "ACTIVE" && sub.currentPeriodEnd
-            ? sub.currentPeriodEnd.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+            ? sub.currentPeriodEnd.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" })
             : null
         }
+        /* Renovar el mismo plan se ofrece en los últimos días: antes la ruta
+           lo rechaza ("ya está pago"), y el mismo número decide las dos cosas. */
+        puedeRenovar={estado === "ACTIVE" && !!fechaClave && daysRemaining(fechaClave) <= DIAS_PARA_RENOVAR_ANTES}
         pruebaDisponible={!sub || !pruebaYaUsada(sub)}
         uso={uso}
         cuenta={cuenta}

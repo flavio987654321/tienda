@@ -20,6 +20,54 @@ export const TRIAL_DAYS = 7;
 export const GRACE_DAYS = 4;
 export const MONTHLY_DAYS = 30;
 export const ANNUAL_DAYS = 365;
+/**
+ * Desde cuántos días antes del vencimiento se puede renovar el MISMO plan. Antes
+ * de eso, pagarlo de nuevo se rechaza ("ya está pago hasta…"); dentro de este
+ * plazo se acepta y el período nuevo se suma al final (ver el webhook de
+ * suscripción). Lo usan la ruta que cobra y las pantallas que ofrecen renovar.
+ */
+export const DIAS_PARA_RENOVAR_ANTES = 7;
+/** Cuántos días antes del vencimiento sale el mail de "tu plan vence pronto" (digitales). */
+export const DIAS_DE_AVISO_ANTES_DE_VENCER = 3;
+
+/**
+ * Si pagar `plan` + `billing` ahora sería repetir lo que ya tiene pago, con más
+ * de `DIAS_PARA_RENOVAR_ANTES` por delante. Devuelve hasta cuándo está pago, o
+ * `null` si se puede cobrar. Pura: la usan la ruta y su chequeo.
+ */
+export function yaEstaPago(
+  sub: { role: string; tier: string; plan: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null,
+  plan: string,
+  billing: string,
+  now: Date = new Date(),
+): Date | null {
+  if (!sub || !sub.currentPeriodEnd) return null;
+  if (planDeSuscripcion(sub) !== plan || sub.plan !== billing) return null;
+  if (getSubscriptionStatus(sub, now) !== "ACTIVE") return null;
+  const faltan = (sub.currentPeriodEnd.getTime() - now.getTime()) / 86400000;
+  return faltan > DIAS_PARA_RENOVAR_ANTES ? sub.currentPeriodEnd : null;
+}
+
+/**
+ * Desde cuándo corre el período que se acaba de pagar.
+ *
+ * ⚠️ Renovar el MISMO plan y ciclo todavía vigente SUMA: el período nuevo
+ * empieza donde termina el actual. Antes arrancaba siempre hoy, y quien
+ * renovaba con días por delante los perdía. Cambiar de plan sí arranca hoy,
+ * porque lo no usado ya se descontó del precio (`cotizarCambioDePlan`). Lo usan
+ * los dos caminos que activan un pago: el webhook y el pago en cero por cupón.
+ */
+export function inicioDelPeriodoNuevo(
+  sub: { role: string; tier: string; plan: string; status: string; trialEndsAt: Date; currentPeriodEnd: Date | null; gracePeriodEndsAt: Date | null } | null,
+  plan: string,
+  billing: string,
+  now: Date = new Date(),
+): Date {
+  if (!sub || !sub.currentPeriodEnd || sub.currentPeriodEnd <= now) return now;
+  if (planDeSuscripcion(sub) !== plan || sub.plan !== billing) return now;
+  if (getSubscriptionStatus(sub, now) !== "ACTIVE") return now;
+  return sub.currentPeriodEnd;
+}
 
 // Días desde el vencimiento hasta que la tienda se cierra sola. Es una etapa
 // posterior a GRACE_DAYS: primero se bloquea el panel (gracia) y la tienda sigue

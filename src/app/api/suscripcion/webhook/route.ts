@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
    webhooks de pago. Acá había una copia a mano —idéntica, pero suelta—, que
    es exactamente lo que esa pieza se escribió para evitar. */
 import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
-import { periodFor } from "@/lib/subscription";
+import { periodFor, inicioDelPeriodoNuevo } from "@/lib/subscription";
 import { planDe, ecosistemaDeRol, planCerrado } from "@/lib/planLimits";
 import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
 import { despues } from "@/lib/despues";
@@ -87,6 +87,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    /* ── Devolución o contracargo: el plan se corta en el acto ─────────────────
+     *
+     * ⚠️ No existía. Sólo se miraban los pagos aprobados, así que alguien podía
+     * pagar Pro, llevarse la bolsa de ebooks (dólares cada uno), desconocer el
+     * pago con la tarjeta y seguir con Pro hasta fin de mes. Las ventas de
+     * productos digitales ya lo manejaban (`digitales/cobro`); la suscripción
+     * no. Encontrado en la auditoría del 03/10/26.
+     *
+     * Sólo si es EL pago que sostiene el período de hoy (`mpPaymentId`): la
+     * devolución de un pago viejo no puede cortar uno nuevo que sí se pagó. Se
+     * vence ahora mismo —fin y gracia en este instante— y no se toca nada más:
+     * el estado lo lee `getSubscriptionStatus` (EXPIRED desde ya, y el cupo de
+     * IA ya es el de Free), y la bajada con sus avisos la hace el cron de
+     * siempre, igual que cualquier vencimiento. */
+    if (payment.status === "refunded" || payment.status === "charged_back") {
+      const ahora = new Date();
+      const cortado = await prisma.subscription.updateMany({
+        where: { userId, mpPaymentId: String(payment.id) },
+        data: { currentPeriodEnd: ahora, gracePeriodEndsAt: ahora },
+      });
+      console.warn("WEBHOOK suscripcion: pago devuelto o desconocido", {
+        paymentId: String(payment.id), userId, status: payment.status, cortado: cortado.count,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
     if (payment.status !== "approved") {
       return NextResponse.json({ ok: true });
     }
@@ -115,7 +141,11 @@ export async function POST(req: NextRequest) {
      * alguien que está pagando. */
     const subActual = await prisma.subscription.findUnique({
       where: { userId },
-      select: { role: true, mpPaymentId: true },
+      select: {
+        role: true, mpPaymentId: true,
+        /* Para saber si es una renovación anticipada (ver `desde`, abajo). */
+        tier: true, plan: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true,
+      },
     });
     const ecoActual = ecosistemaDeRol(subActual?.role);
     if (
@@ -140,7 +170,17 @@ export async function POST(req: NextRequest) {
     const { couponId } = payment.metadata ?? {};
 
     const now = new Date();
-    const period = periodFor(billing, now);
+    /* ── Renovar antes de que venza SUMA, no reemplaza ────────────────────────
+     *
+     * ⚠️ Arrancaba siempre desde hoy: quien renovaba el mismo plan con cinco
+     * días por delante —el "Renovar ahora" de los últimos días— perdía esos
+     * cinco días pagos. `cotizarCambioDePlan` ya decía "renovar lo mismo
+     * extiende el período" y no le acredita nada; esto es lo que lo hace
+     * cierto. Mismo plan, mismo ciclo, todavía vigente: el período nuevo
+     * empieza donde termina el que tiene. Cambiar de plan sigue arrancando hoy,
+     * porque ahí lo no usado ya se descontó del precio. Auditoría 03/10/26.
+     * La regla vive en `inicioDelPeriodoNuevo`. */
+    const period = periodFor(billing, inicioDelPeriodoNuevo(subActual, plan, billing, now));
     const idDelPago = String(payment.id);
 
     /* ── Un pago se aplica UNA vez ────────────────────────────────────────────

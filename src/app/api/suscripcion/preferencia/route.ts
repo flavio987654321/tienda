@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { periodFor, cotizarCambioDePlan } from "@/lib/subscription";
+import { periodFor, cotizarCambioDePlan, yaEstaPago, inicioDelPeriodoNuevo, DIAS_PARA_RENOVAR_ANTES } from "@/lib/subscription";
 import { planDe, ecosistemaDeRol, planCerrado } from "@/lib/planLimits";
 import { platformClient } from "@/lib/mp";
 import { Preference } from "mercadopago";
@@ -114,6 +114,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  /* ── El mismo plan, ya pago: no se cobra de nuevo ─────────────────────────
+     Pagarlo otra vez con el mes andando era plata tirada (el período nuevo
+     arrancaba hoy y se perdían los días que quedaban) y, con el cupo de IA
+     por ciclo, una bolsa nueva a pedido. En los últimos días sí se puede: es
+     renovar antes, y el webhook suma el período al final. Auditoría 03/10/26. */
+  const pagoHasta = yaEstaPago(subActual, plan, billing);
+  if (pagoHasta) {
+    const fecha = pagoHasta.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" });
+    return NextResponse.json(
+      { error: `Tu plan ya está pago hasta el ${fecha}. Vas a poder renovarlo desde ${DIAS_PARA_RENOVAR_ANTES} días antes, sin perder ningún día.` },
+      { status: 409 }
+    );
+  }
+
   const cotizacion = cotizarCambioDePlan(subActual, { plan, billing });
   const baseAmount = cotizacion.aPagar;
 
@@ -144,7 +158,8 @@ export async function POST(req: NextRequest) {
   // Mes gratis (100% off) — activar directamente sin pasar por MP
   if (finalAmount === 0) {
     const now = new Date();
-    const period = periodFor(billing, now);
+    /* Igual que el webhook: renovar lo mismo con días por delante suma. */
+    const period = periodFor(billing, inicioDelPeriodoNuevo(subActual, plan, billing, now));
 
     await prisma.subscription.upsert({
       where: { userId: user.id },
