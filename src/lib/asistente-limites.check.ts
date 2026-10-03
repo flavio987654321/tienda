@@ -111,7 +111,10 @@ async function main() {
     const c = contadorFalso();
     const contar = sinRafaga(c);
 
-    for (let u = 0; u < 20; u++) await mandar(LIMITE_DIARIO_PRUEBA, true, contar, `trucha-${u}`);
+    /* Las que hagan falta para pasar el presupuesto, y no un número fijo: con
+       el tope de prueba en 15 (03/10/26), veinte cuentas ya no lo pasaban. */
+    const truchas = Math.ceil(LIMITE_GLOBAL_PRUEBA_DIARIO / LIMITE_DIARIO_PRUEBA) + 2;
+    for (let u = 0; u < truchas; u++) await mandar(LIMITE_DIARIO_PRUEBA, true, contar, `trucha-${u}`);
     const quemado = c.cuentas.get(`asistente-prueba-dia:${DIA}`) ?? 0;
     chequear("el presupuesto de pruebas quedó pasado", quemado > LIMITE_GLOBAL_PRUEBA_DIARIO, { quemado });
 

@@ -28,19 +28,28 @@ import { contarConTope } from "@/lib/rate-limit";
  * garantiza que no llegue una factura de $500 es el spending limit de la
  * cuenta de Anthropic, que se pone en su consola y vive fuera de este repo. */
 
-/** Anti-script. Una persona escribiendo no se acerca ni de casualidad. */
-export const LIMITE_RAFAGA = 30;
+/** Anti-script. Una persona escribiendo no se acerca ni de casualidad. Más
+ *  bajo que el diario, si no el diario se gasta entero en diez minutos. */
+export const LIMITE_RAFAGA = 20;
 export const VENTANA_RAFAGA_MS = 10 * 60_000;
 
-/** Una tienda que paga, en un día. Holgado a propósito: ya la estamos cobrando. */
-export const LIMITE_DIARIO = 150;
+/**
+ * Una tienda que paga, en un día. Holgado a propósito: ya la estamos cobrando.
+ *
+ * ⚠️ Era 150 hasta el 03/10/26, y con eso una tienda usándola a fondo costaba
+ * US$30 a 50 por mes contra un plan de US$13 a 16: perdíamos plata con la
+ * que más la usara. Lo máximo que le escribió una tienda a Sasha en un día,
+ * mirado en la base ese día, fueron 4 mensajes. 30 es siete veces eso.
+ */
+export const LIMITE_DIARIO = 30;
 
 /* Una cuenta en prueba, en un día. Más bajo, y no por mezquindad: la prueba
  * dura 7 días y no pide tarjeta, así que es la única parte del sistema donde
  * alguien puede gastar sin haber dado nunca un dato real. Cuarenta mensajes
- * por día alcanzan de sobra para conocer a Sasha — el que se queda corto con
- * eso no está probando, está haciendo otra cosa. */
-export const LIMITE_DIARIO_PRUEBA = 40;
+ * por día alcanzaban de sobra para conocer a Sasha —y desde el 03/10/26 son
+ * quince, que también alcanzan. El que se queda corto con eso no está
+ * probando, está haciendo otra cosa. */
+export const LIMITE_DIARIO_PRUEBA = 15;
 
 /* TODAS las cuentas en prueba juntas, en un día. Diez cuentas en prueba
  * usando el asistente a fondo el mismo día ya es mucho más de lo que pasa un

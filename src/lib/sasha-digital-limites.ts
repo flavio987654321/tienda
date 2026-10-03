@@ -22,10 +22,14 @@ import type { TierDigital } from "@/lib/planes-digitales";
  *     por mensaje— es de los planes que pagan.
  *
  *   - El techo por mensaje es chico a propósito. Con Haiku y el prompt corto,
- *     un mensaje ronda medio centavo: 40 por día en Starter son como mucho
- *     US$6 por mes contra un plan de US$19,7, y en un uso normal (5 a 10
- *     mensajes) menos de US$1. Si alguna vez el tope corta a alguien que usa
- *     de verdad, se sube ESE número; lo que no se hace es sacarlo.
+ *     un mensaje ronda un tercio de centavo (medido: 2.250 tokens de entrada
+ *     y 200 de salida, US$0,0033). Si alguna vez el tope corta a alguien que
+ *     usa de verdad, se sube ESE número; lo que no se hace es sacarlo.
+ *
+ *   - ⚠️ Bajaron a la mitad el 03/10/26: 80 en Pro eran hasta US$12 por mes
+ *     de una sola cuenta, más que todos sus ebooks juntos. Lo máximo que le
+ *     escribió alguien a Sasha en un día, mirado en la base ese día, fueron 2
+ *     mensajes (4 en tiendas). 20 y 40 siguen estando muy por encima.
  *
  * Y la regla que no se negocia: si Redis no contesta, se FRENA. Del otro lado
  * hay algo que se paga; "no pude contar" corta y nunca deja pasar. El techo
@@ -38,15 +42,15 @@ export const VENTANA_RAFAGA_MS = 10 * 60_000;
 /** Por día argentino, por plan. Free no tiene (ver arriba). */
 export const DIARIO_POR_PLAN: Record<TierDigital, number> = {
   FREE: 0,
-  STARTER: 40,
-  PRO: 80,
+  STARTER: 20,
+  PRO: 40,
 };
 
-/* TODAS las cuentas digitales juntas, en un día. Diez cuentas Pro usándola a
- * fondo el mismo día son 800; si se alcanza, o hubo un pico real —y hay que
+/* TODAS las cuentas digitales juntas, en un día. Quince cuentas Pro usándola a
+ * fondo el mismo día son 600; si se alcanza, o hubo un pico real —y hay que
  * subirlo— o alguien fabricó cuentas pagas, que es raro porque pagan. Está
  * para que un agujero que no vimos tenga techo igual. */
-export const GLOBAL_SASHA_DIARIO = 800;
+export const GLOBAL_SASHA_DIARIO = 600;
 
 /** A partir de qué porcentaje del tope global se avisa por consola. */
 const AVISO_DESDE = 0.8;

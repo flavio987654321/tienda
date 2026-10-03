@@ -222,7 +222,16 @@ export async function POST(req: NextRequest) {
           .join("");
         if (textoFinal) {
           await prisma.asistenteMensaje.create({
-            data: { userId: user.id, role: "assistant", content: textoFinal, day },
+            data: {
+              userId: user.id, role: "assistant", content: textoFinal, day,
+              /* Lo que costó esta respuesta, igual que en la Sasha de
+                 digitales: con esto el gasto por tienda y por mes es una
+                 consulta y no una estimación (03/10/26). */
+              tokensEntrada: final.usage.input_tokens,
+              tokensSalida: final.usage.output_tokens,
+              tokensCacheLeido: final.usage.cache_read_input_tokens ?? 0,
+              tokensCacheEscrito: final.usage.cache_creation_input_tokens ?? 0,
+            },
           });
         }
       } catch (err) {
