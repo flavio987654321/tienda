@@ -93,8 +93,8 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
   return (
     <DashboardLayout userName={user.name} userId={user.id}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Carritos abandonados</h1>
-        <p className="text-gray-500 mt-1 max-w-2xl text-sm">
+        <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Carritos abandonados</h1>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 mt-1 max-w-2xl text-sm">
           Personas que dejaron su contacto en el checkout pero no completaron la compra.
           El sistema les manda un recordatorio automático por email al cabo de 1 hora.
           También podés contactarlos vos directamente por email o WhatsApp, y opcionalmente ofrecerles un cupón de descuento para cerrar la venta.

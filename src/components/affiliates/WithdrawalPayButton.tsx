@@ -32,7 +32,7 @@ export default function WithdrawalPayButton({ withdrawalId, amount }: Props) {
 
   if (state === "done") {
     return (
-      <div className="flex items-center gap-1.5 rounded-xl bg-green-50 px-3 py-2 text-sm font-bold text-green-700">
+      <div className="flex items-center gap-1.5 rounded-xl bg-green-50 panel-oscuro:bg-green-500/10 px-3 py-2 text-sm font-bold text-green-700 panel-oscuro:text-green-300">
         <CheckCircle className="h-4 w-4" />
         Pagado
       </div>
@@ -42,9 +42,9 @@ export default function WithdrawalPayButton({ withdrawalId, amount }: Props) {
   if (state === "confirming") {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-gray-700 panel-oscuro:text-gray-300">
           ¿Confirmás que transferiste{" "}
-          <strong className="text-amber-700">${amount.toLocaleString("es-AR")}</strong>?
+          <strong className="text-amber-700 panel-oscuro:text-amber-300">${amount.toLocaleString("es-AR")}</strong>?
         </p>
         <div className="flex gap-2">
           <button
@@ -55,7 +55,7 @@ export default function WithdrawalPayButton({ withdrawalId, amount }: Props) {
           </button>
           <button
             onClick={() => setState("idle")}
-            className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+            className="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
           >
             Cancelar
           </button>

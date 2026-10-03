@@ -75,9 +75,9 @@ export default async function ResenasPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
-          <h1 className="text-2xl font-bold text-gray-900">Reseñas</h1>
+          <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Reseñas</h1>
         </div>
-        <p className="text-gray-500 ml-9">Reseñas que tus clientes dejaron en tus productos.</p>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 ml-9">Reseñas que tus clientes dejaron en tus productos.</p>
       </div>
       <ResenasClient initialReviews={serialized} slug={store.slug} aceptaResenaTienda={aceptaResenaTienda} />
     </DashboardLayout>

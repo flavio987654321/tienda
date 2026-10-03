@@ -55,13 +55,13 @@ export default function AffiliateActions({
 
   return (
     <div className="space-y-2">
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 panel-oscuro:bg-red-500/10 px-3 py-2 text-xs text-red-700 panel-oscuro:text-red-300">{error}</p>}
 
       {status === "PENDING" && (
         <div className="space-y-2.5">
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-800 leading-relaxed space-y-1">
+          <div className="rounded-xl border border-blue-100 panel-oscuro:border-blue-500/30 bg-blue-50 panel-oscuro:bg-blue-500/10 px-3 py-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300 leading-relaxed space-y-1">
             <p className="font-semibold">¿Qué pasa si aprobás a {name}?</p>
-            <ul className="space-y-0.5 text-blue-700">
+            <ul className="space-y-0.5 text-blue-700 panel-oscuro:text-blue-300">
               <li>• Podrá compartir tus productos con un link propio y cobrar comisión por cada venta.</li>
               <li>• Podrá crear un catálogo en WhatsApp Business o Facebook con tus fotos y precios. <strong>No puede modificarlos</strong> — siempre se muestran los valores reales de tu tienda.</li>
               <li>• Si le das de baja, su link y catálogo se desactivan en menos de 24 hs. Todas las ventas siguen llegando a vos.</li>
@@ -74,7 +74,7 @@ export default function AffiliateActions({
               Aprobar
             </button>
             <button type="button" onClick={() => run("reject")} disabled={Boolean(loading)}
-              className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
+              className="inline-flex items-center gap-1 rounded-lg bg-red-50 panel-oscuro:bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-600 panel-oscuro:text-red-400 disabled:opacity-50">
               {loading === "reject" ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
               Rechazar
             </button>
@@ -85,12 +85,12 @@ export default function AffiliateActions({
       {status === "APPROVED" && (
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setModal("pause")} disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 disabled:opacity-50">
             {loading === "deactivate" ? <Loader2 className="h-3 w-3 animate-spin" /> : <PauseCircle className="h-3 w-3" />}
             {loading === "deactivate" ? "Pausando..." : "Pausar"}
           </button>
           <button type="button" onClick={() => setModal("remove")} disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-lg bg-red-50 panel-oscuro:bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-600 panel-oscuro:text-red-400 disabled:opacity-50">
             {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
             {loading === "remove" ? "Dando de baja..." : "Dar de baja"}
           </button>
@@ -105,7 +105,7 @@ export default function AffiliateActions({
             {loading === "reactivate" ? "Reactivando..." : "Reactivar"}
           </button>
           <button type="button" onClick={() => setModal("remove")} disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-lg bg-red-50 panel-oscuro:bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-600 panel-oscuro:text-red-400 disabled:opacity-50">
             {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
             {loading === "remove" ? "Dando de baja..." : "Dar de baja"}
           </button>
@@ -114,7 +114,7 @@ export default function AffiliateActions({
 
       {status === "REJECTED" && (
         <button type="button" onClick={() => run("remove")} disabled={Boolean(loading)}
-          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 disabled:opacity-50">
+          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 disabled:opacity-50">
           {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
           {loading === "remove" ? "Quitando..." : "Quitar de lista"}
         </button>
@@ -137,7 +137,7 @@ export default function AffiliateActions({
                   lo mismo sin género y sin barras. */}
               <p>Su link de afiliado deja de funcionar hasta que lo reactives.</p>
               {hasPendingBalance && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-amber-800 text-xs font-medium">
+                <div className="bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl px-3 py-2.5 text-amber-800 panel-oscuro:text-amber-300 text-xs font-medium">
                   ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Pausar la cuenta no cancela ese saldo — seguís debiéndoselo.
                 </div>
               )}
@@ -157,7 +157,7 @@ export default function AffiliateActions({
             <div className="space-y-2">
               <p>Su link queda desactivado y no va a poder postularse de nuevo, salvo que vuelvas a darle acceso desde acá.</p>
               {hasPendingBalance && (
-                <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-red-800 text-xs font-medium">
+                <div className="bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl px-3 py-2.5 text-red-800 panel-oscuro:text-red-300 text-xs font-medium">
                   ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Dar de baja no cancela ese saldo — seguís debiéndoselo.
                 </div>
               )}

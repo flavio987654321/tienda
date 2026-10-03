@@ -92,16 +92,16 @@ export default function AffiliateToggle({
    * y una pantalla vacía se lee como que algo se rompió. */
   if (!soportaAfiliados(storeType)) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5 mb-6 flex items-start gap-3 sm:gap-4">
-        <div className="shrink-0 rounded-xl bg-gray-100 p-2.5">
-          <Lock className="h-5 w-5 text-gray-500" />
+      <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50 p-4 sm:p-5 mb-6 flex items-start gap-3 sm:gap-4">
+        <div className="shrink-0 rounded-xl bg-gray-100 panel-oscuro:bg-gray-800 p-2.5">
+          <Lock className="h-5 w-5 text-gray-500 panel-oscuro:text-gray-400" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-gray-900">Todavía no disponible para tu rubro</p>
-          <p className="text-sm text-gray-600 mt-1">{MOTIVO_SIN_AFILIADOS}</p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Todavía no disponible para tu rubro</p>
+          <p className="text-sm text-gray-600 panel-oscuro:text-gray-400 mt-1">{MOTIVO_SIN_AFILIADOS}</p>
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-2">
             Mientras tanto, las consultas de tus vehículos te siguen llegando normalmente en{" "}
-            <Link href="/dashboard/consultas" className="font-medium text-gray-700 underline underline-offset-2">
+            <Link href="/dashboard/consultas" className="font-medium text-gray-700 panel-oscuro:text-gray-300 underline underline-offset-2">
               Consultas
             </Link>.
           </p>
@@ -121,18 +121,18 @@ export default function AffiliateToggle({
     // El ícono ocupa 44px más 16 de separación: en 360 eso es un sexto del ancho
     // para una decoración. En angosto se achica el aire y el texto arranca antes.
     return (
-      <div className={`rounded-2xl border p-4 sm:p-5 mb-6 flex items-start gap-3 sm:gap-4 ${enabled ? "border-amber-300 bg-amber-50" : "border-orange-200 bg-orange-50"}`}>
-        <div className={`shrink-0 rounded-xl p-2.5 ${enabled ? "bg-amber-100" : "bg-orange-100"}`}>
+      <div className={`rounded-2xl border p-4 sm:p-5 mb-6 flex items-start gap-3 sm:gap-4 ${enabled ? "border-amber-300 panel-oscuro:border-amber-500/40 bg-amber-50 panel-oscuro:bg-amber-500/10" : "border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10"}`}>
+        <div className={`shrink-0 rounded-xl p-2.5 ${enabled ? "bg-amber-100 panel-oscuro:bg-amber-500/15" : "bg-orange-100 panel-oscuro:bg-orange-500/15"}`}>
           {enabled
-            ? <AlertTriangle className="h-5 w-5 text-amber-600" />
-            : <Lock className="h-5 w-5 text-orange-600" />
+            ? <AlertTriangle className="h-5 w-5 text-amber-600 panel-oscuro:text-amber-400" />
+            : <Lock className="h-5 w-5 text-orange-600 panel-oscuro:text-orange-400" />
           }
         </div>
         <div className="min-w-0 flex-1">
           {enabled ? (
             <>
-              <p className="font-semibold text-amber-900">El programa de afiliados está pausado</p>
-              <p className="text-sm text-amber-700 mt-1">
+              <p className="font-semibold text-amber-900 panel-oscuro:text-amber-200">El programa de afiliados está pausado</p>
+              <p className="text-sm text-amber-700 panel-oscuro:text-amber-300 mt-1">
                 Desconectaste MercadoPago.
                 {activeAffiliatesCount > 0 && (
                   <> Tus <strong>{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""}</strong> no {activeAffiliatesCount !== 1 ? "pueden" : "puede"} generar comisiones nuevas hasta que vuelvas a conectarlo.</>
@@ -144,8 +144,8 @@ export default function AffiliateToggle({
             </>
           ) : (
             <>
-              <p className="font-semibold text-orange-900">Afiliados requiere MercadoPago</p>
-              <p className="text-sm text-orange-700 mt-1">
+              <p className="font-semibold text-orange-900 panel-oscuro:text-orange-200">Afiliados requiere MercadoPago</p>
+              <p className="text-sm text-orange-700 panel-oscuro:text-orange-300 mt-1">
                 Para activar el programa de afiliados necesitás conectar tu cuenta de MercadoPago.
                 Así las comisiones se acreditan automáticamente en cada venta, sin que tengas que hacer nada.
               </p>
@@ -156,7 +156,7 @@ export default function AffiliateToggle({
               con la flecha colgando sola. Dicho corto entra en uno. */}
           <Link
             href="/dashboard/pagos"
-            className={`inline-flex items-center gap-1.5 mt-3 text-sm font-semibold px-3 py-2 rounded-lg transition-colors ${enabled ? "text-amber-700 bg-amber-100 hover:bg-amber-200" : "text-orange-700 bg-orange-100 hover:bg-orange-200"}`}
+            className={`inline-flex items-center gap-1.5 mt-3 text-sm font-semibold px-3 py-2 rounded-lg transition-colors ${enabled ? "text-amber-700 panel-oscuro:text-amber-300 bg-amber-100 panel-oscuro:bg-amber-500/15 hover:bg-amber-200 panel-oscuro:hover:bg-amber-500/25" : "text-orange-700 panel-oscuro:text-orange-300 bg-orange-100 panel-oscuro:bg-orange-500/15 hover:bg-orange-200 panel-oscuro:hover:bg-orange-500/25"}`}
           >
             <ExternalLink className="h-3.5 w-3.5 shrink-0" />
             <span className="whitespace-nowrap">Conectar MercadoPago</span>
@@ -168,13 +168,13 @@ export default function AffiliateToggle({
 
   return (
     <>
-      <div className={`rounded-2xl border p-5 mb-6 ${enabled ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
+      <div className={`rounded-2xl border p-5 mb-6 ${enabled ? "bg-green-50 panel-oscuro:bg-green-500/10 border-green-200 panel-oscuro:border-green-500/30" : "bg-gray-50 panel-oscuro:bg-gray-800/50 border-gray-200 panel-oscuro:border-gray-700"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className={`font-semibold ${enabled ? "text-green-800" : "text-gray-700"}`}>
+            <p className={`font-semibold ${enabled ? "text-green-800 panel-oscuro:text-green-300" : "text-gray-700 panel-oscuro:text-gray-300"}`}>
               {enabled ? "Sistema de afiliados activo" : "Sistema de afiliados desactivado"}
             </p>
-            <p className={`text-sm mt-0.5 ${enabled ? "text-green-600" : "text-gray-400"}`}>
+            <p className={`text-sm mt-0.5 ${enabled ? "text-green-600 panel-oscuro:text-green-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
               {enabled
                 ? "Otras personas pueden postularse como vendedores"
                 : "Activalo para que otros puedan vender en tu tienda"}
@@ -184,22 +184,22 @@ export default function AffiliateToggle({
             onClick={handleToggle}
             disabled={saving}
             className={`relative inline-flex h-7 items-center rounded-full transition-colors disabled:opacity-60 ${
-              enabled ? "bg-green-500" : "bg-gray-300"
+              enabled ? "bg-green-500" : "bg-gray-300 panel-oscuro:bg-gray-600"
             }`}
             style={{ width: "52px" }}
           >
             {saving
               ? <Loader2 className="h-4 w-4 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
-              : <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
+              : <span className={`inline-block h-5 w-5 transform rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
             }
           </button>
         </div>
 
         {enabled && (
-          <div className="mt-4 pt-4 border-t border-green-200">
+          <div className="mt-4 pt-4 border-t border-green-200 panel-oscuro:border-green-500/30">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-green-800">Comisión por venta</label>
-              <span className="text-lg font-bold text-green-700">{rate}%</span>
+              <label className="text-sm font-medium text-green-800 panel-oscuro:text-green-300">Comisión por venta</label>
+              <span className="text-lg font-bold text-green-700 panel-oscuro:text-green-300">{rate}%</span>
             </div>
             <input
               type="range" min="1" max="50" value={rate}
@@ -209,18 +209,18 @@ export default function AffiliateToggle({
               onTouchEnd={() => save(true, rate)}
               className="w-full accent-green-600 disabled:opacity-60"
             />
-            <div className="flex justify-between text-xs text-green-600 mt-1">
+            <div className="flex justify-between text-xs text-green-600 panel-oscuro:text-green-400 mt-1">
               <span>1%</span>
-              <span className="text-green-700">Venta $10.000 → afiliado cobra ${(10000 * rate / 100).toLocaleString("es-AR")}</span>
+              <span className="text-green-700 panel-oscuro:text-green-300">Venta $10.000 → afiliado cobra ${(10000 * rate / 100).toLocaleString("es-AR")}</span>
               <span>50%</span>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-green-200 flex items-center justify-between gap-3">
+            <div className="mt-4 pt-4 border-t border-green-200 panel-oscuro:border-green-500/30 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Ticket className="h-4 w-4 text-green-700 shrink-0" />
+                <Ticket className="h-4 w-4 text-green-700 panel-oscuro:text-green-300 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-green-800">Aceptar cupones de premio</p>
-                  <p className="text-xs text-green-600">Los afiliados podrán usar sus cupones ganados como clientes en tu tienda. El descuento sale de la venta.</p>
+                  <p className="text-sm font-medium text-green-800 panel-oscuro:text-green-300">Aceptar cupones de premio</p>
+                  <p className="text-xs text-green-600 panel-oscuro:text-green-400">Los afiliados podrán usar sus cupones ganados como clientes en tu tienda. El descuento sale de la venta.</p>
                 </div>
               </div>
               <button
@@ -233,12 +233,12 @@ export default function AffiliateToggle({
                   }
                 }}
                 disabled={savingCoupons}
-                className={`relative inline-flex h-7 items-center rounded-full transition-colors disabled:opacity-60 shrink-0 ${acceptsCoupons ? "bg-green-500" : "bg-gray-300"}`}
+                className={`relative inline-flex h-7 items-center rounded-full transition-colors disabled:opacity-60 shrink-0 ${acceptsCoupons ? "bg-green-500" : "bg-gray-300 panel-oscuro:bg-gray-600"}`}
                 style={{ width: "52px" }}
               >
                 {savingCoupons
                   ? <Loader2 className="h-4 w-4 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
-                  : <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${acceptsCoupons ? "translate-x-7" : "translate-x-1"}`} />
+                  : <span className={`inline-block h-5 w-5 transform rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${acceptsCoupons ? "translate-x-7" : "translate-x-1"}`} />
                 }
               </button>
             </div>
@@ -249,53 +249,53 @@ export default function AffiliateToggle({
       {/* Modal T&C al activar */}
       {showTcModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck className="h-5 w-5 text-indigo-600" />
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+              <div className="w-9 h-9 rounded-xl bg-indigo-100 panel-oscuro:bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="h-5 w-5 text-indigo-600 panel-oscuro:text-indigo-400" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900 text-base">Términos del programa de afiliados</h2>
-                <p className="text-xs text-gray-500">Leé y aceptá antes de activar</p>
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-base">Términos del programa de afiliados</h2>
+                <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Leé y aceptá antes de activar</p>
               </div>
-              <button onClick={() => setShowTcModal(false)} className="ml-auto text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowTcModal(false)} className="ml-auto text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="overflow-y-auto px-6 py-4 flex-1 space-y-3 text-sm text-gray-600 leading-relaxed">
-              <p><strong className="text-gray-900">¿Cómo funciona?</strong><br />
+            <div className="overflow-y-auto px-6 py-4 flex-1 space-y-3 text-sm text-gray-600 panel-oscuro:text-gray-400 leading-relaxed">
+              <p><strong className="text-gray-900 panel-oscuro:text-gray-100">¿Cómo funciona?</strong><br />
                 Al activar el programa, otras personas pueden postularse para vender tus productos a cambio de una comisión. Vos decidís quién entra, qué comisión pagás y podés pausar o dar de baja a cualquier afiliado cuando quieras.</p>
 
-              <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
+              <p><strong className="text-gray-900 panel-oscuro:text-gray-100">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
                 <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en el panel de comisiones del afiliado — no tenés que hacer nada manualmente.</li>
                 <li>Los retiros los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a los afiliados.</li>
                 <li>No pausar ni dar de baja a un afiliado con el fin de no pagarle comisiones ya devengadas.</li>
-                <li>Notificar con al menos <strong className="text-gray-800">5 días corridos de anticipación</strong> antes de modificar la tasa de comisión, o con <strong className="text-gray-800">48 horas</strong> antes de dar de baja a un afiliado activo sin causa de fraude.</li>
+                <li>Notificar con al menos <strong className="text-gray-800 panel-oscuro:text-gray-200">5 días corridos de anticipación</strong> antes de modificar la tasa de comisión, o con <strong className="text-gray-800 panel-oscuro:text-gray-200">48 horas</strong> antes de dar de baja a un afiliado activo sin causa de fraude.</li>
                 <li>Informar a los afiliados de cualquier cambio en la tasa de comisión. El nuevo porcentaje aplica a pedidos futuros, nunca de forma retroactiva.</li>
               </ul>
 
-              <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
+              <p><strong className="text-gray-900 panel-oscuro:text-gray-100">Responsabilidades de la plataforma</strong><br />
                 TiendaApps provee la infraestructura de tracking y panel de comisiones.{" "}
                 Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en el panel del afiliado.{" "}
-                <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
+                <strong className="text-gray-800 panel-oscuro:text-gray-200">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
 
-              <p><strong className="text-gray-900">Cambios en la comisión</strong><br />
+              <p><strong className="text-gray-900 panel-oscuro:text-gray-100">Cambios en la comisión</strong><br />
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>
 
-              <p><strong className="text-gray-900">Desactivación del programa</strong><br />
+              <p><strong className="text-gray-900 panel-oscuro:text-gray-100">Desactivación del programa</strong><br />
                 Si desactivás el programa, los links de afiliados dejan de funcionar inmediatamente. Las comisiones pendientes siguen siendo válidas y debés honrarlas. Si cancelás tu suscripción a TiendaApps teniendo comisiones pendientes, las ya acreditadas siguen siendo exigibles.</p>
 
-              <p><strong className="text-gray-900">Acuerdos fuera de la plataforma</strong><br />
+              <p><strong className="text-gray-900 panel-oscuro:text-gray-100">Acuerdos fuera de la plataforma</strong><br />
                 Queda prohibido acordar pagos o compensaciones con afiliados por fuera de la plataforma. Toda comisión debe procesarse a través de TiendaApps.</p>
 
-              <Link href="/terminos?role=owner&panel=dashboard" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
+              <Link href="/terminos?role=owner&panel=dashboard" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 text-xs font-medium mt-1">
                 Ver términos completos para dueños <ExternalLink className="h-3 w-3" />
               </Link>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 space-y-3">
+            <div className="px-6 py-4 border-t border-gray-100 panel-oscuro:border-gray-800 space-y-3">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -303,13 +303,13 @@ export default function AffiliateToggle({
                   onChange={(e) => setTcAccepted(e.target.checked)}
                   className="mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 panel-oscuro:text-gray-400">
                   Leí y acepto los términos del programa de afiliados. Entiendo mis obligaciones como titular.
                 </span>
               </label>
               <div className="flex gap-3">
                 <button onClick={() => setShowTcModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
                   Cancelar
                 </button>
                 <button
@@ -327,22 +327,22 @@ export default function AffiliateToggle({
       {/* Modal T&C al activar cupones */}
       {showCouponModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-full overflow-y-auto">
-            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                <Ticket className="h-5 w-5 text-green-600" />
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-full overflow-y-auto">
+            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+              <div className="w-9 h-9 rounded-xl bg-green-100 panel-oscuro:bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                <Ticket className="h-5 w-5 text-green-600 panel-oscuro:text-green-400" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900 text-base">Aceptar cupones de premio</h2>
-                <p className="text-xs text-gray-500">Leé antes de activar</p>
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-base">Aceptar cupones de premio</h2>
+                <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Leé antes de activar</p>
               </div>
-              <button onClick={() => setShowCouponModal(false)} className="ml-auto text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowCouponModal(false)} className="ml-auto text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="px-6 py-4 space-y-3 text-sm text-gray-600 leading-relaxed">
-              <p>Al activar esta opción, tus afiliados podrán usar sus <strong className="text-gray-900">cupones de premio ganados</strong> como descuento al comprar en tu tienda.</p>
+            <div className="px-6 py-4 space-y-3 text-sm text-gray-600 panel-oscuro:text-gray-400 leading-relaxed">
+              <p>Al activar esta opción, tus afiliados podrán usar sus <strong className="text-gray-900 panel-oscuro:text-gray-100">cupones de premio ganados</strong> como descuento al comprar en tu tienda.</p>
               <ul className="list-disc pl-4 space-y-1.5">
                 <li>El descuento se aplica sobre el precio de venta y sale de tu margen, no de la plataforma.</li>
                 <li>El cupón se valida al momento del pago. No se puede combinar con otras promociones.</li>
@@ -359,13 +359,13 @@ export default function AffiliateToggle({
                   onChange={(e) => setCouponTcAccepted(e.target.checked)}
                   className="mt-0.5 accent-green-600 w-4 h-4 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 panel-oscuro:text-gray-400">
                   Entiendo que los descuentos se descontarán de mis ventas y acepto las condiciones.
                 </span>
               </label>
               <div className="flex gap-3">
                 <button onClick={() => setShowCouponModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
                   Cancelar
                 </button>
                 <button
@@ -383,22 +383,22 @@ export default function AffiliateToggle({
       {/* Modal advertencia al desactivar */}
       {showDisableWarning && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-full overflow-y-auto">
-            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-full overflow-y-auto">
+            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 panel-oscuro:bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-amber-600 panel-oscuro:text-amber-400" />
               </div>
-              <h2 className="font-bold text-gray-900 text-base">¿Desactivar el programa?</h2>
-              <button onClick={() => setShowDisableWarning(false)} className="ml-auto text-gray-400 hover:text-gray-600">
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-base">¿Desactivar el programa?</h2>
+              <button onClick={() => setShowDisableWarning(false)} className="ml-auto text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-gray-600">
-                Tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""} activo{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desactivar el programa:
+              <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">
+                Tenés <strong className="text-gray-900 panel-oscuro:text-gray-100">{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""} activo{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desactivar el programa:
               </p>
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-2 text-sm text-gray-600 panel-oscuro:text-gray-400">
                 <li className="flex items-start gap-2">
                   <span className="text-amber-500 font-bold mt-0.5">•</span>
                   Sus links de afiliado dejan de funcionar <strong>de inmediato</strong>.
@@ -410,7 +410,7 @@ export default function AffiliateToggle({
                 {pendingBalance > 0 && (
                   <li className="flex items-start gap-2">
                     <span className="text-red-500 font-bold mt-0.5">•</span>
-                    Hay <strong className="text-red-600">{fmt(pendingBalance)} en comisiones pendientes</strong> de retiro que seguís debiendo honrar.
+                    Hay <strong className="text-red-600 panel-oscuro:text-red-400">{fmt(pendingBalance)} en comisiones pendientes</strong> de retiro que seguís debiendo honrar.
                   </li>
                 )}
               </ul>
@@ -418,7 +418,7 @@ export default function AffiliateToggle({
 
             <div className="px-6 pb-6 flex gap-3">
               <button onClick={() => setShowDisableWarning(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
                 Cancelar
               </button>
               <button

@@ -73,7 +73,7 @@ export default function MetasWidget() {
   if (loading) return null;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
+    <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 p-5 mb-6">
       {/* En angosto el titulo se lleva su propio renglon y los botones van abajo.
           Compartiendo renglón, "Meta de ventas — agosto de 2026" se partía en dos
           y encima a "Crear meta" le quedaba una columna tan finita que también se
@@ -81,20 +81,20 @@ export default function MetasWidget() {
       <div className="flex flex-col items-start gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-2">
           <Target className="h-4 w-4 shrink-0 text-indigo-500" />
-          <h3 className="font-semibold text-gray-900">Meta de ventas — {monthLabel(month)}</h3>
+          <h3 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Meta de ventas — {monthLabel(month)}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {goal && !editing && (
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+              className="text-xs text-red-400 hover:text-red-600 panel-oscuro:hover:text-red-400 disabled:opacity-50 transition-colors"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             </button>
           )}
           <button onClick={editing ? () => setEditing(false) : startEdit}
-            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+            className="text-xs font-medium text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 transition-colors">
             {editing ? "Cancelar" : (goal ? "Editar" : "Crear meta")}
           </button>
         </div>
@@ -102,8 +102,8 @@ export default function MetasWidget() {
 
       {!editing && !goal && (
         <div className="text-center py-4">
-          <p className="text-sm text-gray-400">No hay meta para este mes.</p>
-          <p className="text-xs text-gray-300 mt-1">
+          <p className="text-sm text-gray-400 panel-oscuro:text-gray-500">No hay meta para este mes.</p>
+          <p className="text-xs text-gray-300 panel-oscuro:text-gray-600 mt-1">
             Fijá un objetivo de comisiones del mes. Tus afiliados lo ven en su panel con
             cuánto llevan.
           </p>
@@ -121,11 +121,11 @@ export default function MetasWidget() {
               Para que exista de verdad primero hay que resolver de dónde sale:
               la comisión normal se retiene de la venta, y un premio de fin de
               mes no tiene venta de la cual retenerse. */}
-          <div className="p-3 bg-indigo-50 rounded-xl">
-            <p className="text-xs text-indigo-600 font-medium">Objetivo del mes</p>
-            <p className="text-xl font-bold text-indigo-700">${goal.targetAmount.toLocaleString("es-AR")}</p>
+          <div className="p-3 bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-xl">
+            <p className="text-xs text-indigo-600 panel-oscuro:text-indigo-400 font-medium">Objetivo del mes</p>
+            <p className="text-xl font-bold text-indigo-700 panel-oscuro:text-indigo-300">${goal.targetAmount.toLocaleString("es-AR")}</p>
           </div>
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 text-center">
             Cada afiliado ve este objetivo en su panel, con cuánto lleva generado en el mes.
           </p>
         </div>
@@ -138,15 +138,15 @@ export default function MetasWidget() {
               hacerle creer que se comprometió a algo que la plataforma no va a
               ejecutar. */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo de comisiones del mes ($)</label>
+            <label className="block text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">Objetivo de comisiones del mes ($)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500">$</span>
               <input
                 type="number"
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value)}
                 placeholder="50000"
-                className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function MetasWidget() {
               {saving ? "Guardando..." : "Guardar meta"}
             </button>
             <button onClick={() => setEditing(false)}
-              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+              className="px-4 py-2.5 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl text-sm text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>

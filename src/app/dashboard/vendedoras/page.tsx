@@ -30,11 +30,11 @@ import WithdrawalPayButton from "@/components/affiliates/WithdrawalPayButton";
 import { esVentaConfirmada } from "@/lib/order-status";
 
 function statusClass(status: string) {
-  if (status === "APPROVED") return "bg-green-100 text-green-700";
-  if (status === "REJECTED") return "bg-red-100 text-red-700";
-  if (status === "PAUSED") return "bg-gray-100 text-gray-600";
-  if (status === "REMOVED") return "bg-red-100 text-red-700";
-  return "bg-yellow-100 text-yellow-700";
+  if (status === "APPROVED") return "bg-green-100 panel-oscuro:bg-green-500/15 text-green-700 panel-oscuro:text-green-300";
+  if (status === "REJECTED") return "bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300";
+  if (status === "PAUSED") return "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400";
+  if (status === "REMOVED") return "bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300";
+  return "bg-yellow-100 panel-oscuro:bg-yellow-500/15 text-yellow-700 panel-oscuro:text-yellow-300";
 }
 
 /* Estos carteles van pegados al nombre y la foto de una persona, así que
@@ -253,8 +253,8 @@ export default async function VendedorasPage() {
       <AutoRefresh />
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Afiliados</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Afiliados</h1>
+          <p className="text-gray-500 panel-oscuro:text-gray-400 mt-1">
             Revisá solicitudes, aprobá permisos y controlá comisiones.
           </p>
         </div>
@@ -276,14 +276,14 @@ export default async function VendedorasPage() {
 
       {pendingWithdrawalsDetail.length > 0 && (
         <section className="mb-8">
-          <h2 className="font-bold text-gray-900 mb-1">Transferencias pendientes</h2>
-          <p className="text-sm text-gray-400 mb-4">
+          <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Transferencias pendientes</h2>
+          <p className="text-sm text-gray-400 panel-oscuro:text-gray-500 mb-4">
             Recibiste un email con los datos bancarios de cada retiro. Realizá la transferencia por home banking.
           </p>
           {pendingWithdrawalsDetail.some((w) => w.daysOld >= 15) && (
-            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm">
-              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-              <p className="text-red-800">
+            <div className="flex items-start gap-3 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl p-3 mb-4 text-sm">
+              <AlertTriangle className="h-4 w-4 text-red-600 panel-oscuro:text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-800 panel-oscuro:text-red-300">
                 <span className="font-bold">Hay retiros de más de 15 días sin procesar.</span>{" "}
                 Tu equipo de afiliados está esperando — priorizá estas transferencias para mantener la confianza del equipo.
               </p>
@@ -291,23 +291,23 @@ export default async function VendedorasPage() {
           )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {pendingWithdrawalsDetail.map((w) => (
-              <div key={w.id} className={`bg-white rounded-2xl border p-5 flex flex-col gap-3 ${w.daysOld >= 15 ? "border-red-200" : "border-amber-100"}`}>
+              <div key={w.id} className={`bg-white panel-oscuro:bg-gray-900 rounded-2xl border p-5 flex flex-col gap-3 ${w.daysOld >= 15 ? "border-red-200 panel-oscuro:border-red-500/30" : "border-amber-100 panel-oscuro:border-amber-500/30"}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-bold text-gray-900">{w.affiliateName}</p>
-                    <p className={`text-2xl font-black ${w.daysOld >= 15 ? "text-red-600" : "text-amber-600"}`}>
+                    <p className="font-bold text-gray-900 panel-oscuro:text-gray-100">{w.affiliateName}</p>
+                    <p className={`text-2xl font-black ${w.daysOld >= 15 ? "text-red-600 panel-oscuro:text-red-400" : "text-amber-600 panel-oscuro:text-amber-400"}`}>
                       ${w.amount.toLocaleString("es-AR")}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1">
                       Solicitado el {new Date(w.createdAt).toLocaleDateString("es-AR")}
                     </p>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold shrink-0 ${w.daysOld >= 15 ? "bg-red-100 text-red-700" : w.daysOld >= 7 ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700"}`}>
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold shrink-0 ${w.daysOld >= 15 ? "bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300" : w.daysOld >= 7 ? "bg-orange-100 panel-oscuro:bg-orange-500/15 text-orange-700 panel-oscuro:text-orange-300" : "bg-amber-100 panel-oscuro:bg-amber-500/15 text-amber-700 panel-oscuro:text-amber-300"}`}>
                     {w.daysOld === 0 ? "hoy" : `hace ${w.daysOld}d`}
                   </span>
                 </div>
                 {w.notes && (
-                  <div className="rounded-xl bg-amber-50 p-3 text-xs text-gray-600 font-mono whitespace-pre-wrap break-all">
+                  <div className="rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 p-3 text-xs text-gray-600 panel-oscuro:text-gray-400 font-mono whitespace-pre-wrap break-all">
                     {w.notes}
                   </div>
                 )}
@@ -320,19 +320,19 @@ export default async function VendedorasPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {[
-          { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 bg-yellow-50" },
-          { label: "Activos", value: active.length, icon: UserCheck, color: "text-indigo-600 bg-indigo-50" },
-          { label: isInquiryStore ? "Consultas vendidas" : "Ventas confirmadas", value: ventasConfirmadas, icon: TrendingUp, color: "text-green-600 bg-green-50" },
-          { label: "Retiros en proceso", value: money(pendingWithdrawalsDetail.reduce((s, w) => s + w.amount, 0)), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
+          { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 panel-oscuro:text-yellow-400 bg-yellow-50 panel-oscuro:bg-yellow-500/10" },
+          { label: "Activos", value: active.length, icon: UserCheck, color: "text-indigo-600 panel-oscuro:text-indigo-400 bg-indigo-50 panel-oscuro:bg-indigo-500/10" },
+          { label: isInquiryStore ? "Consultas vendidas" : "Ventas confirmadas", value: ventasConfirmadas, icon: TrendingUp, color: "text-green-600 panel-oscuro:text-green-400 bg-green-50 panel-oscuro:bg-green-500/10" },
+          { label: "Retiros en proceso", value: money(pendingWithdrawalsDetail.reduce((s, w) => s + w.amount, 0)), icon: DollarSign, color: "text-purple-600 panel-oscuro:text-purple-400 bg-purple-50 panel-oscuro:bg-purple-500/10" },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+          <div key={label} className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-4 sm:p-5">
             <div className={`inline-flex p-2 rounded-lg ${color} mb-3`}>
               <Icon className="h-5 w-5" />
             </div>
             {/* Truncado por "Retiros en proceso", que es plata: en una tarjeta de
                 media pantalla, un monto de seis o siete cifras se desbordaba. */}
-            <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={String(value)}>{value}</p>
-            <p className="text-sm text-gray-400 mt-0.5">{label}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100 truncate" title={String(value)}>{value}</p>
+            <p className="text-sm text-gray-400 panel-oscuro:text-gray-500 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
@@ -355,17 +355,17 @@ export default async function VendedorasPage() {
 
       {pending.length > 0 && (
         <section className="mb-8">
-          <h2 className="font-bold text-gray-900 mb-4">Solicitudes pendientes</h2>
+          <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-4">Solicitudes pendientes</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {pending.map((affiliate) => {
               const hoja = antecedentes.get(affiliate.userId);
               return (
-              <div key={affiliate.id} className="bg-white rounded-2xl border border-yellow-100 p-5">
+              <div key={affiliate.id} className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-yellow-100 panel-oscuro:border-yellow-500/30 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="font-bold text-gray-900">{affiliate.user.name}</p>
-                    <p className="truncate text-sm text-gray-400">{affiliate.user.email}</p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="font-bold text-gray-900 panel-oscuro:text-gray-100">{affiliate.user.name}</p>
+                    <p className="truncate text-sm text-gray-400 panel-oscuro:text-gray-500">{affiliate.user.email}</p>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1">
                       Solicitó permiso el {affiliate.requestedAt.toLocaleDateString("es-AR")}
                     </p>
                   </div>
@@ -375,8 +375,8 @@ export default async function VendedorasPage() {
                 </div>
 
                 {hoja && (
-                  <div className="mt-4 rounded-xl border border-gray-100 p-3">
-                    <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
+                  <div className="mt-4 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-3">
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
                       <UserCheck className="h-3.5 w-3.5" />
                       Antecedentes
                     </p>
@@ -384,24 +384,24 @@ export default async function VendedorasPage() {
                       /* Sin historial NO es una advertencia: casi todo el mundo
                          empieza en algún lado, y pintar esto de rojo haría que
                          nadie apruebe a quien recién arranca. Es un dato gris. */
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">
                         Todavía no vende en ninguna tienda — esta sería su primera.
                       </p>
                     ) : (
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">
                         Ya vende en{" "}
-                        <strong className="text-gray-900">
+                        <strong className="text-gray-900 panel-oscuro:text-gray-100">
                           {hoja.tiendas} tienda{hoja.tiendas === 1 ? "" : "s"}
                         </strong>
                         {" · "}
-                        <strong className="text-gray-900">
+                        <strong className="text-gray-900 panel-oscuro:text-gray-100">
                           {hoja.ventas} venta{hoja.ventas === 1 ? "" : "s"}
                         </strong>{" "}
                         confirmada{hoja.ventas === 1 ? "" : "s"}
                       </p>
                     )}
                     {hoja.desde && (
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">
                         Con cuenta en TiendaApps desde{" "}
                         {hoja.desde.toLocaleDateString("es-AR", { month: "long", year: "numeric" })}
                       </p>
@@ -410,20 +410,20 @@ export default async function VendedorasPage() {
                 )}
 
                 {affiliate.applicationMessage && (
-                  <div className="mt-4 rounded-xl bg-gray-50 p-3">
-                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Presentación</p>
-                    <p className="text-sm text-gray-600">{affiliate.applicationMessage}</p>
+                  <div className="mt-4 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3">
+                    <p className="text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase mb-1">Presentación</p>
+                    <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">{affiliate.applicationMessage}</p>
                   </div>
                 )}
                 {affiliate.experience && (
-                  <div className="mt-3 rounded-xl bg-gray-50 p-3">
-                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Experiencia</p>
-                    <p className="text-sm text-gray-600">{affiliate.experience}</p>
+                  <div className="mt-3 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3">
+                    <p className="text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase mb-1">Experiencia</p>
+                    <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">{affiliate.experience}</p>
                   </div>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   {affiliate.socialUrl && (
-                    <a href={affiliate.socialUrl} target="_blank" rel="noreferrer" className="rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-600">
+                    <a href={affiliate.socialUrl} target="_blank" rel="noreferrer" className="rounded-full bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-3 py-1 font-semibold text-indigo-600 panel-oscuro:text-indigo-400">
                       Ver redes
                     </a>
                   )}
@@ -431,7 +431,7 @@ export default async function VendedorasPage() {
                     /* Nunca la dirección del archivo: el documento está en un bucket
                        privado y este endpoint verifica que quien mira sea el dueño de
                        la tienda antes de firmar un link de dos minutos. */
-                    <a href={`/api/vendedoras/cv/${affiliate.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-600">
+                    <a href={`/api/vendedoras/cv/${affiliate.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 panel-oscuro:bg-purple-500/10 px-3 py-1 font-semibold text-purple-600 panel-oscuro:text-purple-400">
                       Ver CV
                     </a>
                   )}
@@ -453,19 +453,19 @@ export default async function VendedorasPage() {
 
       {rankingData.length >= 2 && (
         <section className="mb-8">
-          <h2 className="font-bold text-gray-900 mb-1">Ranking del mes</h2>
-          <p className="text-sm text-gray-400 mb-4">
+          <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Ranking del mes</h2>
+          <p className="text-sm text-gray-400 panel-oscuro:text-gray-500 mb-4">
             {now.toLocaleString("es-AR", { month: "long", year: "numeric" })} — comisiones pagadas por afiliado
           </p>
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+          <div className="overflow-hidden rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900">
             {rankingData.map((r, i) => (
-              <div key={r.id} className={`flex items-center gap-4 px-5 py-3 ${i < rankingData.length - 1 ? "border-b border-gray-50" : ""}`}>
-                <span className={`w-6 text-center text-sm font-black ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-800" : "text-gray-300"}`}>
+              <div key={r.id} className={`flex items-center gap-4 px-5 py-3 ${i < rankingData.length - 1 ? "border-b border-gray-50 panel-oscuro:border-gray-800" : ""}`}>
+                <span className={`w-6 text-center text-sm font-black ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400 panel-oscuro:text-gray-500" : i === 2 ? "text-amber-800 panel-oscuro:text-amber-300" : "text-gray-300 panel-oscuro:text-gray-600"}`}>
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-gray-900">{r.name}</p>
-                  <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100">
+                  <p className="truncate text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">{r.name}</p>
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                     <div
                       className="h-1.5 rounded-full bg-indigo-400 transition-all"
                       style={{ width: topThisMonth > 0 ? `${Math.round((r.thisMonth / topThisMonth) * 100)}%` : "0%" }}
@@ -473,17 +473,17 @@ export default async function VendedorasPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900">{money(r.thisMonth)}</p>
+                  <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{money(r.thisMonth)}</p>
                   {r.change !== null && (
-                    <p className={`text-xs font-semibold ${r.change >= 0 ? "text-green-600" : "text-red-500"}`}>
+                    <p className={`text-xs font-semibold ${r.change >= 0 ? "text-green-600 panel-oscuro:text-green-400" : "text-red-500"}`}>
                       {r.change >= 0 ? "+" : ""}{r.change}% vs mes ant.
                     </p>
                   )}
                   {r.change === null && r.lastMonth === 0 && (
-                    <p className="text-xs text-gray-300">sin historial</p>
+                    <p className="text-xs text-gray-300 panel-oscuro:text-gray-600">sin historial</p>
                   )}
                 </div>
-                <div className="text-right text-xs text-gray-400 hidden sm:block">
+                <div className="text-right text-xs text-gray-400 panel-oscuro:text-gray-500 hidden sm:block">
                   <p>{r.confirmedOrders} ventas</p>
                   <p>{money(r.grossSales)} generado</p>
                 </div>
@@ -498,22 +498,22 @@ export default async function VendedorasPage() {
             subtítulo largo y el monto, no entraba ninguno de los dos cómodo. */}
         <div className="mb-4 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <h2 className="font-bold text-gray-900">Equipo de afiliados</h2>
-            <p className="mt-1 text-sm text-gray-400">Controla permisos, links, ventas y pagos de cada persona.</p>
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Equipo de afiliados</h2>
+            <p className="mt-1 text-sm text-gray-400 panel-oscuro:text-gray-500">Controla permisos, links, ventas y pagos de cada persona.</p>
           </div>
-          <div className="shrink-0 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 ring-1 ring-gray-100">
+          <div className="shrink-0 whitespace-nowrap rounded-full bg-white panel-oscuro:bg-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 ring-1 ring-gray-100 panel-oscuro:ring-gray-800">
             {money(totalComisionesPagadas)} pagadas
           </div>
         </div>
         {teamAffiliates.length === 0 ? (
           /* `p-8` en angosto: con 64px de padding de cada lado, en 360 al texto le
              quedaban 200px y el título salía partido en tres renglones. */
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-16 text-center">
-            <div className="bg-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-8 sm:p-16 text-center">
+            <div className="bg-purple-50 panel-oscuro:bg-purple-500/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Todavía no hay afiliados en el equipo</h3>
-            <p className="text-gray-400 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 panel-oscuro:text-gray-100 mb-2">Todavía no hay afiliados en el equipo</h3>
+            <p className="text-gray-400 panel-oscuro:text-gray-500 mb-4">
               Cuando apruebes una solicitud, esa persona pasa a esta sección con sus links, ventas y comisiones.
             </p>
           </div>
@@ -531,8 +531,8 @@ export default async function VendedorasPage() {
               const displayName = affiliate.user.name || affiliate.user.email;
 
               return (
-                <article key={affiliate.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                  <div className="border-b border-gray-50 p-5">
+                <article key={affiliate.id} className="overflow-hidden rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 shadow-sm">
+                  <div className="border-b border-gray-50 panel-oscuro:border-gray-800 p-5">
                     {/* En celular esto era una fila: a la izquierda el nombre,
                         a la derecha las acciones. Con una solicitud pendiente
                         "las acciones" son un recuadro azul con tres viñetas
@@ -555,7 +555,7 @@ export default async function VendedorasPage() {
                               {statusLabel(affiliate.status)}
                             </span>
                           </div>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400">
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 panel-oscuro:text-gray-500">
                             <span className="inline-flex items-center gap-1">
                               <Mail className="h-3.5 w-3.5" />
                               {affiliate.user.email}
@@ -589,15 +589,15 @@ export default async function VendedorasPage() {
                     {(affiliate.applicationMessage || affiliate.experience) && (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         {affiliate.applicationMessage && (
-                          <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Presentación</p>
-                            <p className="line-clamp-3 text-sm text-gray-600">{affiliate.applicationMessage}</p>
+                          <div className="rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3">
+                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">Presentación</p>
+                            <p className="line-clamp-3 text-sm text-gray-600 panel-oscuro:text-gray-400">{affiliate.applicationMessage}</p>
                           </div>
                         )}
                         {affiliate.experience && (
-                          <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Experiencia</p>
-                            <p className="line-clamp-3 text-sm text-gray-600">{affiliate.experience}</p>
+                          <div className="rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3">
+                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">Experiencia</p>
+                            <p className="line-clamp-3 text-sm text-gray-600 panel-oscuro:text-gray-400">{affiliate.experience}</p>
                           </div>
                         )}
                       </div>
@@ -607,7 +607,7 @@ export default async function VendedorasPage() {
                   {/* `truncate` + `title` en el número: sin eso un saldo de
                       siete cifras se sale de la celda en celular, donde la tira
                       es de dos columnas. */}
-                  <div className="grid grid-cols-2 gap-px bg-gray-100 md:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-px bg-gray-100 panel-oscuro:bg-gray-800 md:grid-cols-4">
                     {(isInquiryStore ? [
                       { label: "Consultas", value: affLeads!.total, aPagar: false },
                       { label: "Ventas", value: affLeads!.confirmed, aPagar: false },
@@ -619,11 +619,11 @@ export default async function VendedorasPage() {
                       { label: "Generado", value: money(grossSales), aPagar: false },
                       { label: "A pagar", value: money(walletBalance), aPagar: true },
                     ]).map((item) => (
-                      <div key={item.label} className="bg-white p-4">
-                        <p className="text-xs font-semibold text-gray-400">{item.label}</p>
+                      <div key={item.label} className="bg-white panel-oscuro:bg-gray-900 p-4">
+                        <p className="text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500">{item.label}</p>
                         <p
                           title={String(item.value)}
-                          className={`mt-1 truncate text-base font-black sm:text-lg ${item.aPagar ? "text-purple-700" : "text-gray-950"}`}
+                          className={`mt-1 truncate text-base font-black sm:text-lg ${item.aPagar ? "text-purple-700 panel-oscuro:text-purple-300" : "text-gray-950"}`}
                         >
                           {item.value}
                         </p>
@@ -643,24 +643,24 @@ export default async function VendedorasPage() {
                         celular esas tres cajas se apilaban y estiraban la
                         tarjeta media pantalla para mostrar datos que no se
                         miran todos los días. */}
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">
                       Ya cobró{" "}
-                      <span className="font-semibold text-gray-600">
+                      <span className="font-semibold text-gray-600 panel-oscuro:text-gray-400">
                         {money(isInquiryStore ? (affiliate.wallet?.totalWithdrawn ?? 0) : paidCommission)}
                       </span>
                       {" · "}
                       Ganó en total{" "}
-                      <span className="font-semibold text-gray-600">{money(affiliate.wallet?.totalEarned ?? 0)}</span>
+                      <span className="font-semibold text-gray-600 panel-oscuro:text-gray-400">{money(affiliate.wallet?.totalEarned ?? 0)}</span>
                     </p>
 
                     {affiliate.status === "APPROVED" && (
-                      <div className="rounded-xl bg-indigo-50 p-3">
+                      <div className="rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 p-3">
                         <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-500">
                           <Link2 className="h-3.5 w-3.5" />
                           Link de venta
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                          <code className="min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 text-xs text-gray-500 ring-1 ring-indigo-100">
+                          <code className="min-w-0 flex-1 truncate rounded-lg bg-white panel-oscuro:bg-gray-900 px-3 py-2 text-xs text-gray-500 panel-oscuro:text-gray-400 ring-1 ring-indigo-100 panel-oscuro:ring-indigo-500/30">
                             /tienda/{store?.slug}?ref={affiliate.id}
                           </code>
                           <CopyLinkButton
@@ -670,7 +670,7 @@ export default async function VendedorasPage() {
                           <Link
                             href={sharePath}
                             target="_blank"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 panel-oscuro:border-indigo-500/30 bg-white panel-oscuro:bg-gray-900 px-3 py-2 text-xs font-bold text-indigo-700 panel-oscuro:text-indigo-300 hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15"
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                             Abrir
@@ -682,24 +682,24 @@ export default async function VendedorasPage() {
                     {(affiliate.socialUrl || affiliate.cvUrl || affiliate.user.instagramHandle || affiliate.user.phone) && (
                       <div className="flex flex-wrap gap-2 text-xs">
                         {affiliate.user.instagramHandle && (
-                          <span className="rounded-full bg-pink-50 px-3 py-1 font-semibold text-pink-700">
+                          <span className="rounded-full bg-pink-50 panel-oscuro:bg-pink-500/10 px-3 py-1 font-semibold text-pink-700 panel-oscuro:text-pink-300">
                             @{affiliate.user.instagramHandle.replace(/^@/, "")}
                           </span>
                         )}
                         {affiliate.user.phone && (
-                          <span className="rounded-full bg-green-50 px-3 py-1 font-semibold text-green-700">
+                          <span className="rounded-full bg-green-50 panel-oscuro:bg-green-500/10 px-3 py-1 font-semibold text-green-700 panel-oscuro:text-green-300">
                             {affiliate.user.phone}
                           </span>
                         )}
                         {affiliate.socialUrl && (
-                          <a href={affiliate.socialUrl} target="_blank" rel="noreferrer" className="rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-700">
+                          <a href={affiliate.socialUrl} target="_blank" rel="noreferrer" className="rounded-full bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-3 py-1 font-semibold text-indigo-700 panel-oscuro:text-indigo-300">
                             Ver redes
                           </a>
                         )}
                         {affiliate.cvUrl && (
                           // Ver el comentario del otro "Ver CV": va por el endpoint
                           // que verifica permiso y firma, nunca por la url cruda.
-                          <a href={`/api/vendedoras/cv/${affiliate.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-700">
+                          <a href={`/api/vendedoras/cv/${affiliate.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 panel-oscuro:bg-purple-500/10 px-3 py-1 font-semibold text-purple-700 panel-oscuro:text-purple-300">
                             Ver CV
                           </a>
                         )}

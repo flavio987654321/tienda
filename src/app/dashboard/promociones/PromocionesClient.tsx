@@ -50,19 +50,19 @@ const TYPE_META: Record<string, {
   // Los ejemplos NO nombran una categoría a propósito (F6-C1): este paso responde
   // QUÉ tipo de descuento es, y el DÓNDE se elige en el paso 2. Decir "20% off en
   // las remeras" hacía pensar que el tipo servía solo para categorías.
-  PERCENT: { Icon: Percent, tile: "bg-indigo-50 text-indigo-600", label: "Porcentaje de descuento", short: "Ej. 20% de descuento",
+  PERCENT: { Icon: Percent, tile: "bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400", label: "Porcentaje de descuento", short: "Ej. 20% de descuento",
     et: "Un porcentaje menos en el precio",
     ed: "El cliente ve el precio original tachado y el nuevo debajo. Se aplica solo con entrar a tu tienda: no tiene que escribir ningún cupón." },
-  FIXED: { Icon: Tag, tile: "bg-rose-50 text-rose-600", label: "Monto fijo de descuento", short: "Ej. $5.000 de descuento",
+  FIXED: { Icon: Tag, tile: "bg-rose-50 panel-oscuro:bg-rose-500/10 text-rose-600 panel-oscuro:text-rose-400", label: "Monto fijo de descuento", short: "Ej. $5.000 de descuento",
     et: "Un monto fijo menos, no un porcentaje",
     ed: "Se resta la misma plata a cada producto, cueste lo que cueste. Ideal para liquidar: en uno de $30.000 son $5.000 menos, y en uno de $8.000 también." },
-  N_PAY_M: { Icon: Gift, tile: "bg-amber-50 text-amber-600", label: "Llevá N, pagá M", short: "Ej. llevá 3 iguales, pagá 2",
+  N_PAY_M: { Icon: Gift, tile: "bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-600 panel-oscuro:text-amber-400", label: "Llevá N, pagá M", short: "Ej. llevá 3 iguales, pagá 2",
     et: "Comprando varios del MISMO producto, uno va sin cargo",
     ed: "Se arma solo en el carrito. En un 3×2, llevando 3 unidades del mismo producto, paga 2. Si querés que pueda combinar productos distintos, usá “Combo: llevá N mezclando”." },
-  MIX_N_PAY_M: { Icon: Shuffle, tile: "bg-violet-50 text-violet-600", label: "Combo: llevá N mezclando", short: "Ej. llevá 3 cualesquiera, el más barato gratis",
+  MIX_N_PAY_M: { Icon: Shuffle, tile: "bg-violet-50 panel-oscuro:bg-violet-500/10 text-violet-600 panel-oscuro:text-violet-400", label: "Combo: llevá N mezclando", short: "Ej. llevá 3 cualesquiera, el más barato gratis",
     et: "Comprando varios productos DISTINTOS, el más barato va sin cargo",
     ed: "Como el 3×2 pero sin obligar a llevar el mismo producto: el cliente combina lo que quiera de lo que elijas (una remera + un pantalón + una campera) y el más barato de cada 3 le sale gratis. Es el que más sube el ticket promedio." },
-  FREE_SHIPPING: { Icon: Truck, tile: "bg-teal-50 text-teal-600", label: "Envío gratis", short: "Ej. desde $50.000",
+  FREE_SHIPPING: { Icon: Truck, tile: "bg-teal-50 panel-oscuro:bg-teal-500/10 text-teal-600 panel-oscuro:text-teal-400", label: "Envío gratis", short: "Ej. desde $50.000",
     et: "El envío pasa a costar cero",
     ed: "Si la compra supera el monto que pongas, el envío se bonifica en el checkout. Por debajo, paga envío normal." },
 };
@@ -75,11 +75,11 @@ const isNxM = (t: string | null | undefined) => t === "N_PAY_M" || t === "MIX_N_
 
 function statusPill(s: string) {
   const map: Record<string, [string, string]> = {
-    active: ["text-green-600 bg-green-50", "Activa"],
-    scheduled: ["text-indigo-600 bg-indigo-50", "Programada"],
-    paused: ["text-slate-400 bg-slate-100", "Pausada"],
-    expired: ["text-slate-500 bg-slate-100", "Vencida"],
-    archived: ["text-slate-500 bg-slate-100", "Archivada"],
+    active: ["text-green-600 panel-oscuro:text-green-400 bg-green-50 panel-oscuro:bg-green-500/10", "Activa"],
+    scheduled: ["text-indigo-600 panel-oscuro:text-indigo-400 bg-indigo-50 panel-oscuro:bg-indigo-500/10", "Programada"],
+    paused: ["text-slate-400 panel-oscuro:text-gray-500 bg-slate-100 panel-oscuro:bg-gray-800", "Pausada"],
+    expired: ["text-slate-500 panel-oscuro:text-gray-400 bg-slate-100 panel-oscuro:bg-gray-800", "Vencida"],
+    archived: ["text-slate-500 panel-oscuro:text-gray-400 bg-slate-100 panel-oscuro:bg-gray-800", "Archivada"],
   };
   const [cls, label] = map[s] ?? map.paused;
   return <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 ${cls}`}><span className="w-1.5 h-1.5 rounded-full bg-current" />{label}</span>;
@@ -277,8 +277,8 @@ export default function PromocionesClient({
     <div>
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Promociones</h1>
-          <p className="text-gray-500 mt-1 text-sm max-w-2xl">
+          <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Promociones</h1>
+          <p className="text-gray-500 panel-oscuro:text-gray-400 mt-1 text-sm max-w-2xl">
             Descuentos que se aplican solos en la tienda. Definís una vez a qué productos van y desde cuándo — no producto por producto.
           </p>
         </div>
@@ -287,14 +287,14 @@ export default function PromocionesClient({
             onClick={() => { setEditing(null); setWizOpen(true); }}
             disabled={atLimit}
             title={atLimit ? `Llegaste a las ${maxPromotions} promociones del plan Tienda Pro` : undefined}
-            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white disabled:bg-gray-300 panel-oscuro:disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
             <Plus className="h-4 w-4" /> Nueva promoción
           </button>
           {/* El cupo se muestra siempre, no solo al llegar al tope: la idea es que
               nadie se entere del límite recién cuando le rebotan el formulario. */}
           {maxPromotions !== null && (
-            <p className={`text-xs font-medium ${atLimit ? "text-amber-600" : "text-gray-400"}`}>
+            <p className={`text-xs font-medium ${atLimit ? "text-amber-600 panel-oscuro:text-amber-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
               {slotsUsed} de {maxPromotions} · plan Tienda Pro
             </p>
           )}
@@ -327,16 +327,16 @@ export default function PromocionesClient({
             activas y la tarjeta diciendo "1". El dato del servidor ya no hace
             falta: ahora la lista se refresca desde el servidor y `liveCount`
             sale siempre de la lista que se está viendo. */}
-        <StatCard tile="bg-indigo-50 text-indigo-600" Icon={Tag} value={String(liveCount)} label="Promociones activas" />
-        <StatCard tile="bg-green-50 text-green-600" Icon={Check} value={String(ventasConPromo)} label="Ventas con promo este mes" />
+        <StatCard tile="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" Icon={Tag} value={String(liveCount)} label="Promociones activas" />
+        <StatCard tile="bg-green-50 panel-oscuro:bg-green-500/10 text-green-600 panel-oscuro:text-green-400" Icon={Check} value={String(ventasConPromo)} label="Ventas con promo este mes" />
         <div className="col-span-2 sm:col-span-1">
-          <StatCard tile="bg-amber-50 text-amber-600" Icon={Gift} value={`$${Math.round(ahorroDelMes).toLocaleString("es-AR")}`} label="Ahorro dado este mes" />
+          <StatCard tile="bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-600 panel-oscuro:text-amber-400" Icon={Gift} value={`$${Math.round(ahorroDelMes).toLocaleString("es-AR")}`} label="Ahorro dado este mes" />
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1.5 mb-4">
-        <TabBtn on={tab === "act"} onClick={() => setTab("act")}>Activas {liveCount > 0 && <span className="ml-1.5 text-[11px] bg-indigo-100 text-indigo-700 rounded-full px-1.5 py-0.5 font-bold">{liveCount}</span>}</TabBtn>
+        <TabBtn on={tab === "act"} onClick={() => setTab("act")}>Activas {liveCount > 0 && <span className="ml-1.5 text-[11px] bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-indigo-700 panel-oscuro:text-indigo-300 rounded-full px-1.5 py-0.5 font-bold">{liveCount}</span>}</TabBtn>
         <TabBtn on={tab === "hist"} onClick={() => setTab("hist")}>Historial</TabBtn>
       </div>
 
@@ -347,11 +347,11 @@ export default function PromocionesClient({
            palabra en la cabeza de casi todo el mundo— y esa es la duda que hace
            que la pantalla se cierre sin crear nada. Así que se responde acá, con
            los tres ejemplos que cubren el 90% de lo que la gente arma. */
-        <div className="bg-white border border-gray-100 rounded-2xl px-5 py-10 sm:px-8 sm:py-14 text-center text-gray-500 text-sm">
+        <div className="bg-white panel-oscuro:bg-gray-900 border border-gray-100 panel-oscuro:border-gray-800 rounded-2xl px-5 py-10 sm:px-8 sm:py-14 text-center text-gray-500 panel-oscuro:text-gray-400 text-sm">
           {tab === "act" ? (
             <>
               <BadgeEmpty />
-              <p className="mt-3 font-semibold text-gray-800 text-base">Todavía no tenés promociones</p>
+              <p className="mt-3 font-semibold text-gray-800 panel-oscuro:text-gray-200 text-base">Todavía no tenés promociones</p>
               <p className="mt-2 mx-auto max-w-md leading-relaxed">
                 Una promoción <b>baja el precio sola</b>, para todo el que entre a tu tienda y sin que
                 nadie tenga que escribir nada. Es lo contrario de un cupón, que hay que repartir y el
@@ -363,21 +363,21 @@ export default function PromocionesClient({
                   ["Llevá 3, pagá 2", "El descuento aparece solo cuando el carrito llega a la cantidad."],
                   ["Envío gratis desde $50.000", "Sube el ticket promedio: el cliente suma para llegar al mínimo."],
                 ].map(([que, porque]) => (
-                  <div key={que} className="flex gap-2.5 items-start rounded-xl bg-gray-50 px-3.5 py-2.5">
+                  <div key={que} className="flex gap-2.5 items-start rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 px-3.5 py-2.5">
                     <Check className="h-4 w-4 shrink-0 mt-0.5 text-indigo-500" />
-                    <span className="text-[12.5px] leading-snug"><b className="text-gray-800">{que}</b> — {porque}</span>
+                    <span className="text-[12.5px] leading-snug"><b className="text-gray-800 panel-oscuro:text-gray-200">{que}</b> — {porque}</span>
                   </div>
                 ))}
               </div>
               <button onClick={() => { setEditing(null); setWizOpen(true); }} className="mt-5 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
                 <Plus className="h-4 w-4" /> Crear mi primera promoción
               </button>
-              <p className="mt-3 text-xs text-gray-400">Te vamos guiando en 5 pasos. Podés apagarla cuando quieras.</p>
+              <p className="mt-3 text-xs text-gray-400 panel-oscuro:text-gray-500">Te vamos guiando en 5 pasos. Podés apagarla cuando quieras.</p>
             </>
           ) : (
             <>
               <BadgeEmpty />
-              <p className="mt-3 font-semibold text-gray-800 text-base">El historial está vacío</p>
+              <p className="mt-3 font-semibold text-gray-800 panel-oscuro:text-gray-200 text-base">El historial está vacío</p>
               <p className="mt-2 mx-auto max-w-md leading-relaxed">
                 Acá van a caer las promociones que <b>archives</b> y las que se venzan solas al pasar su
                 fecha de fin. No se borran: podés mirar qué hiciste el año pasado y restaurar cualquiera
@@ -404,19 +404,19 @@ export default function PromocionesClient({
                  palabra por renglón y "Categorías · remeras" cortado en
                  "Categorí". Ahora arriba va el ícono con el nombre, y abajo el
                  estado a la izquierda y los botones a la derecha. */
-              <div key={p.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div key={p.id} className="bg-white panel-oscuro:bg-gray-900 border border-gray-100 panel-oscuro:border-gray-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                 <div className="flex items-start gap-3 min-w-0 sm:flex-1 sm:items-center sm:gap-4">
                   <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${meta.tile}`}><meta.Icon className="h-5 w-5" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-gray-900 text-[15px]">{p.name}</span>
+                      <span className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-[15px]">{p.name}</span>
                       <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.tile}`}>{discountLabel(p)}</span>
                     </div>
-                    <div className="text-[12.5px] text-gray-500 flex gap-x-2 gap-y-0.5 flex-wrap items-center mt-0.5">
-                      <span className="text-gray-700 font-medium">{scopeDetail(p, products)}</span>
-                      {p.minOrderAmount > 0 && <><span className="text-gray-300">/</span><span className="whitespace-nowrap">mín. {money(p.minOrderAmount)}</span></>}
-                      {p.endsAt && <><span className="text-gray-300">/</span><span className="whitespace-nowrap">hasta {fmtDate(p.endsAt)}</span></>}
-                      {p.startsAt && p.status === "scheduled" && <><span className="text-gray-300">/</span><span className="whitespace-nowrap">desde {fmtDate(p.startsAt)}</span></>}
+                    <div className="text-[12.5px] text-gray-500 panel-oscuro:text-gray-400 flex gap-x-2 gap-y-0.5 flex-wrap items-center mt-0.5">
+                      <span className="text-gray-700 panel-oscuro:text-gray-300 font-medium">{scopeDetail(p, products)}</span>
+                      {p.minOrderAmount > 0 && <><span className="text-gray-300 panel-oscuro:text-gray-600">/</span><span className="whitespace-nowrap">mín. {money(p.minOrderAmount)}</span></>}
+                      {p.endsAt && <><span className="text-gray-300 panel-oscuro:text-gray-600">/</span><span className="whitespace-nowrap">hasta {fmtDate(p.endsAt)}</span></>}
+                      {p.startsAt && p.status === "scheduled" && <><span className="text-gray-300 panel-oscuro:text-gray-600">/</span><span className="whitespace-nowrap">desde {fmtDate(p.startsAt)}</span></>}
                     </div>
                   </div>
                 </div>
@@ -426,7 +426,7 @@ export default function PromocionesClient({
                     {statusPill(p.status)}
                     {belowCost > 0 && (
                       <span title={`${belowCost} producto${belowCost !== 1 ? "s" : ""} por debajo de su costo`}
-                        className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center gap-1 whitespace-nowrap">
+                        className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-700 panel-oscuro:text-amber-300 inline-flex items-center gap-1 whitespace-nowrap">
                         <AlertTriangle className="h-3 w-3 shrink-0" /> bajo costo
                       </span>
                     )}
@@ -491,7 +491,7 @@ export default function PromocionesClient({
             </>
           )}
           confirmLabel={aConfirmar.accion === "archivar" ? "Archivar" : "Eliminar para siempre"}
-          confirmClass={aConfirmar.accion === "archivar" ? "bg-gray-900 hover:bg-gray-800" : "bg-red-600 hover:bg-red-700"}
+          confirmClass={aConfirmar.accion === "archivar" ? "bg-gray-900 hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white" : "bg-red-600 hover:bg-red-700"}
           onCancel={() => setAConfirmar(null)}
           onConfirm={() => {
             const { p, accion } = aConfirmar;
@@ -502,7 +502,7 @@ export default function PromocionesClient({
       )}
 
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium shadow-lg z-[90] ${toast.ok ? "bg-gray-900 text-white" : "bg-red-600 text-white"}`}>{toast.msg}</div>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium shadow-lg z-[90] ${toast.ok ? "bg-gray-900 text-white panel-oscuro:bg-gray-800 panel-oscuro:ring-1 panel-oscuro:ring-white/10" : "bg-red-600 text-white"}`}>{toast.msg}</div>
       )}
     </div>
   );
@@ -511,31 +511,31 @@ export default function PromocionesClient({
 // ── Subcomponentes de la lista ───────────────────────────────────────────────
 function StatCard({ tile, Icon, value, label }: { tile: string; Icon: typeof Percent; value: string; label: string }) {
   return (
-    <div className="h-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+    <div className="h-full bg-white panel-oscuro:bg-gray-900 border border-gray-100 panel-oscuro:border-gray-800 rounded-2xl p-4 shadow-sm">
       <div className={`w-9 h-9 rounded-xl grid place-items-center mb-3 ${tile}`}><Icon className="h-4.5 w-4.5" /></div>
       {/* Truncado por si el ahorro del mes llega a siete cifras: en una tarjeta
           de media pantalla, "$1.234.567" en `text-2xl` desbordaba la grilla. */}
-      <div className="text-xl sm:text-2xl font-extrabold text-gray-900 truncate" title={value}>{value}</div>
-      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+      <div className="text-xl sm:text-2xl font-extrabold text-gray-900 panel-oscuro:text-gray-100 truncate" title={value}>{value}</div>
+      <div className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{label}</div>
     </div>
   );
 }
 function TabBtn({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button onClick={onClick} className={`text-sm font-semibold px-3.5 py-2 rounded-xl transition-colors ${on ? "bg-white text-gray-900 shadow-sm border border-gray-100" : "text-gray-500 hover:bg-gray-100"}`}>{children}</button>;
+  return <button onClick={onClick} className={`text-sm font-semibold px-3.5 py-2 rounded-xl transition-colors ${on ? "bg-white panel-oscuro:bg-gray-900 text-gray-900 panel-oscuro:text-gray-100 shadow-sm border border-gray-100 panel-oscuro:border-gray-800" : "text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800"}`}>{children}</button>;
 }
 function Toggle({ on, disabled, onClick }: { on: boolean; disabled?: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} disabled={disabled} aria-pressed={on}
-      className={`relative w-10 h-[23px] shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-indigo-600" : "bg-gray-300"}`}>
-      <span className={`absolute top-[2.5px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all ${on ? "left-[19px]" : "left-[2.5px]"}`} />
+      className={`relative w-10 h-[23px] shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-indigo-600" : "bg-gray-300 panel-oscuro:bg-gray-600"}`}>
+      <span className={`absolute top-[2.5px] w-[18px] h-[18px] rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-all ${on ? "left-[19px]" : "left-[2.5px]"}`} />
     </button>
   );
 }
 function IconBtn({ children, title, onClick, disabled, danger }: { children: React.ReactNode; title: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
-  return <button title={title} onClick={onClick} disabled={disabled} className={`p-2 rounded-lg transition-colors disabled:opacity-40 ${danger ? "text-gray-400 hover:text-red-600 hover:bg-red-50" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"}`}>{children}</button>;
+  return <button title={title} onClick={onClick} disabled={disabled} className={`p-2 rounded-lg transition-colors disabled:opacity-40 ${danger ? "text-gray-400 panel-oscuro:text-gray-500 hover:text-red-600 panel-oscuro:hover:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10" : "text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-700 panel-oscuro:hover:text-gray-300 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800"}`}>{children}</button>;
 }
 function BadgeEmpty() {
-  return <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 grid place-items-center mx-auto"><Percent className="h-5 w-5" /></div>;
+  return <div className="w-12 h-12 rounded-2xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-500 grid place-items-center mx-auto"><Percent className="h-5 w-5" /></div>;
 }
 
 // ── Wizard de creación ───────────────────────────────────────────────────────
@@ -751,27 +751,27 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
   // paso a paso y la cruz de cerrar— quedaban tapados por la barra.
   return (
     <div className="fixed inset-0 z-[80] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4 sm:p-7" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl w-full max-w-[540px] max-h-full flex flex-col overflow-hidden shadow-2xl">
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl w-full max-w-[540px] max-h-full flex flex-col overflow-hidden shadow-2xl">
         {/* Head + stepper */}
         {/* `px-4` en angosto: con `px-6` fijo se iban 48px de los 360 en padding,
             y el paso a paso de cinco círculos quedaba pegado al borde. */}
-        <div className="shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-gray-100 relative">
-          <button onClick={onClose} className="absolute right-3 top-3 sm:right-4 sm:top-4 w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
+        <div className="shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800 relative">
+          <button onClick={onClose} className="absolute right-3 top-3 sm:right-4 sm:top-4 w-7 h-7 grid place-items-center rounded-lg text-gray-400 panel-oscuro:text-gray-500 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 hover:text-gray-700 panel-oscuro:hover:text-gray-300"><X className="h-4 w-4" /></button>
           <div className="flex items-center pr-8 sm:pr-0">
             {STEP_NAMES.map((nm, i) => {
               const n = i + 1; const st = n < step ? "done" : n === step ? "now" : "";
               return (
                 <div key={nm} className="flex items-center">
                   <div className="flex items-center gap-2">
-                    <span className={`w-[26px] h-[26px] rounded-full grid place-items-center text-[12px] font-bold shrink-0 ${st === "now" ? "bg-indigo-600 text-white" : st === "done" ? "bg-indigo-50 text-indigo-600" : "bg-gray-100 text-gray-400"}`}>
+                    <span className={`w-[26px] h-[26px] rounded-full grid place-items-center text-[12px] font-bold shrink-0 ${st === "now" ? "bg-indigo-600 text-white" : st === "done" ? "bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400 panel-oscuro:text-gray-500"}`}>
                       {n < step ? <Check className="h-3.5 w-3.5" /> : n}
                     </span>
-                    <span className={`text-xs font-semibold hidden sm:block ${st === "now" ? "text-gray-900" : st === "done" ? "text-gray-500" : "text-gray-400"}`}>{nm}</span>
+                    <span className={`text-xs font-semibold hidden sm:block ${st === "now" ? "text-gray-900 panel-oscuro:text-gray-100" : st === "done" ? "text-gray-500 panel-oscuro:text-gray-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}>{nm}</span>
                   </div>
                   {/* En 360 los cinco círculos con la rayita de 20px sumaban 258px
                       de los 296 disponibles y quedaban tocando los bordes. La
                       rayita achica solo en angosto: es decoración, no información. */}
-                  {n < 5 && <span className="w-3 sm:w-5 h-0.5 bg-gray-200 mx-1 sm:mx-1.5 rounded" />}
+                  {n < 5 && <span className="w-3 sm:w-5 h-0.5 bg-gray-200 panel-oscuro:bg-gray-700 mx-1 sm:mx-1.5 rounded" />}
                 </div>
               );
             })}
@@ -793,9 +793,9 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 ))}
               </div>
               {meta && (
-                <div className="flex gap-3 bg-indigo-50 rounded-xl p-3.5 mt-4">
-                  <div className="w-8 h-8 rounded-lg bg-white text-indigo-600 grid place-items-center shrink-0"><meta.Icon className="h-4 w-4" /></div>
-                  <div><div className="font-bold text-[13px] text-gray-900">{meta.et}</div><div className="text-[12.5px] text-indigo-900/70 leading-snug mt-0.5">{meta.ed}</div></div>
+                <div className="flex gap-3 bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-xl p-3.5 mt-4">
+                  <div className="w-8 h-8 rounded-lg bg-white panel-oscuro:bg-gray-900 text-indigo-600 panel-oscuro:text-indigo-400 grid place-items-center shrink-0"><meta.Icon className="h-4 w-4" /></div>
+                  <div><div className="font-bold text-[13px] text-gray-900 panel-oscuro:text-gray-100">{meta.et}</div><div className="text-[12.5px] text-indigo-900/70 panel-oscuro:text-indigo-200 leading-snug mt-0.5">{meta.ed}</div></div>
                 </div>
               )}
             </>
@@ -829,9 +829,9 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 </InfoNote>
               )}
               <div className="space-y-2.5">
-                <OptCard sel={scope === "ALL"} onClick={() => setScope("ALL")} tile="bg-indigo-50 text-indigo-600" Icon={Store} title="Toda la tienda" desc="Cada producto de tu catálogo" />
-                <OptCard sel={scope === "CATEGORY"} onClick={() => setScope("CATEGORY")} tile="bg-indigo-50 text-indigo-600" Icon={Folder} title="Categorías" desc="Todos los productos de uno o varios rubros" />
-                <OptCard sel={scope === "PRODUCTS"} onClick={() => setScope("PRODUCTS")} tile="bg-indigo-50 text-indigo-600" Icon={ListChecks} title="Productos elegidos" desc="Los seleccionás uno por uno" />
+                <OptCard sel={scope === "ALL"} onClick={() => setScope("ALL")} tile="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" Icon={Store} title="Toda la tienda" desc="Cada producto de tu catálogo" />
+                <OptCard sel={scope === "CATEGORY"} onClick={() => setScope("CATEGORY")} tile="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" Icon={Folder} title="Categorías" desc="Todos los productos de uno o varios rubros" />
+                <OptCard sel={scope === "PRODUCTS"} onClick={() => setScope("PRODUCTS")} tile="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" Icon={ListChecks} title="Productos elegidos" desc="Los seleccionás uno por uno" />
               </div>
               {scope === "CATEGORY" && (
                 <Picker label="Elegí las categorías" right={cats.length ? `${cats.length} elegidas` : undefined}>
@@ -848,10 +848,10 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
               )}
               {scope === "PRODUCTS" && (
                 <Picker label="Elegí los productos" right={`${prodIds.length} seleccionados`}>
-                  <div className="p-2 border-b border-gray-100">
+                  <div className="p-2 border-b border-gray-100 panel-oscuro:border-gray-800">
                     <div className="relative">
-                      <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input value={prodSearch} onChange={(e) => setProdSearch(e.target.value)} placeholder="Buscar producto…" className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                      <Search className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input value={prodSearch} onChange={(e) => setProdSearch(e.target.value)} placeholder="Buscar producto…" className="w-full text-sm border border-gray-200 panel-oscuro:border-gray-700 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                     </div>
                   </div>
                   {/* Se dibujan como mucho 60 filas. Antes se dibujaban TODAS
@@ -866,7 +866,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                       <PkRow key={p.id} on={prodIds.includes(p.id)} onClick={() => setProdIds((prev) => prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id])} name={p.name} sub={money(p.price)} />
                     ))}
                     {filteredProds.length > MAX_FILAS_PICKER && (
-                      <div className="px-3.5 py-2.5 text-[12px] text-gray-400 border-t border-gray-100">
+                      <div className="px-3.5 py-2.5 text-[12px] text-gray-400 panel-oscuro:text-gray-500 border-t border-gray-100 panel-oscuro:border-gray-800">
                         y {filteredProds.length - MAX_FILAS_PICKER} más — buscá por nombre para encontrarlos.
                       </div>
                     )}
@@ -948,7 +948,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   >
                     <input value={value} onChange={(e) => setValue(type === "PERCENT" ? onlyDigits(e.target.value) : digitsMoney(e.target.value))} inputMode="numeric" placeholder={type === "FIXED" ? "$ 5.000" : "20"} className={inputCls} />
                     {type === "PERCENT" && value !== "" && (parseFloat(value) < 1 || parseFloat(value) > MAX_PCT) && (
-                      <p className="text-[12px] text-red-600 mt-1.5">El porcentaje tiene que estar entre 1 y {MAX_PCT}.</p>
+                      <p className="text-[12px] text-red-600 panel-oscuro:text-red-400 mt-1.5">El porcentaje tiene que estar entre 1 y {MAX_PCT}.</p>
                     )}
                     {/* F6-C4: la consecuencia del monto, con sus propios productos,
                         antes de guardar. */}
@@ -977,10 +977,10 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   prenderlo, aparece un desplegable: escala si se suman fechas, y
                   quien pone un evento ya sabe cuál, no necesita explorar. Los
                   ejemplos del subtítulo cubren el descubrimiento que daban los chips. */}
-              <div className="flex justify-between items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5 mb-3.5">
+              <div className="flex justify-between items-center gap-3 bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 rounded-xl p-3.5 mb-3.5">
                 <div className="min-w-0">
-                  <div className="font-semibold text-[13.5px] text-gray-900">¿Es parte de un evento?</div>
-                  <div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">Black Friday, Día de la Madre, Hot Sale… Cambia cómo se ve en la tienda, no cuánto descuenta.</div>
+                  <div className="font-semibold text-[13.5px] text-gray-900 panel-oscuro:text-gray-100">¿Es parte de un evento?</div>
+                  <div className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5 max-w-[34ch]">Black Friday, Día de la Madre, Hot Sale… Cambia cómo se ve en la tienda, no cuánto descuenta.</div>
                 </div>
                 <Toggle
                   on={eventMode !== "none"}
@@ -1019,7 +1019,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   />
                 )}
                 {eventMode !== "none" && eventLabel.trim() && (
-                  <p className="text-[11.5px] text-gray-500 mt-2 leading-relaxed">
+                  <p className="text-[11.5px] text-gray-500 panel-oscuro:text-gray-400 mt-2 leading-relaxed">
                     En tu tienda va a aparecer un cartel de <b>{eventLabel.trim()}</b> arriba de todo, el nombre
                     en la etiqueta de cada producto, y un filtro para ver solo estos.
                     {endsAt && <> Con la fecha de fin puesta, se muestra además una cuenta regresiva.</>}
@@ -1028,7 +1028,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
               </Field>
 
               {fechasAuto && eventLabel.trim() && (
-                <p className="text-[11.5px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mb-2.5">
+                <p className="text-[11.5px] text-indigo-700 panel-oscuro:text-indigo-300 bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-100 panel-oscuro:border-indigo-500/30 rounded-lg px-3 py-2 mb-2.5">
                   Elegiste <b>{eventLabel.trim()}</b> y completamos las fechas. Podés cambiarlas.
                 </p>
               )}
@@ -1043,15 +1043,15 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 <Field label="Hasta (opcional)"><input type="date" value={endsAt} onChange={(e) => { setEndsAt(e.target.value); setFechasAuto(false); }} className={inputCls} /></Field>
               </div>
               {fechasAlReves && (
-                <p className="text-[12px] text-red-600 -mt-1 mb-3.5">
+                <p className="text-[12px] text-red-600 panel-oscuro:text-red-400 -mt-1 mb-3.5">
                   La fecha de fin es anterior a la de inicio: así la promoción no se aplicaría nunca.
                 </p>
               )}
-              <div className="flex justify-between items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
-                <div className="min-w-0"><div className="font-semibold text-[13.5px] text-gray-900">¿Se combina con cupones?</div><div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">En “No”, quien tenga esta promo no puede usar un cupón encima.</div></div>
+              <div className="flex justify-between items-center gap-3 bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 rounded-xl p-3.5">
+                <div className="min-w-0"><div className="font-semibold text-[13.5px] text-gray-900 panel-oscuro:text-gray-100">¿Se combina con cupones?</div><div className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5 max-w-[34ch]">En “No”, quien tenga esta promo no puede usar un cupón encima.</div></div>
                 <Toggle on={combines} onClick={() => setCombines(!combines)} />
               </div>
-              <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+              <div className="flex gap-2.5 items-start bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800 panel-oscuro:text-amber-300">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>Si algún producto afectado no tiene <b>costo cargado</b>, no vamos a poder avisarte si la promo lo deja abajo del costo. Cargá los costos para quedar cubierto.</span>
               </div>
@@ -1086,21 +1086,21 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                     type="button"
                     onClick={() => setEmojiOpen((o) => !o)}
                     aria-label="Agregar emoji"
-                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 panel-oscuro:text-gray-500 transition-colors hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 hover:text-indigo-600 panel-oscuro:hover:text-indigo-400"
                   >
                     <Smile className="h-5 w-5" />
                   </button>
                   {emojiOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
-                      <div className="absolute right-0 z-20 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+                      <div className="absolute right-0 z-20 mt-1.5 w-72 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-2 shadow-xl">
                         <div className="grid grid-cols-8 gap-0.5">
                           {PROMO_EMOJIS.map((e) => (
                             <button
                               key={e}
                               type="button"
                               onClick={() => insertEmoji(e)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors hover:bg-gray-100"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors hover:bg-gray-100 panel-oscuro:hover:bg-gray-800"
                             >
                               {e}
                             </button>
@@ -1111,7 +1111,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   )}
                 </div>
               </Field>
-              <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden mt-2">
+              <div className="bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 rounded-xl overflow-hidden mt-2">
                 <ReviewRow k="Tipo" v={meta?.label ?? "—"} />
                 <ReviewRow k="Se aplica a" v={scopeDetail({ scope: scope ?? "ALL", categories: cats, productIds: prodIds }, products)} />
                 <ReviewRow k="Descuento" v={reviewDiscount(type, value, minQty, payQty)} />
@@ -1121,7 +1121,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
               {/* En edición el asistente abre acá, así que este es el único lugar
                   donde se puede ver el problema sin ir para atrás a propósito. */}
               {fechasAlReves && (
-                <div className="flex gap-2.5 items-start bg-red-50 border border-red-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700">
+                <div className="flex gap-2.5 items-start bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700 panel-oscuro:text-red-300">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>
                     La <b>fecha de fin es anterior a la de inicio</b>, así la promoción no se aplicaría nunca.
@@ -1144,7 +1144,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 return (
                   <>
                     {cf.below.length > 0 && (
-                      <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+                      <div className="flex gap-2.5 items-start bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800 panel-oscuro:text-amber-300">
                         <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                         <div>
                           <b>Ojo: {cf.below.length} producto{cf.below.length !== 1 ? "s" : ""} quedaría{cf.below.length !== 1 ? "n" : ""} bajo su costo.</b>{" "}
@@ -1159,7 +1159,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                       </div>
                     )}
                     {cf.missingCost > 0 && (
-                      <p className="text-[11.5px] text-gray-400 mt-2">
+                      <p className="text-[11.5px] text-gray-400 panel-oscuro:text-gray-500 mt-2">
                         {cf.missingCost} producto{cf.missingCost !== 1 ? "s" : ""} sin costo cargado — no {cf.missingCost !== 1 ? "los" : "lo"} pudimos chequear.
                       </p>
                     )}
@@ -1176,7 +1176,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 if (impacto.capped.length > 0) {
                   const w = impacto.capped[0];
                   return (
-                    <div className="flex gap-2.5 items-start bg-red-50 border border-red-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700">
+                    <div className="flex gap-2.5 items-start bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700 panel-oscuro:text-red-300">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                       <div>
                         <b>“{w.name}” ({money(w.price)}) quedaría casi regalado</b> con {money(parseNum(value))} de descuento
@@ -1189,7 +1189,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 }
                 if (impacto.deep.length === 0) return null;
                 return (
-                  <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+                  <div className="flex gap-2.5 items-start bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800 panel-oscuro:text-amber-300">
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                     <div>
                       <b>{impacto.deep.length} producto{impacto.deep.length !== 1 ? "s" : ""} queda{impacto.deep.length !== 1 ? "n" : ""} con más de la mitad de descuento.</b>{" "}
@@ -1209,7 +1209,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   guardarla creyendo que va a descontar algo, cuando figura como
                   "Activa" y no aplica nunca, es peor que cualquier molestia. */}
               {promoMuerta && (
-                <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+                <div className="flex gap-2.5 items-start bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800 panel-oscuro:text-amber-300">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <div>
                     <b>Esta promoción no se va a aplicar nunca.</b>{" "}
@@ -1220,18 +1220,18 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   </div>
                 </div>
               )}
-              <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-green-800">
+              <div className="flex gap-2.5 items-start bg-green-50 panel-oscuro:bg-green-500/10 border border-green-200 panel-oscuro:border-green-500/30 rounded-xl p-3 mt-3.5 text-[12.5px] text-green-800 panel-oscuro:text-green-300">
                 <Check className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{isEdit ? "Al guardar" : "Al crearla"}, esos {affected} producto{affected !== 1 ? "s" : ""} muestran el precio con descuento en la tienda al instante.</span>
               </div>
-              {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
+              {err && <p className="text-sm text-red-600 panel-oscuro:text-red-400 mt-3">{err}</p>}
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 flex justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100">
-          <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="shrink-0 whitespace-nowrap text-sm font-semibold text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-2.5 transition-colors">
+        <div className="shrink-0 flex justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 panel-oscuro:border-gray-800">
+          <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="shrink-0 whitespace-nowrap text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-800 panel-oscuro:hover:text-gray-200 border border-gray-200 panel-oscuro:border-gray-700 hover:border-gray-300 panel-oscuro:hover:border-gray-600 rounded-xl px-4 py-2.5 transition-colors">
             {step === 1 ? "Cancelar" : "Atrás"}
           </button>
           <button onClick={next} disabled={!canNext() || saving} className="flex shrink-0 items-center justify-center gap-2 whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
@@ -1244,51 +1244,51 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
   );
 }
 
-const inputCls = "w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
+const inputCls = "w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
 
 function StepTitle({ t, d }: { t: string; d: string }) {
-  return <><h2 className="text-lg font-bold text-gray-900">{t}</h2><p className="text-sm text-gray-500 mt-0.5 mb-4 max-w-[46ch]">{d}</p></>;
+  return <><h2 className="text-lg font-bold text-gray-900 panel-oscuro:text-gray-100">{t}</h2><p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-0.5 mb-4 max-w-[46ch]">{d}</p></>;
 }
 function OptCard({ sel, onClick, tile, Icon, title, desc }: { sel: boolean; onClick: () => void; tile: string; Icon: typeof Percent; title: string; desc: string }) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-3.5 border-[1.5px] rounded-xl p-3.5 text-left transition-all ${sel ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/30"}`}>
+    <button onClick={onClick} className={`w-full flex items-center gap-3.5 border-[1.5px] rounded-xl p-3.5 text-left transition-all ${sel ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10" : "border-gray-200 panel-oscuro:border-gray-700 hover:border-indigo-200 panel-oscuro:hover:border-indigo-500/30 hover:bg-indigo-50/30 panel-oscuro:hover:bg-indigo-500/10"}`}>
       <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${tile}`}><Icon className="h-5 w-5" /></span>
-      <span className="flex-1"><span className="block font-semibold text-sm text-gray-900">{title}</span><span className="block text-[12.5px] text-gray-500 mt-0.5">{desc}</span></span>
-      <span className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${sel ? "border-indigo-600 shadow-[inset_0_0_0_4px_#4f46e5]" : "border-gray-300"}`} />
+      <span className="flex-1"><span className="block font-semibold text-sm text-gray-900 panel-oscuro:text-gray-100">{title}</span><span className="block text-[12.5px] text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{desc}</span></span>
+      <span className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${sel ? "border-indigo-600 shadow-[inset_0_0_0_4px_#4f46e5]" : "border-gray-300 panel-oscuro:border-gray-600"}`} />
     </button>
   );
 }
 function Picker({ label, right, children }: { label: string; right?: string; children: React.ReactNode }) {
   return (
     <div className="mt-4">
-      <div className="flex justify-between text-xs font-semibold text-gray-500 mb-2"><span>{label}</span>{right && <span className="text-indigo-600">{right}</span>}</div>
-      <div className="border border-gray-200 rounded-xl overflow-hidden">{children}</div>
+      <div className="flex justify-between text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 mb-2"><span>{label}</span>{right && <span className="text-indigo-600 panel-oscuro:text-indigo-400">{right}</span>}</div>
+      <div className="border border-gray-200 panel-oscuro:border-gray-700 rounded-xl overflow-hidden">{children}</div>
     </div>
   );
 }
 function PkRow({ on, onClick, name, sub, radio }: { on: boolean; onClick: () => void; name: string; sub: string; radio?: boolean }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 px-3.5 py-2.5 border-b border-gray-100 last:border-b-0 hover:bg-indigo-50/40 transition-colors text-left">
+    <button onClick={onClick} className="w-full flex items-center gap-3 px-3.5 py-2.5 border-b border-gray-100 panel-oscuro:border-gray-800 last:border-b-0 hover:bg-indigo-50/40 panel-oscuro:hover:bg-indigo-500/10 transition-colors text-left">
       {radio
-        ? <span className={`w-5 h-5 rounded-full border-2 shrink-0 ${on ? "border-indigo-600 shadow-[inset_0_0_0_4px_#4f46e5]" : "border-gray-300"}`} />
-        : <span className={`w-5 h-5 rounded-md border-2 shrink-0 grid place-items-center ${on ? "bg-indigo-600 border-indigo-600 text-white" : "border-gray-300"}`}>{on && <Check className="h-3 w-3" strokeWidth={3} />}</span>}
-      <span className="flex-1 text-[13.5px] font-medium text-gray-900">{name}</span>
-      <span className={`text-xs ${on ? "text-indigo-600" : "text-gray-400"}`}>{sub}</span>
+        ? <span className={`w-5 h-5 rounded-full border-2 shrink-0 ${on ? "border-indigo-600 shadow-[inset_0_0_0_4px_#4f46e5]" : "border-gray-300 panel-oscuro:border-gray-600"}`} />
+        : <span className={`w-5 h-5 rounded-md border-2 shrink-0 grid place-items-center ${on ? "bg-indigo-600 border-indigo-600 text-white" : "border-gray-300 panel-oscuro:border-gray-600"}`}>{on && <Check className="h-3 w-3" strokeWidth={3} />}</span>}
+      <span className="flex-1 text-[13.5px] font-medium text-gray-900 panel-oscuro:text-gray-100">{name}</span>
+      <span className={`text-xs ${on ? "text-indigo-600 panel-oscuro:text-indigo-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}>{sub}</span>
     </button>
   );
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return <div className="mb-3.5 flex-1"><label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">{label}</label>{children}{hint && <p className="text-[11.5px] text-gray-400 mt-1.5">{hint}</p>}</div>;
+  return <div className="mb-3.5 flex-1"><label className="block text-[12.5px] font-semibold text-gray-700 panel-oscuro:text-gray-300 mb-1.5">{label}</label>{children}{hint && <p className="text-[11.5px] text-gray-400 panel-oscuro:text-gray-500 mt-1.5">{hint}</p>}</div>;
 }
 function InfoNote({ children }: { children: React.ReactNode }) {
-  return <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-1 text-[12.5px] text-green-800"><Info className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
+  return <div className="flex gap-2.5 items-start bg-green-50 panel-oscuro:bg-green-500/10 border border-green-200 panel-oscuro:border-green-500/30 rounded-xl p-3 mt-1 text-[12.5px] text-green-800 panel-oscuro:text-green-300"><Info className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
 }
 // Aviso ámbar: algo que conviene saber pero NO impide seguir. Mismo criterio que
 // el cartel de piso de costo — el panel avisa, no traba (el único bloqueo de la
 // sección es el monto fijo que dejaría un producto en $0).
 function WarnNote({ children }: { children: React.ReactNode }) {
-  return <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3 text-[12.5px] text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
+  return <div className="flex gap-2.5 items-start bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3 mt-3 text-[12.5px] text-amber-900 panel-oscuro:text-amber-200"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
 }
 // F6-C4 — una línea que responde "¿y esto qué le hace a mis productos?" mientras
 // se escribe el monto. El riesgo de un monto fijo es siempre el mismo número —
@@ -1300,7 +1300,7 @@ function ImpactoFijo({ imp }: { imp: FixedImpactResult }) {
   if (!w) return null; // sin monto todavía, o sin productos con precio en alcance
   const alPiso = imp.capped.length > 0;
   const hondo = w.pct >= DEEP_DISCOUNT_PCT;
-  const cls = alPiso ? "text-red-600" : hondo ? "text-amber-700" : "text-gray-500";
+  const cls = alPiso ? "text-red-600 panel-oscuro:text-red-400" : hondo ? "text-amber-700 panel-oscuro:text-amber-300" : "text-gray-500 panel-oscuro:text-gray-400";
   return (
     <p className={`text-[12px] mt-1.5 ${cls}`}>
       {alPiso ? (
@@ -1319,14 +1319,14 @@ function ImpactoFijo({ imp }: { imp: FixedImpactResult }) {
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="px-4 py-4 text-[12.5px] text-gray-400">{children}</div>;
+  return <div className="px-4 py-4 text-[12.5px] text-gray-400 panel-oscuro:text-gray-500">{children}</div>;
 }
 // La etiqueta no se parte y el valor sí: "Se aplica a" cortado en dos renglones
 // para que entre "Categoría · remeras, pantalones" deja la tabla ilegible. El
 // valor puede ser largo de verdad (una lista de categorías), así que se lo deja
 // crecer hacia abajo con `break-words` para que ninguna palabra se salga.
 function ReviewRow({ k, v, last }: { k: string; v: string; last?: boolean }) {
-  return <div className={`flex justify-between gap-3 px-4 py-2.5 text-[13px] ${last ? "" : "border-b border-gray-100"}`}><span className="shrink-0 whitespace-nowrap text-gray-500">{k}</span><span className="min-w-0 break-words font-semibold text-gray-900 text-right">{v}</span></div>;
+  return <div className={`flex justify-between gap-3 px-4 py-2.5 text-[13px] ${last ? "" : "border-b border-gray-100 panel-oscuro:border-gray-800"}`}><span className="shrink-0 whitespace-nowrap text-gray-500 panel-oscuro:text-gray-400">{k}</span><span className="min-w-0 break-words font-semibold text-gray-900 panel-oscuro:text-gray-100 text-right">{v}</span></div>;
 }
 
 // El parseo de montos vive en la librería (B-13): "5.000" son cinco mil y no cinco.

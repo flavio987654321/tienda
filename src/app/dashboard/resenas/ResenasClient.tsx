@@ -164,7 +164,7 @@ export default function ResenasClient({
   return (
     <div>
       {/* Pestañas: lo mismo que ve la clienta en la tienda, del lado de acá. */}
-      <div className="flex gap-2 mb-5 border-b border-gray-200">
+      <div className="flex gap-2 mb-5 border-b border-gray-200 panel-oscuro:border-gray-700">
         {([
           { key: "producto" as const, label: "Los productos", n: deProducto.length, icon: <Package className="w-4 h-4" /> },
           { key: "tienda"   as const, label: "La tienda",     n: deTienda.length,   icon: <Store className="w-4 h-4" /> },
@@ -174,13 +174,13 @@ export default function ResenasClient({
             onClick={() => { setTab(t.key); setFilter("all"); setBusqueda(""); setPagina(1); }}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
               tab === t.key
-                ? "border-indigo-600 text-indigo-700"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "border-indigo-600 text-indigo-700 panel-oscuro:text-indigo-300"
+                : "border-transparent text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-300"
             }`}
           >
             {t.icon}
             {t.label}
-            <span className="text-xs font-normal text-gray-400">({t.n})</span>
+            <span className="text-xs font-normal text-gray-400 panel-oscuro:text-gray-500">({t.n})</span>
             {/* El numerito solo en la de tienda: es la única que tiene cola. */}
             {t.key === "tienda" && pendientes.length > 0 && (
               <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold">
@@ -192,7 +192,7 @@ export default function ResenasClient({
       </div>
 
       {/* Qué es cada pestaña. Sin esto, "La tienda" con 0 parece un error. */}
-      <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+      <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mb-5 leading-relaxed">
         {tab === "producto"
           ? "Opiniones sobre un producto puntual. Se publican solas: están atadas a algo concreto y le sirven a quien está por comprar ese producto."
           : "Opiniones sobre tu tienda en general — la atención, el envío, la experiencia. Se dejan desde tu portada y no apuntan a ningún producto, así que las revisás vos antes de que se publiquen."}
@@ -202,9 +202,9 @@ export default function ResenasClient({
           ve una pestaña vacía esperando reseñas que nadie puede escribirle, y no
           hay forma de que se entere salvo esperando para siempre. */}
       {tab === "tienda" && !aceptaResenaTienda && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3">
+        <div className="bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-4 mb-5 flex gap-3">
           <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-800 leading-relaxed">
+          <p className="text-xs text-amber-800 panel-oscuro:text-amber-300 leading-relaxed">
             <strong>Tu diseño actual todavía no tiene el formulario</strong> para que te dejen
             opiniones sobre la tienda, así que por ahora esta pestaña no va a recibir nada.
             Las reseñas de tus productos siguen funcionando normal.
@@ -217,33 +217,33 @@ export default function ResenasClient({
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-amber-500" />
-            <h2 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
               Esperando tu aprobación ({pendientes.length})
             </h2>
           </div>
           <div className="flex flex-col gap-3">
             {pendientes.map(r => (
-              <div key={r.id} className="bg-amber-50/50 rounded-xl border border-amber-200 p-4">
+              <div key={r.id} className="bg-amber-50/50 panel-oscuro:bg-amber-500/10 rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 p-4">
                 <div className="flex items-center gap-2 flex-wrap mb-1.5">
                   <div className="flex gap-0.5">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}`} />
+                      <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200 panel-oscuro:text-gray-700 fill-gray-200 panel-oscuro:fill-gray-700"}`} />
                     ))}
                   </div>
-                  <span className="text-xs font-semibold text-gray-700">{r.reviewer}</span>
-                  <span className="text-xs text-gray-400">·</span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs font-semibold text-gray-700 panel-oscuro:text-gray-300">{r.reviewer}</span>
+                  <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">·</span>
+                  <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">
                     {new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}
                   </span>
                   {r.verified && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 panel-oscuro:bg-emerald-500/15 text-emerald-700 panel-oscuro:text-emerald-300 text-xs font-semibold">
                       <ShieldCheck className="w-3 h-3" />
                       Compró en tu tienda
                     </span>
                   )}
                 </div>
                 {r.comment && (
-                  <p className="text-sm text-gray-700 leading-relaxed mb-3">&ldquo;{r.comment}&rdquo;</p>
+                  <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 leading-relaxed mb-3">&ldquo;{r.comment}&rdquo;</p>
                 )}
                 <div className="flex gap-2 flex-wrap">
                   <button
@@ -256,7 +256,7 @@ export default function ResenasClient({
                   <button
                     onClick={() => handleEstado(r.id, "REJECTED")}
                     disabled={!!moderando || !!deleting || !!verifying}
-                    className="px-4 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-xs font-bold hover:bg-gray-50 transition-colors disabled:opacity-40"
+                    className="px-4 py-1.5 rounded-lg border border-gray-300 panel-oscuro:border-gray-600 text-gray-600 panel-oscuro:text-gray-400 text-xs font-bold hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-40"
                   >
                     No publicar
                   </button>
@@ -264,7 +264,7 @@ export default function ResenasClient({
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-3 leading-relaxed">
             &ldquo;No publicar&rdquo; no la borra: queda guardada y la podés publicar más adelante si cambiás de idea.
           </p>
         </div>
@@ -272,19 +272,19 @@ export default function ResenasClient({
 
       {/* Rechazadas, para que no queden invisibles */}
       {tab === "tienda" && rechazadas.length > 0 && (
-        <details className="mb-6 bg-gray-50 rounded-xl border border-gray-200 p-4">
-          <summary className="text-xs font-semibold text-gray-600 cursor-pointer">
+        <details className="mb-6 bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 p-4">
+          <summary className="text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 cursor-pointer">
             {rechazadas.length} que decidiste no publicar
           </summary>
           <div className="flex flex-col gap-2 mt-3">
             {rechazadas.map(r => (
-              <div key={r.id} className="flex items-start gap-3 text-xs text-gray-500 border-t border-gray-200 pt-2">
-                <span className="font-semibold text-gray-600 flex-shrink-0">{r.rating}★ {r.reviewer}</span>
+              <div key={r.id} className="flex items-start gap-3 text-xs text-gray-500 panel-oscuro:text-gray-400 border-t border-gray-200 panel-oscuro:border-gray-700 pt-2">
+                <span className="font-semibold text-gray-600 panel-oscuro:text-gray-400 flex-shrink-0">{r.rating}★ {r.reviewer}</span>
                 <span className="flex-1">{r.comment}</span>
                 <button
                   onClick={() => handleEstado(r.id, "APPROVED")}
                   disabled={!!moderando}
-                  className="flex-shrink-0 text-indigo-600 font-semibold hover:underline disabled:opacity-40"
+                  className="flex-shrink-0 text-indigo-600 panel-oscuro:text-indigo-400 font-semibold hover:underline disabled:opacity-40"
                 >
                   Publicar
                 </button>
@@ -296,41 +296,41 @@ export default function ResenasClient({
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-4">
           {/* Los números son de la pestaña abierta, y el título lo dice. Un
               "Total reseñas: 31" que mezcla productos con atención no le sirve
               para decidir nada: no sabe qué tiene que mejorar. */}
-          <p className="text-xs text-gray-400 mb-1">
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-1">
             {tab === "producto" ? "Sobre productos" : "Sobre la tienda"}
           </p>
-          <p className="text-2xl font-bold text-gray-900">{publicadas.length}</p>
+          <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{publicadas.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 mb-1">Promedio</p>
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-4">
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-1">Promedio</p>
           <div className="flex items-center gap-1.5">
-            <p className="text-2xl font-bold text-gray-900">{avgRating.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{avgRating.toFixed(1)}</p>
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 mb-1">5 estrellas</p>
-          <p className="text-2xl font-bold text-gray-900">{publicadas.filter(r => r.rating === 5).length}</p>
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-4">
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-1">5 estrellas</p>
+          <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{publicadas.filter(r => r.rating === 5).length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <p className="text-xs text-gray-400 mb-1">Compra verificada</p>
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-4">
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-1">Compra verificada</p>
           <div className="flex items-center gap-1.5">
-            <p className="text-2xl font-bold text-gray-900">{verifiedCount}</p>
+            <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{verifiedCount}</p>
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
           </div>
         </div>
       </div>
 
       {/* Info verificación */}
-      <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-5 flex gap-3">
+      <div className="bg-emerald-50 panel-oscuro:bg-emerald-500/10 border border-emerald-100 panel-oscuro:border-emerald-500/30 rounded-xl p-4 mb-5 flex gap-3">
         <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-emerald-800 mb-0.5">¿Qué es “Compra verificada”?</p>
-          <p className="text-xs text-emerald-700 leading-relaxed">
+          <p className="text-sm font-semibold text-emerald-800 panel-oscuro:text-emerald-300 mb-0.5">¿Qué es “Compra verificada”?</p>
+          <p className="text-xs text-emerald-700 panel-oscuro:text-emerald-300 leading-relaxed">
             Una reseña se verifica <strong>automáticamente</strong> cuando el cliente deja su email y coincide con una compra entregada en tu tienda.
             También podés verificarla <strong>manualmente</strong> desde acá para ventas por WhatsApp, efectivo o transferencia.
             El badge “✓ Compra verificada” aparece visible en tu tienda.
@@ -340,17 +340,17 @@ export default function ResenasClient({
 
       {/* Buscador */}
       <div className="relative mb-3">
-        <Search className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Search className="w-4 h-4 text-gray-300 panel-oscuro:text-gray-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           value={busqueda}
           onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
           placeholder={tab === "producto" ? "Buscar por persona, producto o texto..." : "Buscar por persona o texto..."}
-          className="w-full pl-9 pr-9 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-indigo-400"
+          className="w-full pl-9 pr-9 py-2 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 text-sm outline-none focus:border-indigo-400"
         />
         {busqueda && (
           <button
             onClick={() => { setBusqueda(""); setPagina(1); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-lg leading-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 panel-oscuro:text-gray-600 hover:text-gray-500 panel-oscuro:hover:text-gray-400 text-lg leading-none"
             aria-label="Limpiar búsqueda"
           >×</button>
         )}
@@ -381,7 +381,7 @@ export default function ResenasClient({
             className={`truncate rounded-lg px-2 py-1.5 text-sm font-medium transition-colors sm:px-3 ${
               filter === f.key
                 ? "bg-indigo-600 text-white"
-                : "bg-white border border-gray-200 text-gray-600 hover:border-indigo-300"
+                : "bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-gray-600 panel-oscuro:text-gray-400 hover:border-indigo-300 panel-oscuro:hover:border-indigo-500/40"
             }`}
           >
             <span className="sm:hidden">{f.corto}</span>
@@ -395,9 +395,9 @@ export default function ResenasClient({
       {buscadas.length === 0 ? (
         /* `p-8` en angosto: con 48px de padding de cada lado le quedaban 232px
            al texto y salía partido en cinco renglones cortitos. */
-        <div className="bg-white rounded-xl border border-gray-100 p-8 sm:p-12 text-center">
-          <Star className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="mx-auto max-w-sm text-gray-400 text-sm">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-8 sm:p-12 text-center">
+          <Star className="w-10 h-10 text-gray-200 panel-oscuro:text-gray-700 mx-auto mb-3" />
+          <p className="mx-auto max-w-sm text-gray-400 panel-oscuro:text-gray-500 text-sm">
             {q
               ? `No hay ninguna que diga “${busqueda.trim()}”.`
               : publicadas.length > 0
@@ -414,12 +414,12 @@ export default function ResenasClient({
           {enPantalla.map(r => (
             <div
               key={r.id}
-              className={`bg-white rounded-xl border p-4 flex gap-4 transition-colors ${
-                r.verified ? "border-emerald-200 bg-emerald-50/30" : "border-gray-100"
+              className={`bg-white panel-oscuro:bg-gray-900 rounded-xl border p-4 flex gap-4 transition-colors ${
+                r.verified ? "border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50/30 panel-oscuro:bg-emerald-500/10" : "border-gray-100 panel-oscuro:border-gray-800"
               }`}
             >
               {/* Imagen del producto */}
-              <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 self-start">
+              <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 self-start">
                 {/* Sin producto es una reseña de la tienda entera: lleva el ícono
                     de local en vez del de paquete, para distinguirlas de un
                     vistazo en una lista que ahora mezcla las dos. */}
@@ -428,7 +428,7 @@ export default function ResenasClient({
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     {r.product
-                      ? <Package className="w-5 h-5 text-gray-300" />
+                      ? <Package className="w-5 h-5 text-gray-300 panel-oscuro:text-gray-600" />
                       : <Store className="w-5 h-5 text-indigo-300" />}
                   </div>
                 )}
@@ -438,16 +438,16 @@ export default function ResenasClient({
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <div className="flex gap-0.5">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}`} />
+                      <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200 panel-oscuro:text-gray-700 fill-gray-200 panel-oscuro:fill-gray-700"}`} />
                     ))}
                   </div>
-                  <span className="text-xs font-semibold text-gray-700">{r.reviewer}</span>
-                  <span className="text-xs text-gray-400">·</span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs font-semibold text-gray-700 panel-oscuro:text-gray-300">{r.reviewer}</span>
+                  <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">·</span>
+                  <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">
                     {new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}
                   </span>
                   {r.verified && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 panel-oscuro:bg-emerald-500/15 text-emerald-700 panel-oscuro:text-emerald-300 text-xs font-semibold">
                       <ShieldCheck className="w-3 h-3" />
                       {r.verifiedBy === "auto" ? "Compra verificada" : "Verificada por vos"}
                     </span>
@@ -456,11 +456,11 @@ export default function ResenasClient({
 
                 {/* Comentario */}
                 {r.comment && (
-                  <p className="text-sm text-gray-700 leading-relaxed mb-2">&ldquo;{r.comment}&rdquo;</p>
+                  <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 leading-relaxed mb-2">&ldquo;{r.comment}&rdquo;</p>
                 )}
 
                 {/* De qué habla la reseña */}
-                <div className="flex min-w-0 items-center gap-1.5 text-xs text-gray-400">
+                <div className="flex min-w-0 items-center gap-1.5 text-xs text-gray-400 panel-oscuro:text-gray-500">
                   {/* El nombre del producto era texto plano: leías una reseña
                       mala y tenías que ir a buscar el producto a mano. Ahora
                       lleva a la ficha, en otra pestaña para no perder el lugar
@@ -475,7 +475,7 @@ export default function ResenasClient({
                         target="_blank"
                         rel="noopener noreferrer"
                         title={r.product.name}
-                        className="font-medium text-gray-500 hover:text-indigo-600 hover:underline inline-flex min-w-0 items-center gap-1"
+                        className="font-medium text-gray-500 panel-oscuro:text-gray-400 hover:text-indigo-600 panel-oscuro:hover:text-indigo-400 hover:underline inline-flex min-w-0 items-center gap-1"
                       >
                         <span className="truncate">{r.product.name}</span>
                         <ExternalLink className="w-3 h-3 shrink-0" />
@@ -494,8 +494,8 @@ export default function ResenasClient({
                   title={r.verified ? "Quitar verificación" : "Marcar como compra real"}
                   className={`p-2 rounded-lg transition-colors disabled:opacity-40 ${
                     r.verified
-                      ? "text-emerald-600 hover:text-gray-400 hover:bg-gray-50"
-                      : "text-gray-300 hover:text-emerald-600 hover:bg-emerald-50"
+                      ? "text-emerald-600 panel-oscuro:text-emerald-400 hover:text-gray-400 panel-oscuro:hover:text-gray-500 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
+                      : "text-gray-300 panel-oscuro:text-gray-600 hover:text-emerald-600 panel-oscuro:hover:text-emerald-400 hover:bg-emerald-50 panel-oscuro:hover:bg-emerald-500/10"
                   } ${verifying === r.id ? "animate-pulse" : ""}`}
                 >
                   {r.verified
@@ -509,7 +509,7 @@ export default function ResenasClient({
                   onClick={() => handleDelete(r.id)}
                   disabled={!!deleting || !!verifying}
                   title="Eliminar reseña"
-                  className={`p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 ${
+                  className={`p-2 text-gray-300 panel-oscuro:text-gray-600 hover:text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-40 ${
                     deleting === r.id ? "animate-pulse" : ""
                   }`}
                 >
@@ -523,24 +523,24 @@ export default function ResenasClient({
               que nunca se pueden usar son ruido. */}
           {totalPaginas > 1 && (
             <div className="flex items-center justify-between gap-3 pt-2 flex-wrap">
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">
                 {(paginaSegura - 1) * POR_PAGINA + 1}–{Math.min(paginaSegura * POR_PAGINA, buscadas.length)} de {buscadas.length}
               </p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPagina(p => Math.max(1, p - 1))}
                   disabled={paginaSegura <= 1}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-indigo-300 disabled:opacity-30 disabled:hover:border-gray-200"
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-600 panel-oscuro:text-gray-400 hover:border-indigo-300 panel-oscuro:hover:border-indigo-500/40 disabled:opacity-30 disabled:hover:border-gray-200 panel-oscuro:disabled:hover:border-gray-700"
                 >
                   ← Anterior
                 </button>
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 panel-oscuro:text-gray-400 font-medium">
                   {paginaSegura} de {totalPaginas}
                 </span>
                 <button
                   onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
                   disabled={paginaSegura >= totalPaginas}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-indigo-300 disabled:opacity-30 disabled:hover:border-gray-200"
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-600 panel-oscuro:text-gray-400 hover:border-indigo-300 panel-oscuro:hover:border-indigo-500/40 disabled:opacity-30 disabled:hover:border-gray-200 panel-oscuro:disabled:hover:border-gray-700"
                 >
                   Siguiente →
                 </button>

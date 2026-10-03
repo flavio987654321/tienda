@@ -19,7 +19,7 @@ export default function ConfirmModal({
   title,
   body,
   confirmLabel,
-  confirmClass = "bg-gray-900 hover:bg-gray-800",
+  confirmClass = "bg-gray-900 hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white",
   onConfirm,
   onCancel,
 }: {
@@ -35,23 +35,23 @@ export default function ConfirmModal({
       className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div role="dialog" aria-modal="true" aria-label={title} className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-full flex flex-col overflow-hidden">
-        <div className="shrink-0 flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100">
-          <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+      <div role="dialog" aria-modal="true" aria-label={title} className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full max-h-full flex flex-col overflow-hidden">
+        <div className="shrink-0 flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+          <div className="w-9 h-9 rounded-xl bg-amber-100 panel-oscuro:bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+            <AlertTriangle className="h-5 w-5 text-amber-600 panel-oscuro:text-amber-400" />
           </div>
-          <h3 className="flex-1 min-w-0 font-bold text-gray-900 text-sm">{title}</h3>
-          <button onClick={onCancel} aria-label="Cerrar" className="shrink-0 text-gray-400 hover:text-gray-600">
+          <h3 className="flex-1 min-w-0 font-bold text-gray-900 panel-oscuro:text-gray-100 text-sm">{title}</h3>
+          <button onClick={onCancel} aria-label="Cerrar" className="shrink-0 text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-600 leading-relaxed">{body}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-600 panel-oscuro:text-gray-400 leading-relaxed">{body}</div>
         {/* Apilados en angosto: dos botones con texto largo ("Archivar la
             promoción") no entran uno al lado del otro en 360 y se cortaban. */}
         <div className="shrink-0 px-5 pb-5 flex flex-col-reverse gap-2 sm:flex-row">
           <button
             onClick={onCancel}
-            className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="flex-1 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
           >
             Cancelar
           </button>
