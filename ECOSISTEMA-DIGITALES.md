@@ -1705,6 +1705,11 @@ Anda de verdad:
 - ✅ **Contexto para la IA** — `iaProducto` e `iaDescripcion`: el **nicho** de la
   cuenta, que es lo que va a leer todo lo que genere la IA. Es la pieza que
   faltaba y la que conecta esta pantalla con la Fase 4.
+  ⚠️ **Sacado de la pantalla el 02/10/26:** ninguna IA lo llegó a leer —cada
+  producto le cuenta su tema por su cuenta— y prometía que lo próximo saldría
+  "con el tema anterior". Las columnas quedan en la base, quietas. Lo que sí
+  mezclaba temas era la firma de la tapa (el nombre de la tienda): ahora se
+  elige por ebook en "Editar el contenido".
 - ✅ **Pagos** — Mercado Pago con la comisión del plan al lado del botón.
 - ✅ Migración `20260901160000_config_digital`: 4 columnas nullables en `Store`,
   comparadas contra `migrate diff` antes de aplicar.
