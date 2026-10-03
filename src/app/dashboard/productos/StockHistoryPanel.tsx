@@ -49,32 +49,32 @@ export default function StockHistoryPanel({ productId }: { productId: string }) 
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+    <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 overflow-hidden">
       <button
         type="button"
         onClick={toggle}
-        className="flex w-full items-center gap-2 px-6 py-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center gap-2 px-6 py-4 text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
       >
         <History className="h-4 w-4 text-indigo-500" />
         Historial de movimientos de stock
-        <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="border-t border-gray-100 px-6 py-4">
+        <div className="border-t border-gray-100 panel-oscuro:border-gray-800 px-6 py-4">
           {loading && items.length === 0 && (
-            <div className="flex items-center justify-center py-6 text-gray-400">
+            <div className="flex items-center justify-center py-6 text-gray-400 panel-oscuro:text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           )}
           {error && <p className="text-sm text-red-500">{error}</p>}
           {!loading && items.length === 0 && !error && (
-            <p className="text-sm text-gray-400">Todavía no hay movimientos registrados.</p>
+            <p className="text-sm text-gray-400 panel-oscuro:text-gray-500">Todavía no hay movimientos registrados.</p>
           )}
           {items.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
-                  <tr className="border-b border-gray-50 text-xs text-gray-400 uppercase tracking-wider">
+                  <tr className="border-b border-gray-50 panel-oscuro:border-gray-800 text-xs text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wider">
                     <th className="text-left py-2 pr-4">Fecha</th>
                     <th className="text-left py-2 pr-4">Variante</th>
                     <th className="text-left py-2 pr-4">Tipo</th>
@@ -84,22 +84,22 @@ export default function StockHistoryPanel({ productId }: { productId: string }) 
                     <th className="text-left py-2">Quién</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 panel-oscuro:divide-gray-800">
                   {items.map((m) => (
                     <tr key={m.id}>
-                      <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">
+                      <td className="py-2 pr-4 text-gray-500 panel-oscuro:text-gray-400 whitespace-nowrap">
                         {new Date(m.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </td>
-                      <td className="py-2 pr-4 text-gray-700 whitespace-nowrap">{m.variantLabel}</td>
+                      <td className="py-2 pr-4 text-gray-700 panel-oscuro:text-gray-300 whitespace-nowrap">{m.variantLabel}</td>
                       <td className="py-2 pr-4">
-                        <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{m.typeLabel}</span>
+                        <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400">{m.typeLabel}</span>
                       </td>
-                      <td className={`py-2 pr-4 font-semibold ${m.delta > 0 ? "text-emerald-600" : m.delta < 0 ? "text-red-500" : "text-gray-400"}`}>
+                      <td className={`py-2 pr-4 font-semibold ${m.delta > 0 ? "text-emerald-600 panel-oscuro:text-emerald-400" : m.delta < 0 ? "text-red-500" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
                         {m.delta > 0 ? `+${m.delta}` : m.delta}
                       </td>
-                      <td className="py-2 pr-4 text-gray-700">{m.stockAfter} u.</td>
-                      <td className="py-2 pr-4 text-gray-400 whitespace-nowrap">{m.reason || "—"}</td>
-                      <td className="py-2 text-gray-500">{m.changedBy}</td>
+                      <td className="py-2 pr-4 text-gray-700 panel-oscuro:text-gray-300">{m.stockAfter} u.</td>
+                      <td className="py-2 pr-4 text-gray-400 panel-oscuro:text-gray-500 whitespace-nowrap">{m.reason || "—"}</td>
+                      <td className="py-2 text-gray-500 panel-oscuro:text-gray-400">{m.changedBy}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -111,7 +111,7 @@ export default function StockHistoryPanel({ productId }: { productId: string }) 
               type="button"
               onClick={() => load(false)}
               disabled={loading}
-              className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+              className="mt-3 text-sm font-medium text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 disabled:opacity-50"
             >
               {loading ? "Cargando..." : "Ver más"}
             </button>

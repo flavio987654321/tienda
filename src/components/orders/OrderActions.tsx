@@ -74,30 +74,30 @@ export default function OrderActions({ orderId, status, trackingCode: initialTra
   if (confirm) {
     return (
       <div className="flex flex-col gap-2 min-w-[220px]">
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+        <div className="flex items-start gap-2 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl px-3 py-2.5">
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-800 font-medium leading-snug">{CONFIRM_MSG[confirm]}</p>
+          <p className="text-xs text-amber-800 panel-oscuro:text-amber-300 font-medium leading-snug">{CONFIRM_MSG[confirm]}</p>
         </div>
         {(confirm === "markShipped" || confirm === "updateTracking") && (
           <input
             value={trackingCode}
             onChange={e => setTracking(e.target.value)}
             placeholder={confirm === "updateTracking" ? "Nuevo código de seguimiento" : "Código de seguimiento (opcional)"}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500"
           />
         )}
         <div className="flex gap-2">
           <button
             onClick={() => run(confirm)}
             disabled={ocupado}
-            className="flex-1 rounded-lg bg-gray-900 hover:bg-gray-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 rounded-lg bg-gray-900 hover:bg-gray-700 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white px-3 py-2 text-xs font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
           >
             {ocupado ? <><Loader2 className="h-3 w-3 animate-spin" /> Guardando…</> : "Sí, confirmar"}
           </button>
           <button
             onClick={() => setConfirm(null)}
             disabled={ocupado}
-            className="flex-1 rounded-lg bg-gray-100 hover:bg-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 px-3 py-2 text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             No, volver
           </button>
@@ -114,7 +114,7 @@ export default function OrderActions({ orderId, status, trackingCode: initialTra
 
   return (
     <div className="space-y-2 min-w-[180px]">
-      {error && <p className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/30 px-3 py-2 text-xs text-red-700 panel-oscuro:text-red-300">{error}</p>}
 
       {status === "PENDING" && (
         <div className="flex flex-wrap gap-2">
@@ -128,7 +128,7 @@ export default function OrderActions({ orderId, status, trackingCode: initialTra
           <button
             onClick={() => setConfirm("cancel")}
             disabled={ocupado}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 hover:text-red-600 panel-oscuro:hover:text-red-400 border border-transparent hover:border-red-200 panel-oscuro:hover:border-red-500/30 px-3 py-2 text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Cancelar
           </button>
@@ -147,7 +147,7 @@ export default function OrderActions({ orderId, status, trackingCode: initialTra
           <button
             onClick={() => setConfirm("cancel")}
             disabled={ocupado}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 hover:text-red-600 panel-oscuro:hover:text-red-400 border border-transparent hover:border-red-200 panel-oscuro:hover:border-red-500/30 px-3 py-2 text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Cancelar pedido
           </button>
@@ -159,14 +159,14 @@ export default function OrderActions({ orderId, status, trackingCode: initialTra
           <button
             onClick={() => setConfirm("markDelivered")}
             disabled={ocupado}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-950 hover:bg-gray-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-950 hover:bg-gray-700 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {rotulo("Marcar entregado")}
           </button>
           <button
             onClick={() => setConfirm("updateTracking")}
             disabled={ocupado}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 hover:bg-indigo-50 hover:text-indigo-700 border border-transparent hover:border-indigo-200 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 border border-transparent hover:border-indigo-200 panel-oscuro:hover:border-indigo-500/30 px-3 py-2 text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Actualizar tracking
           </button>

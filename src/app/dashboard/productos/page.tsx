@@ -73,7 +73,7 @@ export default async function ProductosPage({ searchParams }: Props) {
   if (!store) {
     return (
       <DashboardLayout userName={user.name} userId={user.id}>
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-16 text-center text-gray-400">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-8 sm:p-16 text-center text-gray-400 panel-oscuro:text-gray-500">
           No encontramos tu tienda.
         </div>
       </DashboardLayout>
@@ -247,10 +247,10 @@ export default async function ProductosPage({ searchParams }: Props) {
       <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">
             {esAutos ? "Vehículos" : "Productos"}
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-gray-500 panel-oscuro:text-gray-400 mt-1">
             {totalTienda} {esAutos ? "vehículo" : "producto"}{totalTienda !== 1 ? "s" : ""} en tu tienda
           </p>
         </div>
@@ -287,12 +287,12 @@ export default async function ProductosPage({ searchParams }: Props) {
       </div>
 
       {totalTienda === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-16 text-center">
-          <div className="bg-indigo-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-8 sm:p-16 text-center">
+          <div className="bg-indigo-50 panel-oscuro:bg-indigo-500/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Package className="h-8 w-8 text-indigo-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No tenés productos aún</h3>
-          <p className="text-gray-400 mb-6">Agregá tu primer producto para empezar a vender</p>
+          <h3 className="text-lg font-semibold text-gray-900 panel-oscuro:text-gray-100 mb-2">No tenés productos aún</h3>
+          <p className="text-gray-400 panel-oscuro:text-gray-500 mb-6">Agregá tu primer producto para empezar a vender</p>
           <Link
             href="/dashboard/productos/nuevo"
             className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition-colors"

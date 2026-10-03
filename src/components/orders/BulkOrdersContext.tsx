@@ -69,8 +69,8 @@ export function BulkModeToggle() {
       onClick={() => setActive(!active)}
       className={`self-start sm:self-auto flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
         active
-          ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+          ? "border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300 hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15"
+          : "border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
       }`}
     >
       {active ? <X className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}

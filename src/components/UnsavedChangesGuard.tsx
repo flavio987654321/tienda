@@ -73,14 +73,14 @@ export function UnsavedChangesGuard({ isDirty }: Props) {
       />
 
       {/* Modal */}
-      <div className="relative bg-[#0f172a] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+      <div className="relative bg-[#0f172a] border border-white/10 panel-oscuro:border-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
         <div className="flex items-start gap-4 mb-5">
           <div className="w-10 h-10 bg-amber-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
             <AlertTriangle className="h-5 w-5 text-amber-400" />
           </div>
           <div>
             <p className="text-white font-bold text-base mb-1">Cambios sin guardar</p>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-gray-400 panel-oscuro:text-gray-500 text-sm leading-relaxed">
               Tenés cambios que no guardaste todavía. Si salís ahora los perdés.
             </p>
           </div>
@@ -89,7 +89,7 @@ export function UnsavedChangesGuard({ isDirty }: Props) {
         <div className="flex gap-3">
           <button
             onClick={() => setPendingUrl(null)}
-            className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+            className="flex-1 bg-white/5 panel-oscuro:bg-gray-900/5 hover:bg-white/10 panel-oscuro:hover:bg-gray-900/10 border border-white/10 panel-oscuro:border-gray-900 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
           >
             Quedarme
           </button>

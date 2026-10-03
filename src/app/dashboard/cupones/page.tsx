@@ -96,10 +96,10 @@ function couponStatus(c: CouponRow, now: Date) {
 }
 
 const STATUS_BADGE = {
-  active:    { label: "Vigente",  cls: "bg-green-50 text-green-700 border border-green-200" },
-  expired:   { label: "Vencido",  cls: "bg-red-50 text-red-600 border border-red-200" },
-  exhausted: { label: "Agotado",  cls: "bg-amber-50 text-amber-700 border border-amber-200" },
-  inactive:  { label: "Inactivo", cls: "bg-gray-100 text-gray-500 border border-gray-200" },
+  active:    { label: "Vigente",  cls: "bg-green-50 panel-oscuro:bg-green-500/10 text-green-700 panel-oscuro:text-green-300 border border-green-200 panel-oscuro:border-green-500/30" },
+  expired:   { label: "Vencido",  cls: "bg-red-50 panel-oscuro:bg-red-500/10 text-red-600 panel-oscuro:text-red-400 border border-red-200 panel-oscuro:border-red-500/30" },
+  exhausted: { label: "Agotado",  cls: "bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-700 panel-oscuro:text-amber-300 border border-amber-200 panel-oscuro:border-amber-500/30" },
+  inactive:  { label: "Inactivo", cls: "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-500 panel-oscuro:text-gray-400 border border-gray-200 panel-oscuro:border-gray-700" },
 } as const;
 
 function fmtDate(iso: string | null) {
@@ -240,18 +240,18 @@ function CouponHistory() {
     <div className="mt-12">
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Historial de cupones</h2>
-          <p className="text-sm text-gray-500">Todos los cupones de tu tienda, sus usos y estadísticas</p>
+          <h2 className="text-lg font-bold text-gray-900 panel-oscuro:text-gray-100">Historial de cupones</h2>
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">Todos los cupones de tu tienda, sus usos y estadísticas</p>
         </div>
         {/* Cupo del plan, siempre visible: el tope no se descubre recién cuando
             rebota la creación. Cuenta solo los cupones propios que siguen vivos
             — los de la ruleta y los vencidos no ocupan lugar. */}
         {limit?.max != null && (
-          <div className={`rounded-xl border px-3.5 py-2 ${limit.used >= limit.max ? "border-amber-200 bg-amber-50" : "border-gray-100 bg-white"}`}>
-            <p className={`text-sm font-bold ${limit.used >= limit.max ? "text-amber-700" : "text-gray-900"}`}>
+          <div className={`rounded-xl border px-3.5 py-2 ${limit.used >= limit.max ? "border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10" : "border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900"}`}>
+            <p className={`text-sm font-bold ${limit.used >= limit.max ? "text-amber-700 panel-oscuro:text-amber-300" : "text-gray-900 panel-oscuro:text-gray-100"}`}>
               {limit.used} de {limit.max} cupones
             </p>
-            <p className={`text-xs ${limit.used >= limit.max ? "text-amber-600" : "text-gray-400"}`}>
+            <p className={`text-xs ${limit.used >= limit.max ? "text-amber-600 panel-oscuro:text-amber-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
               {limit.used >= limit.max
                 ? "Llegaste al tope del plan Pro"
                 : "Plan Tienda Pro · no cuentan los vencidos ni los de la ruleta"}
@@ -310,13 +310,13 @@ function CouponHistory() {
               /* Son cinco en dos columnas: la última quedaba sola con un hueco
                  al lado. Con cantidad impar se lleva el renglón entero, y de
                  paso "Descuento total otorgado" entra sin partirse. */
-              className={`rounded-xl border border-gray-100 bg-white p-4 shadow-sm ${
+              className={`rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4 shadow-sm ${
                 i === todas.length - 1 && todas.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""
               }`}
             >
               <p className="text-xl mb-1">{icon}</p>
-              <p className="text-xl font-bold text-gray-900 truncate" title={value}>{value}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xl font-bold text-gray-900 panel-oscuro:text-gray-100 truncate" title={value}>{value}</p>
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
                 {label}
                 <Tip text={tip} align="left" />
               </p>
@@ -332,18 +332,18 @@ function CouponHistory() {
           pestañas, y el buscador es su hermano. */}
       <div className="mb-4 space-y-2 sm:flex sm:items-center sm:gap-3 sm:space-y-0">
       <div className="min-w-0 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-0.5 w-max min-w-full sm:w-auto sm:min-w-0">
+        <div className="flex rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50 p-1 gap-0.5 w-max min-w-full sm:w-auto sm:min-w-0">
           {TABS.map(tab => (
             <button key={tab.id}
               onClick={() => { setStatusFilter(tab.id); setPage(0); }}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                statusFilter === tab.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                statusFilter === tab.id ? "bg-white panel-oscuro:bg-gray-900 text-gray-900 panel-oscuro:text-gray-100 shadow-sm" : "text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-300"
               }`}
             >
               {tab.label}
               {tab.count !== undefined && (
                 <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs font-bold tabular-nums ${
-                  statusFilter === tab.id ? "bg-gray-100 text-gray-600" : "bg-gray-200 text-gray-400"
+                  statusFilter === tab.id ? "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400" : "bg-gray-200 panel-oscuro:bg-gray-700 text-gray-400 panel-oscuro:text-gray-500"
                 }`}>{tab.count}</span>
               )}
             </button>
@@ -351,22 +351,22 @@ function CouponHistory() {
         </div>
       </div>
         <div className="relative flex-1 sm:min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 panel-oscuro:text-gray-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar por código o email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 pl-9 pr-3 py-2 text-sm text-gray-700 panel-oscuro:text-gray-300 placeholder:text-gray-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 panel-oscuro:focus:ring-indigo-500/30"
           />
         </div>
       </div>
 
       {selected.size > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2.5 mb-3">
-          <span className="text-xs font-semibold text-indigo-700">{selected.size} seleccionado{selected.size > 1 ? "s" : ""}</span>
+        <div className="flex items-center justify-between rounded-xl border border-indigo-100 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-4 py-2.5 mb-3">
+          <span className="text-xs font-semibold text-indigo-700 panel-oscuro:text-indigo-300">{selected.size} seleccionado{selected.size > 1 ? "s" : ""}</span>
           <div className="flex items-center gap-3">
-            <button onClick={() => setSelected(new Set())} className="text-xs font-semibold text-gray-500 hover:text-gray-700">
+            <button onClick={() => setSelected(new Set())} className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-300">
               Cancelar
             </button>
             <button onClick={() => deleteCoupons([...selected])} disabled={deleting}
@@ -377,10 +377,10 @@ function CouponHistory() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
+            <Loader2 className="h-6 w-6 animate-spin text-gray-300 panel-oscuro:text-gray-600" />
           </div>
         ) : coupons.length === 0 ? (
           /* El vacío es el único momento en que alguien mira esta pantalla sin
@@ -394,8 +394,8 @@ function CouponHistory() {
             <p className="text-3xl mb-3">🏷️</p>
             {search || statusFilter !== "all" ? (
               <>
-                <p className="text-sm font-semibold text-gray-700">Sin resultados para ese filtro</p>
-                <p className="mx-auto mt-1 max-w-sm text-xs text-gray-400">
+                <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Sin resultados para ese filtro</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs text-gray-400 panel-oscuro:text-gray-500">
                   Probá con otro estado, o buscá por el código del cupón o el email de quien lo ganó.
                 </p>
                 <button onClick={() => { setSearch(""); setStatusFilter("all"); setPage(0); }}
@@ -405,18 +405,18 @@ function CouponHistory() {
               </>
             ) : (
               <>
-                <p className="text-base font-semibold text-gray-800 mb-2">Todavía no hay cupones</p>
-                <p className="mx-auto max-w-md text-sm text-gray-500 leading-relaxed">
+                <p className="text-base font-semibold text-gray-800 panel-oscuro:text-gray-200 mb-2">Todavía no hay cupones</p>
+                <p className="mx-auto max-w-md text-sm text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
                   Un cupón es un código que tu cliente escribe al pagar para llevarse un descuento.
-                  Acá no se crean a mano: <strong className="font-semibold text-gray-700">aparecen solos</strong> cuando
+                  Acá no se crean a mano: <strong className="font-semibold text-gray-700 panel-oscuro:text-gray-300">aparecen solos</strong> cuando
                   alguien gana jugando a la ruleta o la raspadita, y cuando le mandás un recordatorio
                   por WhatsApp a quien dejó el carrito por la mitad.
                 </p>
-                <p className="mx-auto mt-3 max-w-md text-sm text-gray-500 leading-relaxed">
+                <p className="mx-auto mt-3 max-w-md text-sm text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
                   Cada uno es único, con su propio descuento, su límite de usos y su vencimiento.
                   Cuando empiecen a salir vas a ver acá cuáles se canjearon y cuánto descuento entregaste.
                 </p>
-                <p className="mt-4 text-xs text-gray-400">
+                <p className="mt-4 text-xs text-gray-400 panel-oscuro:text-gray-500">
                   Armá tu ruleta o tu raspadita más arriba para que empiecen a salir.
                 </p>
               </>
@@ -426,13 +426,13 @@ function CouponHistory() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/80">
+                <tr className="border-b border-gray-100 panel-oscuro:border-gray-800 bg-gray-50/80 panel-oscuro:bg-gray-800/50">
                   <th className="w-10 px-4 py-3">
                     <input type="checkbox" checked={selected.size > 0 && selected.size === coupons.length}
-                      onChange={toggleSelectAll} className="rounded border-gray-300" aria-label="Seleccionar todos" />
+                      onChange={toggleSelectAll} className="rounded border-gray-300 panel-oscuro:border-gray-600" aria-label="Seleccionar todos" />
                   </th>
                   {(["Código", "Descuento", "Usos", "Vence", "Estado", ""] as const).map(h => (
-                    <th key={h} className={`px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide ${h === "Vence" ? "hidden sm:table-cell" : ""}`}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-left text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide ${h === "Vence" ? "hidden sm:table-cell" : ""}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -443,45 +443,45 @@ function CouponHistory() {
                   const isExp = expandedId === coupon.id;
                   return (
                     <Fragment key={coupon.id}>
-                      <tr className={`border-b border-gray-50 transition-colors ${isExp ? "bg-indigo-50/30" : "hover:bg-gray-50/60"}`}>
+                      <tr className={`border-b border-gray-50 panel-oscuro:border-gray-800 transition-colors ${isExp ? "bg-indigo-50/30 panel-oscuro:bg-indigo-500/10" : "hover:bg-gray-50/60 panel-oscuro:hover:bg-gray-800/50"}`}>
                         <td className="px-4 py-3">
                           <input type="checkbox" checked={selected.has(coupon.id)}
-                            onChange={() => toggleSelected(coupon.id)} className="rounded border-gray-300" aria-label={`Seleccionar ${coupon.code}`} />
+                            onChange={() => toggleSelected(coupon.id)} className="rounded border-gray-300 panel-oscuro:border-gray-600" aria-label={`Seleccionar ${coupon.code}`} />
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <code className="font-mono font-bold text-gray-900 text-xs tracking-wider">{coupon.code}</code>
+                            <code className="font-mono font-bold text-gray-900 panel-oscuro:text-gray-100 text-xs tracking-wider">{coupon.code}</code>
                             {coupon.winnerEmail && (
                               <span title={`Personal de: ${coupon.winnerEmail}`}
-                                className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-xs text-indigo-600 font-semibold cursor-default">🎡</span>
+                                className="rounded-md bg-indigo-100 panel-oscuro:bg-indigo-500/15 px-1.5 py-0.5 text-xs text-indigo-600 panel-oscuro:text-indigo-400 font-semibold cursor-default">🎡</span>
                             )}
                             {coupon.isActivePrizeTemplate && (
                               <span title="Es la plantilla de un premio activo en la ruleta — si lo borrás, ese premio deja de entregarse a los próximos ganadores"
-                                className="rounded-md bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 font-semibold cursor-default">🎯 Premio activo</span>
+                                className="rounded-md bg-amber-100 panel-oscuro:bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-700 panel-oscuro:text-amber-300 font-semibold cursor-default">🎯 Premio activo</span>
                             )}
                             {coupon.label?.includes("WhatsApp") && (
                               <span title="Cupón creado para recuperación por WhatsApp"
-                                className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs text-green-700 font-semibold cursor-default">💬 WA</span>
+                                className="rounded-md bg-green-100 panel-oscuro:bg-green-500/15 px-1.5 py-0.5 text-xs text-green-700 panel-oscuro:text-green-300 font-semibold cursor-default">💬 WA</span>
                             )}
                             <button onClick={() => copyCode(coupon.code)}
-                              className="text-gray-300 hover:text-gray-500 transition-colors" aria-label="Copiar código">
+                              className="text-gray-300 panel-oscuro:text-gray-600 hover:text-gray-500 panel-oscuro:hover:text-gray-400 transition-colors" aria-label="Copiar código">
                               {copied === coupon.code
                                 ? <Check className="h-3.5 w-3.5 text-green-500" />
                                 : <Copy className="h-3.5 w-3.5" />}
                             </button>
                           </div>
-                          {coupon.label && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[160px]">{coupon.label}</p>}
+                          {coupon.label && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5 truncate max-w-[160px]">{coupon.label}</p>}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-gray-800">
+                        <td className="px-4 py-3 font-semibold text-gray-800 panel-oscuro:text-gray-200">
                           {coupon.discountType === "percentage" ? `${coupon.discountValue}%` : fmtARS(coupon.discountValue)}
                         </td>
                         <td className="px-4 py-3 tabular-nums">
-                          <span className={coupon.usedCount > 0 ? "font-bold text-gray-900" : "text-gray-400"}>
+                          <span className={coupon.usedCount > 0 ? "font-bold text-gray-900 panel-oscuro:text-gray-100" : "text-gray-400 panel-oscuro:text-gray-500"}>
                             {coupon.usedCount}
                           </span>
-                          <span className="text-gray-400">/{coupon.maxUses ?? "∞"}</span>
+                          <span className="text-gray-400 panel-oscuro:text-gray-500">/{coupon.maxUses ?? "∞"}</span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-500 hidden sm:table-cell">{fmtDate(coupon.expiresAt)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 panel-oscuro:text-gray-400 hidden sm:table-cell">{fmtDate(coupon.expiresAt)}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.cls}`}>
                             {badge.label}
@@ -491,13 +491,13 @@ function CouponHistory() {
                           <div className="flex items-center justify-end gap-1.5">
                             {coupon.usedCount > 0 && (
                               <button onClick={() => handleExpand(coupon.id)}
-                                className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                                className="rounded-lg border border-gray-200 panel-oscuro:border-gray-700 p-1.5 text-gray-400 panel-oscuro:text-gray-500 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 hover:text-gray-600 panel-oscuro:hover:text-gray-400 transition-colors"
                                 aria-label={isExp ? "Ocultar usos" : "Ver usos"}>
                                 {isExp ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                               </button>
                             )}
                             <button onClick={() => deleteCoupons([coupon.id])} disabled={deleting}
-                              className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-50"
+                              className="rounded-lg border border-gray-200 panel-oscuro:border-gray-700 p-1.5 text-gray-400 panel-oscuro:text-gray-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 hover:text-red-500 hover:border-red-200 panel-oscuro:hover:border-red-500/30 transition-colors disabled:opacity-50"
                               aria-label="Eliminar cupón">
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -505,19 +505,19 @@ function CouponHistory() {
                         </td>
                       </tr>
                       {isExp && (
-                        <tr className="bg-indigo-50/20 border-b border-gray-50">
+                        <tr className="bg-indigo-50/20 panel-oscuro:bg-indigo-500/10 border-b border-gray-50 panel-oscuro:border-gray-800">
                           <td colSpan={7} className="px-4 pt-1 pb-4">
                             {usesLoading ? (
-                              <div className="flex items-center gap-2 py-4 text-xs text-gray-400">
+                              <div className="flex items-center gap-2 py-4 text-xs text-gray-400 panel-oscuro:text-gray-500">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando usos…
                               </div>
                             ) : uses.length === 0 ? (
-                              <p className="py-3 text-xs text-gray-400">Sin pedidos registrados con este cupón</p>
+                              <p className="py-3 text-xs text-gray-400 panel-oscuro:text-gray-500">Sin pedidos registrados con este cupón</p>
                             ) : (
-                              <div className="rounded-xl border border-indigo-100 overflow-hidden mt-2">
+                              <div className="rounded-xl border border-indigo-100 panel-oscuro:border-indigo-500/30 overflow-hidden mt-2">
                                 <table className="w-full text-xs">
                                   <thead>
-                                    <tr className="bg-indigo-50 border-b border-indigo-100">
+                                    <tr className="bg-indigo-50 panel-oscuro:bg-indigo-500/10 border-b border-indigo-100 panel-oscuro:border-indigo-500/30">
                                       <th className="px-3 py-2 text-left font-semibold text-indigo-400 uppercase tracking-wide">Comprador</th>
                                       <th className="px-3 py-2 text-left font-semibold text-indigo-400 uppercase tracking-wide hidden sm:table-cell">Email</th>
                                       <th className="px-3 py-2 text-right font-semibold text-indigo-400 uppercase tracking-wide">Pedido</th>
@@ -527,12 +527,12 @@ function CouponHistory() {
                                   </thead>
                                   <tbody>
                                     {uses.map(u => (
-                                      <tr key={u.id} className="border-b border-indigo-50 last:border-0 hover:bg-indigo-50/40 transition-colors">
-                                        <td className="px-3 py-2 font-medium text-gray-700">{u.buyerName}</td>
-                                        <td className="px-3 py-2 text-gray-500 hidden sm:table-cell">{u.buyerEmail}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-gray-900 tabular-nums">{fmtARS(u.total)}</td>
-                                        <td className="px-3 py-2 text-right font-semibold text-green-600 tabular-nums">−{fmtARS(u.discountAmount)}</td>
-                                        <td className="px-3 py-2 text-right text-gray-400 hidden sm:table-cell">{fmtDate(u.createdAt)}</td>
+                                      <tr key={u.id} className="border-b border-indigo-50 panel-oscuro:border-indigo-500/20 last:border-0 hover:bg-indigo-50/40 panel-oscuro:hover:bg-indigo-500/10 transition-colors">
+                                        <td className="px-3 py-2 font-medium text-gray-700 panel-oscuro:text-gray-300">{u.buyerName}</td>
+                                        <td className="px-3 py-2 text-gray-500 panel-oscuro:text-gray-400 hidden sm:table-cell">{u.buyerEmail}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-gray-900 panel-oscuro:text-gray-100 tabular-nums">{fmtARS(u.total)}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-green-600 panel-oscuro:text-green-400 tabular-nums">−{fmtARS(u.discountAmount)}</td>
+                                        <td className="px-3 py-2 text-right text-gray-400 panel-oscuro:text-gray-500 hidden sm:table-cell">{fmtDate(u.createdAt)}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -551,14 +551,14 @@ function CouponHistory() {
         )}
 
         {totalPages > 1 && !loading && (
-          <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
+          <div className="flex items-center justify-between border-t border-gray-100 panel-oscuro:border-gray-800 px-4 py-3">
             <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
-              className="text-xs font-semibold text-gray-500 disabled:opacity-30 hover:text-gray-800 transition-colors">
+              className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 disabled:opacity-30 hover:text-gray-800 panel-oscuro:hover:text-gray-200 transition-colors">
               ← Anterior
             </button>
-            <span className="text-xs text-gray-400 tabular-nums">Página {page + 1} de {totalPages}</span>
+            <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">Página {page + 1} de {totalPages}</span>
             <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}
-              className="text-xs font-semibold text-gray-500 disabled:opacity-30 hover:text-gray-800 transition-colors">
+              className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 disabled:opacity-30 hover:text-gray-800 panel-oscuro:hover:text-gray-200 transition-colors">
               Siguiente →
             </button>
           </div>
@@ -567,7 +567,7 @@ function CouponHistory() {
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide pointer-events-none">
-          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">
+          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl panel-oscuro:bg-gray-800 panel-oscuro:ring-1 panel-oscuro:ring-white/10">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />{toast}
           </div>
         </div>
@@ -910,19 +910,19 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-2 sm:p-4">
-      <div className="relative flex w-full max-w-5xl max-h-[95vh] sm:max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl flex-col">
+      <div className="relative flex w-full max-w-5xl max-h-[95vh] sm:max-h-[92vh] overflow-hidden rounded-2xl bg-white panel-oscuro:bg-gray-900 shadow-2xl flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 sm:px-6 py-4 shrink-0">
+        <div className="flex items-center justify-between gap-2 border-b border-gray-100 panel-oscuro:border-gray-800 px-4 sm:px-6 py-4 shrink-0">
           <div className="flex gap-2 min-w-0">
             {(["SPIN", "SCRATCH"] as const).map((t) => (
               <button key={t} onClick={() => set("type", t)}
-                className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${form.type === t ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${form.type === t ? "bg-indigo-600 text-white" : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-200 panel-oscuro:hover:bg-gray-700"}`}>
                 {t === "SPIN" ? "🎡 Ruleta" : "🪙 Raspadita"}
               </button>
             ))}
           </div>
-          <button onClick={handleClose} className="shrink-0 text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+          <button onClick={handleClose} className="shrink-0 text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400"><X className="h-5 w-5" /></button>
         </div>
 
         {/* Tabs.
@@ -932,14 +932,14 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
             el renglón scrollea, que es lo que el `overflow-x-auto` quería hacer
             desde el principio. En angosto se abrevia el rótulo largo, así casi no
             hace falta arrastrar. */}
-        <div className="flex border-b border-gray-100 shrink-0 overflow-x-auto">
+        <div className="flex border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0 overflow-x-auto">
           {([
             { id: "general", label: "General", corto: "General", icon: Settings },
             { id: "styles",  label: "Estilos", corto: "Estilos", icon: Palette },
             { id: "prizes",  label: "Premios y probabilidades", corto: "Premios", icon: Gift },
           ] as const).map(({ id, label, corto, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-4 sm:px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === id ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-4 sm:px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === id ? "border-indigo-600 text-indigo-600 panel-oscuro:text-indigo-400" : "border-transparent text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-300"}`}>
               <Icon className="h-4 w-4 shrink-0" />
               <span className="sm:hidden">{corto}</span>
               <span className="hidden sm:inline">{label}</span>
@@ -962,12 +962,12 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                       treinta caracteres. */}
                   {([["title","Título"],["subtitle","Subtítulo"],["buttonText","Texto del botón de girar"],["reclaimText","Texto del botón de reclamar"]] as const).map(([k,l]) => (
                     <div key={k}>
-                      <label className="mb-1 block text-xs font-semibold text-gray-500">{l}</label>
+                      <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">{l}</label>
                       <CampoAuto value={form[k]} onChange={(v) => set(k, v)} ariaLabel={l} className="px-3 py-2" />
                     </div>
                   ))}
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs font-semibold text-gray-500">Texto legal (opcional)</label>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Texto legal (opcional)</label>
                     <CampoAuto
                       value={form.legalText}
                       onChange={(v) => set("legalText", v)}
@@ -977,14 +977,14 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                     />
                   </div>
                 </div>
-                <hr className="border-gray-100" />
+                <hr className="border-gray-100 panel-oscuro:border-gray-800" />
                 {form.type === "SPIN" && (
                   <div>
-                    <label className="mb-2 block text-xs font-semibold text-gray-500">Centro de la ruleta</label>
+                    <label className="mb-2 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Centro de la ruleta</label>
                     <div className="flex gap-3 mb-3">
                       {(["text","logo"] as const).map((t) => (
                         <button key={t} onClick={() => set("centerType", t)}
-                          className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${form.centerType === t ? "bg-indigo-50 border border-indigo-400 text-indigo-700" : "bg-gray-100 text-gray-600"}`}>
+                          className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${form.centerType === t ? "bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-400 text-indigo-700 panel-oscuro:text-indigo-300" : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400"}`}>
                           {t === "text" ? "Texto" : "Logo"}
                         </button>
                       ))}
@@ -995,12 +995,12 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                     )}
                   </div>
                 )}
-                <hr className="border-gray-100" />
+                <hr className="border-gray-100 panel-oscuro:border-gray-800" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-gray-500">¿Cuándo aparece?</label>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">¿Cuándo aparece?</label>
                     <select value={form.triggerType} onChange={(e) => set("triggerType", e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400">
+                      className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400">
                       <option value="FIRST_CLICK">Luego del primer click</option>
                       <option value="ON_ENTER">Al entrar a la tienda</option>
                       <option value="DELAY">Después de X segundos</option>
@@ -1008,26 +1008,26 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                   </div>
                   {form.triggerType === "DELAY" && (
                     <div>
-                      <label className="mb-1 block text-xs font-semibold text-gray-500">Segundos</label>
+                      <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Segundos</label>
                       <input type="number" min={1} max={60} value={form.triggerDelay ?? ""}
                         onChange={(e) => set("triggerDelay", parseInt(e.target.value) || null)}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                        className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                     </div>
                   )}
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-gray-500">¿Cuántas veces se muestra?</label>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">¿Cuántas veces se muestra?</label>
                     <select value={form.showFrequency} onChange={(e) => set("showFrequency", e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400">
+                      className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400">
                       <option value="ONCE_EVER">Una vez por dispositivo</option>
                       <option value="ONCE_SESSION">Una vez por sesión</option>
                       <option value="ALWAYS">Siempre que ingresa</option>
                     </select>
                   </div>
-                  <div className="flex items-start gap-3 pt-1 rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2.5 sm:col-span-2">
-                    <ToggleRight className="h-6 w-6 text-indigo-600 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 pt-1 rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-100 panel-oscuro:border-indigo-500/30 px-3 py-2.5 sm:col-span-2">
+                    <ToggleRight className="h-6 w-6 text-indigo-600 panel-oscuro:text-indigo-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">Requerir email para girar — siempre activo</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Sin el email del visitante no hay forma de avisarle si gana, ni de identificarlo si te escribe reclamando su premio — por eso no se puede desactivar.</p>
+                      <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Requerir email para girar — siempre activo</p>
+                      <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">Sin el email del visitante no hay forma de avisarle si gana, ni de identificarlo si te escribe reclamando su premio — por eso no se puede desactivar.</p>
                     </div>
                   </div>
                 </div>
@@ -1046,28 +1046,28 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                     ["centerBg","Fondo del centro"],["centerBorder","Borde del centro"],["centerText","Texto central"],
                   ] as [keyof WidgetStyles, string][]).map(([key, label]) => (
                     <div key={key}>
-                      <label className="mb-1 block text-xs font-semibold text-gray-500">{label}</label>
+                      <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">{label}</label>
                       <div className="flex items-center gap-2">
                         <input type="color" value={form.styles[key] as string}
                           onChange={(e) => setStyle(key, e.target.value)}
-                          className="h-9 w-12 cursor-pointer rounded-lg border border-gray-200 p-0.5" />
+                          className="h-9 w-12 cursor-pointer rounded-lg border border-gray-200 panel-oscuro:border-gray-700 p-0.5" />
                         <input value={form.styles[key] as string} onChange={(e) => setStyle(key, e.target.value)}
-                          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-400" />
+                          className="flex-1 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-indigo-400" />
                       </div>
                     </div>
                   ))}
                 </div>
                 {form.type === "SPIN" && (
                   <div>
-                    <label className="mb-2 block text-xs font-semibold text-gray-500">Colores de los sectores</label>
+                    <label className="mb-2 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Colores de los sectores</label>
                     <div className="flex flex-wrap gap-2">
                       {form.styles.spinnerColors.map((c, i) => (
                         <input key={i} type="color" value={c}
                           onChange={(e) => { const cols = [...form.styles.spinnerColors]; cols[i] = e.target.value; setStyle("spinnerColors", cols); }}
-                          className="h-8 w-10 cursor-pointer rounded-lg border border-gray-200 p-0.5" />
+                          className="h-8 w-10 cursor-pointer rounded-lg border border-gray-200 panel-oscuro:border-gray-700 p-0.5" />
                       ))}
                       <button onClick={() => setStyle("spinnerColors", [...form.styles.spinnerColors, "#6366f1"])}
-                        className="flex items-center gap-1 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-500">
+                        className="flex items-center gap-1 rounded-lg border border-dashed border-gray-300 panel-oscuro:border-gray-600 px-3 py-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400 hover:border-indigo-400 hover:text-indigo-500">
                         <Plus className="h-3 w-3" /> Color
                       </button>
                     </div>
@@ -1080,15 +1080,15 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
             {tab === "prizes" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-gray-500">Configurá los premios y sus chances. Las probabilidades deben sumar 100.</p>
+                  <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">Configurá los premios y sus chances. Las probabilidades deben sumar 100.</p>
                   <div className="flex items-center gap-2 shrink-0">
                     {form.prizes.length > 1 && (
                       <button type="button" onClick={distributeEvenly}
-                        className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100">
+                        className="rounded-full border border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15">
                         Repartir en partes iguales
                       </button>
                     )}
-                    <div className={`text-sm font-bold rounded-full px-3 py-1 ${sum === 100 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                    <div className={`text-sm font-bold rounded-full px-3 py-1 ${sum === 100 ? "bg-green-100 panel-oscuro:bg-green-500/15 text-green-700 panel-oscuro:text-green-300" : "bg-red-100 panel-oscuro:bg-red-500/15 text-red-600 panel-oscuro:text-red-400"}`}>
                       {sum}/100
                     </div>
                   </div>
@@ -1096,78 +1096,78 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
 
                 <div className="space-y-3">
                   {form.prizes.map((p, idx) => (
-                    <div key={idx} className={`rounded-2xl border p-4 ${p.isNoPrize ? "border-gray-200 bg-gray-50" : "border-indigo-100 bg-white"}`}>
+                    <div key={idx} className={`rounded-2xl border p-4 ${p.isNoPrize ? "border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50" : "border-indigo-100 panel-oscuro:border-indigo-500/30 bg-white panel-oscuro:bg-gray-900"}`}>
                       <div className="flex items-start gap-3">
                         <div className="flex-1 grid gap-3 sm:grid-cols-2">
 
                           {/* Tipo y valor del descuento — PRIMERO: el % real manda sobre el cartel */}
                           {!p.isNoPrize && (
                             <div>
-                              <label className="mb-1 block text-xs font-semibold text-gray-500">Tipo de descuento</label>
+                              <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Tipo de descuento</label>
                               <div className="flex gap-2">
                                 <select value={p.discountType} onChange={(e) => updatePrize(idx, { discountType: e.target.value as "percentage" | "fixed" })}
-                                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400">
+                                  className="flex-1 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400">
                                   <option value="percentage">Porcentaje (%)</option>
                                   <option value="fixed">Monto fijo ($)</option>
                                 </select>
                                 <input type="number" min={1} value={p.discountValue || ""}
                                   onChange={(e) => updatePrize(idx, { discountValue: parseFloat(e.target.value) || 0 })}
                                   placeholder={p.discountType === "percentage" ? "20" : "5000"}
-                                  className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                                  className="w-24 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                               </div>
                             </div>
                           )}
 
                           {/* Etiqueta — se arma sola con el % real; el guardado bloquea si no coincide */}
                           <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-500">Etiqueta (se muestra en la ruleta)</label>
+                            <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Etiqueta (se muestra en la ruleta)</label>
                             <CampoAuto value={p.label} onChange={(v) => updatePrize(idx, { label: v })}
                               placeholder={p.isNoPrize ? "Sin premio" : "Se completa sola con el %"}
                               ariaLabel="Etiqueta del premio" className="px-3 py-2" />
-                            {!p.isNoPrize && <p className="mt-1 text-xs text-gray-400">Se arma sola con el descuento. Si la cambiás, tiene que seguir coincidiendo con el %.</p>}
+                            {!p.isNoPrize && <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">Se arma sola con el descuento. Si la cambiás, tiene que seguir coincidiendo con el %.</p>}
                           </div>
 
                           {/* Probabilidad */}
                           <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-500">Probabilidad (%)</label>
+                            <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Probabilidad (%)</label>
                             <input type="number" min={0} max={100} value={p.probability}
                               onChange={(e) => updatePrize(idx, { probability: parseInt(e.target.value) || 0 })}
-                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                              className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                           </div>
 
                           {!p.isNoPrize && (<>
                             {/* Validez para el ganador */}
                             <div>
-                              <label className="mb-1 block text-xs font-semibold text-gray-500">⏱️ Validez del cupón para el ganador (horas) *</label>
+                              <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">⏱️ Validez del cupón para el ganador (horas) *</label>
                               <input type="number" min={1} value={p.winHours ?? ""}
                                 onChange={(e) => updatePrize(idx, { winHours: parseInt(e.target.value) || 0 })}
                                 placeholder="48"
-                                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
-                              <p className="mt-1 text-xs text-gray-400">Cuánto tiempo tiene cada ganador para usar su cupón desde que lo gana.</p>
+                                className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                              <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">Cuánto tiempo tiene cada ganador para usar su cupón desde que lo gana.</p>
                             </div>
 
                             {/* Usos y fecha límite de la promo */}
                             <div>
-                              <label className="mb-1 block text-xs font-semibold text-gray-500">🏆 Cantidad de ganadores / 📅 Fecha límite de esta promo (opcional)</label>
+                              <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">🏆 Cantidad de ganadores / 📅 Fecha límite de esta promo (opcional)</label>
                               <div className="flex gap-2">
                                 <input type="number" min={1} value={p.maxUses ?? ""}
                                   onChange={(e) => updatePrize(idx, { maxUses: parseInt(e.target.value) || null })}
                                   placeholder="∞"
-                                  className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                                  className="w-20 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                                 <input type="date" value={p.expiresAt ?? ""}
                                   onChange={(e) => updatePrize(idx, { expiresAt: e.target.value || null })}
-                                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                                  className="flex-1 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                               </div>
-                              <p className="mt-1 text-xs text-gray-400">El número es cuántas personas en total pueden ganar este premio (después pasa a “sin premio” en la ruleta, aunque toque ese sector). La fecha corta la promo entera antes de esa cantidad si llega primero — no afecta el plazo del ganador de arriba.</p>
+                              <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">El número es cuántas personas en total pueden ganar este premio (después pasa a “sin premio” en la ruleta, aunque toque ese sector). La fecha corta la promo entera antes de esa cantidad si llega primero — no afecta el plazo del ganador de arriba.</p>
                             </div>
 
                             {/* Código auto-generado */}
                             {p.couponCode && (
                               <div className="sm:col-span-2">
-                                <label className="mb-1 block text-xs font-semibold text-gray-500">Código generado (lo recibe el cliente al ganar)</label>
+                                <label className="mb-1 block text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Código generado (lo recibe el cliente al ganar)</label>
                                 <div className="flex items-center gap-2">
-                                  <code className="flex-1 rounded-xl bg-indigo-50 px-3 py-2 text-sm font-black tracking-widest text-indigo-700">{p.couponCode}</code>
-                                  <button onClick={() => copyCode(p.couponCode!)} className="text-gray-400 hover:text-gray-600">
+                                  <code className="flex-1 rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-3 py-2 text-sm font-black tracking-widest text-indigo-700 panel-oscuro:text-indigo-300">{p.couponCode}</code>
+                                  <button onClick={() => copyCode(p.couponCode!)} className="text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
                                     {copied === p.couponCode ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                                   </button>
                                 </div>
@@ -1175,13 +1175,13 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                             )}
                             {!p.couponCode && (
                               <div className="sm:col-span-2">
-                                <p className="text-xs text-gray-400 italic">El código se genera automáticamente al guardar.</p>
+                                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 italic">El código se genera automáticamente al guardar.</p>
                               </div>
                             )}
                           </>)}
                         </div>
 
-                        <button onClick={() => removePrize(idx)} className="mt-1 text-red-400 hover:text-red-600 shrink-0">
+                        <button onClick={() => removePrize(idx)} className="mt-1 text-red-400 hover:text-red-600 panel-oscuro:hover:text-red-400 shrink-0">
                           <X className="h-4 w-4" />
                         </button>
                       </div>
@@ -1190,19 +1190,19 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                 </div>
 
                 {probError && (
-                  <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+                  <div className="flex items-center gap-2 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 px-4 py-3 text-sm text-red-600 panel-oscuro:text-red-400">
                     <AlertCircle className="h-4 w-4 shrink-0" />{probError}
                   </div>
                 )}
 
                 <div className="flex gap-2">
                   <button onClick={addPrize}
-                    className="flex items-center gap-2 rounded-xl border border-dashed border-indigo-300 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">
+                    className="flex items-center gap-2 rounded-xl border border-dashed border-indigo-300 panel-oscuro:border-indigo-500/40 px-4 py-2 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10">
                     <Plus className="h-4 w-4" /> Agregar premio
                   </button>
                   {!form.prizes.some((p) => p.isNoPrize) && (
                     <button onClick={addNoPrize}
-                      className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50">
+                      className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-600 px-4 py-2 text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50">
                       <Plus className="h-4 w-4" /> Sin premio
                     </button>
                   )}
@@ -1212,9 +1212,9 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
           </div>
 
           {/* Preview — oculto en pantallas pequeñas */}
-          <div className="hidden lg:flex w-52 shrink-0 border-l border-gray-100 bg-gray-50 px-4 py-4 flex-col items-center gap-3 overflow-y-auto">
+          <div className="hidden lg:flex w-52 shrink-0 border-l border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 px-4 py-4 flex-col items-center gap-3 overflow-y-auto">
             <style>{`@keyframes preview-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0">Vista previa</p>
+            <p className="text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide shrink-0">Vista previa</p>
             {/* shrink-0: sin esto flexbox aplasta la tarjeta cuando falta alto y,
                 al tener overflow-hidden, recortaba el final (el texto legal) en
                 vez de dejar scrollear el panel. */}
@@ -1236,7 +1236,7 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                 {form.legalText && <p className="text-center text-xs opacity-50" style={{ color: form.styles.textColor }}>{form.legalText}</p>}
               </div>
             </div>
-            <p className="text-[10px] text-gray-400 text-center leading-relaxed shrink-0">Demo animado — así lo ve tu cliente</p>
+            <p className="text-[10px] text-gray-400 panel-oscuro:text-gray-500 text-center leading-relaxed shrink-0">Demo animado — así lo ve tu cliente</p>
           </div>
         </div>
 
@@ -1248,18 +1248,18 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
             aclaración va arriba, en su propio renglón, y los botones abajo
             repartidos a la mitad — con el de guardar más ancho, que es el que se
             aprieta. De `sm` para arriba vuelve la fila de siempre. */}
-        <div className="border-t border-gray-100 px-4 sm:px-6 py-4 shrink-0">
+        <div className="border-t border-gray-100 panel-oscuro:border-gray-800 px-4 sm:px-6 py-4 shrink-0">
           {(generalError || probError) && (
-            <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-600 mb-3">
+            <div className="flex items-start gap-2 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 px-4 py-2.5 text-sm text-red-600 panel-oscuro:text-red-400 mb-3">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <span className="min-w-0">{generalError || probError}</span>
             </div>
           )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-gray-400">Los códigos se generan automáticamente al guardar.</p>
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Los códigos se generan automáticamente al guardar.</p>
             <div className="flex gap-3 shrink-0">
               <button onClick={handleClose}
-                className="flex-1 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 sm:flex-none sm:py-2">
+                className="flex-1 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 sm:flex-none sm:py-2">
                 Cancelar
               </button>
               <button onClick={handleSave} disabled={saving}
@@ -1399,7 +1399,7 @@ export default function CuponesPage() {
       <AvisosDeSeccionCliente seccion="/dashboard/cupones" />
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide pointer-events-none">
-          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">
+          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl panel-oscuro:bg-gray-800 panel-oscuro:ring-1 panel-oscuro:ring-white/10">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />{toast}
           </div>
         </div>
@@ -1432,20 +1432,20 @@ export default function CuponesPage() {
             panel: el h1 a la izquierda con un bloque centrado abajo era lo que se
             veía desprolijo. */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Cupones y premios</h1>
-          <p className="mt-1.5 max-w-xl text-base text-gray-600 leading-relaxed">
+          <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Cupones y premios</h1>
+          <p className="mt-1.5 max-w-xl text-base text-gray-600 panel-oscuro:text-gray-400 leading-relaxed">
             Convertí visitas en ventas con un juego: un descuento aburrido se ignora, un premio ganado se usa.
           </p>
         </div>
 
         {!loading && storeTemplateId && GAMIFICATION_EXCLUDED_TEMPLATES.has(storeTemplateId) ? (
-          <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-10 text-center">
             <p className="text-3xl mb-3">🚗</p>
-            <p className="text-sm font-semibold text-gray-700 mb-1">La ruleta no está disponible para este tipo de tienda</p>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">Los diseños de Auto Motor y Auto Drive no incluyen este juego. Podés seguir usando cupones manuales y de recuperación por WhatsApp más abajo.</p>
+            <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 mb-1">La ruleta no está disponible para este tipo de tienda</p>
+            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 max-w-sm mx-auto">Los diseños de Auto Motor y Auto Drive no incluyen este juego. Podés seguir usando cupones manuales y de recuperación por WhatsApp más abajo.</p>
           </div>
         ) : loading ? (
-          <div className="rounded-2xl border border-gray-100 bg-white p-8 sm:p-16 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-8 sm:p-16 text-center text-sm text-gray-400 panel-oscuro:text-gray-500 flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
           </div>
         ) : !widget ? (
@@ -1470,11 +1470,11 @@ export default function CuponesPage() {
                 { icon: "📧", title: "Captura emails", desc: "Requerís el email antes de jugar — crecés tu lista de forma orgánica" },
                 { icon: "🔒", title: "Sin trampas", desc: "El premio se determina en el servidor, nadie puede manipularlo" },
               ].map(({ icon, title, desc }) => (
-                <div key={title} className="flex items-start gap-3 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left sm:block sm:text-center">
+                <div key={title} className="flex items-start gap-3 rounded-2xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 p-4 text-left sm:block sm:text-center">
                   <span className="text-2xl shrink-0 leading-none sm:block sm:mb-2">{icon}</span>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-gray-800 mb-1">{title}</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
+                    <p className="text-xs font-bold text-gray-800 panel-oscuro:text-gray-200 mb-1">{title}</p>
+                    <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">{desc}</p>
                   </div>
                 </div>
               ))}
@@ -1483,8 +1483,8 @@ export default function CuponesPage() {
             {/* La consigna que estaba en el encabezado centrado vive acá, que es
                 donde hay que elegir de verdad. Como h2, además, la página pasa a
                 tener una jerarquía real: título → por qué sirve → qué elegir. */}
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Elegí cómo lo descubren tus clientes</h2>
-            <p className="text-sm text-gray-500 mb-5">Los dos entregan el mismo cupón: cambia la forma de revelarlo.</p>
+            <h2 className="text-lg font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Elegí cómo lo descubren tus clientes</h2>
+            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mb-5">Los dos entregan el mismo cupón: cambia la forma de revelarlo.</p>
 
             {/* Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
@@ -1598,8 +1598,8 @@ export default function CuponesPage() {
             </div>
 
             {/* Cómo funciona — barra inferior */}
-            <div className="border-t border-gray-100 pt-6">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest text-center mb-4">Cómo funciona</p>
+            <div className="border-t border-gray-100 panel-oscuro:border-gray-800 pt-6">
+              <p className="text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest text-center mb-4">Cómo funciona</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { n: "1", text: "Configurás los premios y probabilidades" },
@@ -1607,9 +1607,9 @@ export default function CuponesPage() {
                   { n: "3", text: "El cliente juega y gana un código" },
                   { n: "4", text: "Lo aplica en el checkout" },
                 ].map(({ n, text }) => (
-                  <div key={n} className="flex items-start gap-2.5 rounded-xl bg-gray-50 px-3 py-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[10px] font-bold text-white mt-0.5">{n}</span>
-                    <span className="text-xs text-gray-600 leading-snug">{text}</span>
+                  <div key={n} className="flex items-start gap-2.5 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 px-3 py-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[10px] font-bold text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 mt-0.5">{n}</span>
+                    <span className="text-xs text-gray-600 panel-oscuro:text-gray-400 leading-snug">{text}</span>
                   </div>
                 ))}
               </div>
@@ -1619,7 +1619,7 @@ export default function CuponesPage() {
           // Widget configurado
           <div className="space-y-4">
             {/* Card principal — dos columnas */}
-            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
               <div className="flex flex-col md:flex-row">
 
                 {/* Columna izquierda: info + premios */}
@@ -1627,26 +1627,26 @@ export default function CuponesPage() {
                   {/* Header row */}
                   <div className="flex items-start justify-between gap-4 mb-5">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-2xl">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-2xl">
                         {widget.type === "SPIN" ? "🎡" : "🪙"}
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-lg font-bold text-gray-900">{widget.type === "SPIN" ? "Ruleta" : "Raspadita"}</span>
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${widget.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          <span className="text-lg font-bold text-gray-900 panel-oscuro:text-gray-100">{widget.type === "SPIN" ? "Ruleta" : "Raspadita"}</span>
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${widget.isActive ? "bg-green-100 panel-oscuro:bg-green-500/15 text-green-700 panel-oscuro:text-green-300" : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-500 panel-oscuro:text-gray-400"}`}>
                             {widget.isActive ? "● Activo en tu tienda" : "Inactivo"}
                           </span>
                         </div>
                         {/* Behavior chips */}
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                          <span className="rounded-md bg-gray-100 panel-oscuro:bg-gray-800 px-2 py-0.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
                             {widget.triggerType === "FIRST_CLICK" ? "Al primer click" : widget.triggerType === "ON_ENTER" ? "Al entrar" : `Tras ${widget.triggerDelay}s`}
                           </span>
-                          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                          <span className="rounded-md bg-gray-100 panel-oscuro:bg-gray-800 px-2 py-0.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
                             {widget.showFrequency === "ONCE_EVER" ? "1 vez por dispositivo" : widget.showFrequency === "ONCE_SESSION" ? "1 vez por sesión" : "Siempre"}
                           </span>
                           {widget.emailRequired && (
-                            <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600">📧 Email requerido</span>
+                            <span className="rounded-md bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-2 py-0.5 text-xs text-indigo-600 panel-oscuro:text-indigo-400">📧 Email requerido</span>
                           )}
                         </div>
                       </div>
@@ -1654,15 +1654,15 @@ export default function CuponesPage() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 shrink-0">
                       <button onClick={() => { setEditorDefaultTab("general"); setShowEditor(true); }}
-                        className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                        className="flex items-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50">
                         <Settings className="h-3.5 w-3.5" /> Editar
                       </button>
                       <button onClick={toggleWidget} disabled={toggling} className="disabled:opacity-50">
                         {toggling
                           ? <Loader2 className="h-7 w-7 animate-spin text-indigo-400" />
                           : widget.isActive
-                            ? <ToggleRight className="h-8 w-8 text-indigo-600" />
-                            : <ToggleLeft className="h-8 w-8 text-gray-300" />}
+                            ? <ToggleRight className="h-8 w-8 text-indigo-600 panel-oscuro:text-indigo-400" />
+                            : <ToggleLeft className="h-8 w-8 text-gray-300 panel-oscuro:text-gray-600" />}
                       </button>
                     </div>
                   </div>
@@ -1671,7 +1671,7 @@ export default function CuponesPage() {
                   {widget.prizes.length > 0 ? (
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        <p className="text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide">
                           {widget.prizes.filter(p => !p.isNoPrize).length} premio{widget.prizes.filter(p => !p.isNoPrize).length !== 1 ? "s" : ""} activos
                         </p>
                         <button onClick={() => { setEditorDefaultTab("prizes"); setShowEditor(true); }}
@@ -1679,21 +1679,21 @@ export default function CuponesPage() {
                       </div>
                       <div className="space-y-2">
                         {widget.prizes.map((p, i) => (
-                          <div key={i} className={`flex items-center gap-3 rounded-xl px-4 py-2.5 ${p.isNoPrize ? "bg-gray-50" : "bg-indigo-50"}`}>
+                          <div key={i} className={`flex items-center gap-3 rounded-xl px-4 py-2.5 ${p.isNoPrize ? "bg-gray-50 panel-oscuro:bg-gray-800/50" : "bg-indigo-50 panel-oscuro:bg-indigo-500/10"}`}>
                             <span className="text-base shrink-0">{p.isNoPrize ? "😔" : "🎁"}</span>
                             <div className="flex-1 min-w-0">
-                              <span className="font-semibold text-gray-800 text-sm">{p.label}</span>
+                              <span className="font-semibold text-gray-800 panel-oscuro:text-gray-200 text-sm">{p.label}</span>
                               {!p.isNoPrize && (
-                                <span className="ml-2 text-xs text-gray-500">
+                                <span className="ml-2 text-xs text-gray-500 panel-oscuro:text-gray-400">
                                   {p.discountType === "percentage" ? `${p.discountValue}%` : `$${p.discountValue?.toLocaleString("es-AR")}`} off
                                   {p.maxUses ? ` · ${p.maxUses} usos` : ""}
                                 </span>
                               )}
                               {!p.isNoPrize && p.couponCode && (
-                                <code className="ml-2 text-xs text-indigo-600 font-mono tracking-wider">{p.couponCode}</code>
+                                <code className="ml-2 text-xs text-indigo-600 panel-oscuro:text-indigo-400 font-mono tracking-wider">{p.couponCode}</code>
                               )}
                             </div>
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-bold shrink-0 ${p.isNoPrize ? "bg-gray-200 text-gray-600" : "bg-indigo-100 text-indigo-700"}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-bold shrink-0 ${p.isNoPrize ? "bg-gray-200 panel-oscuro:bg-gray-700 text-gray-600 panel-oscuro:text-gray-400" : "bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-indigo-700 panel-oscuro:text-indigo-300"}`}>
                               {p.probability}%
                             </span>
                           </div>
@@ -1702,10 +1702,10 @@ export default function CuponesPage() {
                     </div>
                   ) : (
                     /* Empty prizes — CTA visual */
-                    <div className="rounded-2xl border-2 border-dashed border-indigo-100 bg-indigo-50/40 p-6 text-center">
+                    <div className="rounded-2xl border-2 border-dashed border-indigo-100 panel-oscuro:border-indigo-500/30 bg-indigo-50/40 panel-oscuro:bg-indigo-500/10 p-6 text-center">
                       <div className="text-3xl mb-2">🎁</div>
-                      <p className="text-sm font-semibold text-gray-700 mb-1">Todavía no hay premios configurados</p>
-                      <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto">Agregá los descuentos que querés sortear y el sistema generará los códigos automáticamente.</p>
+                      <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 mb-1">Todavía no hay premios configurados</p>
+                      <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mb-4 max-w-xs mx-auto">Agregá los descuentos que querés sortear y el sistema generará los códigos automáticamente.</p>
                       <button
                         onClick={() => { setEditorDefaultTab("prizes"); setShowEditor(true); }}
                         className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition-colors">
@@ -1740,7 +1740,7 @@ export default function CuponesPage() {
             </div>
 
             {/* Cambiar tipo / Eliminar */}
-            <div className="flex items-center justify-between text-sm text-gray-400">
+            <div className="flex items-center justify-between text-sm text-gray-400 panel-oscuro:text-gray-500">
               <div className="flex items-center gap-2">
                 <span>¿Preferís otro estilo?</span>
                 <button
@@ -1752,7 +1752,7 @@ export default function CuponesPage() {
               <button
                 onClick={deleteWidget}
                 disabled={deleting}
-                className="text-red-400 hover:text-red-600 hover:underline disabled:opacity-50 text-xs">
+                className="text-red-400 hover:text-red-600 panel-oscuro:hover:text-red-400 hover:underline disabled:opacity-50 text-xs">
                 {deleting ? "Eliminando…" : "Eliminar widget"}
               </button>
             </div>

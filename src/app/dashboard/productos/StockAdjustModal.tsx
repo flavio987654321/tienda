@@ -78,27 +78,27 @@ export default function StockAdjustModal({ product, onSave, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh] animate-fade-slide"
+        className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh] animate-fade-slide"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0">
           <div>
-            <h2 className="font-bold text-gray-900">Ajustar stock</h2>
-            <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{product.name}</p>
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Ajustar stock</h2>
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5 truncate max-w-xs">{product.name}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <X className="h-4 w-4 text-gray-400" />
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors">
+            <X className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-6 space-y-3">
           {product.variants.map((v) => (
             <div key={v.id} className="flex items-center gap-2">
-              <span className="flex-1 text-sm text-gray-600 truncate">{v.value}</span>
+              <span className="flex-1 text-sm text-gray-600 panel-oscuro:text-gray-400 truncate">{v.value}</span>
               <button
                 type="button"
                 onClick={() => step(v.id, -1)}
-                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                className="p-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
@@ -107,12 +107,12 @@ export default function StockAdjustModal({ product, onSave, onClose }: Props) {
                 min={0}
                 value={values[v.id]}
                 onChange={(e) => setValues((p) => ({ ...p, [v.id]: e.target.value }))}
-                className="w-16 text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-16 text-center border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 type="button"
                 onClick={() => step(v.id, 1)}
-                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                className="p-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -120,30 +120,30 @@ export default function StockAdjustModal({ product, onSave, onClose }: Props) {
           ))}
 
           <div>
-            <label className="text-xs font-medium text-gray-600 mb-1 block">Motivo (opcional)</label>
+            <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Motivo (opcional)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Ej: conteo físico, devolución, merma..."
               rows={2}
               maxLength={200}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
+              className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
             />
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 text-red-600 panel-oscuro:text-red-400 text-sm bg-red-50 panel-oscuro:bg-red-500/10 rounded-xl px-3 py-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {error}
             </div>
           )}
         </div>
 
-        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-gray-100 bg-white rounded-b-2xl">
+        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 rounded-b-2xl">
           <button
             onClick={onClose}
             disabled={saving}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>

@@ -25,9 +25,9 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<VehicleStatus, { label: string; color: string; bg: string; border: string; dot: string }> = {
-  AVAILABLE: { label: "Disponible",  color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
-  RESERVED:  { label: "Reservado",   color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200",   dot: "bg-amber-500"   },
-  SOLD:      { label: "Vendido",     color: "text-gray-500",    bg: "bg-gray-100",   border: "border-gray-200",    dot: "bg-gray-400"    },
+  AVAILABLE: { label: "Disponible",  color: "text-emerald-700 panel-oscuro:text-emerald-300", bg: "bg-emerald-50 panel-oscuro:bg-emerald-500/10", border: "border-emerald-200 panel-oscuro:border-emerald-500/30", dot: "bg-emerald-500" },
+  RESERVED:  { label: "Reservado",   color: "text-amber-700 panel-oscuro:text-amber-300",   bg: "bg-amber-50 panel-oscuro:bg-amber-500/10",   border: "border-amber-200 panel-oscuro:border-amber-500/30",   dot: "bg-amber-500"   },
+  SOLD:      { label: "Vendido",     color: "text-gray-500 panel-oscuro:text-gray-400",    bg: "bg-gray-100 panel-oscuro:bg-gray-800",   border: "border-gray-200 panel-oscuro:border-gray-700",    dot: "bg-gray-400 panel-oscuro:bg-gray-500"    },
 };
 
 export function VehicleStatusBadge({ status, animate = false }: { status: VehicleStatus; animate?: boolean }) {
@@ -90,17 +90,17 @@ export default function VehicleStatusModal({ productId, productName, currentStat
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-fade-slide"
+        className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-fade-slide"
         onClick={e => e.stopPropagation()}
       >
         {/* Header — fijo arriba */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0">
           <div>
-            <h2 className="font-bold text-gray-900">Estado del vehículo</h2>
-            <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{productName}</p>
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Estado del vehículo</h2>
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5 truncate max-w-xs">{productName}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <X className="h-4 w-4 text-gray-400" />
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors">
+            <X className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
           </button>
         </div>
 
@@ -118,10 +118,10 @@ export default function VehicleStatusModal({ productId, productName, currentStat
                   className={`relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 text-sm font-semibold transition-all duration-200 ${
                     active
                       ? `${cfg.bg} ${cfg.border} ${cfg.color} scale-[1.03] shadow-sm`
-                      : "border-gray-100 text-gray-400 hover:border-gray-200 hover:scale-[1.01]"
+                      : "border-gray-100 panel-oscuro:border-gray-800 text-gray-400 panel-oscuro:text-gray-500 hover:border-gray-200 panel-oscuro:hover:border-gray-700 hover:scale-[1.01]"
                   }`}
                 >
-                  <span className={`w-2.5 h-2.5 rounded-full ${active ? cfg.dot : "bg-gray-200"} ${active && s === "AVAILABLE" ? "animate-pulse" : ""}`} />
+                  <span className={`w-2.5 h-2.5 rounded-full ${active ? cfg.dot : "bg-gray-200 panel-oscuro:bg-gray-700"} ${active && s === "AVAILABLE" ? "animate-pulse" : ""}`} />
                   {cfg.label}
                   {active && (
                     <span className="absolute top-2 right-2 animate-pop-in">
@@ -135,34 +135,34 @@ export default function VehicleStatusModal({ productId, productName, currentStat
 
           {/* Campos solo para SOLD */}
           {isSold && (
-            <div className="space-y-3 animate-fade-slide border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos de la venta</p>
+            <div className="space-y-3 animate-fade-slide border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+              <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 uppercase tracking-wide">Datos de la venta</p>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Comprador <span className="text-red-400">*</span></label>
+                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Comprador <span className="text-red-400">*</span></label>
                 <input
                   value={buyerName}
                   onChange={e => { setBuyerName(e.target.value); setError(""); }}
                   placeholder="Nombre y apellido"
                   maxLength={100}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Teléfono del comprador</label>
+                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Teléfono del comprador</label>
                 <input
                   value={buyerPhone}
                   onChange={e => setBuyerPhone(e.target.value)}
                   placeholder="+54 11 1234-5678"
                   type="tel"
                   maxLength={30}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Precio de venta ($)</label>
+                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Precio de venta ($)</label>
                 <input
                   value={soldPrice}
                   onChange={e => {
@@ -172,32 +172,32 @@ export default function VehicleStatusModal({ productId, productName, currentStat
                   placeholder="Ej: 12500000"
                   type="text"
                   inputMode="numeric"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
                 {soldPrice && !isNaN(parseFloat(soldPrice)) && (
-                  <p className={`mt-1.5 text-xs font-semibold ${parseFloat(soldPrice) - costTotal < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                  <p className={`mt-1.5 text-xs font-semibold ${parseFloat(soldPrice) - costTotal < 0 ? "text-red-600 panel-oscuro:text-red-400" : "text-emerald-600 panel-oscuro:text-emerald-400"}`}>
                     Ganancia estimada: ${Math.round(parseFloat(soldPrice) - costTotal).toLocaleString("es-AR")}
-                    {costTotal === 0 && <span className="text-gray-400 font-normal"> (sin gastos cargados)</span>}
+                    {costTotal === 0 && <span className="text-gray-400 panel-oscuro:text-gray-500 font-normal"> (sin gastos cargados)</span>}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Notas internas</label>
+                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Notas internas</label>
                 <textarea
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Ej: Señado el 10/6, financiado por banco..."
                   rows={2}
                   maxLength={500}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+                  className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
                 />
               </div>
             </div>
           )}
 
           {error && (
-            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 text-red-600 panel-oscuro:text-red-400 text-sm bg-red-50 panel-oscuro:bg-red-500/10 rounded-xl px-3 py-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {error}
             </div>
@@ -206,11 +206,11 @@ export default function VehicleStatusModal({ productId, productName, currentStat
         </div>
 
         {/* Footer fijo — siempre visible */}
-        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-gray-100 bg-white rounded-b-2xl">
+        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 rounded-b-2xl">
           <button
             onClick={onClose}
             disabled={saving}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>

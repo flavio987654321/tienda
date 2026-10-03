@@ -58,7 +58,7 @@ export default async function PedidoDetailPage({ params }: Props) {
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/dashboard/pedidos"
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-800 panel-oscuro:hover:text-gray-200 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver a pedidos
@@ -71,10 +71,10 @@ export default async function PedidoDetailPage({ params }: Props) {
             <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(order.status)}`}>
               {statusLabel(order.status)}
             </span>
-            <span className="text-sm font-mono text-gray-400">#{order.id.slice(-6).toUpperCase()}</span>
+            <span className="text-sm font-mono text-gray-400 panel-oscuro:text-gray-500">#{order.id.slice(-6).toUpperCase()}</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{money(order.total)}</p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{money(order.total)}</p>
+          <p className="mt-1 text-sm text-gray-400 panel-oscuro:text-gray-500">
             {itemCount} producto{itemCount !== 1 ? "s" : ""} · {order.createdAt.toLocaleString("es-AR")}
           </p>
         </div>
@@ -88,22 +88,22 @@ export default async function PedidoDetailPage({ params }: Props) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr_1fr]">
-        <div className="rounded-2xl border border-gray-100 bg-white p-5">
-          <p className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
-            <Package className="h-4 w-4 text-gray-400" />
+        <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5">
+          <p className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+            <Package className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
             Productos
           </p>
           <div className="space-y-2">
             {order.items.map((item) => (
-              <div key={item.id} className="rounded-xl bg-gray-50 p-3 text-sm">
+              <div key={item.id} className="rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3 text-sm">
                 <div className="flex justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-gray-900">{item.product.name}</p>
+                    <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100">{item.product.name}</p>
                     {item.variant && (
-                      <p className="text-xs text-gray-400">{item.variant.name}: {item.variant.value}</p>
+                      <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">{item.variant.name}: {item.variant.value}</p>
                     )}
                   </div>
-                  <p className="font-bold text-gray-900 shrink-0">{item.quantity} x {money(item.price)}</p>
+                  <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 shrink-0">{item.quantity} x {money(item.price)}</p>
                 </div>
               </div>
             ))}
@@ -121,16 +121,16 @@ export default async function PedidoDetailPage({ params }: Props) {
             // ese caso no se mostraba nada, ni siquiera el subtotal.
             if (!(order.discountAmount > 0 || order.shippingCost > 0 || hayPromo)) return null;
             return (
-              <div className="mt-2 space-y-0.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
+              <div className="mt-2 space-y-0.5 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3 text-xs text-gray-500 panel-oscuro:text-gray-400">
                 <p className="flex justify-between"><span>Subtotal</span><span>{money(order.subtotal)}</span></p>
                 {appliedPromos.filter((p) => p.savings > 0).map((p, i) => (
-                  <p key={i} className="flex justify-between gap-3 text-emerald-600">
+                  <p key={i} className="flex justify-between gap-3 text-emerald-600 panel-oscuro:text-emerald-400">
                     <span>🎉 {p.name ? `${p.name} · ${p.label}` : p.label}</span>
                     <span className="shrink-0">− {money(p.savings)}</span>
                   </p>
                 ))}
                 {order.discountAmount > 0 && (
-                  <p className="flex justify-between text-emerald-600">
+                  <p className="flex justify-between text-emerald-600 panel-oscuro:text-emerald-400">
                     <span>Descuento{order.coupon ? ` (${order.coupon.code})` : ""}</span>
                     <span>− {money(order.discountAmount)}</span>
                   </p>
@@ -139,37 +139,37 @@ export default async function PedidoDetailPage({ params }: Props) {
                   <p className="flex justify-between"><span>Envío</span><span>{money(order.shippingCost)}</span></p>
                 )}
                 {freeShippingPromo && (
-                  <p className="flex justify-between gap-3 text-emerald-600">
+                  <p className="flex justify-between gap-3 text-emerald-600 panel-oscuro:text-emerald-400">
                     <span>🚚 Envío gratis{freeShippingPromo.name ? ` · ${freeShippingPromo.name}` : ""}</span>
                     {/* Lo que costaba ese envío y la tienda no cobró (#7c). Sin esto
                         el "gratis" parece salir de la nada. */}
                     <span className="shrink-0">{order.shippingWaived > 0 ? `te costó ${money(order.shippingWaived)}` : "sin cargo"}</span>
                   </p>
                 )}
-                <p className="flex justify-between font-bold text-gray-800"><span>Total</span><span>{money(order.total)}</span></p>
+                <p className="flex justify-between font-bold text-gray-800 panel-oscuro:text-gray-200"><span>Total</span><span>{money(order.total)}</span></p>
               </div>
             );
           })()}
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-5">
-          <p className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
-            <UserRound className="h-4 w-4 text-gray-400" />
+        <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5">
+          <p className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+            <UserRound className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
             Comprador
           </p>
-          <div className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600 space-y-0.5">
-            <p className="font-semibold text-gray-900">{address.name || order.buyer.name || "Sin nombre"}</p>
+          <div className="rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3 text-sm text-gray-600 panel-oscuro:text-gray-400 space-y-0.5">
+            <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100">{address.name || order.buyer.name || "Sin nombre"}</p>
             <p>{address.email || order.buyer.email}</p>
             {address.phone && <p>{address.phone}</p>}
             {(address.street || address.city) && (
-              <p className="mt-2 text-xs text-gray-400">
+              <p className="mt-2 text-xs text-gray-400 panel-oscuro:text-gray-500">
                 {[address.street, address.city, address.province, address.postalCode].filter(Boolean).join(", ")}
               </p>
             )}
           </div>
           {order.notes && (
-            <div className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-              <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-600">
+            <div className="mt-2 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 p-3 text-sm text-amber-800 panel-oscuro:text-amber-300">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-600 panel-oscuro:text-amber-400">
                 <MessageSquare className="h-3.5 w-3.5" />
                 Nota del comprador
               </p>
@@ -178,17 +178,17 @@ export default async function PedidoDetailPage({ params }: Props) {
           )}
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-5">
-          <p className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
-            <Truck className="h-4 w-4 text-gray-400" />
+        <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5">
+          <p className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+            <Truck className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
             Venta y envío
           </p>
-          <div className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600 space-y-1">
+          <div className="rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3 text-sm text-gray-600 panel-oscuro:text-gray-400 space-y-1">
             <p><strong>Pago:</strong> {order.payment?.provider ?? "manual"} / {order.payment?.status ?? "PENDING"}</p>
             <p><strong>Envío:</strong> {order.shippingMethod || "A coordinar"} ({money(order.shippingCost)})</p>
             <p><strong>Tracking:</strong> {order.trackingCode || order.shipping?.trackingCode || "Sin cargar"}</p>
             {order.affiliate ? (
-              <div className="mt-3 rounded-lg bg-purple-50 p-2 text-purple-700">
+              <div className="mt-3 rounded-lg bg-purple-50 panel-oscuro:bg-purple-500/10 p-2 text-purple-700 panel-oscuro:text-purple-300">
                 <p className="font-semibold">Venta por afiliado</p>
                 <p>{order.affiliate.user.name || order.affiliate.user.email}</p>
                 <p>
@@ -200,26 +200,26 @@ export default async function PedidoDetailPage({ params }: Props) {
                 </p>
               </div>
             ) : (
-              <p className="mt-3 rounded-lg bg-gray-100 p-2 text-xs text-gray-500">Venta directa, sin comisión.</p>
+              <p className="mt-3 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 p-2 text-xs text-gray-500 panel-oscuro:text-gray-400">Venta directa, sin comisión.</p>
             )}
           </div>
         </div>
       </div>
 
       {order.reviews.length > 0 && (
-        <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5">
-          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+        <div className="mt-5 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5">
+          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
             <Star className="h-3.5 w-3.5" />
             Reseñas del comprador
           </p>
           <div className="space-y-2">
             {order.reviews.map((review) => (
-              <div key={review.id} className="rounded-xl bg-gray-50 p-3 text-sm">
+              <div key={review.id} className="rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 p-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-gray-900">{review.product.name}</p>
+                  <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100">{review.product.name}</p>
                   <span className="text-amber-500">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
                 </div>
-                {review.comment && <p className="mt-1 text-gray-600">{review.comment}</p>}
+                {review.comment && <p className="mt-1 text-gray-600 panel-oscuro:text-gray-400">{review.comment}</p>}
               </div>
             ))}
           </div>
@@ -227,17 +227,17 @@ export default async function PedidoDetailPage({ params }: Props) {
       )}
 
       {order.statusLogs.length > 0 && (
-        <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5">
-          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+        <div className="mt-5 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5">
+          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
             <Clock className="h-3.5 w-3.5" />
             Historial de cambios
           </p>
-          <ol className="relative ml-2 border-l border-gray-100">
+          <ol className="relative ml-2 border-l border-gray-100 panel-oscuro:border-gray-800">
             {order.statusLogs.map((log) => (
               <li key={log.id} className="mb-2 ml-4">
-                <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-300" />
-                <p className="text-xs text-gray-500">
-                  <span className="font-semibold text-gray-700">{log.fromStatus} → {log.toStatus}</span>
+                <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white panel-oscuro:border-gray-900 bg-indigo-300" />
+                <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
+                  <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{log.fromStatus} → {log.toStatus}</span>
                   {" · "}
                   {new Date(log.changedAt).toLocaleString("es-AR")}
                 </p>

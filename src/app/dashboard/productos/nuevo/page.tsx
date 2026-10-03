@@ -215,9 +215,9 @@ function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void
   // no tendría cómo sacarlo y el guardado seguiría arrastrándolo.
   if (!reel) {
     return (
-      <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-red-50 border border-red-200 flex flex-col items-center justify-center gap-1.5 px-2 flex-shrink-0">
+      <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 flex flex-col items-center justify-center gap-1.5 px-2 flex-shrink-0">
         <X className="h-5 w-5 text-red-400" />
-        <span className="text-[10px] font-medium text-red-600 text-center leading-snug">Link inválido</span>
+        <span className="text-[10px] font-medium text-red-600 panel-oscuro:text-red-400 text-center leading-snug">Link inválido</span>
         <button
           type="button"
           onClick={onRemove}
@@ -231,7 +231,7 @@ function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void
 
   const isLink = reel.kind === "link";
   return (
-    <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-black border border-gray-200 group flex-shrink-0">
+    <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-black border border-gray-200 panel-oscuro:border-gray-700 group flex-shrink-0">
       {/* Instagram y TikTok no se pueden reproducir acá: se abren en su app, igual
           que le va a pasar al comprador. Los demás abren el mismo modal de la tienda. */}
       {isLink ? (
@@ -239,9 +239,9 @@ function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void
           href={reel.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors"
+          className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gray-50 panel-oscuro:bg-gray-800/50 text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors"
         >
-          <Film className="h-5 w-5 text-gray-400" />
+          <Film className="h-5 w-5 text-gray-400 panel-oscuro:text-gray-500" />
           <span className="text-[10px] font-medium">{reel.platform}</span>
         </a>
       ) : (
@@ -278,12 +278,12 @@ function PhotoAddCell({ label, onClick }: { label: string; onClick: () => void }
     <button
       type="button"
       onClick={onClick}
-      className="aspect-square border-2 border-dashed border-gray-200 rounded-xl p-3 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group flex flex-col items-center justify-center gap-2.5"
+      className="aspect-square border-2 border-dashed border-gray-200 panel-oscuro:border-gray-700 rounded-xl p-3 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 panel-oscuro:hover:bg-indigo-500/10 transition-all group flex flex-col items-center justify-center gap-2.5"
     >
-      <span className="w-9 h-9 rounded-full border-2 border-indigo-200 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center transition-colors flex-shrink-0">
+      <span className="w-9 h-9 rounded-full border-2 border-indigo-200 panel-oscuro:border-indigo-500/30 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 panel-oscuro:group-hover:bg-indigo-500/10 flex items-center justify-center transition-colors flex-shrink-0">
         <Plus className="h-4 w-4" />
       </span>
-      <span className="text-xs font-medium text-gray-600 leading-snug text-center">{label}</span>
+      <span className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 leading-snug text-center">{label}</span>
     </button>
   );
 }
@@ -1387,36 +1387,36 @@ function ProductoFormPage() {
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/dashboard/productos" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/dashboard/productos" className="text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{isEditing ? "Editar producto" : "Nuevo producto"}</h1>
-            <p className="text-gray-500 mt-0.5">
+            <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{isEditing ? "Editar producto" : "Nuevo producto"}</h1>
+            <p className="text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
               {isEditing ? "Actualiza los datos y guarda los cambios" : "Completa los datos y mira la vista previa en tiempo real"}
             </p>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">{error}</div>
+          <div className="bg-red-50 panel-oscuro:bg-red-500/10 text-red-700 panel-oscuro:text-red-300 px-4 py-3 rounded-xl text-sm mb-4">{error}</div>
         )}
 
         <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex-1 lg:overflow-y-auto lg:pr-1 space-y-5 pb-6">
             {loadingProduct && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 text-sm text-gray-500 flex items-center gap-2">
+              <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 text-sm text-gray-500 panel-oscuro:text-gray-400 flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Cargando producto...
               </div>
             )}
 
             {/* Basic info */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <h2 className="font-semibold text-gray-900">Informacion basica</h2>
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
+              <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Informacion basica</h2>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del producto *</label>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Nombre del producto *</label>
                 {/* El campo mas tipeado de la app, y era el que peor se portaba:
                     un nombre real no entra en el ancho de un telefono y se iba
                     corriendo hacia la derecha, asi que no se podia releer lo
@@ -1434,7 +1434,7 @@ function ProductoFormPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Descripción</label>
                 <RichTextEditor
                   value={form.description}
                   onChange={(html) => { updateForm("description", html); markDirty(); }}
@@ -1444,7 +1444,7 @@ function ProductoFormPage() {
               </div>
               {!storeTypeConfig.hideGender && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Género</label>
                   <div className="flex gap-2">
                     {(["mujer", "hombre", "unisex"] as const).map((g) => (
                       <button
@@ -1454,7 +1454,7 @@ function ProductoFormPage() {
                         className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                           gender === g
                             ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                            : "bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700 hover:border-indigo-300 panel-oscuro:hover:border-indigo-500/40"
                         }`}
                       >
                         {g === "mujer" ? "Mujer" : g === "hombre" ? "Hombre" : "Unisex"}
@@ -1465,11 +1465,11 @@ function ProductoFormPage() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Categoría</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, subcategory: "" }))}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
                   >
                     {productCategories.map((c) => (
                       <option key={c} value={c}>{formatCategoryLabel(c)}</option>
@@ -1487,11 +1487,11 @@ function ProductoFormPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoría</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Subcategoría</label>
                   <select
                     value={form.subcategory}
                     onChange={(e) => updateForm("subcategory", e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
                   >
                     <option value="">Sin subcategoría</option>
                     {availableSubcategories.map((subcat) => (
@@ -1511,11 +1511,11 @@ function ProductoFormPage() {
                 </div>
                 {!storeTypeConfig.hideTags && (
                   <div>
-                    <label htmlFor="tagInput" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="tagInput" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">
                       Tags
                       <Tip align="left" text={tagsTip(store.tipoTienda || "ROPA")} />
                     </label>
-                    <p className="text-xs text-gray-400 mt-0.5 mb-1.5">
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5 mb-1.5">
                       Escribí uno y apretá Enter. También podés pegar varios separados por coma.
                     </p>
 
@@ -1524,7 +1524,7 @@ function ProductoFormPage() {
                         {listaTags.map((t) => (
                           <span
                             key={t}
-                            className="flex max-w-full items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
+                            className="flex max-w-full items-center gap-1.5 rounded-full border border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 panel-oscuro:text-indigo-300"
                           >
                             <span className="truncate">{t}</span>
                             <button
@@ -1568,7 +1568,7 @@ function ProductoFormPage() {
                         onClick={() => agregarTags(tagInput)}
                         disabled={!tagInput.trim()}
                         aria-label="Agregar tag"
-                        className="shrink-0 rounded-xl bg-indigo-50 px-3 text-indigo-600 hover:bg-indigo-100 disabled:opacity-40 transition-colors"
+                        className="shrink-0 rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-3 text-indigo-600 panel-oscuro:text-indigo-400 hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15 disabled:opacity-40 transition-colors"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
@@ -1580,8 +1580,8 @@ function ProductoFormPage() {
 
             {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
             {storeTypeConfig.supportsCondicion && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-semibold text-gray-900 mb-3">{storeTypeConfig.showServiceHistory ? "Condición del vehículo" : "Condición del producto"}</h2>
+              <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6">
+                <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100 mb-3">{storeTypeConfig.showServiceHistory ? "Condición del vehículo" : "Condición del producto"}</h2>
                 <div className="flex flex-wrap gap-2">
                   {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
                     <button
@@ -1590,8 +1590,8 @@ function ProductoFormPage() {
                       onClick={() => { setCondicion(opt); markDirty(); }}
                       className={`flex-1 min-w-[100px] py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
                         condicion === opt
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                          : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
+                          ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300"
+                          : "border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 text-gray-500 panel-oscuro:text-gray-400 hover:border-gray-300 panel-oscuro:hover:border-gray-600"
                       }`}
                     >
                       {opt}
@@ -1602,15 +1602,15 @@ function ProductoFormPage() {
             )}
 
             {/* Images */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">Imagenes del producto *</h2>
-                <span className="text-xs text-gray-400">{images.length}/{MAX_PRODUCT_IMAGES}</span>
+                <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Imagenes del producto *</h2>
+                <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">{images.length}/{MAX_PRODUCT_IMAGES}</span>
               </div>
 
               {/* Hint arriba del grid: los selects viven adentro de cada cuadro */}
               {images.length > 0 && valoresParaFoto.length > 0 && (
-                <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
+                <div className="flex items-start gap-2 bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-xl px-3 py-2.5 text-xs text-indigo-700 panel-oscuro:text-indigo-300">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   {/* El texto nombra las opciones que tiene ESTE producto. Decía
                       "un color" siempre, aunque el producto se vendiera por largo. */}
@@ -1637,7 +1637,7 @@ function ProductoFormPage() {
                       onClick={() => setCarouselIdx(i)}
                       className={`group relative aspect-square rounded-xl cursor-grab active:cursor-grabbing border-2 transition-all overflow-hidden ${
                         dragIdx === i ? "opacity-40 scale-95" : ""
-                      } ${carouselIdx === i ? "border-indigo-500 ring-2 ring-indigo-200" : "border-transparent hover:border-gray-300"}`}
+                      } ${carouselIdx === i ? "border-indigo-500 ring-2 ring-indigo-200 panel-oscuro:ring-indigo-500/30" : "border-transparent hover:border-gray-300 panel-oscuro:hover:border-gray-600"}`}
                     >
                       <Image src={img.url} alt="" fill sizes="(max-width: 640px) 45vw, 200px" className="object-cover" />
                       {img.variantValue && (
@@ -1662,10 +1662,10 @@ function ProductoFormPage() {
                         value={img.variantValue || ""}
                         onChange={(e) => assignImageValue(i, e.target.value || undefined)}
                         onClick={(e) => e.stopPropagation()}
-                        className={`w-full text-xs border rounded-lg bg-white py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                        className={`w-full text-xs border rounded-lg bg-white panel-oscuro:bg-gray-900 py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                           img.variantValue
-                            ? "border-indigo-300 text-indigo-700 font-medium bg-indigo-50"
-                            : "border-gray-200 text-gray-400"
+                            ? "border-indigo-300 panel-oscuro:border-indigo-500/40 text-indigo-700 panel-oscuro:text-indigo-300 font-medium bg-indigo-50 panel-oscuro:bg-indigo-500/10"
+                            : "border-gray-200 panel-oscuro:border-gray-700 text-gray-400 panel-oscuro:text-gray-500"
                         }`}
                       >
                         <option value="">Sin asignar</option>
@@ -1685,9 +1685,9 @@ function ProductoFormPage() {
                 ))}
 
                 {uploadingImg ? (
-                  <div className="aspect-square border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl flex flex-col items-center justify-center gap-2">
+                  <div className="aspect-square border-2 border-dashed border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50/30 panel-oscuro:bg-indigo-500/10 rounded-xl flex flex-col items-center justify-center gap-2">
                     <Loader2 className="h-6 w-6 text-indigo-400 animate-spin" />
-                    <span className="text-xs text-gray-500">Subiendo...</span>
+                    <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Subiendo...</span>
                   </div>
                 ) : images.length < MAX_PRODUCT_IMAGES ? (
                   remainingPhotoTips.length > 0 ? (
@@ -1701,7 +1701,7 @@ function ProductoFormPage() {
               </div>
 
               {avisoFoto && (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+                <div className="flex items-start gap-2 rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-3 py-2.5 text-xs text-amber-900 panel-oscuro:text-amber-200">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                   <span>
                     {avisoFoto}
@@ -1712,7 +1712,7 @@ function ProductoFormPage() {
                 </div>
               )}
 
-              <p className="text-xs text-gray-400 text-center">
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 text-center">
                 Hasta {MAX_PRODUCT_IMAGES} fotos (podés elegir varias a la vez). JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
               </p>
               <input
@@ -1726,25 +1726,25 @@ function ProductoFormPage() {
 
               {/* Hint cuando todavía no hay variantes cargadas */}
               {!storeTypeConfig.hideVariants && valoresParaFoto.length === 0 && (
-                <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
-                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div className="flex items-start gap-2 bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl px-3 py-2.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
+                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400 panel-oscuro:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <span>Si tu producto viene en <strong>varias versiones</strong> (colores, talles, largos), primero cargalas en <strong>Variantes y stock</strong> (más abajo) — después vas a poder asignarle una foto a cada una.</span>
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold text-gray-900">Reels / Videos</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Un video muestra el producto en movimiento — es lo que más convence de comprar</p>
+                  <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Reels / Videos</h2>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Un video muestra el producto en movimiento — es lo que más convence de comprar</p>
                 </div>
-                <span className="text-xs text-gray-400">{reelUrls.length}/{MAX_PRODUCT_REELS}</span>
+                <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">{reelUrls.length}/{MAX_PRODUCT_REELS}</span>
               </div>
 
               {/* Ayuda visual: qué grabar y cuánto debe durar */}
-              <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
-                <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div className="flex items-start gap-2 bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl px-3 py-2.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
+                <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400 panel-oscuro:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <span>
                   Grabá <strong>vertical</strong> (como una historia) y de <strong>15 a 30 segundos</strong>. {reelTips(store.tipoTienda || "ROPA")}{" "}
                   Si el video te quedó horizontal no pasa nada: tu cliente lo abre a pantalla completa y lo ve entero.
@@ -1773,9 +1773,9 @@ function ProductoFormPage() {
                 ))}
 
                 {uploadingVideo && (
-                  <div className="w-[116px] aspect-[9/16] border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl flex flex-col items-center justify-center gap-2 flex-shrink-0">
+                  <div className="w-[116px] aspect-[9/16] border-2 border-dashed border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50/30 panel-oscuro:bg-indigo-500/10 rounded-xl flex flex-col items-center justify-center gap-2 flex-shrink-0">
                     <Loader2 className="h-5 w-5 text-indigo-400 animate-spin" />
-                    <span className="text-[11px] text-gray-500">Subiendo...</span>
+                    <span className="text-[11px] text-gray-500 panel-oscuro:text-gray-400">Subiendo...</span>
                   </div>
                 )}
 
@@ -1785,12 +1785,12 @@ function ProductoFormPage() {
                     type="button"
                     onClick={() => videoFileInputRef.current?.click()}
                     disabled={uploadingVideo}
-                    className="w-[116px] aspect-[9/16] border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2.5 p-2 flex-shrink-0 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-[116px] aspect-[9/16] border-2 border-dashed border-gray-200 panel-oscuro:border-gray-700 rounded-xl flex flex-col items-center justify-center gap-2.5 p-2 flex-shrink-0 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 panel-oscuro:hover:bg-indigo-500/10 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="w-9 h-9 rounded-full border-2 border-indigo-200 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center transition-colors">
+                    <span className="w-9 h-9 rounded-full border-2 border-indigo-200 panel-oscuro:border-indigo-500/30 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 panel-oscuro:group-hover:bg-indigo-500/10 flex items-center justify-center transition-colors">
                       <Plus className="h-4 w-4" />
                     </span>
-                    <span className="text-[11px] font-medium text-gray-600 text-center leading-snug">Subir video</span>
+                    <span className="text-[11px] font-medium text-gray-600 panel-oscuro:text-gray-400 text-center leading-snug">Subir video</span>
                   </button>
                 ))}
               </div>
@@ -1801,7 +1801,7 @@ function ProductoFormPage() {
                 <button
                   type="button"
                   onClick={() => setShowReelUrlInput(true)}
-                  className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-indigo-600 panel-oscuro:text-indigo-400 font-medium hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   o pegá un link de Instagram, TikTok o YouTube
@@ -1820,7 +1820,7 @@ function ProductoFormPage() {
                     onChange={(e) => setReelUrlDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReelUrl(); } }}
                     placeholder="https://www.instagram.com/reel/... o youtube.com/shorts/..."
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <button
                     type="button"
@@ -1833,7 +1833,7 @@ function ProductoFormPage() {
                   <button
                     type="button"
                     onClick={() => { setShowReelUrlInput(false); setReelUrlDraft(""); }}
-                    className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
+                    className="p-2.5 text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 rounded-xl transition-colors"
                     aria-label="Cancelar"
                   >
                     <X className="h-4 w-4" />
@@ -1842,13 +1842,13 @@ function ProductoFormPage() {
               )}
 
               {avisoVideo && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-3.5 py-3">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                  <p className="text-xs text-amber-800 leading-relaxed">{avisoVideo}</p>
+                  <p className="text-xs text-amber-800 panel-oscuro:text-amber-300 leading-relaxed">{avisoVideo}</p>
                 </div>
               )}
 
-              <p className="text-xs text-gray-400 text-center">
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 text-center">
                 Hasta {MAX_PRODUCT_REELS} videos. MP4, WEBM o MOV de hasta {MAX_VIDEO_SIZE_MB} MB, o un link de Instagram, TikTok o YouTube
               </p>
 
@@ -1864,10 +1864,10 @@ function ProductoFormPage() {
 
             {/* Historial de servicios — solo AUTOS */}
             {storeTypeConfig.showServiceHistory && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
                 <div>
-                  <h2 className="font-semibold text-gray-900">Historial de servicios</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Marcá los servicios que están al día. Se muestran con un tilde verde en la página del vehículo.</p>
+                  <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Historial de servicios</h2>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Marcá los servicios que están al día. Se muestran con un tilde verde en la página del vehículo.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   {AUTO_SERVICES.map(svc => (
@@ -1877,16 +1877,16 @@ function ProductoFormPage() {
                       onClick={() => { setServices(p => ({ ...p, [svc.key]: !p[svc.key] })); markDirty(); }}
                       className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left ${
                         services[svc.key]
-                          ? "border-green-400 bg-green-50"
-                          : "border-gray-100 bg-gray-50"
+                          ? "border-green-400 bg-green-50 panel-oscuro:bg-green-500/10"
+                          : "border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50"
                       }`}
                     >
                       <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                        services[svc.key] ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+                        services[svc.key] ? "bg-green-500 text-white" : "bg-gray-200 panel-oscuro:bg-gray-700 text-gray-400 panel-oscuro:text-gray-500"
                       }`}>
                         {services[svc.key] ? "✓" : "✕"}
                       </span>
-                      <span className={`text-xs font-medium ${services[svc.key] ? "text-green-700" : "text-gray-400"}`}>
+                      <span className={`text-xs font-medium ${services[svc.key] ? "text-green-700 panel-oscuro:text-green-300" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
                         {svc.label}
                       </span>
                     </button>
@@ -1896,18 +1896,18 @@ function ProductoFormPage() {
             )}
 
             {/* Precio */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5 space-y-4">
               {/* Precio de venta */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Precio de venta *</label>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Precio de venta *</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">$</span>
                   <input
                     type="number"
                     value={form.price}
                     onChange={(e) => updateForm("price", e.target.value)}
                     required min="0" step="0.01" placeholder="0"
-                    className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 {/* F6-C9 — el candado del monto fijo protege el momento de CREAR
@@ -1919,8 +1919,8 @@ function ProductoFormPage() {
                 {avisarPromo && promoRiesgo && (
                   <div className={`mt-2 flex gap-2 items-start rounded-xl border p-3 text-[12.5px] ${
                     promoRiesgo.pct >= MAX_FIXED_DISCOUNT_PCT
-                      ? "bg-red-50 border-red-200 text-red-700"
-                      : "bg-amber-50 border-amber-200 text-amber-800"
+                      ? "bg-red-50 panel-oscuro:bg-red-500/10 border-red-200 panel-oscuro:border-red-500/30 text-red-700 panel-oscuro:text-red-300"
+                      : "bg-amber-50 panel-oscuro:bg-amber-500/10 border-amber-200 panel-oscuro:border-amber-500/30 text-amber-800 panel-oscuro:text-amber-300"
                   }`}>
                     <Tag className="h-4 w-4 shrink-0 mt-0.5" />
                     <div>
@@ -1946,28 +1946,28 @@ function ProductoFormPage() {
 
               {/* Costo interno + margen — todos los rubros excepto Autos/Motos (que usan Gastos del vehículo) */}
               {!storeTypeConfig.usesVehicleExpenses && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-gray-700">Costo</label>
+                    <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Costo</label>
                     {margin.kind !== "no-cost" && (
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        margin.kind === "loss" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                        margin.kind === "loss" ? "bg-red-50 panel-oscuro:bg-red-500/10 text-red-600 panel-oscuro:text-red-400" : "bg-green-50 panel-oscuro:bg-green-500/10 text-green-700 panel-oscuro:text-green-300"
                       }`}>
                         {margin.kind === "loss" ? "Estás vendiendo a pérdida" : `Margen de ganancia: ${margin.marginPct.toFixed(0)}%`}
                       </span>
                     )}
                   </div>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">$</span>
                     <input
                       type="number"
                       value={form.costPrice}
                       onChange={(e) => { updateForm("costPrice", e.target.value); markDirty(); }}
                       min="0" step="0.01" placeholder="0"
-                      className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <p className="mt-1.5 text-xs text-gray-400">
+                  <p className="mt-1.5 text-xs text-gray-400 panel-oscuro:text-gray-500">
                     {margin.kind === "no-cost"
                       ? "Cargalo para ver tu margen de ganancia. Es de uso interno, tus clientes no lo verán en la tienda."
                       : "Es de uso interno, tus clientes no lo verán en la tienda."}
@@ -1977,40 +1977,40 @@ function ProductoFormPage() {
 
               {/* Gastos del vehículo — solo Autos/Motos, reemplaza el campo Costo */}
               {storeTypeConfig.usesVehicleExpenses && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-gray-700">Gastos del vehículo</label>
+                    <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Gastos del vehículo</label>
                     {gastos.length > 0 && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400">
                         Costo total: ${calcVehicleCostTotal(gastos).toLocaleString("es-AR")}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mb-3">
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-3">
                     Compra, lavado, service, cubiertas... Es de uso interno, tus clientes no lo verán en la tienda.
                   </p>
 
                   {!isEditing ? (
-                    <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2.5">
+                    <p className="text-xs text-amber-700 panel-oscuro:text-amber-300 bg-amber-50 panel-oscuro:bg-amber-500/10 rounded-xl px-3 py-2.5">
                       Guardá el vehículo primero para poder cargarle gastos.
                     </p>
                   ) : (
                     <div className="space-y-2">
                       {gastos.map((g) => (
-                        <div key={g.id} className="flex items-center justify-between gap-2 border border-gray-100 rounded-xl px-3 py-2">
+                        <div key={g.id} className="flex items-center justify-between gap-2 border border-gray-100 panel-oscuro:border-gray-800 rounded-xl px-3 py-2">
                           <div className="min-w-0">
-                            <p className="text-sm text-gray-800 truncate">{g.concepto}</p>
+                            <p className="text-sm text-gray-800 panel-oscuro:text-gray-200 truncate">{g.concepto}</p>
                             {g.fecha && (
-                              <p className="text-xs text-gray-400">{formatFechaGasto(g.fecha)}</p>
+                              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">{formatFechaGasto(g.fecha)}</p>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-semibold text-gray-700">${g.monto.toLocaleString("es-AR")}</span>
+                            <span className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">${g.monto.toLocaleString("es-AR")}</span>
                             <button
                               type="button"
                               onClick={() => handleDeleteGasto(g.id)}
                               disabled={deletingGastoId === g.id}
-                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              className="p-1.5 text-red-400 hover:text-red-600 panel-oscuro:hover:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -2022,7 +2022,7 @@ function ProductoFormPage() {
                         <select
                           value={gastoConcepto}
                           onChange={(e) => setGastoConcepto(e.target.value)}
-                          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                           {GASTO_CONCEPTOS.map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -2032,24 +2032,24 @@ function ProductoFormPage() {
                             onChange={(e) => setGastoConceptoOtro(e.target.value)}
                             placeholder="Concepto"
                             maxLength={100}
-                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         )}
                         <div className="relative w-full sm:w-32">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 text-sm">$</span>
                           <input
                             type="number"
                             value={gastoMonto}
                             onChange={(e) => setGastoMonto(e.target.value)}
                             min="0" step="0.01" placeholder="Monto"
-                            className="w-full border border-gray-200 rounded-xl pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         </div>
                         <input
                           type="date"
                           value={gastoFecha}
                           onChange={(e) => setGastoFecha(e.target.value)}
-                          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                         <button
                           type="button"
@@ -2068,11 +2068,11 @@ function ProductoFormPage() {
               )}
 
               {/* Toggle ¿En oferta? */}
-              <div className="border-t border-gray-100 pt-4 space-y-4">
+              <div className="border-t border-gray-100 panel-oscuro:border-gray-800 pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">¿Está en oferta?</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">¿Está en oferta?</p>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                       {isOnSale
                         ? "Activa — el cliente ve el precio original tachado y el badge elegido"
                         : "No — se muestra solo el precio de venta"}
@@ -2081,10 +2081,10 @@ function ProductoFormPage() {
                   <button
                     type="button"
                     onClick={() => { setIsOnSale(v => !v); markDirty(); }}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isOnSale ? "bg-indigo-600" : "bg-gray-200"}`}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isOnSale ? "bg-indigo-600" : "bg-gray-200 panel-oscuro:bg-gray-700"}`}
                     role="switch" aria-checked={isOnSale}
                   >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${isOnSale ? "translate-x-5" : "translate-x-0"}`} />
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white panel-oscuro:bg-gray-900 shadow ring-0 transition duration-200 ${isOnSale ? "translate-x-5" : "translate-x-0"}`} />
                   </button>
                 </div>
 
@@ -2092,10 +2092,10 @@ function ProductoFormPage() {
                   <div className="space-y-4">
                     {/* Precio original */}
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1.5">
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">
                         <span>Precio original (antes del descuento)</span>
                         {discount > 0 && (
-                          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 panel-oscuro:bg-green-500/15 text-green-700 panel-oscuro:text-green-300">
                             -{discount}% OFF
                           </span>
                         )}
@@ -2107,16 +2107,16 @@ function ProductoFormPage() {
                         const cpTooLow = !cpInvalid && cp !== null && cp <= sp;
                         return <>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">$</span>
                             <input
                               type="number"
                               value={form.comparePrice}
                               onChange={(e) => { updateForm("comparePrice", e.target.value); markDirty(); }}
                               min="0" step="0.01" placeholder="ej: 60000"
                               className={`w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                cpInvalid ? "border-red-400 bg-red-50"
-                                : cpTooLow ? "border-amber-400 bg-amber-50"
-                                : "border-gray-200"
+                                cpInvalid ? "border-red-400 bg-red-50 panel-oscuro:bg-red-500/10"
+                                : cpTooLow ? "border-amber-400 bg-amber-50 panel-oscuro:bg-amber-500/10"
+                                : "border-gray-200 panel-oscuro:border-gray-700"
                               }`}
                             />
                           </div>
@@ -2127,7 +2127,7 @@ function ProductoFormPage() {
                             </p>
                           )}
                           {cpTooLow && (
-                            <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
+                            <p className="mt-1 text-xs text-amber-600 panel-oscuro:text-amber-400 flex items-center gap-1">
                               <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                               El precio original debe ser mayor al precio de venta.
                             </p>
@@ -2136,37 +2136,37 @@ function ProductoFormPage() {
                       })()}
                       {discount > 0 && (
                         <div className="mt-2 flex items-center gap-3 text-sm">
-                          <span className="text-gray-400 line-through">${parseFloat(form.comparePrice).toLocaleString("es-AR")}</span>
-                          <span className="font-semibold text-gray-900">${parseFloat(form.price).toLocaleString("es-AR")}</span>
-                          <span className="text-green-600 font-bold">-{discount}%</span>
+                          <span className="text-gray-400 panel-oscuro:text-gray-500 line-through">${parseFloat(form.comparePrice).toLocaleString("es-AR")}</span>
+                          <span className="font-semibold text-gray-900 panel-oscuro:text-gray-100">${parseFloat(form.price).toLocaleString("es-AR")}</span>
+                          <span className="text-green-600 panel-oscuro:text-green-400 font-bold">-{discount}%</span>
                         </div>
                       )}
                     </div>
 
                     {/* Badge picker */}
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">Badge en la imagen <span className="text-xs text-gray-400 font-normal">(opcional)</span></p>
-                      <p className="text-xs text-gray-400 mb-2">Elegí el estilo visual del badge. Si tenés una promo N llevás M pagás, el badge se genera automáticamente.</p>
+                      <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1">Badge en la imagen <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 font-normal">(opcional)</span></p>
+                      <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-2">Elegí el estilo visual del badge. Si tenés una promo N llevás M pagás, el badge se genera automáticamente.</p>
                       <div className="flex flex-wrap gap-2">
                         {(["OFERTA", "SALE", "PCT"] as const).map(key => (
                           <button
                             key={key}
                             type="button"
                             onClick={() => { updateForm("offerBadge", form.offerBadge === key ? "" : key); markDirty(); }}
-                            className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all ${form.offerBadge === key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}
+                            className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all ${form.offerBadge === key ? "border-indigo-600 bg-indigo-50 panel-oscuro:bg-indigo-500/10" : "border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 hover:border-indigo-200 panel-oscuro:hover:border-indigo-500/30"}`}
                           >
                             {form.offerBadge === key && (
                               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>
                             )}
                             <OfferBadgePreview badge={key} pct={key === "PCT" ? discount || null : null} />
-                            <span className="text-[10px] text-gray-500 font-medium">{key === "OFERTA" ? "Oferta" : key === "SALE" ? "Sale" : "% Off"}</span>
+                            <span className="text-[10px] text-gray-500 panel-oscuro:text-gray-400 font-medium">{key === "OFERTA" ? "Oferta" : key === "SALE" ? "Sale" : "% Off"}</span>
                           </button>
                         ))}
                         {form.offerBadge && (
                           <button
                             type="button"
                             onClick={() => { updateForm("offerBadge", ""); markDirty(); }}
-                            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-gray-100 bg-gray-50 hover:border-red-200 text-xs text-gray-400 hover:text-red-500 transition-all min-w-[48px]"
+                            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 hover:border-red-200 panel-oscuro:hover:border-red-500/30 text-xs text-gray-400 panel-oscuro:text-gray-500 hover:text-red-500 transition-all min-w-[48px]"
                           >
                             <span className="text-base">✕</span>
                             <span>Ninguno</span>
@@ -2177,8 +2177,8 @@ function ProductoFormPage() {
 
                     {/* Nota de oferta */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Nota de la oferta <span className="text-xs text-gray-400 font-normal">(opcional)</span>
+                      <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">
+                        Nota de la oferta <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 font-normal">(opcional)</span>
                       </label>
                       <textarea
                         value={form.offerNote}
@@ -2186,16 +2186,16 @@ function ProductoFormPage() {
                         placeholder="Ej: Válida hasta agotar stock · Solo talles M y L"
                         rows={2}
                         maxLength={200}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                        className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                       />
-                      <p className="mt-1 text-xs text-gray-400 text-right">{form.offerNote.length}/200</p>
-                      <p className="text-xs text-gray-400">Se muestra en el detalle del producto junto al precio de oferta.</p>
+                      <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500 text-right">{form.offerNote.length}/200</p>
+                      <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Se muestra en el detalle del producto junto al precio de oferta.</p>
                     </div>
 
                     {/* Fecha de vencimiento de la oferta */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Válida hasta <span className="text-xs text-gray-400 font-normal">(opcional)</span>
+                      <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">
+                        Válida hasta <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 font-normal">(opcional)</span>
                         <Tip text="Cuando llegue esta fecha/hora la oferta se desactiva automáticamente en la tienda: desaparece el precio tachado, el badge y la nota." align="right" />
                       </label>
                       <div className="flex items-center gap-2">
@@ -2203,17 +2203,17 @@ function ProductoFormPage() {
                           type="datetime-local"
                           value={form.offerEndsAt}
                           onChange={(e) => { updateForm("offerEndsAt", e.target.value); markDirty(); }}
-                          className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                         {form.offerEndsAt && (
                           <button type="button" onClick={() => { updateForm("offerEndsAt", ""); markDirty(); }}
-                            className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                            className="p-2 rounded-lg text-gray-400 panel-oscuro:text-gray-500 hover:text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors">
                             <X className="h-4 w-4" />
                           </button>
                         )}
                       </div>
                       {form.offerEndsAt && (
-                        <p className={`mt-1.5 text-xs flex items-center gap-1 ${new Date(form.offerEndsAt) <= new Date() ? "text-red-600" : "text-green-600"}`}>
+                        <p className={`mt-1.5 text-xs flex items-center gap-1 ${new Date(form.offerEndsAt) <= new Date() ? "text-red-600 panel-oscuro:text-red-400" : "text-green-600 panel-oscuro:text-green-400"}`}>
                           {(() => {
                             const end = new Date(form.offerEndsAt);
                             const now = new Date();
@@ -2229,7 +2229,7 @@ function ProductoFormPage() {
                     </div>
 
                     {discount > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-green-600 panel-oscuro:text-green-400 bg-green-50 panel-oscuro:bg-green-500/10 px-4 py-2 rounded-xl">
                         <Tag className="h-4 w-4" />
                         Este producto aparecerá automáticamente en los bloques de <strong>&quot;Ofertas destacadas&quot;</strong> de tu tienda.
                       </div>
@@ -2247,11 +2247,11 @@ function ProductoFormPage() {
 
             {/* Precio mayorista — solo rubros que soportan mayorista Y tienda configurada como tal */}
             {store.tieneVentaMayorista && storeTypeConfig.supportsWholesale && (
-              <div className="bg-white rounded-2xl border border-indigo-100 p-6 space-y-5">
+              <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-indigo-100 panel-oscuro:border-indigo-500/30 p-6 space-y-5">
                 {/* Cabecera */}
                 <div>
-                  <h2 className="font-semibold text-gray-900">Venta mayorista</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Los precios mayoristas aplican automáticamente cuando el comprador alcanza la cantidad mínima</p>
+                  <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Venta mayorista</h2>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Los precios mayoristas aplican automáticamente cuando el comprador alcanza la cantidad mínima</p>
                 </div>
 
                 {/* Precio base + cantidad mínima.
@@ -2261,9 +2261,9 @@ function ProductoFormPage() {
                     come parte del espacio. */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="precioMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Precio por mayor base *</label>
+                    <label htmlFor="precioMayorista" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Precio por mayor base *</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">$</span>
                       <input
                         id="precioMayorista"
                         type="number"
@@ -2271,12 +2271,12 @@ function ProductoFormPage() {
                         onChange={(e) => { setPrecioMayorista(e.target.value); markDirty(); }}
                         min="0" step="0.01" placeholder="0"
                         aria-label="Precio mayorista base"
-                        className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="cantMinMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima *</label>
+                    <label htmlFor="cantMinMayorista" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Cantidad mínima *</label>
                     <input
                       id="cantMinMayorista"
                       type="number"
@@ -2284,7 +2284,7 @@ function ProductoFormPage() {
                       onChange={(e) => { setCantMinMayorista(e.target.value); markDirty(); }}
                       min="1" step="1" placeholder="Ej: 6"
                       aria-label="Cantidad mínima para precio mayorista"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
@@ -2294,14 +2294,14 @@ function ProductoFormPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Escalones de precio</p>
-                        <p className="text-xs text-gray-400">Precio menor para quien compra más. Máximo 3 escalones.</p>
+                        <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Escalones de precio</p>
+                        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Precio menor para quien compra más. Máximo 3 escalones.</p>
                       </div>
                       {escalones.length < 3 && (
                         <button
                           type="button"
                           onClick={() => { setEscalones([...escalones, { desde: "", precio: "" }]); markDirty(); }}
-                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded-lg px-3 py-1.5 transition-colors"
+                          className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 border border-indigo-200 panel-oscuro:border-indigo-500/30 rounded-lg px-3 py-1.5 transition-colors"
                           aria-label="Agregar escalón de precio mayorista"
                         >
                           + Agregar escalón
@@ -2311,9 +2311,9 @@ function ProductoFormPage() {
                     {escalones.length > 0 && (
                       <div className="space-y-2">
                         {escalones.map((esc, idx) => (
-                          <div key={idx} className="flex items-center gap-3 bg-indigo-50 rounded-xl px-4 py-3">
+                          <div key={idx} className="flex items-center gap-3 bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-xl px-4 py-3">
                             <div className="flex-1">
-                              <label htmlFor={`esc-desde-${idx}`} className="block text-xs text-gray-500 mb-1">Desde (unidades)</label>
+                              <label htmlFor={`esc-desde-${idx}`} className="block text-xs text-gray-500 panel-oscuro:text-gray-400 mb-1">Desde (unidades)</label>
                               <input
                                 id={`esc-desde-${idx}`}
                                 type="number"
@@ -2327,13 +2327,13 @@ function ProductoFormPage() {
                                   next[idx] = { ...next[idx], desde: e.target.value };
                                   setEscalones(next); markDirty();
                                 }}
-                                className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full border border-indigo-200 panel-oscuro:border-indigo-500/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
                             <div className="flex-1">
-                              <label htmlFor={`esc-precio-${idx}`} className="block text-xs text-gray-500 mb-1">Precio por unidad</label>
+                              <label htmlFor={`esc-precio-${idx}`} className="block text-xs text-gray-500 panel-oscuro:text-gray-400 mb-1">Precio por unidad</label>
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 text-sm">$</span>
                                 <input
                                   id={`esc-precio-${idx}`}
                                   type="number"
@@ -2346,7 +2346,7 @@ function ProductoFormPage() {
                                     next[idx] = { ...next[idx], precio: e.target.value };
                                     setEscalones(next); markDirty();
                                   }}
-                                  className="w-full border border-indigo-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                  className="w-full border border-indigo-200 panel-oscuro:border-indigo-500/30 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
                             </div>
@@ -2354,7 +2354,7 @@ function ProductoFormPage() {
                               type="button"
                               aria-label={`Eliminar escalón ${idx + 1}`}
                               onClick={() => { setEscalones(escalones.filter((_, i) => i !== idx)); markDirty(); }}
-                              className="mt-4 text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
+                              className="mt-4 text-gray-400 panel-oscuro:text-gray-500 hover:text-red-500 transition-colors text-lg leading-none"
                             >
                               ×
                             </button>
@@ -2372,11 +2372,11 @@ function ProductoFormPage() {
                     checked={soloMayorista}
                     onChange={(e) => { setSoloMayorista(e.target.checked); markDirty(); }}
                     aria-label="Producto exclusivo para compradores mayoristas"
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 panel-oscuro:border-gray-600 text-indigo-600 panel-oscuro:text-indigo-400 focus:ring-indigo-500"
                   />
                   <span>
-                    <span className="block text-sm font-medium text-gray-700 group-hover:text-indigo-700 transition-colors">Solo visible en tienda mayorista</span>
-                    <span className="block text-xs text-gray-400 mt-0.5">Este producto no aparece si la tienda no tiene venta mayorista activada</span>
+                    <span className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 group-hover:text-indigo-700 panel-oscuro:group-hover:text-indigo-300 transition-colors">Solo visible en tienda mayorista</span>
+                    <span className="block text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Este producto no aparece si la tienda no tiene venta mayorista activada</span>
                   </span>
                 </label>
               </div>
@@ -2384,15 +2384,15 @@ function ProductoFormPage() {
 
             {/* Promoción por cantidad y Cuotas — no aplican a rubros con checkoutMode "inquiry" (ej. AUTOS): no hay compra online de varias unidades ni tarjeta de por medio */}
             {!storeTypeConfig.hidePromotions && <>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5">
               <div className="flex items-start gap-3">
                 <div className="text-2xl leading-none mt-0.5">🎉</div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">Promociones</p>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">Promociones</p>
+                  <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1 leading-relaxed">
                     Los descuentos (por cantidad, %, 3×2, envío gratis) ahora se crean en la sección <strong>Promociones</strong>. Desde ahí los aplicás a este producto, a una categoría o a toda la tienda, con fechas y todo.
                   </p>
-                  <Link href="/dashboard/promociones" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                  <Link href="/dashboard/promociones" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300">
                     Ir a Promociones
                     <span aria-hidden>→</span>
                   </Link>
@@ -2401,10 +2401,10 @@ function ProductoFormPage() {
             </div>
 
             {/* Cuotas sin interés — informativo, no conectado a ningún banco ni a Mercado Pago */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-3">
               <div>
-                <h2 className="font-semibold text-gray-900">Cuotas sin interés</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Cuotas sin interés</h2>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                   Solo se muestra si tenés Mercado Pago conectado. Es información para el comprador, no una conexión real con tu banco — el cálculo es simplemente precio ÷ cuotas. Las cuotas reales y si se aplica interés se definen en tu cuenta de Mercado Pago al momento del pago. Elegí solo lo que realmente puedas ofrecer para evitar reclamos.
                 </p>
               </div>
@@ -2423,8 +2423,8 @@ function ProductoFormPage() {
                     aria-pressed={cuotas === opt}
                     className={`py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
                       cuotas === opt
-                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                        : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
+                        ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300"
+                        : "border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 text-gray-500 panel-oscuro:text-gray-400 hover:border-gray-300 panel-oscuro:hover:border-gray-600"
                     }`}
                   >
                     {opt === 0 ? "Sin cuotas" : `${opt} cuotas`}
@@ -2435,67 +2435,67 @@ function ProductoFormPage() {
             </>}
 
             {/* Envío — peso y dimensiones, oculto para rubros como AUTOS que no se mandan por correo */}
-            {!storeTypeConfig.hideShipping && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            {!storeTypeConfig.hideShipping && <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
               <div>
                 <div className="flex items-center gap-1">
-                  <h2 className="font-semibold text-gray-900">Envío</h2>
+                  <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Envío</h2>
                   <Tip align="left" text="Usado para cotizar el costo de envío real con el correo. Si lo dejás vacío, el envío se coordina manualmente con el cliente." />
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">Peso y dimensiones del paquete (opcional)</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Peso y dimensiones del paquete (opcional)</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Peso (kg)</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Peso (kg)</label>
                   <input
                     type="number"
                     value={weightKg}
                     onChange={(e) => { setWeightKg(e.target.value); markDirty(); }}
                     min="0" step="0.01" placeholder="0"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Ancho (cm)</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Ancho (cm)</label>
                   <input
                     type="number"
                     value={widthCm}
                     onChange={(e) => { setWidthCm(e.target.value); markDirty(); }}
                     min="0" step="0.1" placeholder="0"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Alto (cm)</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Alto (cm)</label>
                   <input
                     type="number"
                     value={heightCm}
                     onChange={(e) => { setHeightCm(e.target.value); markDirty(); }}
                     min="0" step="0.1" placeholder="0"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Profundidad (cm)</label>
+                  <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Profundidad (cm)</label>
                   <input
                     type="number"
                     value={depthCm}
                     onChange={(e) => { setDepthCm(e.target.value); markDirty(); }}
                     min="0" step="0.1" placeholder="0"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
             </div>}
 
             {/* Variantes — ocultas para tiendas como AUTOS donde no aplica */}
-            {!storeTypeConfig.hideVariants && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            {!storeTypeConfig.hideVariants && <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1">
-                    <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
+                    <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Variantes y stock</h2>
                     <Tip align="left" text={variantTip(useBuilder ? ["Color", opcionNombre] : dimsActuales)} />
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                     {useBuilder
                       ? `Elegí colores y ${opcionNombre.toLowerCase()} — las combinaciones se generan solas.`
                       : `Una fila por combinación — ${variantExample(dimsActuales)}`}
@@ -2537,7 +2537,7 @@ function ProductoFormPage() {
                     }}
                     // `whitespace-nowrap` porque a 360 "Modo manual" se partía en dos
                     // líneas y quedaba encimado con el texto de la izquierda.
-                    className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors whitespace-nowrap shrink-0"
+                    className="text-xs text-gray-400 panel-oscuro:text-gray-500 hover:text-indigo-600 panel-oscuro:hover:text-indigo-400 underline underline-offset-2 transition-colors whitespace-nowrap shrink-0"
                   >
                     {useBuilder ? "Modo manual" : "Modo constructor"}
                   </button>
@@ -2546,7 +2546,7 @@ function ProductoFormPage() {
                   <button
                     type="button"
                     onClick={addVariant}
-                    className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-indigo-600 panel-oscuro:text-indigo-400 font-medium hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     Agregar
@@ -2579,21 +2579,21 @@ function ProductoFormPage() {
                       en Moda siempre "Talle" y "Color". Acá se escriben, y el
                       cambio se aplica a todas las filas de una. */}
                   <div className="flex flex-wrap items-center gap-2 pb-1">
-                    <span className="text-xs font-medium text-gray-500">Opciones:</span>
+                    <span className="text-xs font-medium text-gray-500 panel-oscuro:text-gray-400">Opciones:</span>
                     {/* `key` por POSICIÓN, no por nombre: si la clave fuera el nombre,
                         confirmar el cambio remontaría el input y se perdería el foco. */}
                     {dimsActuales.map((dim, i) => (
-                      <span key={i} className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg pl-2 pr-1 py-1">
+                      <span key={i} className="inline-flex items-center gap-1 bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-200 panel-oscuro:border-gray-700 rounded-lg pl-2 pr-1 py-1">
                         <NombreOpcion
                           valor={dim}
                           otros={dimsActuales.filter(d => d !== dim)}
                           onCommit={(nuevo) => renameDim(dim, nuevo)}
                           ariaLabel={`Nombre de la opción ${dim}`}
-                          className="w-24 bg-transparent text-sm font-medium text-gray-700 focus:outline-none"
+                          className="w-24 bg-transparent text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 focus:outline-none"
                         />
                         {dimsActuales.length > 1 && (
                           <button type="button" onClick={() => removeDim(dim)} aria-label={`Quitar la opción ${dim}`}
-                            className="text-gray-300 hover:text-red-500 transition-colors">
+                            className="text-gray-300 panel-oscuro:text-gray-600 hover:text-red-500 transition-colors">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         )}
@@ -2601,20 +2601,20 @@ function ProductoFormPage() {
                     ))}
                     {dimsActuales.length < MAX_OPCIONES && (
                       <button type="button" onClick={addDim}
-                        className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors">
+                        className="inline-flex items-center gap-1 text-xs text-indigo-600 panel-oscuro:text-indigo-400 font-medium hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 transition-colors">
                         <Plus className="h-3.5 w-3.5" /> Agregar opción
                       </button>
                     )}
                   </div>
                   {variants.map((variant, idx) => (
-                    <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 rounded-xl">
+                    <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl">
                       {Object.keys(variant.attrs).map(dim => {
                         const isColor = esOpcionDeColor(dim);
                         const val = variant.attrs[dim] || "";
                         const circle = isColor ? colorPreview(val) : null;
                         return (
                           <div key={dim} className="flex-1 min-w-[80px]">
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                            <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1">
                               {dim}
                               {isColor && (
                                 <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
@@ -2623,7 +2623,7 @@ function ProductoFormPage() {
                             <div className="relative">
                               {circle && (
                                 <span
-                                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300"
+                                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300 panel-oscuro:border-gray-600"
                                   style={{ backgroundColor: circle }}
                                 />
                               )}
@@ -2636,7 +2636,7 @@ function ProductoFormPage() {
                                 // sea como sea que se llame. Antes estaba clavado a
                                 // "Talle", así que renombrarla las hacía desaparecer.
                                 list={!isColor && sugerida.valores.length > 0 ? `sug-${idx}-${dim}` : undefined}
-                                className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
+                                className={`w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
                               />
                               {!isColor && sugerida.valores.length > 0 && (
                                 <datalist id={`sug-${idx}-${dim}`}>
@@ -2653,33 +2653,33 @@ function ProductoFormPage() {
                           donde la fila tiene lugar de sobra. Si estuviera acá y no
                           allá, quién puede cargarlo dependería del modo. */}
                       <div className="hidden lg:block w-28 shrink-0">
-                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
+                        <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1 flex items-center">
                           SKU
                           <Tip align="right" text="Tu código interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depósito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto." />
                         </label>
-                        <input type="text" value={variant.sku} onChange={(e) => updateVariantField(idx, "sku", e.target.value)} placeholder="opcional" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <input type="text" value={variant.sku} onChange={(e) => updateVariantField(idx, "sku", e.target.value)} placeholder="opcional" className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div className="w-20 shrink-0">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
-                        <input type="number" value={variant.stock} onChange={(e) => updateVariantField(idx, "stock", e.target.value)} min="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1">Stock</label>
+                        <input type="number" value={variant.stock} onChange={(e) => updateVariantField(idx, "stock", e.target.value)} min="0" className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div className="w-24 shrink-0">
-                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                        <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1 flex items-center gap-1">
                           Precio propio
                           <Tip align="right" text="Precio de esta variante específica. Si lo completás, reemplaza al precio base del producto. Dejalo vacío para usar el precio base." />
                         </label>
-                        <input type="number" value={variant.price} onChange={(e) => updateVariantField(idx, "price", e.target.value)} min="0" placeholder="base" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <input type="number" value={variant.price} onChange={(e) => updateVariantField(idx, "price", e.target.value)} min="0" placeholder="base" className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div className="w-24 shrink-0">
-                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
+                        <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1 flex items-center">
                           Alerta stock
                           <Tip align="right" text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
                         </label>
-                        <input type="number" value={variant.lowStockThreshold} onChange={(e) => updateVariantField(idx, "lowStockThreshold", e.target.value)} min="0" placeholder="5" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <input type="number" value={variant.lowStockThreshold} onChange={(e) => updateVariantField(idx, "lowStockThreshold", e.target.value)} min="0" placeholder="5" className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div className="flex items-end pb-1 shrink-0">
                         {variants.length > 1 && (
-                          <button type="button" onClick={() => removeVariant(idx)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <button type="button" onClick={() => removeVariant(idx)} className="p-2 text-red-400 hover:text-red-600 panel-oscuro:hover:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 rounded-lg transition-colors">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -2689,7 +2689,7 @@ function ProductoFormPage() {
 
                   {/* Hint: fotos sin color asignado */}
                   {valoresParaFoto.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
-                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
+                    <div className="flex items-start gap-2 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl px-3 py-2.5 text-xs text-amber-700 panel-oscuro:text-amber-300">
                       <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                       <span>Tenés variantes cargadas pero hay fotos sin asignar. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a {etiquetaFoto}.</span>
                     </div>
@@ -2701,16 +2701,16 @@ function ProductoFormPage() {
             {isEditing && editingId && <StockHistoryPanel productId={editingId} />}
 
             {/* Ficha técnica / Atributos */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1">
-                    <h2 className="font-semibold text-gray-900">
+                    <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">
                       {storeTypeConfig.hideVariants ? "Ficha técnica" : activeExtraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
                     </h2>
                     <Tip align="left" text={extraFieldsTip(store.tipoTienda || "ROPA")} />
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                     {activeExtraFields.length > 0
                       ? activeExtraFields.map((f) => f.label).join(", ")
                       : "Número de serie, peso, material, dimensiones, etc."}
@@ -2719,7 +2719,7 @@ function ProductoFormPage() {
                 <button
                   type="button"
                   onClick={addAttribute}
-                  className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                  className="flex items-center gap-1.5 text-sm text-indigo-600 panel-oscuro:text-indigo-400 font-medium hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   Agregar
@@ -2742,7 +2742,7 @@ function ProductoFormPage() {
                     };
                     return (
                       <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">
                           {field.label}
                           {field.tip && <Tip align="left" text={field.tip} />}
                         </label>
@@ -2750,7 +2750,7 @@ function ProductoFormPage() {
                           <select
                             value={val}
                             onChange={(e) => onChange(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                            className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
                           >
                             <option value="">Seleccioná...</option>
                             {field.options.map((opt) => (
@@ -2766,7 +2766,7 @@ function ProductoFormPage() {
                             value={val}
                             onChange={(e) => onChange(e.target.value)}
                             placeholder={field.placeholder || ""}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         ) : (
                           <CampoAuto
@@ -2783,7 +2783,7 @@ function ProductoFormPage() {
 
               {/* Atributos personalizados (Agregar) */}
               {activeExtraFields.length === 0 && attributes.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">
+                <p className="text-sm text-gray-400 panel-oscuro:text-gray-500 text-center py-4">
                   Sin atributos. Usá esto para especificar datos técnicos del producto.
                 </p>
               )}
@@ -2794,7 +2794,7 @@ function ProductoFormPage() {
                 .map(({ attr, idx }) => (
                   <div key={idx} className="flex flex-col sm:flex-row gap-3 sm:items-end">
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del atributo</label>
+                      <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1">Nombre del atributo</label>
                       {/* El VALOR del atributo ya era CampoAuto; el nombre habia
                           quedado como input y tiene el mismo problema. */}
                       <CampoAuto
@@ -2805,7 +2805,7 @@ function ProductoFormPage() {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Valor</label>
+                      <label className="block text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 mb-1">Valor</label>
                       <CampoAuto
                         value={attr.value}
                         onChange={(v) => updateAttribute(idx, "value", v)}
@@ -2816,7 +2816,7 @@ function ProductoFormPage() {
                     <button
                       type="button"
                       onClick={() => removeAttribute(idx)}
-                      className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mb-0.5"
+                      className="p-2.5 text-red-400 hover:text-red-600 panel-oscuro:hover:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 rounded-xl transition-colors mb-0.5"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -2834,27 +2834,27 @@ function ProductoFormPage() {
                 es lo mismo que un error: pasarse no rompe nada, solo se ve menos.
                 Por eso el aviso es ámbar y no rojo, y el guardado nunca se frena
                 por esto. */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setSeoAbierto((v) => !v)}
                 aria-expanded={seoAbierto}
-                className="flex w-full items-center gap-2 p-6 text-left hover:bg-gray-50 transition-colors"
+                className="flex w-full items-center gap-2 p-6 text-left hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
               >
                 <Search className="h-4 w-4 text-indigo-500 shrink-0" />
-                <span className="font-semibold text-gray-900">Optimización para Google</span>
-                <span className="text-xs text-gray-400">(opcional)</span>
+                <span className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Optimización para Google</span>
+                <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">(opcional)</span>
                 {seoTocado && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 panel-oscuro:text-indigo-400 bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-2 py-0.5 rounded-full">
                     Personalizado
                   </span>
                 )}
-                <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 shrink-0 transition-transform ${seoAbierto ? "rotate-180" : ""}`} />
+                <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 shrink-0 transition-transform ${seoAbierto ? "rotate-180" : ""}`} />
               </button>
 
               {seoAbierto && (
-                <div className="px-6 pb-6 space-y-4 border-t border-gray-100 pt-4">
-                  <p className="text-xs text-gray-500 leading-relaxed">
+                <div className="px-6 pb-6 space-y-4 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+                  <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
                     Esto es lo que se lee en el <strong>resultado de Google</strong>, no en tu tienda.
                     Si lo dejás vacío se arma solo con el nombre y la descripción del producto — que
                     para la mayoría alcanza. Sirve cuando el producto se llama distinto de lo que la
@@ -2865,10 +2865,10 @@ function ProductoFormPage() {
                   {/* Título */}
                   <div>
                     <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                      <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">
                         Título en Google
                       </label>
-                      <span className={`text-xs tabular-nums ${form.seoTitle.length > SEO_TITULO_VISIBLE ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
+                      <span className={`text-xs tabular-nums ${form.seoTitle.length > SEO_TITULO_VISIBLE ? "text-amber-600 panel-oscuro:text-amber-400 font-semibold" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
                         {form.seoTitle.length}/{SEO_TITULO_VISIBLE}
                       </span>
                     </div>
@@ -2886,10 +2886,10 @@ function ProductoFormPage() {
                       placeholder={seoTituloAuto}
                       maxLength={SEO_TITULO_MAX}
                       rows={2}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
                     />
                     {form.seoTitle.length > SEO_TITULO_VISIBLE && (
-                      <p className="text-xs text-amber-600 mt-1.5">
+                      <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-1.5">
                         Google muestra unos {SEO_TITULO_VISIBLE} caracteres — de acá en adelante lo va a cortar con &ldquo;…&rdquo;. Se guarda igual.
                       </p>
                     )}
@@ -2898,10 +2898,10 @@ function ProductoFormPage() {
                   {/* Descripción */}
                   <div>
                     <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                      <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">
                         Descripción en Google
                       </label>
-                      <span className={`text-xs tabular-nums ${form.seoDescription.length > SEO_DESC_VISIBLE ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
+                      <span className={`text-xs tabular-nums ${form.seoDescription.length > SEO_DESC_VISIBLE ? "text-amber-600 panel-oscuro:text-amber-400 font-semibold" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
                         {form.seoDescription.length}/{SEO_DESC_VISIBLE}
                       </span>
                     </div>
@@ -2912,10 +2912,10 @@ function ProductoFormPage() {
                       placeholder={seoDescripcionAuto}
                       maxLength={SEO_DESC_MAX}
                       rows={3}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
                     />
                     {form.seoDescription.length > SEO_DESC_VISIBLE && (
-                      <p className="text-xs text-amber-600 mt-1.5">
+                      <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-1.5">
                         Google muestra unos {SEO_DESC_VISIBLE} caracteres — el resto no se va a ver. Se guarda igual.
                       </p>
                     )}
@@ -2923,7 +2923,7 @@ function ProductoFormPage() {
 
                   {/* Cómo se vería */}
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Así se vería en Google</p>
+                    <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 mb-2">Así se vería en Google</p>
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                       <p className="text-[13px] text-emerald-700 truncate">
                         tiendaapps.com › tienda › producto
@@ -2935,16 +2935,16 @@ function ProductoFormPage() {
                         {recortar(form.seoDescription.trim() || seoDescripcionAuto, SEO_DESC_VISIBLE)}
                       </p>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                    <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-2 leading-relaxed">
                       Es una referencia: Google arma el resultado como quiere y a veces usa otro texto
                       de la página si le parece que responde mejor a lo que buscaron.
                     </p>
                   </div>
 
                   {/* Avisos */}
-                  <div className="rounded-xl bg-amber-50 border border-amber-100 p-3.5 space-y-2">
-                    <p className="text-xs font-semibold text-amber-900">Tres cosas para tener en cuenta</p>
-                    <ul className="text-xs text-amber-800 space-y-1.5 leading-relaxed">
+                  <div className="rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/30 p-3.5 space-y-2">
+                    <p className="text-xs font-semibold text-amber-900 panel-oscuro:text-amber-200">Tres cosas para tener en cuenta</p>
+                    <ul className="text-xs text-amber-800 panel-oscuro:text-amber-300 space-y-1.5 leading-relaxed">
                       <li>
                         <strong>No es inmediato.</strong> Google tiene que volver a pasar por la página.
                         Puede tardar de unos días a un par de semanas.
@@ -2969,7 +2969,7 @@ function ProductoFormPage() {
                         updateForm("seoDescription", "");
                         markDirty();
                       }}
-                      className="text-xs font-medium text-gray-500 hover:text-gray-700 underline underline-offset-2"
+                      className="text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-300 underline underline-offset-2"
                     >
                       Volver al automático
                     </button>
@@ -2979,12 +2979,12 @@ function ProductoFormPage() {
             </div>
 
             {/* Programar publicación */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-6 space-y-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-indigo-500" />
-                <h2 className="font-semibold text-gray-900">Programar publicación</h2>
+                <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">Programar publicación</h2>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">
                 Si elegís una fecha futura, el producto se guardará oculto y se publicará automáticamente en esa fecha y hora.
               </p>
               <div className="flex items-center gap-3">
@@ -2993,13 +2993,13 @@ function ProductoFormPage() {
                   value={publishAt}
                   min={new Date().toISOString().slice(0, 16)}
                   onChange={(e) => { setPublishAt(e.target.value); markDirty(); }}
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 {publishAt && (
                   <button
                     type="button"
                     onClick={() => { setPublishAt(""); markDirty(); }}
-                    className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    className="p-2.5 text-gray-400 panel-oscuro:text-gray-500 hover:text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 rounded-xl transition-colors"
                     title="Quitar fecha programada"
                   >
                     <X className="h-4 w-4" />
@@ -3007,7 +3007,7 @@ function ProductoFormPage() {
                 )}
               </div>
               {publishAt && new Date(publishAt) > new Date() && (
-                <p className="text-xs text-indigo-600 font-medium">
+                <p className="text-xs text-indigo-600 panel-oscuro:text-indigo-400 font-medium">
                   Este producto se publicará el {new Date(publishAt).toLocaleString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               )}
@@ -3017,7 +3017,7 @@ function ProductoFormPage() {
             <div className="flex gap-3 pb-2">
               <Link
                 href="/dashboard/productos"
-                className="flex-1 text-center py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                className="flex-1 text-center py-3 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
               >
                 Cancelar
               </Link>
@@ -3036,8 +3036,8 @@ function ProductoFormPage() {
           <div className="w-full lg:w-80 flex-shrink-0">
             <div className="lg:sticky lg:top-0">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-gray-700">Vista previa</p>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Tu tienda</span>
+                <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Vista previa</p>
+                <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 bg-gray-100 panel-oscuro:bg-gray-800 px-2 py-1 rounded-full">Tu tienda</span>
               </div>
 
               {/* Product Card Preview */}
@@ -3261,24 +3261,24 @@ function ProductoFormPage() {
               )}
 
               {/* Info footer */}
-              <div className="mt-4 bg-indigo-50 rounded-xl p-3 space-y-1.5">
-                <p className="text-xs font-semibold text-indigo-700">Resumen del producto</p>
-                <div className="flex justify-between text-xs text-indigo-600">
+              <div className="mt-4 bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-xl p-3 space-y-1.5">
+                <p className="text-xs font-semibold text-indigo-700 panel-oscuro:text-indigo-300">Resumen del producto</p>
+                <div className="flex justify-between text-xs text-indigo-600 panel-oscuro:text-indigo-400">
                   <span>Imagenes</span>
                   <span>{images.length} subidas</span>
                 </div>
                 {storeTypeConfig.hideVariants ? (
-                  <div className="flex justify-between text-xs text-indigo-600">
+                  <div className="flex justify-between text-xs text-indigo-600 panel-oscuro:text-indigo-400">
                     <span>Atributos</span>
                     <span>{attributes.filter((a) => a.key && a.value).length} cargados</span>
                   </div>
                 ) : (
                   <>
-                    <div className="flex justify-between text-xs text-indigo-600">
+                    <div className="flex justify-between text-xs text-indigo-600 panel-oscuro:text-indigo-400">
                       <span>Variantes</span>
                       <span>{variants.filter((v) => Object.values(v.attrs).some(Boolean)).length} cargadas</span>
                     </div>
-                    <div className="flex justify-between text-xs text-indigo-600">
+                    <div className="flex justify-between text-xs text-indigo-600 panel-oscuro:text-indigo-400">
                       <span>Stock total</span>
                       <span>{totalStock} unidades</span>
                     </div>
@@ -3296,7 +3296,7 @@ function ProductoFormPage() {
 
 export default function NuevoProductoPage() {
   return (
-    <Suspense fallback={<DashboardLayout><div className="p-6 text-sm text-gray-500">Cargando...</div></DashboardLayout>}>
+    <Suspense fallback={<DashboardLayout><div className="p-6 text-sm text-gray-500 panel-oscuro:text-gray-400">Cargando...</div></DashboardLayout>}>
       <ProductoFormPage />
     </Suspense>
   );

@@ -35,7 +35,7 @@ const COMPORTAMIENTO = "w-full resize-none overflow-hidden";
 /* El aspecto por defecto, que es el del resto del panel. Se reemplaza entero con
    la prop `estilo` — ver el comentario de la prop. */
 const ESTILO_POR_DEFECTO =
-  "border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-400";
+  "border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 panel-oscuro:disabled:bg-gray-800/50 disabled:text-gray-400 panel-oscuro:disabled:text-gray-500";
 
 export default function CampoAuto({
   value, onChange, onEnter, onBlur, placeholder, className = "", id, maxLength, ariaLabel, disabled,

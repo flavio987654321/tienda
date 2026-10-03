@@ -89,7 +89,7 @@ export default async function DashboardPage() {
             href={`mailto:soporte@tiendaapps.com?subject=${encodeURIComponent(
               "No aparece mi tienda"
             )}&body=${encodeURIComponent(`Mi cuenta: ${userId}`)}`}
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white"
           >
             Escribirnos
           </a>

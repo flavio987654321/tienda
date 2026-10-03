@@ -16,8 +16,27 @@ export default function TemaDelPanelTiendas() {
   useEffect(() => {
     aplicarTemaTiendas(temaGuardadoTiendas());
     const cortar = escucharSistemaTiendas();
+
+    /* ⚠️ Al imprimir, claro siempre. Desde el panel se imprimen remitos y
+       listados: en oscuro salían con texto gris claro sobre papel blanco
+       —los navegadores no imprimen los fondos—. Se pasa a claro antes de
+       imprimir y se vuelve a lo que estaba después. */
+    let antes: string | null = null;
+    const alImprimir = () => {
+      antes = document.documentElement.getAttribute(ATRIBUTO_TEMA);
+      document.documentElement.setAttribute(ATRIBUTO_TEMA, "claro");
+    };
+    const alTerminar = () => {
+      if (antes) document.documentElement.setAttribute(ATRIBUTO_TEMA, antes);
+      antes = null;
+    };
+    window.addEventListener("beforeprint", alImprimir);
+    window.addEventListener("afterprint", alTerminar);
+
     return () => {
       cortar();
+      window.removeEventListener("beforeprint", alImprimir);
+      window.removeEventListener("afterprint", alTerminar);
       document.documentElement.removeAttribute(ATRIBUTO_TEMA);
     };
   }, []);

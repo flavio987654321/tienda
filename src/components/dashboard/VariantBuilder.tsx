@@ -113,10 +113,10 @@ export function VariantBuilder({
   return (
     <div className="space-y-5">
       {/* ── Colores ── */}
-      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+      <div className="bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl p-4 space-y-3">
         <div>
-          <p className="text-sm font-semibold text-gray-700">Colores</p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Colores</p>
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
             Si no encontrás el color podés crearlo. Escribilo y apretá Enter.
           </p>
         </div>
@@ -141,12 +141,12 @@ export function VariantBuilder({
               onClick={() => toggleColor(c.label)}
               className={`flex min-w-0 items-center gap-2 px-2 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                 colors.includes(c.label)
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300"
+                  : "border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 hover:border-gray-300 panel-oscuro:hover:border-gray-600"
               }`}
             >
               <span
-                className="w-4 h-4 rounded-full shrink-0 border border-gray-200"
+                className="w-4 h-4 rounded-full shrink-0 border border-gray-200 panel-oscuro:border-gray-700"
                 style={{ backgroundColor: c.hex }}
               />
               <span className="truncate">{c.label}</span>
@@ -162,12 +162,12 @@ export function VariantBuilder({
             onChange={e => setCustomColor(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomColor(); } }}
             placeholder="Color personalizado (ej: Turquesa, #FF5500)"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
           />
           <button
             type="button"
             onClick={addCustomColor}
-            className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
+            className="px-3 py-2 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15 transition-colors"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -179,9 +179,9 @@ export function VariantBuilder({
             {colors.map(c => (
               <span
                 key={c}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-indigo-200 rounded-full text-xs text-indigo-700 font-medium"
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-white panel-oscuro:bg-gray-900 border border-indigo-200 panel-oscuro:border-indigo-500/30 rounded-full text-xs text-indigo-700 panel-oscuro:text-indigo-300 font-medium"
               >
-                <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: resolveHex(c) }} />
+                <span className="w-3 h-3 rounded-full border border-gray-200 panel-oscuro:border-gray-700" style={{ backgroundColor: resolveHex(c) }} />
                 {c}
                 <button
                   type="button"
@@ -197,7 +197,7 @@ export function VariantBuilder({
       </div>
 
       {/* ── Segunda dimensión (Talles / Tamaños / etc.) ── */}
-      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+      <div className="bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl p-4 space-y-3">
         <div>
           {/* El nombre de la opción es EDITABLE. Antes era un título fijo por
               rubro, así que un collar en una tienda de Moda se guardaba como
@@ -211,15 +211,15 @@ export function VariantBuilder({
                 otros={["Color"]}
                 onCommit={onSizeDimChange}
                 ariaLabel="Nombre de la opción"
-                className="text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-1 w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2.5 py-1 w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              <span className="text-xs text-gray-400">así lo va a ver el comprador</span>
+              <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">así lo va a ver el comprador</span>
             </div>
           ) : (
-            <p className="text-sm font-semibold text-gray-700">{sizeDim}</p>
+            <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">{sizeDim}</p>
           )}
-          <p className="text-xs text-gray-400 mt-1.5">{sizeHint}</p>
-          {stdSizes.length > 0 && <p className="text-xs text-gray-400">Sugerencias:</p>}
+          <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1.5">{sizeHint}</p>
+          {stdSizes.length > 0 && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Sugerencias:</p>}
         </div>
 
         {/* Grilla de talles estándar. Cuatro columnas en angosto: los nombres son
@@ -233,8 +233,8 @@ export function VariantBuilder({
               onClick={() => toggleSize(s)}
               className={`truncate px-3 py-1.5 rounded-lg border text-sm font-medium text-center transition-all ${
                 sizes.includes(s)
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300"
+                  : "border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 hover:border-gray-300 panel-oscuro:hover:border-gray-600"
               }`}
             >
               {s}
@@ -250,12 +250,12 @@ export function VariantBuilder({
             onChange={e => setCustomSize(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomSize(); } }}
             placeholder={sizePlaceholder}
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
           />
           <button
             type="button"
             onClick={addCustomSize}
-            className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
+            className="px-3 py-2 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15 transition-colors"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -267,7 +267,7 @@ export function VariantBuilder({
             {sizes.filter(s => !stdSizes.includes(s)).map(s => (
               <span
                 key={s}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-indigo-200 rounded-full text-xs text-indigo-700 font-medium"
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-white panel-oscuro:bg-gray-900 border border-indigo-200 panel-oscuro:border-indigo-500/30 rounded-full text-xs text-indigo-700 panel-oscuro:text-indigo-300 font-medium"
               >
                 {s}
                 <button
@@ -293,13 +293,13 @@ export function VariantBuilder({
           ya estaba vacío, y en el celular no suma un campo más que llenar. */}
       {variants.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 uppercase tracking-wide">
             Variantes creadas ({variants.length})
           </p>
 
           {/* Encabezado. Sólo de sm para arriba: abajo cada número lleva su
               propia etiqueta, porque la fila se parte en dos. */}
-          <div className="hidden sm:grid gap-3 px-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]">
+          <div className="hidden sm:grid gap-3 px-3 pb-1 text-xs font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]">
             <span />
             <span>Foto</span>
             <span>Variante</span>
@@ -340,13 +340,13 @@ export function VariantBuilder({
               // seis columnas, sin duplicar el marcado.
               <div
                 key={idx}
-                className="grid gap-3 items-center px-3 py-2.5 bg-gray-50 rounded-xl grid-cols-[28px_56px_1fr] sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]"
+                className="grid gap-3 items-center px-3 py-2.5 bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl grid-cols-[28px_56px_1fr] sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]"
               >
                 {/* Círculo de color */}
                 <span className="flex justify-center">
                   {hex && (
                     <span
-                      className="w-5 h-5 rounded-full border border-gray-300 shrink-0"
+                      className="w-5 h-5 rounded-full border border-gray-300 panel-oscuro:border-gray-600 shrink-0"
                       style={{ background: hex }}
                     />
                   )}
@@ -358,21 +358,21 @@ export function VariantBuilder({
                   onClick={() => valorFoto && setPhotoModal(valorFoto)}
                   title={valorFoto ? `Asignar foto a ${valorFoto}` : ""}
                   disabled={!valorFoto}
-                  className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center hover:border-indigo-400 transition-colors relative bg-white disabled:opacity-40"
+                  className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 panel-oscuro:border-gray-600 overflow-hidden flex items-center justify-center hover:border-indigo-400 transition-colors relative bg-white panel-oscuro:bg-gray-900 disabled:opacity-40"
                 >
                   {photo ? (
                     <Image src={photo} alt={valorFoto} fill sizes="56px" style={{ objectFit: "cover" }} />
                   ) : (
-                    <Camera className="h-5 w-5 text-gray-400" />
+                    <Camera className="h-5 w-5 text-gray-400 panel-oscuro:text-gray-500" />
                   )}
                 </button>
 
                 {/* Nombre de variante. `min-w-0` porque `1fr` es minmax(auto,1fr) y
                     `truncate` no baja el mínimo por sí solo: sin esto un nombre
                     largo ensancha la columna y vuelve el desborde. */}
-                <p className="text-sm text-gray-700 truncate min-w-0">
+                <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 truncate min-w-0">
                   {color && <span className="font-medium">{color}</span>}
-                  {color && size && <span className="text-gray-400"> · </span>}
+                  {color && size && <span className="text-gray-400 panel-oscuro:text-gray-500"> · </span>}
                   {size && <span>{size}</span>}
                 </p>
 
@@ -384,43 +384,43 @@ export function VariantBuilder({
                   onChange={e => onVariantChange(idx, "sku", e.target.value)}
                   placeholder="opcional"
                   aria-label={`SKU de ${[color, size].filter(Boolean).join(" · ")}`}
-                  className="hidden lg:block w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  className="hidden lg:block w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
                 />
 
                 {/* Los tres números. En celular, fila propia con etiquetas. */}
                 <div className="col-span-3 grid grid-cols-3 gap-2 sm:contents">
                   <label className="sm:contents">
-                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Stock</span>
+                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-0.5">Stock</span>
                     <input
                       type="number"
                       value={v.stock}
                       onChange={e => onVariantChange(idx, "stock", e.target.value)}
                       min="0"
-                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center bg-white"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center bg-white panel-oscuro:bg-gray-900"
                     />
                   </label>
 
                   <label className="sm:contents">
-                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Precio</span>
+                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-0.5">Precio</span>
                     <input
                       type="number"
                       value={v.price}
                       onChange={e => onVariantChange(idx, "price", e.target.value)}
                       min="0"
                       placeholder="base"
-                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
                     />
                   </label>
 
                   <label className="sm:contents">
-                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Alerta</span>
+                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-0.5">Alerta</span>
                     <input
                       type="number"
                       value={v.lowStockThreshold}
                       onChange={e => onVariantChange(idx, "lowStockThreshold", e.target.value)}
                       min="0"
                       placeholder="5"
-                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white panel-oscuro:bg-gray-900"
                     />
                   </label>
                 </div>
@@ -438,24 +438,24 @@ export function VariantBuilder({
           onClick={() => setPhotoModal(null)}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-sm w-full max-h-full overflow-y-auto shadow-2xl"
+            className="bg-white panel-oscuro:bg-gray-900 rounded-2xl p-6 max-w-sm w-full max-h-full overflow-y-auto shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <p className="font-semibold text-gray-900 text-sm">
+              <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100 text-sm">
                 Seleccioná una imagen para <strong>{photoModal}</strong>
               </p>
               <button
                 type="button"
                 onClick={() => setPhotoModal(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {photoImages.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">
+              <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 text-center py-6">
                 Primero subí fotos del producto (sección de imágenes arriba).
               </p>
             ) : (
@@ -494,7 +494,7 @@ export function VariantBuilder({
                     onAssignPhoto(photoModal, undefined);
                     setPhotoModal(null);
                   }}
-                  className="flex-1 py-2.5 text-sm text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+                  className="flex-1 py-2.5 text-sm text-red-600 panel-oscuro:text-red-400 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors"
                 >
                   Quitar foto
                 </button>

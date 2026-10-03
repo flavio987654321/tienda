@@ -148,7 +148,7 @@ export default function StoreTypeModal({
     return (
       <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-6 animate-fade-slide">
         <div className="relative flex items-center justify-center">
-          <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-white animate-spin" />
+          <div className="w-24 h-24 rounded-full border-4 border-white/10 panel-oscuro:border-gray-900 border-t-white animate-spin" />
           <span className="absolute text-4xl">{toConfig?.emoji}</span>
         </div>
         <div className="text-center">
@@ -167,21 +167,21 @@ export default function StoreTypeModal({
     const toConfig   = STORE_TYPES.find((t) => t.id === selected);
     return (
       <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-fade-slide">
-          <div className="bg-red-50 rounded-t-3xl px-7 py-6 border-b border-red-100 shrink-0">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-fade-slide">
+          <div className="bg-red-50 panel-oscuro:bg-red-500/10 rounded-t-3xl px-7 py-6 border-b border-red-100 panel-oscuro:border-red-500/30 shrink-0">
             <div className="flex items-center gap-3 mb-1">
-              <div className="p-2 bg-red-100 rounded-xl">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div className="p-2 bg-red-100 panel-oscuro:bg-red-500/15 rounded-xl">
+                <AlertTriangle className="h-5 w-5 text-red-600 panel-oscuro:text-red-400" />
               </div>
-              <h2 className="text-lg font-bold text-red-700">¿Estás seguro?</h2>
+              <h2 className="text-lg font-bold text-red-700 panel-oscuro:text-red-300">¿Estás seguro?</h2>
             </div>
-            <p className="text-sm text-red-600 mt-1">
+            <p className="text-sm text-red-600 panel-oscuro:text-red-400 mt-1">
               Estás por cambiar de <strong>{fromConfig?.emoji} {fromConfig?.label}</strong> a <strong>{toConfig?.emoji} {toConfig?.label}</strong>
             </p>
           </div>
 
           <div className="px-7 py-5 space-y-4 overflow-y-auto">
-            <p className="text-sm text-gray-700 font-medium">Esto va a eliminar permanentemente:</p>
+            <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium">Esto va a eliminar permanentemente:</p>
             <ul className="space-y-2">
               {[
                 "Todos tus productos publicados",
@@ -194,13 +194,13 @@ export default function StoreTypeModal({
                 "El historial de ventas y estadísticas de tus afiliados",
                 "La plantilla y configuración del diseño",
               ].map((item) => (
-                <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600">
+                <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600 panel-oscuro:text-gray-400">
                   <Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" />
                   {item}
                 </li>
               ))}
             </ul>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium space-y-1.5">
+            <div className="bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl px-4 py-3 text-xs text-amber-700 panel-oscuro:text-amber-300 font-medium space-y-1.5">
               <p>Esta acción no se puede deshacer desde el panel. Se conservan: logo, colores, redes sociales, conexión Mercado Pago y tus afiliados (sin su historial de ventas). La ruleta queda desactivada hasta que la configures con premios nuevos.</p>
               <p><strong>Antes de cambiar tenés que dar de baja las promociones y los cupones que estén vigentes.</strong> Si un cliente tiene uno en la mano, al cambiar de rubro deja de funcionar pero te lo va a reclamar igual — así que la baja la decidís vos, no el sistema por atrás.</p>
               <p>Tu tienda va a quedar <strong>offline</strong> hasta que configures y publiques el catálogo del nuevo rubro.</p>
@@ -209,7 +209,7 @@ export default function StoreTypeModal({
 
             {/* Exportar antes de borrar */}
             <div className="space-y-2">
-              <p className="text-xs text-gray-400 font-medium">Guardá una copia antes de continuar:</p>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 font-medium">Guardá una copia antes de continuar:</p>
               {([
                 ["productos", "Mis productos"],
                 ["pedidos", "Mis pedidos (incluye pagos y comisiones)"],
@@ -220,7 +220,7 @@ export default function StoreTypeModal({
                   key={tipo}
                   onClick={() => downloadCsv(tipo)}
                   disabled={downloading !== null}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
                 >
                   {downloading === tipo ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Descargando...</>
@@ -234,14 +234,14 @@ export default function StoreTypeModal({
             </div>
 
             {error && (
-              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 animate-fade-slide">
+              <div className="flex items-start gap-2.5 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-2xl px-4 py-3 text-sm text-red-700 panel-oscuro:text-red-300 animate-fade-slide">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <p>{error}</p>
                   {errorLink && (
                     <a
                       href={errorLink.href}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 underline underline-offset-2 hover:text-red-800"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 panel-oscuro:text-red-300 underline underline-offset-2 hover:text-red-800 panel-oscuro:hover:text-red-300"
                     >
                       {errorLink.label} →
                     </a>
@@ -255,9 +255,9 @@ export default function StoreTypeModal({
                 type="checkbox"
                 checked={ackIrreversible}
                 onChange={(e) => setAckIrreversible(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-red-600"
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 panel-oscuro:border-gray-600 accent-red-600"
               />
-              <span className="text-xs text-gray-600">
+              <span className="text-xs text-gray-600 panel-oscuro:text-gray-400">
                 Entiendo que esta acción es irreversible y ya descargué los respaldos que necesito.
               </span>
             </label>
@@ -267,7 +267,7 @@ export default function StoreTypeModal({
             <button
               onClick={() => setConfirmStep(false)}
               disabled={saving}
-              className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex-1 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
             >
               Cancelar
             </button>
@@ -291,7 +291,7 @@ export default function StoreTypeModal({
   // ── Pantalla principal de selección ──
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Header */}
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative shrink-0">
@@ -299,7 +299,7 @@ export default function StoreTypeModal({
             <button
               onClick={handleClose}
               title="Cerrar"
-              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 panel-oscuro:hover:bg-gray-900/20 transition-colors"
             >
               <X className="h-4 w-4 text-white/80" />
             </button>
@@ -326,13 +326,13 @@ export default function StoreTypeModal({
                   <div
                     key={t.id}
                     title="Próximamente disponible"
-                    className="relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed select-none"
+                    className="relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 opacity-50 cursor-not-allowed select-none"
                   >
                     <span className="text-2xl leading-none grayscale">{t.emoji}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-tight text-gray-400">{t.label}</p>
+                      <p className="text-sm font-semibold leading-tight text-gray-400 panel-oscuro:text-gray-500">{t.label}</p>
                     </div>
-                    <span className="absolute top-1.5 right-2 text-[10px] font-bold text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full leading-tight">
+                    <span className="absolute top-1.5 right-2 text-[10px] font-bold text-gray-400 panel-oscuro:text-gray-500 bg-gray-200 panel-oscuro:bg-gray-700 px-1.5 py-0.5 rounded-full leading-tight">
                       Próximamente
                     </span>
                   </div>
@@ -344,19 +344,19 @@ export default function StoreTypeModal({
                   onClick={() => { setSelected(t.id); setWholesale(false); }}
                   className={`relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all duration-200 ${
                     active && saved
-                      ? "border-green-500 bg-green-50 shadow-md scale-[1.03] animate-success-flash"
+                      ? "border-green-500 bg-green-50 panel-oscuro:bg-green-500/10 shadow-md scale-[1.03] animate-success-flash"
                       : active
-                      ? "border-indigo-500 bg-indigo-50 shadow-md scale-[1.03]"
-                      : "border-gray-100 hover:border-gray-300 bg-gray-50 hover:scale-[1.01]"
+                      ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 shadow-md scale-[1.03]"
+                      : "border-gray-100 panel-oscuro:border-gray-800 hover:border-gray-300 panel-oscuro:hover:border-gray-600 bg-gray-50 panel-oscuro:bg-gray-800/50 hover:scale-[1.01]"
                   }`}
                 >
                   <span className="text-2xl leading-none">{t.emoji}</span>
                   <div className="min-w-0">
-                    <p className={`text-sm font-semibold leading-tight ${active ? "text-indigo-700" : "text-gray-800"}`}>
+                    <p className={`text-sm font-semibold leading-tight ${active ? "text-indigo-700 panel-oscuro:text-indigo-300" : "text-gray-800 panel-oscuro:text-gray-200"}`}>
                       {t.label}
                     </p>
                     {isCurrent && isEditing && (
-                      <p className="text-xs text-gray-400 mt-0.5">actual</p>
+                      <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">actual</p>
                     )}
                   </div>
                   {active && (
@@ -371,7 +371,7 @@ export default function StoreTypeModal({
 
           {/* Info del tipo seleccionado */}
           {selectedConfig && (
-            <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 rounded-2xl px-4 py-3 text-sm text-indigo-700 space-y-1.5">
+            <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-2xl px-4 py-3 text-sm text-indigo-700 panel-oscuro:text-indigo-300 space-y-1.5">
               <p className="font-medium">{selectedConfig.description}</p>
               <p className="text-indigo-500 text-xs">
                 Ejemplos de categorías: {selectedConfig.categorias.slice(0, 4).join(", ")}...
@@ -380,7 +380,7 @@ export default function StoreTypeModal({
           )}
 
           {error && (
-            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 animate-fade-slide">
+            <div className="flex items-start gap-2.5 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-2xl px-4 py-3 text-sm text-red-700 panel-oscuro:text-red-300 animate-fade-slide">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -388,7 +388,7 @@ export default function StoreTypeModal({
 
           {/* Aviso de reset cuando cambia de tipo */}
           {isChangingType && (
-            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-700 animate-fade-slide">
+            <div className="flex items-start gap-2.5 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-2xl px-4 py-3 text-sm text-amber-700 panel-oscuro:text-amber-300 animate-fade-slide">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>Al confirmar se van a eliminar todos tus productos, pedidos y consultas actuales.</span>
             </div>
@@ -396,18 +396,18 @@ export default function StoreTypeModal({
 
           {/* Toggle mayorista — solo primera vez */}
           {!isEditing && selectedConfig?.supportsWholesale && (
-            <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3.5 border border-gray-100">
+            <div className="flex items-center justify-between bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-2xl px-4 py-3.5 border border-gray-100 panel-oscuro:border-gray-800">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Venta por mayor</p>
-                <p className="text-xs text-gray-400 mt-0.5">Activa campos de precio mayorista en tus productos</p>
+                <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Venta por mayor</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Activa campos de precio mayorista en tus productos</p>
               </div>
               <button
                 onClick={() => setWholesale((v) => !v)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  wholesale ? "bg-indigo-600" : "bg-gray-200"
+                  wholesale ? "bg-indigo-600" : "bg-gray-200 panel-oscuro:bg-gray-700"
                 }`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${
                   wholesale ? "translate-x-6" : "translate-x-1"
                 }`} />
               </button>

@@ -25,7 +25,7 @@ export default function Tip({
 }) {
   return (
     <span className="relative inline-flex group/tip ml-1 cursor-help align-middle">
-      <HelpCircle className="h-3.5 w-3.5 text-indigo-400 hover:text-indigo-600 transition-colors" />
+      <HelpCircle className="h-3.5 w-3.5 text-indigo-400 hover:text-indigo-600 panel-oscuro:hover:text-indigo-400 transition-colors" />
       <span
         role="tooltip"
         className={`pointer-events-none absolute bottom-full mb-2 w-56 rounded-xl bg-gray-900 px-3 py-2 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 leading-relaxed shadow-lg ${

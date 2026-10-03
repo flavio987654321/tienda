@@ -39,10 +39,10 @@ function ToolbarBtn({
       onMouseDown={(e) => { e.preventDefault(); onClick(); }}
       className={`h-8 min-w-[32px] px-2 rounded-lg text-sm flex items-center justify-center transition-colors ${
         disabled
-          ? "text-gray-300 cursor-not-allowed"
+          ? "text-gray-300 panel-oscuro:text-gray-600 cursor-not-allowed"
           : active
-          ? "bg-indigo-100 text-indigo-700"
-          : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          ? "bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-indigo-700 panel-oscuro:text-indigo-300"
+          : "text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 hover:text-gray-700 panel-oscuro:hover:text-gray-300"
       }`}
     >
       {children}
@@ -76,7 +76,7 @@ function ColorPickerButton({ editor }: { editor: NonNullable<ReturnType<typeof u
         </span>
       </ToolbarBtn>
       {open && (
-        <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-2.5 w-40">
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl shadow-lg p-2.5 w-40">
           <div className="grid grid-cols-4 gap-1.5">
             {DESCRIPTION_TEXT_COLORS.map((c) => (
               <button
@@ -96,7 +96,7 @@ function ColorPickerButton({ editor }: { editor: NonNullable<ReturnType<typeof u
           <button
             type="button"
             onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetColor().run(); setOpen(false); }}
-            className="mt-2 w-full text-xs text-gray-500 hover:text-gray-700 text-center py-1 rounded-lg hover:bg-gray-50"
+            className="mt-2 w-full text-xs text-gray-500 panel-oscuro:text-gray-400 hover:text-gray-700 panel-oscuro:hover:text-gray-300 text-center py-1 rounded-lg hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
           >
             Quitar color
           </button>
@@ -133,7 +133,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
         <Link2 className="h-4 w-4" />
       </ToolbarBtn>
       {open && (
-        <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-2.5 w-64">
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl shadow-lg p-2.5 w-64">
           <input
             autoFocus
             type="text"
@@ -141,7 +141,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyLink(); } if (e.key === "Escape") setOpen(false); }}
             placeholder="https://..."
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <div className="flex items-center gap-1.5 mt-2">
             <button type="button" onMouseDown={(e) => { e.preventDefault(); applyLink(); }}
@@ -150,7 +150,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
             </button>
             {isActive && (
               <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetLink().run(); setOpen(false); }}
-                title="Quitar link" className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50">
+                title="Quitar link" className="p-1.5 text-gray-400 panel-oscuro:text-gray-500 hover:text-red-500 rounded-lg hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50">
                 <Unlink className="h-3.5 w-3.5" />
               </button>
             )}
@@ -199,7 +199,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
         // tienda al renderizar la descripción guardada — así el editor se ve igual
         // a como va a quedar publicado. Sin esto, el reset de Tailwind le saca el
         // list-style a los <ul>/<ol> y las viñetas/números no se ven al tipear.
-        class: "product-rte max-w-none focus:outline-none min-h-[80px] px-4 py-3 text-sm text-gray-700 leading-relaxed",
+        class: "product-rte max-w-none focus:outline-none min-h-[80px] px-4 py-3 text-sm text-gray-700 panel-oscuro:text-gray-300 leading-relaxed",
       },
     },
   });
@@ -222,9 +222,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
   const htmlLength = rawHtml === "<p></p>" ? 0 : rawHtml.length;
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 bg-white">
+    <div className="border border-gray-200 panel-oscuro:border-gray-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 bg-white panel-oscuro:bg-gray-900">
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-gray-50 flex-wrap">
+      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 flex-wrap">
         <ToolbarBtn disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} title="Deshacer">
           <Undo2 className="h-4 w-4" />
         </ToolbarBtn>
@@ -232,7 +232,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
           <Redo2 className="h-4 w-4" />
         </ToolbarBtn>
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="w-px h-5 bg-gray-200 panel-oscuro:bg-gray-700 mx-1" />
 
         <ToolbarBtn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} title="Negrita">
           <BoldIcon className="h-4 w-4" />
@@ -245,7 +245,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
         </ToolbarBtn>
         <ColorPickerButton editor={editor} />
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="w-px h-5 bg-gray-200 panel-oscuro:bg-gray-700 mx-1" />
 
         <ToolbarBtn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Lista con viñetas">
           <List className="h-4 w-4" />
@@ -254,7 +254,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
           <ListOrdered className="h-4 w-4" />
         </ToolbarBtn>
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="w-px h-5 bg-gray-200 panel-oscuro:bg-gray-700 mx-1" />
 
         <ToolbarBtn active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} title="Alinear izquierda">
           <AlignLeft className="h-4 w-4" />
@@ -269,7 +269,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
           <AlignJustify className="h-4 w-4" />
         </ToolbarBtn>
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="w-px h-5 bg-gray-200 panel-oscuro:bg-gray-700 mx-1" />
 
         <LinkButton editor={editor} />
 
@@ -278,7 +278,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
         </ToolbarBtn>
 
         {maxLength && (
-          <span className={`ml-auto text-xs ${htmlLength > maxLength * 0.9 ? "text-orange-500" : "text-gray-400"}`}>
+          <span className={`ml-auto text-xs ${htmlLength > maxLength * 0.9 ? "text-orange-500" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
             {htmlLength}/{maxLength}
           </span>
         )}

@@ -78,7 +78,7 @@ export default function BulkActionsBar() {
     <>
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide">
-          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">
+          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl panel-oscuro:bg-gray-800 panel-oscuro:ring-1 panel-oscuro:ring-white/10">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             {toast}
           </div>
@@ -86,15 +86,15 @@ export default function BulkActionsBar() {
       )}
 
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
         style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto max-w-5xl px-4 pt-3 sm:px-6">
           {pendingAction ? (
             <div className="flex flex-col gap-2.5">
-              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-3 py-2.5">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                <p className="text-sm font-medium leading-snug text-amber-800">
+                <p className="text-sm font-medium leading-snug text-amber-800 panel-oscuro:text-amber-300">
                   {BULK_CONFIRM_QUESTION[pendingAction](eligibleIdsFor(pendingAction).length)}{" "}
                   {BULK_CONFIRM_NOTE[pendingAction]}
                   {eligibleIdsFor(pendingAction).length < selected.size && (
@@ -102,19 +102,19 @@ export default function BulkActionsBar() {
                   )}
                 </p>
               </div>
-              {error && <p className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700">{error}</p>}
+              {error && <p className="rounded-lg bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/30 px-3 py-2 text-xs text-red-700 panel-oscuro:text-red-300">{error}</p>}
               <div className="flex gap-2 pb-1">
                 <button
                   onClick={() => runBulkAction(pendingAction)}
                   disabled={ocupado}
-                  className="flex-1 sm:flex-none rounded-xl bg-gray-900 hover:bg-gray-700 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 sm:flex-none rounded-xl bg-gray-900 hover:bg-gray-700 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
                 >
                   {ocupado ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : "Sí, confirmar"}
                 </button>
                 <button
                   onClick={() => { setPendingAction(null); setError(""); }}
                   disabled={ocupado}
-                  className="flex-1 sm:flex-none rounded-xl bg-gray-100 hover:bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 sm:flex-none rounded-xl bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   No, volver
                 </button>
@@ -122,12 +122,12 @@ export default function BulkActionsBar() {
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2 pb-1">
-              <span className="text-sm font-semibold text-gray-700 mr-1">
+              <span className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 mr-1">
                 {selected.size} seleccionado{selected.size !== 1 ? "s" : ""}
               </span>
               <button
                 onClick={selectAll}
-                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 mr-auto"
+                className="text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-800 panel-oscuro:hover:text-indigo-300 mr-auto"
               >
                 Seleccionar todos ({orders.length})
               </button>
@@ -137,7 +137,7 @@ export default function BulkActionsBar() {
                   <button
                     key={action}
                     onClick={() => setPendingAction(action)}
-                    className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-3.5 py-2 text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
                   >
                     {BULK_ACTION_LABEL[action]} ({count})
                   </button>
@@ -145,7 +145,7 @@ export default function BulkActionsBar() {
               })}
               <button
                 onClick={clearSelection}
-                className="flex items-center gap-1 rounded-xl px-2.5 py-2 text-sm font-semibold text-gray-400 hover:text-gray-600"
+                className="flex items-center gap-1 rounded-xl px-2.5 py-2 text-sm font-semibold text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400"
               >
                 <X className="h-4 w-4" /> Limpiar
               </button>

@@ -16,7 +16,7 @@ export default function OrderCheckbox({ orderId }: { orderId: string }) {
         checked={checked}
         onChange={() => toggleOne(orderId)}
         aria-label="Seleccionar pedido"
-        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+        className="h-4 w-4 rounded border-gray-300 panel-oscuro:border-gray-600 text-indigo-600 panel-oscuro:text-indigo-400 focus:ring-indigo-500"
       />
     </label>
   );
