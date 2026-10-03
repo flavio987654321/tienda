@@ -8,21 +8,22 @@
    claro y el de digitales oscuro, y son aparatos distintos muchas veces.
 
    ══════════════════════════════════════════════════════════════════════════
-   ⚠️ APAGADO HASTA QUE ESTÉN TODAS LAS PANTALLAS (03/10/26)
+   ⚠️ PRENDIDO DESDE EL 03/10/26, CON UN INTERRUPTOR DE EMERGENCIA
    ══════════════════════════════════════════════════════════════════════════
 
-   Se va pasando pantalla por pantalla. Una pantalla a medio pasar en oscuro se
-   ve peor que el panel claro de siempre, así que mientras falten, el tema NO
-   se aplica: sin el atributo, ninguna clase `panel-oscuro:` hace nada y el
-   panel queda exactamente como estaba. Se prende con
-   `NEXT_PUBLIC_TIENDAS_OSCURO=1`, que es lo que se usa para probar en local. */
+   Se pasó pantalla por pantalla con el tema apagado y se prendió con todas
+   pasadas y auditadas. Si algo se ve mal en oscuro y hay que volver atrás ya,
+   `NEXT_PUBLIC_TIENDAS_OSCURO=0` en Vercel lo apaga: sin el atributo, ninguna
+   clase `panel-oscuro:` hace nada y el panel queda claro como siempre. Ojo:
+   es NEXT_PUBLIC, así que el valor queda fijo al armar la versión — cambiarlo
+   pide volver a subir. */
 
 import { ATRIBUTO_TEMA, resolverTema, temaDe, type Tema } from "@/lib/tema-digitales";
 
 export { ATRIBUTO_TEMA, TEMAS, COPY_TEMA, type Tema } from "@/lib/tema-digitales";
 
 /** Si el modo oscuro del panel de tiendas ya se puede usar. Ver arriba. */
-export const OSCURO_TIENDAS_LISTO = process.env.NEXT_PUBLIC_TIENDAS_OSCURO === "1";
+export const OSCURO_TIENDAS_LISTO = process.env.NEXT_PUBLIC_TIENDAS_OSCURO !== "0";
 
 /** Dónde se guarda. Sólo el navegador: es una preferencia de ESTE aparato. */
 export const CLAVE_TEMA_TIENDAS = "tema_tiendas";
@@ -33,7 +34,7 @@ export const EVENTO_TEMA_TIENDAS = "tema-tiendas";
 /** El script que pinta antes del primer dibujo. Ver `SCRIPT_TEMA` en digitales. */
 export const SCRIPT_TEMA_TIENDAS = `
 (function(){try{
-  var t = localStorage.getItem(${JSON.stringify(CLAVE_TEMA_TIENDAS)}) || "auto";
+  var t = localStorage.getItem(${JSON.stringify(CLAVE_TEMA_TIENDAS)}) || "claro";
   if (t !== "claro" && t !== "oscuro") {
     t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
   }
@@ -58,12 +59,19 @@ export function aplicarTemaTiendas(t: Tema): void {
   }
 }
 
-/** El tema guardado, o "auto". */
+/**
+ * El tema guardado, o "claro" si nunca eligió.
+ *
+ * ⚠️ Claro y no "auto" a propósito (pedido de Flavio, 03/10/26): el panel de
+ * tiendas arranca SIEMPRE claro, aunque el teléfono o la compu estén en modo
+ * oscuro. El oscuro es para quien lo elige con la luna. Digitales, en cambio,
+ * sigue al sistema.
+ */
 export function temaGuardadoTiendas(): Tema {
   try {
-    return temaDe(localStorage.getItem(CLAVE_TEMA_TIENDAS)) ?? "auto";
+    return temaDe(localStorage.getItem(CLAVE_TEMA_TIENDAS)) ?? "claro";
   } catch {
-    return "auto";
+    return "claro";
   }
 }
 

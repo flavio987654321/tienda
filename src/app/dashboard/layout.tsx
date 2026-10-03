@@ -172,9 +172,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
-      {/* El tema claro/oscuro, apagado hasta que estén pasadas todas las
-          pantallas (ver `tema-tiendas`). El script pinta antes del primer
-          dibujo; el componente se ocupa del resto de la visita. */}
+      {/* El tema claro/oscuro (ver `tema-tiendas`): arranca claro y el
+          oscuro es para quien lo elige con la luna. El script pinta antes del
+          primer dibujo; el componente se ocupa del resto de la visita. */}
       {OSCURO_TIENDAS_LISTO && <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_TIENDAS }} />}
       {OSCURO_TIENDAS_LISTO && <TemaDelPanelTiendas />}
       <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" scope="/dashboard" />
