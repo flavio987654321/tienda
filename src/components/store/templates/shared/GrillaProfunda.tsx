@@ -73,16 +73,23 @@ export function PiezaQueLlega({
       return;
     }
 
+    /* Llega CADA VEZ que entra, no una sola. Antes se desconectaba después de
+       la primera llegada, y Flavio lo notó (03/10/26): la primera vez que se
+       pasa por la grilla las piezas vienen desde lejos; se sube, se vuelve a
+       bajar, y ya están quietas — el efecto parece haberse roto.
+
+       Ahora, cuando la pieza sale de la pantalla del TODO vuelve a quedar
+       "lejos", sin que se vea (está afuera), y la próxima vez que entra vuelve
+       a llegar. Se espera a que salga entera para no cortar la llegada de una
+       pieza que apenas asoma por el borde. */
     const io = new IntersectionObserver(
       ([e]) => {
-        if (!e.isIntersecting) return;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- responde a que la pieza entró en pantalla, no se puede calcular durante el render
-        setLlego(true);
-        io.disconnect(); // una sola vez
+        if (e.isIntersecting && e.intersectionRatio >= 0.08) setLlego(true);
+        else if (!e.isIntersecting) setLlego(false);
       },
       // Un poco antes de entrar del todo, para que el movimiento termine cuando
       // la pieza ya está bien a la vista y no justo al aparecer.
-      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+      { threshold: [0, 0.08], rootMargin: "0px 0px -40px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();

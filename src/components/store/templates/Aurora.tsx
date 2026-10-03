@@ -1229,7 +1229,7 @@ export default function Aurora() {
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
           <p style={{ fontFamily:TITULO, fontSize:24, fontWeight:300, letterSpacing:"-0.01em", color:productosText, margin:0 }}>
-            {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
+            {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory === "Todos" ? "Toda la colección" : activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)}
             {activeSubcategory && <span style={{ opacity:0.6 }}> › {activeSubcategory}</span>}
             <span style={{ fontSize:13, color:productosMid, fontFamily:TEXTO, fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
           </p>
