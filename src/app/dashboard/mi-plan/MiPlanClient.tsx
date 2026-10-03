@@ -206,7 +206,7 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-white panel-oscuro:bg-gray-900 rounded-full transition-all"
+                  className="h-full bg-white rounded-full transition-all"
                   style={{ width: `${Math.min(100, (days / totalDays) * 100)}%` }}
                 />
               </div>

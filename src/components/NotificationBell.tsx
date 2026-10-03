@@ -207,10 +207,10 @@ export default function NotificationBell({ userId }: { userId: string }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 dark:hover:bg-white/10 panel-oscuro:dark:hover:bg-gray-900/10 transition-colors"
+        className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 dark:hover:bg-white/10 transition-colors"
         aria-label="Notificaciones"
       >
-        <Bell className="h-5 w-5 text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-300 panel-oscuro:dark:text-gray-600" />
+        <Bell className="h-5 w-5 text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-300" />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
             {unread > 9 ? "9+" : unread}
@@ -219,8 +219,8 @@ export default function NotificationBell({ userId }: { userId: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 shadow-xl dark:bg-[#0f1629] dark:border-white/10 panel-oscuro:dark:border-gray-900">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 panel-oscuro:border-gray-800 dark:border-white/10 panel-oscuro:dark:border-gray-900">
+        <div className="absolute right-0 top-11 z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 shadow-xl dark:bg-[#0f1629] dark:border-white/10">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 panel-oscuro:border-gray-800 dark:border-white/10">
             <p className="font-bold text-sm text-gray-900 panel-oscuro:text-gray-100 dark:text-white">Notificaciones</p>
             <div className="flex items-center gap-2">
               {unread > 0 && (
@@ -244,7 +244,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
             </div>
           </div>
 
-          <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50 panel-oscuro:divide-gray-800 dark:divide-white/5 panel-oscuro:dark:divide-gray-900">
+          <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50 panel-oscuro:divide-gray-800 dark:divide-white/5">
             {notifications.length === 0 ? (
               <div className="py-10 text-center text-sm text-gray-400 panel-oscuro:text-gray-500">
                 Sin notificaciones
@@ -253,18 +253,18 @@ export default function NotificationBell({ userId }: { userId: string }) {
               notifications.map((n) => {
                 const inner = (
                   <div
-                    className={`group flex gap-3 px-4 py-3 transition-colors hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 dark:hover:bg-white/5 panel-oscuro:dark:hover:bg-gray-900/5 ${!n.read ? "bg-indigo-50/60 panel-oscuro:bg-indigo-500/10 dark:bg-indigo-950/30" : ""}`}
+                    className={`group flex gap-3 px-4 py-3 transition-colors hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 dark:hover:bg-white/5 ${!n.read ? "bg-indigo-50/60 panel-oscuro:bg-indigo-500/10 dark:bg-indigo-950/30" : ""}`}
                     onClick={() => !n.read && markOneRead(n.id)}
                   >
                     <span className="text-lg shrink-0 mt-0.5">{ICONS[n.type] ?? "🔔"}</span>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm leading-snug ${!n.read ? "font-semibold text-gray-900 panel-oscuro:text-gray-100 dark:text-white" : "text-gray-700 panel-oscuro:text-gray-300 dark:text-gray-300 panel-oscuro:dark:text-gray-600"}`}>
+                      <p className={`text-sm leading-snug ${!n.read ? "font-semibold text-gray-900 panel-oscuro:text-gray-100 dark:text-white" : "text-gray-700 panel-oscuro:text-gray-300 dark:text-gray-300"}`}>
                         {n.title}
                       </p>
                       {n.body && (
                         <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>
                       )}
-                      <p className="text-xs text-gray-300 panel-oscuro:text-gray-600 dark:text-gray-500 panel-oscuro:dark:text-gray-400 mt-1">
+                      <p className="text-xs text-gray-300 panel-oscuro:text-gray-600 dark:text-gray-500 mt-1">
                         {timeAgo(n.createdAt)} · {formatDate(n.createdAt)}
                       </p>
                     </div>
@@ -274,7 +274,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
                         /* Visible siempre en angosto: en una pantalla táctil no
                            hay hover, así que este botón no aparecía nunca y la
                            única forma de sacar un aviso era borrarlos todos. */
-                        className="transition-opacity p-0.5 rounded hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 dark:hover:bg-white/10 panel-oscuro:dark:hover:bg-gray-900/10 sm:opacity-0 sm:group-hover:opacity-100"
+                        className="transition-opacity p-0.5 rounded hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 dark:hover:bg-white/10 sm:opacity-0 sm:group-hover:opacity-100"
                         title="Eliminar"
                       >
                         <X className="h-3.5 w-3.5 text-gray-400 panel-oscuro:text-gray-500" />

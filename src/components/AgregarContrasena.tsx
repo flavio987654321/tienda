@@ -89,14 +89,14 @@ export function AgregarContrasena() {
           {listo ? (
             <>
               <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 dark:text-white">Contraseña guardada</p>
-              <p className="mt-1 text-sm text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-400 panel-oscuro:dark:text-gray-500">
+              <p className="mt-1 text-sm text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-400">
                 Desde ahora podés entrar con Google o con tu mail y esta contraseña.
               </p>
             </>
           ) : (
             <>
               <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 dark:text-white">Agregá una contraseña</p>
-              <p className="mt-1 text-sm text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-400 panel-oscuro:dark:text-gray-500">
+              <p className="mt-1 text-sm text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-400">
                 Entrás con Google. Con una contraseña también podés entrar desde la app instalada,
                 y si un día perdés tu cuenta de Google no te quedás afuera.
               </p>
@@ -154,7 +154,7 @@ export function AgregarContrasena() {
                       type="button"
                       onClick={() => { setAbierto(false); setError(""); setClave(""); setRepetir(""); }}
                       disabled={guardando}
-                      className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 dark:text-gray-300 panel-oscuro:dark:text-gray-600 dark:hover:bg-gray-800"
+                      className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
                       Cancelar
                     </button>

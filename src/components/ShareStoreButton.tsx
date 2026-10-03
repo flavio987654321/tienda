@@ -140,29 +140,29 @@ export default function ShareStoreButton({
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative bg-white rounded-2xl shadow-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto"
+            className="relative bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors"
             >
-              <X className="h-4 w-4 text-gray-500" />
+              <X className="h-4 w-4 text-gray-500 panel-oscuro:text-gray-400" />
             </button>
 
-            <h3 className="font-bold text-gray-900 mb-1">Compartir tu tienda</h3>
-            <p className="text-xs text-gray-400 mb-3">Así aparece cuando alguien recibe el link</p>
+            <h3 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Compartir tu tienda</h3>
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-3">Así aparece cuando alguien recibe el link</p>
 
             {!isPublished && (
-              <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-3 py-3">
-                <p className="text-xs font-semibold text-amber-800 mb-0.5">Tu tienda no está publicada</p>
-                <p className="text-xs text-amber-700 mb-2 leading-relaxed">
+              <div className="mb-4 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 px-3 py-3">
+                <p className="text-xs font-semibold text-amber-800 panel-oscuro:text-amber-300 mb-0.5">Tu tienda no está publicada</p>
+                <p className="text-xs text-amber-700 panel-oscuro:text-amber-300 mb-2 leading-relaxed">
                   Solo vos podés ver el link por ahora. Publicala para que tus clientes puedan comprar.
                 </p>
                 <a
                   href="/dashboard"
                   onClick={() => setOpen(false)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-1.5 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 panel-oscuro:text-amber-300 bg-amber-100 panel-oscuro:bg-amber-500/15 hover:bg-amber-200 panel-oscuro:hover:bg-amber-500/25 border border-amber-300 panel-oscuro:border-amber-500/40 rounded-lg px-3 py-1.5 transition-colors"
                 >
                   Publicar ahora →
                 </a>
@@ -191,7 +191,7 @@ export default function ShareStoreButton({
             {canNativeShare && (
               <button
                 onClick={handleNativeShare}
-                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors mb-3"
+                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white font-semibold py-2.5 rounded-xl text-sm transition-colors mb-3"
               >
                 <Smartphone className="h-4 w-4" />
                 Compartir con cualquier app
@@ -199,7 +199,7 @@ export default function ShareStoreButton({
             )}
 
             {/* Platform grid */}
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Elegí dónde compartir</p>
+            <p className="text-[11px] font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide mb-2">Elegí dónde compartir</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
               {/* WhatsApp */}
               <button
@@ -228,7 +228,7 @@ export default function ShareStoreButton({
               {/* Twitter/X */}
               <button
                 onClick={() => handlePlatform("twitter")}
-                className="flex items-center gap-2 bg-black hover:bg-gray-900 text-white font-semibold py-2.5 px-3 rounded-xl text-sm transition-colors"
+                className="flex items-center gap-2 bg-black hover:bg-gray-900 text-white panel-oscuro:ring-1 panel-oscuro:ring-white/15 font-semibold py-2.5 px-3 rounded-xl text-sm transition-colors"
               >
                 <XIcon /> Twitter / X
               </button>
@@ -246,7 +246,7 @@ export default function ShareStoreButton({
               {/* TikTok */}
               <button
                 onClick={() => handlePlatform("tiktok")}
-                className="flex items-center gap-2 bg-black hover:bg-gray-900 text-white font-semibold py-2.5 px-3 rounded-xl text-sm transition-colors"
+                className="flex items-center gap-2 bg-black hover:bg-gray-900 text-white panel-oscuro:ring-1 panel-oscuro:ring-white/15 font-semibold py-2.5 px-3 rounded-xl text-sm transition-colors"
               >
                 {copied === "tiktok" ? <Check className="h-4 w-4 shrink-0" /> : <TkIcon />}
                 TikTok
@@ -255,17 +255,17 @@ export default function ShareStoreButton({
 
             {/* Instagram / TikTok hint */}
             {hint === "instagram" && (
-              <div className="mb-3 rounded-xl bg-pink-50 border border-pink-100 px-3 py-2.5">
-                <p className="text-xs font-semibold text-pink-700 mb-0.5">Link copiado ✓</p>
-                <p className="text-xs text-pink-600 leading-relaxed">
+              <div className="mb-3 rounded-xl bg-pink-50 panel-oscuro:bg-pink-500/10 border border-pink-100 panel-oscuro:border-pink-500/30 px-3 py-2.5">
+                <p className="text-xs font-semibold text-pink-700 panel-oscuro:text-pink-300 mb-0.5">Link copiado ✓</p>
+                <p className="text-xs text-pink-600 panel-oscuro:text-pink-400 leading-relaxed">
                   Abrí Instagram → Nueva historia → toca el ícono de link → pegalo. O andá a tu perfil → Editar perfil → Sitio web → pegalo.
                 </p>
               </div>
             )}
             {hint === "tiktok" && (
-              <div className="mb-3 rounded-xl bg-gray-900/5 border border-gray-200 px-3 py-2.5">
-                <p className="text-xs font-semibold text-gray-800 mb-0.5">Link copiado ✓</p>
-                <p className="text-xs text-gray-600 leading-relaxed">
+              <div className="mb-3 rounded-xl bg-gray-900/5 border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2.5">
+                <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200 mb-0.5">Link copiado ✓</p>
+                <p className="text-xs text-gray-600 panel-oscuro:text-gray-400 leading-relaxed">
                   Abrí TikTok → Tu perfil → Editar perfil → Sitio web → pegalo. Así tus seguidores pueden comprar directo desde tu bio.
                 </p>
               </div>
@@ -274,10 +274,10 @@ export default function ShareStoreButton({
             {/* Copy link */}
             <button
               onClick={() => copyToClipboard("main")}
-              className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-2.5 rounded-xl text-sm transition-colors"
+              className="w-full flex items-center justify-center gap-2 border border-gray-200 panel-oscuro:border-gray-700 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 text-gray-700 panel-oscuro:text-gray-300 font-semibold py-2.5 rounded-xl text-sm transition-colors"
             >
               {copied === "main" ? (
-                <><Check className="h-4 w-4 text-green-600" /><span className="text-green-600">¡Copiado!</span></>
+                <><Check className="h-4 w-4 text-green-600 panel-oscuro:text-green-400" /><span className="text-green-600 panel-oscuro:text-green-400">¡Copiado!</span></>
               ) : (
                 <><Copy className="h-4 w-4" />Copiar link</>
               )}

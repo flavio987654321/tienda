@@ -50,7 +50,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
         checked ? "bg-blue-500" : "bg-gray-200 panel-oscuro:bg-gray-700"
       }`}
     >
-      <span className={`inline-block h-4 w-4 rounded-full bg-white panel-oscuro:bg-gray-900 shadow transform transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
     </button>
   );
 }

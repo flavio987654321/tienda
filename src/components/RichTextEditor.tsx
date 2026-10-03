@@ -199,7 +199,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "Describ
         // tienda al renderizar la descripción guardada — así el editor se ve igual
         // a como va a quedar publicado. Sin esto, el reset de Tailwind le saca el
         // list-style a los <ul>/<ol> y las viñetas/números no se ven al tipear.
-        class: "product-rte max-w-none focus:outline-none min-h-[80px] px-4 py-3 text-sm text-gray-700 panel-oscuro:text-gray-300 leading-relaxed",
+        // La hoja es blanca también en modo oscuro: el texto se puede pintar de
+        // "Negro" (`DESCRIPTION_TEXT_COLORS`) y en un fondo oscuro no se vería.
+        class: "product-rte max-w-none focus:outline-none min-h-[80px] px-4 py-3 text-sm text-gray-700 leading-relaxed bg-white [color-scheme:light]",
       },
     },
   });

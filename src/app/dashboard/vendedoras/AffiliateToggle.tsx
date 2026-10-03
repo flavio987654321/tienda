@@ -190,7 +190,7 @@ export default function AffiliateToggle({
           >
             {saving
               ? <Loader2 className="h-4 w-4 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
-              : <span className={`inline-block h-5 w-5 transform rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
+              : <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
             }
           </button>
         </div>
@@ -238,7 +238,7 @@ export default function AffiliateToggle({
               >
                 {savingCoupons
                   ? <Loader2 className="h-4 w-4 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
-                  : <span className={`inline-block h-5 w-5 transform rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${acceptsCoupons ? "translate-x-7" : "translate-x-1"}`} />
+                  : <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${acceptsCoupons ? "translate-x-7" : "translate-x-1"}`} />
                 }
               </button>
             </div>

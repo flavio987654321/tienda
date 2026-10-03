@@ -527,7 +527,7 @@ function Toggle({ on, disabled, onClick }: { on: boolean; disabled?: boolean; on
   return (
     <button onClick={onClick} disabled={disabled} aria-pressed={on}
       className={`relative w-10 h-[23px] shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-indigo-600" : "bg-gray-300 panel-oscuro:bg-gray-600"}`}>
-      <span className={`absolute top-[2.5px] w-[18px] h-[18px] rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-all ${on ? "left-[19px]" : "left-[2.5px]"}`} />
+      <span className={`absolute top-[2.5px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all ${on ? "left-[19px]" : "left-[2.5px]"}`} />
     </button>
   );
 }

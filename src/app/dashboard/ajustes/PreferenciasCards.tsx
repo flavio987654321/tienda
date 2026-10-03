@@ -159,7 +159,7 @@ function Switch({ value, onChange, label }: { value: boolean; onChange: (v: bool
       onClick={() => onChange(!value)}
       className={`relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${value ? "bg-indigo-600" : "bg-slate-300 panel-oscuro:bg-gray-600"}`}
     >
-      <span className={`block h-5 w-5 rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${value ? "translate-x-5" : "translate-x-0"}`} />
+      <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-5" : "translate-x-0"}`} />
     </button>
   );
 }
