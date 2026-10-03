@@ -52,6 +52,36 @@ export async function POST(req: NextRequest) {
       console.error("WEBHOOK suscripcion: userId inválido en metadata", { userId });
       return NextResponse.json({ ok: true });
     }
+    /* ── Devolución o contracargo: el plan se corta en el acto ─────────────────
+     *
+     * ⚠️ No existía. Sólo se miraban los pagos aprobados, así que alguien podía
+     * pagar Pro, llevarse la bolsa de ebooks (dólares cada uno), desconocer el
+     * pago con la tarjeta y seguir con Pro hasta fin de mes. Las ventas de
+     * productos digitales ya lo manejaban (`digitales/cobro`); la suscripción
+     * no. Encontrado en la auditoría del 03/10/26.
+     *
+     * Sólo si es EL pago que sostiene el período de hoy (`mpPaymentId`): la
+     * devolución de un pago viejo no puede cortar uno nuevo que sí se pagó. Se
+     * vence ahora mismo —fin y gracia en este instante— y no se toca nada más:
+     * el estado lo lee `getSubscriptionStatus` (EXPIRED desde ya, y el cupo de
+     * IA ya es el de Free), y la bajada con sus avisos la hace el cron de
+     * siempre, igual que cualquier vencimiento.
+     *
+     * Va ANTES de validar el plan y el monto: esos controles son para activar
+     * un pago, y una devolución tiene que cortar aunque el plan se haya cerrado
+     * después o la metadata no cierre. Sólo necesita a quién y qué pago. */
+    if (payment.status === "refunded" || payment.status === "charged_back") {
+      const ahora = new Date();
+      const cortado = await prisma.subscription.updateMany({
+        where: { userId, mpPaymentId: String(payment.id) },
+        data: { currentPeriodEnd: ahora, gracePeriodEndsAt: ahora },
+      });
+      console.warn("WEBHOOK suscripcion: pago devuelto o desconocido", {
+        paymentId: String(payment.id), userId, status: payment.status, cortado: cortado.count,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
     // El plan sale del registro, no de una lista escrita a mano acá. Se exige
     // además que TENGA precio: un plan gratis nunca puede llegar por un pago.
     const defPlan = planDe(plan);
@@ -83,32 +113,6 @@ export async function POST(req: NextRequest) {
         billing,
         received: payment.transaction_amount,
         expected: expectedAmt,
-      });
-      return NextResponse.json({ ok: true });
-    }
-
-    /* ── Devolución o contracargo: el plan se corta en el acto ─────────────────
-     *
-     * ⚠️ No existía. Sólo se miraban los pagos aprobados, así que alguien podía
-     * pagar Pro, llevarse la bolsa de ebooks (dólares cada uno), desconocer el
-     * pago con la tarjeta y seguir con Pro hasta fin de mes. Las ventas de
-     * productos digitales ya lo manejaban (`digitales/cobro`); la suscripción
-     * no. Encontrado en la auditoría del 03/10/26.
-     *
-     * Sólo si es EL pago que sostiene el período de hoy (`mpPaymentId`): la
-     * devolución de un pago viejo no puede cortar uno nuevo que sí se pagó. Se
-     * vence ahora mismo —fin y gracia en este instante— y no se toca nada más:
-     * el estado lo lee `getSubscriptionStatus` (EXPIRED desde ya, y el cupo de
-     * IA ya es el de Free), y la bajada con sus avisos la hace el cron de
-     * siempre, igual que cualquier vencimiento. */
-    if (payment.status === "refunded" || payment.status === "charged_back") {
-      const ahora = new Date();
-      const cortado = await prisma.subscription.updateMany({
-        where: { userId, mpPaymentId: String(payment.id) },
-        data: { currentPeriodEnd: ahora, gracePeriodEndsAt: ahora },
-      });
-      console.warn("WEBHOOK suscripcion: pago devuelto o desconocido", {
-        paymentId: String(payment.id), userId, status: payment.status, cortado: cortado.count,
       });
       return NextResponse.json({ ok: true });
     }

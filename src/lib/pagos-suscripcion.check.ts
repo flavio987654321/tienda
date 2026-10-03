@@ -315,7 +315,9 @@ console.log("\nAuditoría del 03/10/26: devoluciones, renovar y avisos");
   chequear("una devolución o un contracargo cortan el plan de ESE pago, antes de mirar si está aprobado",
     /payment\.status === "refunded" \|\| payment\.status === "charged_back"/.test(webhook)
     && webhook.includes("where: { userId, mpPaymentId: String(payment.id) }")
-    && webhook.indexOf('payment.status === "refunded"') < webhook.indexOf('payment.status !== "approved"'));
+    && webhook.indexOf('payment.status === "refunded"') < webhook.indexOf('payment.status !== "approved"')
+    /* Y antes de validar plan y monto: esos son para ACTIVAR, no para cortar. */
+    && webhook.indexOf('payment.status === "refunded"') < webhook.indexOf("const defPlan = planDe(plan);"));
   chequear("el webhook y el pago en cero usan la misma regla para desde cuándo corre el período",
     webhook.includes("periodFor(billing, inicioDelPeriodoNuevo(subActual, plan, billing, now))")
     && pref.includes("periodFor(billing, inicioDelPeriodoNuevo(subActual, plan, billing, now))")

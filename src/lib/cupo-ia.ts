@@ -256,7 +256,10 @@ export function cuentaDelCupo(sub: SuscripcionParaElCupo | null, ahora: Date = n
     tier,
     enPrueba: false,
     ciclo: `pago:${new Date(inicio).toISOString()}:${n}`,
-    renuevaEl: new Date(renueva).toISOString(),
+    /* En la gracia el período ya terminó: no hay fecha por delante, vuelve con
+       el pago. Sin esto la pantalla decía "vuelven el 1 de noviembre" con el 1
+       ya pasado. */
+    renuevaEl: renueva > ahora.getTime() ? new Date(renueva).toISOString() : null,
   };
 }
 

@@ -391,8 +391,8 @@ check("CUP-D",
   /* En la gracia (venció y todavía no pagó) no se abre un ciclo nuevo. */
   const enGracia = cuentaDelCupo(pago("2026-09-01"), dia("2026-10-03"));
   const antes = cuentaDelCupo(pago("2026-09-01"), dia("2026-09-20"));
-  check("CIC-E", enGracia.tier === "PRO" && enGracia.ciclo === antes.ciclo,
-    "en el período de gracia la bolsa no se rellena: el ciclo nuevo lo abre el pago");
+  check("CIC-E", enGracia.tier === "PRO" && enGracia.ciclo === antes.ciclo && enGracia.renuevaEl === null,
+    "en el período de gracia la bolsa no se rellena (el ciclo nuevo lo abre el pago) ni promete una fecha ya pasada");
 
   /* Free, sin suscripción o cancelada: Free, sin ciclo. */
   check("CIC-F", cuentaDelCupo(null).tier === "FREE"
