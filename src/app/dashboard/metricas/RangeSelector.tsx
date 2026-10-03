@@ -63,14 +63,14 @@ export function RangeSelector({
   return (
     <div className="relative">
       <div className="inline-flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
+        <div className="inline-flex rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-1">
           {PRESETS.map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => irAPreset(r)}
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                r === preset ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"
+                r === preset ? "bg-indigo-600 text-white" : "text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
               }`}
             >
               {NOMBRE_PRESET[r]}
@@ -83,8 +83,8 @@ export function RangeSelector({
           onClick={() => setAbierto((v) => !v)}
           className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
             aMedida || comparacion === "anio"
-              ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-              : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+              ? "border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300"
+              : "border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
           }`}
           aria-expanded={abierto}
         >
@@ -108,41 +108,41 @@ export function RangeSelector({
             className="fixed inset-0 z-20 cursor-default"
             onClick={() => setAbierto(false)}
           />
-          <div className="absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg">
+          <div className="absolute right-0 z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 shadow-lg">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-bold text-gray-900">Elegí el período</p>
-              <button type="button" onClick={() => setAbierto(false)} className="text-gray-400 hover:text-gray-600">
+              <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Elegí el período</p>
+              <button type="button" onClick={() => setAbierto(false)} className="text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
-                <span className="text-xs font-semibold text-gray-500">Desde</span>
+                <span className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Desde</span>
                 <input
                   type="date"
                   value={d}
                   max={h || hoy}
                   onChange={(e) => setD(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
+                  className="mt-1 w-full rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-2 py-1.5 text-sm text-gray-900 panel-oscuro:text-gray-100"
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-semibold text-gray-500">Hasta</span>
+                <span className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Hasta</span>
                 <input
                   type="date"
                   value={h}
                   min={d}
                   max={hoy}
                   onChange={(e) => setH(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
+                  className="mt-1 w-full rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-2 py-1.5 text-sm text-gray-900 panel-oscuro:text-gray-100"
                 />
               </label>
             </div>
-            <p className="mt-1.5 text-xs text-gray-400">Hasta {MAX_DIAS} días.</p>
+            <p className="mt-1.5 text-xs text-gray-400 panel-oscuro:text-gray-500">Hasta {MAX_DIAS} días.</p>
 
-            <div className="mt-4 border-t border-gray-100 pt-3">
-              <p className="text-xs font-semibold text-gray-500">Comparar contra</p>
+            <div className="mt-4 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3">
+              <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Comparar contra</p>
               <div className="mt-1.5 grid gap-1.5">
                 {([
                   ["anterior", "El período anterior", "Los mismos días, justo antes."],
@@ -151,7 +151,7 @@ export function RangeSelector({
                   <label
                     key={valor}
                     className={`flex cursor-pointer gap-2 rounded-lg border p-2 text-xs ${
-                      comp === valor ? "border-indigo-300 bg-indigo-50" : "border-gray-200"
+                      comp === valor ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10" : "border-gray-200 panel-oscuro:border-gray-700"
                     }`}
                   >
                     <input
@@ -162,8 +162,8 @@ export function RangeSelector({
                       onChange={() => setComp(valor)}
                     />
                     <span>
-                      <span className="block font-semibold text-gray-800">{titulo}</span>
-                      <span className="block leading-relaxed text-gray-500">{ayuda}</span>
+                      <span className="block font-semibold text-gray-800 panel-oscuro:text-gray-200">{titulo}</span>
+                      <span className="block leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{ayuda}</span>
                     </span>
                   </label>
                 ))}

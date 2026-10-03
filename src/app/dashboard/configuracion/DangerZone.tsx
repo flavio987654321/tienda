@@ -105,10 +105,10 @@ export default function DangerZone({
 
   return (
     <>
-      <div className="rounded-xl border border-red-200 bg-red-50/60 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-red-200">
+      <div className="rounded-xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50/60 panel-oscuro:bg-red-500/10 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-red-200 panel-oscuro:border-red-500/30">
           <ShieldAlert className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm font-bold text-red-700">Zona de peligro</p>
+          <p className="text-sm font-bold text-red-700 panel-oscuro:text-red-300">Zona de peligro</p>
         </div>
         <div className="p-4 space-y-2.5">
           {/* Sin diseño no se ofrece: sería una acción destructiva que no borra
@@ -116,7 +116,7 @@ export default function DangerZone({
           {hasDesign && (
             <button
               onClick={() => handleOpen("store")}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm text-red-700 font-medium transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 hover:bg-red-100 panel-oscuro:hover:bg-red-500/15 text-sm text-red-700 panel-oscuro:text-red-300 font-medium transition-colors text-left"
             >
               <Store className="h-4 w-4 shrink-0" />
               <div>
@@ -131,7 +131,7 @@ export default function DangerZone({
               dejar de pagar. */}
           <button
             onClick={() => setClosing(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-300 bg-red-100 hover:bg-red-200 text-sm text-red-800 font-semibold transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-300 panel-oscuro:border-red-500/40 bg-red-100 panel-oscuro:bg-red-500/15 hover:bg-red-200 panel-oscuro:hover:bg-red-500/25 text-sm text-red-800 panel-oscuro:text-red-300 font-semibold transition-colors text-left"
           >
             <Power className="h-4 w-4 shrink-0" />
             <div>
@@ -147,7 +147,7 @@ export default function DangerZone({
         <div className="px-4 pb-4 -mt-0.5">
           <button
             onClick={() => handleOpen("account")}
-            className="text-xs text-red-600/70 hover:text-red-700 underline underline-offset-2 transition-colors"
+            className="text-xs text-red-600/70 panel-oscuro:text-red-400 hover:text-red-700 panel-oscuro:hover:text-red-300 underline underline-offset-2 transition-colors"
           >
             Eliminar mis datos permanentemente
           </button>
@@ -168,18 +168,18 @@ export default function DangerZone({
            este modal se pasa largo de un teléfono, y sin tope se cortaba arriba
            y abajo — con el botón de confirmar entre lo que no se alcanzaba. */
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-full flex flex-col overflow-hidden">
-            <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 pt-6 pb-4 border-b border-gray-100">
-              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-full flex flex-col overflow-hidden">
+            <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 pt-6 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+              <div className="w-10 h-10 rounded-xl bg-red-100 panel-oscuro:bg-red-500/15 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-600 panel-oscuro:text-red-400" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900 text-base">
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-base">
                   {target === "store" ? "Resetear diseño de la tienda" : "Eliminar mis datos permanentemente"}
                 </h2>
-                <p className="text-xs text-gray-500">Esta acción no se puede deshacer</p>
+                <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Esta acción no se puede deshacer</p>
               </div>
-              <button onClick={handleCloseModal} aria-label="Cerrar" className="ml-auto text-gray-400 hover:text-gray-600">
+              <button onClick={handleCloseModal} aria-label="Cerrar" className="ml-auto text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -187,41 +187,41 @@ export default function DangerZone({
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
               {loading ? (
                 <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400 panel-oscuro:text-gray-500" />
                 </div>
               ) : hasBlockers ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-700 font-medium">No podés eliminar todavía porque hay pendientes:</p>
+                  <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium">No podés eliminar todavía porque hay pendientes:</p>
                   {info!.pendingOrders > 0 && (
-                    <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-3 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-amber-800">{info!.pendingOrders} pedido{info!.pendingOrders !== 1 ? "s" : ""} pendiente{info!.pendingOrders !== 1 ? "s" : ""}</p>
-                        <p className="text-xs text-amber-600 mt-0.5">Tenés que completarlos o cancelarlos desde el panel de pedidos.</p>
+                        <p className="text-sm font-semibold text-amber-800 panel-oscuro:text-amber-300">{info!.pendingOrders} pedido{info!.pendingOrders !== 1 ? "s" : ""} pendiente{info!.pendingOrders !== 1 ? "s" : ""}</p>
+                        <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-0.5">Tenés que completarlos o cancelarlos desde el panel de pedidos.</p>
                       </div>
                     </div>
                   )}
                   {info!.pendingBalances > 0 && (
-                    <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-3 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-amber-800">{fmt(info!.pendingBalances)} en panel de comisiones de afiliados</p>
-                        <p className="text-xs text-amber-600 mt-0.5">Tus afiliados deben retirar su saldo antes de que puedas eliminar la tienda.</p>
+                        <p className="text-sm font-semibold text-amber-800 panel-oscuro:text-amber-300">{fmt(info!.pendingBalances)} en panel de comisiones de afiliados</p>
+                        <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-0.5">Tus afiliados deben retirar su saldo antes de que puedas eliminar la tienda.</p>
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Qué se elimina</p>
-                    <ul className="space-y-1.5 text-sm text-gray-600">
+                  <div className="bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl p-4 space-y-2">
+                    <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400 uppercase tracking-wider">Qué se elimina</p>
+                    <ul className="space-y-1.5 text-sm text-gray-600 panel-oscuro:text-gray-400">
                       {target === "store" ? (
                         <>
                           <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> El diseño y los bloques de tu página</li>
                           <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Tu tienda sale de línea hasta que la republiques</li>
-                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliados se conservan</li>
-                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Tus datos de cobro, envíos e integraciones también</li>
+                          <li className="flex items-center gap-2 text-gray-400 panel-oscuro:text-gray-500"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliados se conservan</li>
+                          <li className="flex items-center gap-2 text-gray-400 panel-oscuro:text-gray-500"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Tus datos de cobro, envíos e integraciones también</li>
                         </>
                       ) : (
                         <>
@@ -230,7 +230,7 @@ export default function DangerZone({
                         </>
                       )}
                     </ul>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-2">
                       {target === "store"
                         ? "Vas a poder armar un diseño nuevo desde cero en el constructor."
                         : "El historial de pedidos y comisiones se conserva por 5 años (requisito AFIP). Podés volver a registrarte con el mismo email."}
@@ -238,9 +238,9 @@ export default function DangerZone({
                   </div>
 
                   {target === "account" && (
-                    <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                      <AlertTriangle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                      <p className="text-xs text-blue-800 leading-relaxed">
+                    <div className="flex items-start gap-2.5 bg-blue-50 panel-oscuro:bg-blue-500/10 border border-blue-200 panel-oscuro:border-blue-500/30 rounded-xl p-3">
+                      <AlertTriangle className="h-4 w-4 text-blue-600 panel-oscuro:text-blue-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-800 panel-oscuro:text-blue-300 leading-relaxed">
                         Si lo que querés es dejar de pagar y no perder tu trabajo, mejor <strong>cerrá tu tienda</strong>:
                         se conserva todo y la reactivás cuando quieras. Esto de acá no tiene vuelta.
                       </p>
@@ -248,8 +248,8 @@ export default function DangerZone({
                   )}
 
                   <div>
-                    <label htmlFor="danger-confirm" className="block text-sm text-gray-700 mb-2">
-                      Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900">{info?.storeName}</strong>
+                    <label htmlFor="danger-confirm" className="block text-sm text-gray-700 panel-oscuro:text-gray-300 mb-2">
+                      Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900 panel-oscuro:text-gray-100">{info?.storeName}</strong>
                     </label>
                     <input
                       id="danger-confirm"
@@ -257,12 +257,12 @@ export default function DangerZone({
                       value={confirmText}
                       onChange={(e) => { setConfirmText(e.target.value); setErrorMsg(""); }}
                       placeholder={info?.storeName ?? ""}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                      className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                     />
                   </div>
 
                   {errorMsg && (
-                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{errorMsg}</p>
+                    <p className="text-sm text-red-600 panel-oscuro:text-red-400 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl px-4 py-2.5">{errorMsg}</p>
                   )}
                 </div>
               )}
@@ -271,7 +271,7 @@ export default function DangerZone({
             <div className="shrink-0 px-4 sm:px-6 pb-6 pt-4 flex gap-3">
               <button
                 onClick={handleCloseModal}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
               >
                 Cancelar
               </button>

@@ -2776,17 +2776,17 @@ export default function ConfiguracionPage() {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-5">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 flex items-center justify-center mb-5">
             <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3" />
             </svg>
           </div>
-          <h2 className="text-xl font-black text-gray-900 mb-2">Usá una pantalla más grande</h2>
-          <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
+          <h2 className="text-xl font-black text-gray-900 panel-oscuro:text-gray-100 mb-2">Usá una pantalla más grande</h2>
+          <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm leading-relaxed max-w-xs">
             El editor de tu tienda está diseñado para usarse desde una computadora o tablet grande.
             Abrilo desde tu PC para diseñar y personalizar.
           </p>
-          <div className="mt-6 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800 max-w-xs">
+          <div className="mt-6 px-4 py-3 rounded-2xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 text-xs text-amber-800 panel-oscuro:text-amber-300 max-w-xs">
             Desde el celular podés ver pedidos, productos, cupones y estadísticas sin problema.
           </div>
         </div>
@@ -2799,8 +2799,8 @@ export default function ConfiguracionPage() {
     return (
       <DashboardLayout>
         <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
+          <div className="bg-slate-100 panel-oscuro:bg-gray-950" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", padding: "24px 40px 0" }}>
             <div style={{ width: "100%", maxWidth: 960, flex: 1,
               borderRadius: "14px 14px 0 0", background: "#1e293b",
               boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
@@ -2866,8 +2866,8 @@ export default function ConfiguracionPage() {
     return (
       <DashboardLayout>
         <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
+          <div className="bg-slate-100 panel-oscuro:bg-gray-950" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", padding: "24px 40px 0" }}>
 
             <div style={{
               width: "100%", maxWidth: 960, flex: 1,
@@ -3061,7 +3061,8 @@ export default function ConfiguracionPage() {
   /* ── STEP 3: Editing ── */
   return (
     <DashboardLayout fullHeight hideHelp>
-      <div data-tour-scope="diseno-editor" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
+      <div data-tour-scope="diseno-editor" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}
+        className="bg-slate-100 panel-oscuro:bg-gray-950">
 
         {/* Barra paso 3 */}
         <div style={{

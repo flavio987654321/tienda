@@ -141,7 +141,7 @@ function statusColor(status: string) {
     DELIVERED: "bg-indigo-600",
     CANCELLED: "bg-red-400",
   };
-  return map[status] ?? "bg-gray-400";
+  return map[status] ?? "bg-gray-400 panel-oscuro:bg-gray-500";
 }
 
 // ─── UI Components ────────────────────────────────────────────────────────────
@@ -264,7 +264,8 @@ function LineChart({
           return (
             <g key={i}>
               <line x1={padL} y1={y} x2={padL + innerW} y2={y}
-                stroke={i === 0 ? "#e5e7eb" : "#f3f4f6"} strokeWidth={i === 0 ? 1 : 0.5} />
+                stroke={i === 0 ? "#e5e7eb" : "#f3f4f6"} strokeWidth={i === 0 ? 1 : 0.5}
+                className={i === 0 ? "panel-oscuro:stroke-gray-700" : "panel-oscuro:stroke-gray-800"} />
               <text x={padL - 5} y={y + 3.5} textAnchor="end" fontSize={10.5} fill="#9ca3af">
                 {formatter(v)}
               </text>
@@ -277,7 +278,8 @@ function LineChart({
 
         {/* Línea */}
         <path d={linePath} fill="none" stroke={hasData ? color : "#e5e7eb"}
-          strokeWidth={hasData ? 2 : 1} strokeLinejoin="round" strokeLinecap="round" />
+          strokeWidth={hasData ? 2 : 1} strokeLinejoin="round" strokeLinecap="round"
+          className={hasData ? undefined : "panel-oscuro:stroke-gray-700"} />
 
         {/* Punto pico con etiqueta */}
         {hasData && (
@@ -395,31 +397,31 @@ function BarrasRanking({
           <div key={f.clave} className={i >= TOPE_PANTALLA ? "hidden print:block" : undefined}>
             <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
               <div className="min-w-0">
-                <span className="text-gray-700 font-medium break-words">{f.titulo}</span>
-                {f.sub && <span className="text-xs text-gray-400 ml-1.5">{f.sub}</span>}
+                <span className="text-gray-700 panel-oscuro:text-gray-300 font-medium break-words">{f.titulo}</span>
+                {f.sub && <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 ml-1.5">{f.sub}</span>}
               </div>
               <div className="shrink-0 text-right">
-                <span className="font-bold text-gray-900">{f.valor}</span>
-                <span className="text-xs text-gray-400 ml-1">
+                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{f.valor}</span>
+                <span className="text-xs text-gray-400 panel-oscuro:text-gray-500 ml-1">
                   {unidad}{f.valor !== 1 ? "s" : ""}
                 </span>
               </div>
             </div>
-            <div className="h-1.5 rounded-full bg-gray-100">
+            <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
               <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
             </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-gray-400 tabular-nums">
+            <p className="mt-1.5 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
               {f.dejo !== null ? (
                 <>
-                  Te dejó <span className="font-bold text-gray-900">{money(f.dejo)}</span>
+                  Te dejó <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{money(f.dejo)}</span>
                   {f.pedidosSinCosto > 0 && (
-                    <span className="text-amber-600">
+                    <span className="text-amber-600 panel-oscuro:text-amber-400">
                       {" "}(de {f.valor - f.pedidosSinCosto} de {f.valor} — al resto le falta el costo)
                     </span>
                   )}
                 </>
               ) : (
-                <span className="text-amber-600">Sin el costo cargado no se puede saber la ganancia</span>
+                <span className="text-amber-600 panel-oscuro:text-amber-400">Sin el costo cargado no se puede saber la ganancia</span>
               )}
               <br />
               Trajo {money(f.trajo)} · descontaste {money(f.costo)}
@@ -437,15 +439,15 @@ function BarrasRanking({
           escondía nada más el link, el papel terminaba en "y 12 más ·" colgando
           de un separador que no separa nada. */}
       {filas.length > TOPE_PANTALLA && (
-        <p className="pt-1 text-xs text-gray-400 print:hidden">
+        <p className="pt-1 text-xs text-gray-400 panel-oscuro:text-gray-500 print:hidden">
           y {filas.length - TOPE_PANTALLA} más ·{" "}
-          <Link href={href} className="font-semibold text-indigo-600 hover:text-indigo-700">
+          <Link href={href} className="font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300">
             {cta} →
           </Link>
         </p>
       )}
       {filas.length > TOPE_PAPEL && (
-        <p className="hidden print:block pt-1 text-xs text-gray-400">
+        <p className="hidden print:block pt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">
           y {filas.length - TOPE_PAPEL} más, que no entraron en el informe.
         </p>
       )}
@@ -464,10 +466,10 @@ function BarrasRanking({
    mirar valen más que un párrafo que se saltea siempre. */
 function QueEsCada({ unidad }: { unidad: string }) {
   return (
-    <div className="mb-4 rounded-xl bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
-      <p><span className="font-semibold text-gray-700">Trajo</span> — lo que facturaron esos {unidad}.</p>
-      <p><span className="font-semibold text-gray-700">Descontaste</span> — lo que resignaste para que entraran.</p>
-      <p><span className="font-semibold text-gray-700">Te dejó</span> — lo que quedó después del costo de los productos y del descuento. Es el que decide.</p>
+    <div className="mb-4 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 px-3 py-2.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+      <p><span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Trajo</span> — lo que facturaron esos {unidad}.</p>
+      <p><span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Descontaste</span> — lo que resignaste para que entraran.</p>
+      <p><span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Te dejó</span> — lo que quedó después del costo de los productos y del descuento. Es el que decide.</p>
     </div>
   );
 }
@@ -489,9 +491,9 @@ function SinUsar({ titulo, items, href, cta }: {
   if (items.length === 0) return null;
   const MOSTRAR = 4;
   return (
-    <div className="mt-5 border-t border-gray-100 pt-3.5">
-      <p className="text-xs font-semibold text-gray-500">{titulo}</p>
-      <p className="mt-1 text-xs leading-relaxed text-gray-400 break-words">
+    <div className="mt-5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5">
+      <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">{titulo}</p>
+      <p className="mt-1 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500 break-words">
         <span className="print:hidden">
           {items.slice(0, MOSTRAR).join(" · ")}
           {items.length > MOSTRAR && ` · y ${items.length - MOSTRAR} más`}
@@ -503,7 +505,7 @@ function SinUsar({ titulo, items, href, cta }: {
           {items.length > TOPE_PAPEL && ` · y ${items.length - TOPE_PAPEL} más`}
         </span>
       </p>
-      <Link href={href} className="mt-1.5 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700 print:hidden">
+      <Link href={href} className="mt-1.5 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 print:hidden">
         {cta} →
       </Link>
     </div>
@@ -512,7 +514,7 @@ function SinUsar({ titulo, items, href, cta }: {
 
 function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6">
+    <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
       <div className="flex items-start justify-between mb-4">
         <div className={`p-2.5 rounded-xl ${iconBg}`}>
           <Icon className="h-5 w-5" />
@@ -521,8 +523,8 @@ function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps)
           <span
             className={`text-xs font-bold px-2.5 py-1 rounded-full ${
               trend >= 0
-                ? "bg-green-50 text-green-600"
-                : "bg-red-50 text-red-500"
+                ? "bg-green-50 panel-oscuro:bg-green-500/10 text-green-600 panel-oscuro:text-green-400"
+                : "bg-red-50 panel-oscuro:bg-red-500/10 text-red-500"
             }`}
             title="vs. el período anterior de igual duración"
           >
@@ -530,9 +532,9 @@ function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps)
           </span>
         )}
       </div>
-      <p className="text-3xl font-black text-gray-900">{value}</p>
-      <p className="text-sm text-gray-500 mt-1">{label}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      <p className="text-3xl font-black text-gray-900 panel-oscuro:text-gray-100">{value}</p>
+      <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-1">{label}</p>
+      {sub && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -1405,13 +1407,13 @@ export default async function MetricasPage({
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
+            <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Métricas</h1>
             {/* Decir contra QUÉ se compara dejó de ser un detalle: antes había
                 una sola respuesta posible y alcanzaba con la frase fija. Ahora
                 el mismo "+40%" quiere decir cosas muy distintas según sea contra
                 el mes pasado o contra el año pasado, y sin esta línea no hay
                 forma de saber cuál de las dos se está mirando. */}
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 panel-oscuro:text-gray-400">
               <strong>{store.name}</strong> —{" "}
               {rango.preset !== null
                 ? `últimos ${rangeDays} días`
@@ -1421,7 +1423,7 @@ export default async function MetricasPage({
             {/* Sólo en el papel: un PDF que circula por mail o se archiva tiene que
                 decir de cuándo es. En pantalla la fecha sobra —es hoy— pero dentro
                 de tres meses, en un archivo suelto, es el único dato que lo ubica. */}
-            <p className="hidden print:block mt-1 text-xs text-gray-500">
+            <p className="hidden print:block mt-1 text-xs text-gray-500 panel-oscuro:text-gray-400">
               Informe generado el {new Date().toLocaleDateString("es-AR", {
                 day: "2-digit", month: "long", year: "numeric",
               })} · Período: {fechaLarga(periodStartStr)} a {fechaLarga(periodEndStr)}
@@ -1469,7 +1471,7 @@ export default async function MetricasPage({
             un período distinto al que la persona pidió, y todos se ven igual de
             creíbles. */}
         {rango.aviso && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+          <div className="rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 panel-oscuro:text-amber-300">
             {rango.aviso}
           </div>
         )}
@@ -1480,7 +1482,7 @@ export default async function MetricasPage({
             embudo dan cualquier cosa. Sin este aviso parecería que la tienda
             estuvo muerta, cuando lo único que pasó es que el dato ya no está. */}
         {periodoExcedeRetencion(periodStartStr, hoyDia) && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+          <div className="rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 panel-oscuro:text-amber-300">
             Estás mirando más atrás de lo que se guardan las visitas.{" "}
             <span className="font-semibold">{AVISO_RETENCION}</span>{" "}
             En la parte más vieja del período vas a ver las ventas, pero las visitas, la
@@ -1494,41 +1496,41 @@ export default async function MetricasPage({
             Sólo en tiendas con carrito: AUTOS vende por consulta y sus números
             —leads, vehículos vendidos— no entran en esta cuenta. */}
         {!isAutos && (
-          <div className={`rounded-2xl border bg-white p-6 border-l-4 ${
-            resumen.tono === "bien" ? "border-gray-100 border-l-emerald-500"
-            : resumen.tono === "mal" ? "border-gray-100 border-l-rose-500"
-            : resumen.tono === "atencion" ? "border-gray-100 border-l-amber-500"
-            : "border-gray-100 border-l-gray-300"
+          <div className={`rounded-2xl border bg-white panel-oscuro:bg-gray-900 p-6 border-l-4 ${
+            resumen.tono === "bien" ? "border-gray-100 panel-oscuro:border-gray-800 border-l-emerald-500"
+            : resumen.tono === "mal" ? "border-gray-100 panel-oscuro:border-gray-800 border-l-rose-500"
+            : resumen.tono === "atencion" ? "border-gray-100 panel-oscuro:border-gray-800 border-l-amber-500"
+            : "border-gray-100 panel-oscuro:border-gray-800 border-l-gray-300"
           }`}>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
               Cómo te fue
             </h2>
 
-            <p className="mt-2 text-lg font-bold leading-snug text-gray-900">
+            <p className="mt-2 text-lg font-bold leading-snug text-gray-900 panel-oscuro:text-gray-100">
               {resumen.titular}
             </p>
 
             {resumen.parrafos.map((parrafo) => (
-              <p key={parrafo} className="mt-3 text-sm leading-relaxed text-gray-600">
+              <p key={parrafo} className="mt-3 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
                 {parrafo}
               </p>
             ))}
 
             {resumen.pendientes.length > 0 && (
-              <div className="mt-5 border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <div className="mt-5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
                   Para revisar
                 </p>
                 <ul className="mt-2 space-y-2">
                   {resumen.pendientes.map((pendiente) => (
-                    <li key={pendiente.texto} className="flex gap-2.5 text-sm leading-relaxed text-gray-600">
-                      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300" />
+                    <li key={pendiente.texto} className="flex gap-2.5 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+                      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300 panel-oscuro:bg-gray-600" />
                       <span>
                         {pendiente.texto}{" "}
                         {pendiente.href && (
                           <Link
                             href={pendiente.href}
-                            className="font-semibold text-indigo-600 hover:underline print:hidden"
+                            className="font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline print:hidden"
                           >
                             Ir →
                           </Link>
@@ -1551,7 +1553,7 @@ export default async function MetricasPage({
               sub={`${leadsTotal} en total`}
               trend={leadsDiff}
               icon={MessageSquare}
-              iconBg="bg-indigo-50 text-indigo-600"
+              iconBg="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400"
             />
             <KPICard
               label={`Ventas confirmadas (${rango.etiqueta})`}
@@ -1559,14 +1561,14 @@ export default async function MetricasPage({
               sub={leadsConversionRate !== null ? `${leadsConversionRate}% de conversión histórica` : "Sin datos"}
               trend={leadsConfirmedDiff}
               icon={TrendingUp}
-              iconBg="bg-green-50 text-green-600"
+              iconBg="bg-green-50 panel-oscuro:bg-green-500/10 text-green-600 panel-oscuro:text-green-400"
             />
             <KPICard
               label="Precio prom. de venta"
               value={avgSoldPrice > 0 ? money(avgSoldPrice) : "—"}
               sub={vehiculosVendidos > 0 ? `${vehiculosVendidos} vehículo${vehiculosVendidos !== 1 ? "s" : ""} vendido${vehiculosVendidos !== 1 ? "s" : ""} en total` : "Sin ventas aún"}
               icon={ShoppingBag}
-              iconBg="bg-amber-50 text-amber-600"
+              iconBg="bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-600 panel-oscuro:text-amber-400"
             />
             <KPICard
               label={`Visitas (${rango.etiqueta})`}
@@ -1574,7 +1576,7 @@ export default async function MetricasPage({
               sub={viewsDiff === null ? "Sin datos del período anterior" : undefined}
               trend={viewsDiff}
               icon={Eye}
-              iconBg="bg-blue-50 text-blue-600"
+              iconBg="bg-blue-50 panel-oscuro:bg-blue-500/10 text-blue-600 panel-oscuro:text-blue-400"
             />
           </div>
         ) : (
@@ -1585,7 +1587,7 @@ export default async function MetricasPage({
               sub={revDiff === null ? "Sin datos del período anterior" : undefined}
               trend={revDiff}
               icon={TrendingUp}
-              iconBg="bg-green-50 text-green-600"
+              iconBg="bg-green-50 panel-oscuro:bg-green-500/10 text-green-600 panel-oscuro:text-green-400"
             />
             <KPICard
               label={`Pedidos (${rango.etiqueta})`}
@@ -1593,7 +1595,7 @@ export default async function MetricasPage({
               sub={`Ticket prom. ${money(avgTicket)}`}
               trend={ordersDiff}
               icon={ShoppingBag}
-              iconBg="bg-indigo-50 text-indigo-600"
+              iconBg="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400"
             />
             <KPICard
               label={`Visitas (${rango.etiqueta})`}
@@ -1601,14 +1603,14 @@ export default async function MetricasPage({
               sub={viewsDiff === null ? "Sin datos del período anterior" : undefined}
               trend={viewsDiff}
               icon={Eye}
-              iconBg="bg-blue-50 text-blue-600"
+              iconBg="bg-blue-50 panel-oscuro:bg-blue-500/10 text-blue-600 panel-oscuro:text-blue-400"
             />
             <KPICard
               label="Conversión"
               value={conversionRate !== null ? `${conversionRate}%` : "—"}
               sub="visitas → pedidos"
               icon={MousePointerClick}
-              iconBg="bg-emerald-50 text-emerald-600"
+              iconBg="bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-600 panel-oscuro:text-emerald-400"
             />
           </div>
         )}
@@ -1616,31 +1618,31 @@ export default async function MetricasPage({
         {/* ── Gráficos ── */}
         <div className="grid gap-6 lg:grid-cols-2">
           {isAutos ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
               <div className="flex items-center justify-between gap-3 mb-0.5">
-                <h2 className="font-bold text-gray-900">Consultas diarias</h2>
-                <p className="shrink-0 text-xl font-black text-indigo-600">{totalLeadsPeriod}</p>
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Consultas diarias</h2>
+                <p className="shrink-0 text-xl font-black text-indigo-600 panel-oscuro:text-indigo-400">{totalLeadsPeriod}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-4">{granoPeriodo}</p>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">{granoPeriodo}</p>
               <LineChart data={conGrano(leadsChartData)} color="#6366f1" gradId="grad-indigo" formatter={shortNum} />
             </div>
           ) : (
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
               <div className="flex items-center justify-between gap-3 mb-0.5">
-                <h2 className="font-bold text-gray-900">Ingresos confirmados</h2>
-                <p className="shrink-0 text-xl font-black text-green-600">{money(totalRevenuePeriod)}</p>
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Ingresos confirmados</h2>
+                <p className="shrink-0 text-xl font-black text-green-600 panel-oscuro:text-green-400">{money(totalRevenuePeriod)}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-4">{granoPeriodo}</p>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">{granoPeriodo}</p>
               <LineChart data={conGrano(revenueChartData)} color="#16a34a" gradId="grad-green" formatter={shortMoney} />
             </div>
           )}
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
             <div className="flex items-center justify-between gap-3 mb-0.5">
-              <h2 className="font-bold text-gray-900">Visitas a tu tienda</h2>
-              <p className="shrink-0 text-xl font-black text-blue-600">{totalViewsPeriod.toLocaleString("es-AR")}</p>
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Visitas a tu tienda</h2>
+              <p className="shrink-0 text-xl font-black text-blue-600 panel-oscuro:text-blue-400">{totalViewsPeriod.toLocaleString("es-AR")}</p>
             </div>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">
               {totalViewsPeriod === 0
                 ? "Las visitas del propio dueño no se cuentan"
                 : granoPeriodo}
@@ -1659,10 +1661,10 @@ export default async function MetricasPage({
             decisión: si el que vuelve gasta más, cada peso puesto en que la
             gente vuelva rinde más que uno puesto en traer gente nueva. */}
         {!isAutos && clientesResumen.nuevos.pedidos + clientesResumen.vuelven.pedidos > 0 && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <h2 className="font-bold text-gray-900">Clientes nuevos y clientes que vuelven</h2>
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Clientes nuevos y clientes que vuelven</h2>
 
-            <p className="mt-1 text-sm leading-relaxed text-gray-600">
+            <p className="mt-1 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
               {clientesResumen.vuelven.personas === 0 ? (
                 <>
                   Los {clientesResumen.nuevos.personas} que te compraron en estos {rangeDays} días
@@ -1672,7 +1674,7 @@ export default async function MetricasPage({
               ) : clientesResumen.diferenciaTicketPct !== null ? (
                 <>
                   El que ya te había comprado gasta{" "}
-                  <span className="font-bold text-gray-900">
+                  <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">
                     {Math.abs(clientesResumen.diferenciaTicketPct)}%{" "}
                     {clientesResumen.diferenciaTicketPct > 0 ? "más" : "menos"}
                   </span>
@@ -1685,7 +1687,7 @@ export default async function MetricasPage({
                 </>
               ) : (
                 <>
-                  Volvieron <span className="font-bold text-gray-900">{clientesResumen.vuelven.personas}</span> de
+                  Volvieron <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{clientesResumen.vuelven.personas}</span> de
                   los que ya te habían comprado, y dejaron el {clientesResumen.pctFacturadoDeVuelven}% de
                   lo que facturaste en estos {rangeDays} días.
                 </>
@@ -1694,25 +1696,25 @@ export default async function MetricasPage({
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {[
-                { titulo: "Compraron por primera vez", g: clientesResumen.nuevos, color: "text-indigo-600", barra: "bg-indigo-500" },
-                { titulo: "Ya te habían comprado", g: clientesResumen.vuelven, color: "text-emerald-600", barra: "bg-emerald-500" },
+                { titulo: "Compraron por primera vez", g: clientesResumen.nuevos, color: "text-indigo-600 panel-oscuro:text-indigo-400", barra: "bg-indigo-500" },
+                { titulo: "Ya te habían comprado", g: clientesResumen.vuelven, color: "text-emerald-600 panel-oscuro:text-emerald-400", barra: "bg-emerald-500" },
               ].map(({ titulo, g, color, barra }) => {
                 const total = clientesResumen.nuevos.facturado + clientesResumen.vuelven.facturado;
                 const pct = total > 0 ? Math.round((g.facturado / total) * 100) : 0;
                 return (
-                  <div key={titulo} className="rounded-xl border border-gray-100 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{titulo}</p>
+                  <div key={titulo} className="rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">{titulo}</p>
                     <p className={`mt-1 text-2xl font-black ${color} tabular-nums`}>
                       {g.personas}
-                      <span className="ml-1.5 text-sm font-medium text-gray-400">
+                      <span className="ml-1.5 text-sm font-medium text-gray-400 panel-oscuro:text-gray-500">
                         {g.personas === 1 ? "persona" : "personas"}
                       </span>
                     </p>
-                    <div className="mt-2 h-1.5 rounded-full bg-gray-100">
+                    <div className="mt-2 h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                       <div className={`h-1.5 rounded-full ${barra}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="mt-2 text-xs leading-relaxed text-gray-500 tabular-nums">
-                      Dejaron <span className="font-bold text-gray-900">{money(g.facturado)}</span> ({pct}% del total)
+                    <p className="mt-2 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400 tabular-nums">
+                      Dejaron <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{money(g.facturado)}</span> ({pct}% del total)
                       {" "}en {g.pedidos} pedido{g.pedidos !== 1 ? "s" : ""}.
                       {g.pedidos > 0 && <> Ticket promedio {money(g.ticket)}.</>}
                     </p>
@@ -1721,16 +1723,16 @@ export default async function MetricasPage({
               })}
             </div>
 
-            <div className="mt-5 space-y-2 border-t border-gray-100 pt-3.5 text-xs leading-relaxed text-gray-500">
+            <div className="mt-5 space-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
               <p>
-                Se cuenta la <span className="font-semibold text-gray-700">persona</span>, no el pedido:
+                Se cuenta la <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">persona</span>, no el pedido:
                 quien compró por primera vez en estos {rangeDays} días es nuevo, y todo lo que gastó
                 acá cuenta como plata de cliente nuevo aunque haya comprado varias veces. Por eso los
                 dos números suman exacto lo que facturaste.
               </p>
               <p>
                 Reconocemos a la persona por el mail con el que compra.{" "}
-                <span className="font-semibold text-gray-700">Si vuelve con otro mail, entra como nueva.</span>{" "}
+                <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Si vuelve con otro mail, entra como nueva.</span>{" "}
                 Sólo cuenta lo confirmado: los pedidos pendientes de pago no están.
               </p>
             </div>
@@ -1749,23 +1751,23 @@ export default async function MetricasPage({
             siempre hay un escalón que pierde más que los otros: nombrarlo
             porque sí manda a la dueña a arreglar algo que no está roto. */}
         {!isAutos && totalViewsPeriod > 0 && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
-            <h2 className="font-bold text-gray-900">Dónde se te cae la gente</h2>
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Dónde se te cae la gente</h2>
 
             {embudo.peorCaida ? (
-              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+              <p className="mt-1 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
                 El escalón donde más gente se te cae de más es{" "}
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">
                   &quot;{embudo.peorCaida.titulo.toLowerCase()}&quot;
                 </span>
                 : llegaron{" "}
                 {(embudo.peorCaida.cantidad + embudo.peorCaida.perdidos).toLocaleString("es-AR")} y
-                siguieron <span className="font-bold text-gray-900">{embudo.peorCaida.cantidad.toLocaleString("es-AR")}</span>.
+                siguieron <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{embudo.peorCaida.cantidad.toLocaleString("es-AR")}</span>.
                 {" "}En una tienda parecida pasarían más o menos el {100 - embudo.peorCaida.caidaNormalPct}%,
                 {" "}y acá pasa el {embudo.peorCaida.pctDelAnterior}%.
               </p>
             ) : (
-              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+              <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
                 {totalViewsPeriod < MINIMO_PARA_SENALAR
                   ? `Con ${totalViewsPeriod} visitas todavía no alcanza para decir dónde se cae la gente: cualquier diferencia de dos personas da un porcentaje enorme y no quiere decir nada.`
                   : "Ningún escalón se cae mucho más de lo normal. El recorrido de abajo es el detalle."}
@@ -1781,26 +1783,26 @@ export default async function MetricasPage({
                 return (
                   <div key={e.clave}>
                     <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                      <span className={señalado ? "font-bold text-gray-900" : "font-medium text-gray-700"}>
+                      <span className={señalado ? "font-bold text-gray-900 panel-oscuro:text-gray-100" : "font-medium text-gray-700 panel-oscuro:text-gray-300"}>
                         {e.titulo}
                       </span>
-                      <span className="shrink-0 text-xs text-gray-400 tabular-nums">
-                        <span className="font-bold text-gray-900">{e.cantidad.toLocaleString("es-AR")}</span>
+                      <span className="shrink-0 text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
+                        <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{e.cantidad.toLocaleString("es-AR")}</span>
                         {e.pctDelAnterior !== null && ` · ${e.pctDelAnterior}% de los de arriba`}
                       </span>
                     </div>
                     {/* La barra se ve aunque sea diminuta: un escalón en 0,2% con
                         ancho 0 se lee como que no existe, y existe. */}
-                    <div className="h-2 rounded-full bg-gray-100">
+                    <div className="h-2 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                       <div
                         className={`h-2 rounded-full ${señalado ? "bg-rose-500" : "bg-indigo-500"}`}
                         style={{ width: e.cantidad > 0 ? `${Math.max(ancho, 1)}%` : "0%" }}
                       />
                     </div>
-                    <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                    <p className="mt-1 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
                       {e.detalle}
                       {e.perdidos > 0 && (
-                        <span className={señalado ? "font-semibold text-rose-600" : ""}>
+                        <span className={señalado ? "font-semibold text-rose-600 panel-oscuro:text-rose-400" : ""}>
                           {" "}Se cayeron {e.perdidos.toLocaleString("es-AR")}.
                         </span>
                       )}
@@ -1811,16 +1813,16 @@ export default async function MetricasPage({
             </div>
 
             {/* Las dos cosas que cambian cómo se lee todo lo de arriba. */}
-            <div className="mt-5 space-y-2 border-t border-gray-100 pt-3.5 text-xs leading-relaxed text-gray-500">
+            <div className="mt-5 space-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
               {embudo.faltanPasosNuevos && (
                 <p>
-                  <span className="font-semibold text-gray-700">Los dos escalones del medio recién empezaron a medirse.</span>{" "}
+                  <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Los dos escalones del medio recién empezaron a medirse.</span>{" "}
                   Hasta que pase gente nueva por la tienda van a estar en cero, y el salto de
                   las visitas a los datos va a parecer más grande de lo que es.
                 </p>
               )}
               <p>
-                <span className="font-semibold text-gray-700">Los porcentajes son aproximados.</span>{" "}
+                <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Los porcentajes son aproximados.</span>{" "}
                 Los tres primeros escalones cuentan una vez por navegador por día, los datos
                 una vez por persona, y los dos últimos una vez por pedido. Alguien que entra
                 el lunes y compra el jueves suma arriba un día y abajo otro. Sirve para ver
@@ -1841,11 +1843,11 @@ export default async function MetricasPage({
             desglose de tres visitas presentado como si fuera el mapa de la
             tienda hace tomar decisiones sobre nada. */}
         {!isAutos && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
             <div className="flex items-center justify-between gap-3 mb-0.5">
-              <h2 className="font-bold text-gray-900">De dónde viene la gente</h2>
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">De dónde viene la gente</h2>
               {visitasConOrigen > 0 && (
-                <p className="shrink-0 text-xl font-black text-blue-600">
+                <p className="shrink-0 text-xl font-black text-blue-600 panel-oscuro:text-blue-400">
                   {visitasConOrigen.toLocaleString("es-AR")}
                 </p>
               )}
@@ -1853,11 +1855,11 @@ export default async function MetricasPage({
 
             {visitasConOrigen === 0 ? (
               <>
-                <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
                   Todavía no hay ninguna visita con origen. Esto se empezó a medir hace poco:
                   las visitas anteriores quedaron sin etiqueta y no se pueden recuperar.
                 </p>
-                <p className="mt-3 text-xs leading-relaxed text-gray-400">
+                <p className="mt-3 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
                   Va a llenarse solo a medida que entre gente. No hay nada para configurar.
                 </p>
               </>
@@ -1866,13 +1868,13 @@ export default async function MetricasPage({
                 {/* La conclusión primero. El canal más grande que se puede mover,
                     no el más grande a secas: "directo" casi siempre gana y no se
                     puede hacer nada con eso. */}
-                <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                <p className="mt-1 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
                   {canalPrincipal ? (
                     <>
                       Lo que más gente te trae es{" "}
-                      <span className="font-bold text-gray-900">{NOMBRE_ORIGEN[canalPrincipal.origen]}</span>
+                      <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{NOMBRE_ORIGEN[canalPrincipal.origen]}</span>
                       {": "}
-                      <span className="font-bold text-gray-900">{canalPrincipal.visitas.toLocaleString("es-AR")}</span>
+                      <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{canalPrincipal.visitas.toLocaleString("es-AR")}</span>
                       {" "}de {visitasConOrigen.toLocaleString("es-AR")} visitas
                       {" "}({Math.round((canalPrincipal.visitas / visitasConOrigen) * 100)}%).
                     </>
@@ -1891,16 +1893,16 @@ export default async function MetricasPage({
                     return (
                       <div key={o.origen}>
                         <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                          <span className={bolsa ? "text-gray-500" : "font-medium text-gray-700"}>
+                          <span className={bolsa ? "text-gray-500 panel-oscuro:text-gray-400" : "font-medium text-gray-700 panel-oscuro:text-gray-300"}>
                             {NOMBRE_ORIGEN[o.origen]}
                           </span>
-                          <span className="shrink-0 text-xs text-gray-400 tabular-nums">
-                            <span className="font-bold text-gray-900">{o.visitas.toLocaleString("es-AR")}</span> · {pct}%
+                          <span className="shrink-0 text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
+                            <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{o.visitas.toLocaleString("es-AR")}</span> · {pct}%
                           </span>
                         </div>
-                        <div className="h-1.5 rounded-full bg-gray-100">
+                        <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                           <div
-                            className={`h-1.5 rounded-full ${bolsa ? "bg-gray-300" : "bg-blue-500"}`}
+                            className={`h-1.5 rounded-full ${bolsa ? "bg-gray-300 panel-oscuro:bg-gray-600" : "bg-blue-500"}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -1912,27 +1914,27 @@ export default async function MetricasPage({
                 {/* Los dos avisos que cambian cómo se lee todo lo de arriba. Van
                     siempre visibles y no en un globito: en un teléfono el hover
                     no existe, y una aclaración que no se puede abrir no está. */}
-                <div className="mt-5 space-y-2 border-t border-gray-100 pt-3.5 text-xs leading-relaxed text-gray-500">
+                <div className="mt-5 space-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
                   {totalViewsPeriod > visitasConOrigen && (
                     <p>
-                      De las <span className="font-semibold text-gray-700">{totalViewsPeriod.toLocaleString("es-AR")}</span> visitas
+                      De las <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{totalViewsPeriod.toLocaleString("es-AR")}</span> visitas
                       del período se sabe de dónde vinieron{" "}
-                      <span className="font-semibold text-gray-700">{visitasConOrigen.toLocaleString("es-AR")}</span>.
+                      <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{visitasConOrigen.toLocaleString("es-AR")}</span>.
                       Los porcentajes de arriba son sobre esas, no sobre el total.
                     </p>
                   )}
                   {visitasDirectas > 0 && (
                     <p>
-                      <span className="font-semibold text-gray-700">&quot;Directo&quot; está inflado, y conviene saberlo.</span>{" "}
+                      <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">&quot;Directo&quot; está inflado, y conviene saberlo.</span>{" "}
                       WhatsApp abre los links en un navegador que en la mayoría de los teléfonos
                       no dice de dónde viene, así que buena parte de esas {visitasDirectas.toLocaleString("es-AR")} visitas
                       salieron en realidad de un WhatsApp tuyo. Para que se cuenten bien, mandá
-                      el link de tu tienda con <span className="font-mono text-gray-600">?utm_source=whatsapp</span> al
+                      el link de tu tienda con <span className="font-mono text-gray-600 panel-oscuro:text-gray-400">?utm_source=whatsapp</span> al
                       final. Lo mismo sirve para cualquier campaña.
                     </p>
                   )}
                   <p>
-                    Esto cuenta <span className="font-semibold text-gray-700">visitas, no ventas</span>.
+                    Esto cuenta <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">visitas, no ventas</span>.
                     Que un canal traiga más gente no quiere decir que traiga más plata.
                   </p>
                 </div>
@@ -1945,16 +1947,16 @@ export default async function MetricasPage({
         {isAutos ? (
           <div className="grid gap-6 lg:grid-cols-3">
             {[
-              { label: "Disponibles", count: vehiculosDisponibles, color: "bg-emerald-500", dot: "bg-emerald-100 text-emerald-700" },
-              { label: "Reservados",  count: vehiculosReservados,  color: "bg-amber-500",   dot: "bg-amber-100 text-amber-700"   },
-              { label: "Vendidos",    count: vehiculosVendidos,    color: "bg-gray-400",    dot: "bg-gray-100 text-gray-600"     },
+              { label: "Disponibles", count: vehiculosDisponibles, color: "bg-emerald-500", dot: "bg-emerald-100 panel-oscuro:bg-emerald-500/15 text-emerald-700 panel-oscuro:text-emerald-300" },
+              { label: "Reservados",  count: vehiculosReservados,  color: "bg-amber-500",   dot: "bg-amber-100 panel-oscuro:bg-amber-500/15 text-amber-700 panel-oscuro:text-amber-300"   },
+              { label: "Vendidos",    count: vehiculosVendidos,    color: "bg-gray-400 panel-oscuro:bg-gray-500",    dot: "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400"     },
             ].map(({ label, count, color, dot }) => (
-              <div key={label} className="rounded-2xl border border-gray-100 bg-white p-6 flex items-center gap-4">
+              <div key={label} className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center shrink-0`}>
                   <Package className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-gray-900">{count}</p>
+                  <p className="text-3xl font-black text-gray-900 panel-oscuro:text-gray-100">{count}</p>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${dot}`}>{label}</span>
                 </div>
               </div>
@@ -1962,18 +1964,18 @@ export default async function MetricasPage({
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
-              <h2 className="font-bold text-gray-900">Productos más vendidos</h2>
-              <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo}</p>
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Productos más vendidos</h2>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">{subtituloPeriodo}</p>
               {topProducts.length === 0 ? (
                 <div className="py-4">
                   {/* "en estos N días" y no "aún": ahora el bloque mira el período,
                       así que puede estar vacío en 7 días y tener datos en 90. Decir
                       "aún" haría pensar que la tienda nunca vendió nada. */}
-                  <p className="text-sm font-medium text-gray-600 mb-1">
+                  <p className="text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">
                     Sin ventas confirmadas en estos {rangeDays} días
                   </p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                     Los productos aparecen acá cuando tenés pedidos en estado Confirmado, Enviado o Entregado. Probá con un período más largo.
                   </p>
                 </div>
@@ -1988,12 +1990,12 @@ export default async function MetricasPage({
                         <div key={p.productId} className={i >= TOPE_PANTALLA ? "hidden print:block" : undefined}>
                           <div className="mb-1.5 flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="w-5 shrink-0 text-xs font-bold text-gray-400">#{i + 1}</span>
-                              <span className="font-medium text-gray-800 truncate">{nameMap[p.productId] ?? "Producto eliminado"}</span>
+                              <span className="w-5 shrink-0 text-xs font-bold text-gray-400 panel-oscuro:text-gray-500">#{i + 1}</span>
+                              <span className="font-medium text-gray-800 panel-oscuro:text-gray-200 truncate">{nameMap[p.productId] ?? "Producto eliminado"}</span>
                             </div>
-                            <span className="ml-2 shrink-0 font-bold text-gray-700">{qty} u.</span>
+                            <span className="ml-2 shrink-0 font-bold text-gray-700 panel-oscuro:text-gray-300">{qty} u.</span>
                           </div>
-                          <div className="h-2 rounded-full bg-gray-100">
+                          <div className="h-2 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                             <div className="h-2 rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
@@ -2007,19 +2009,19 @@ export default async function MetricasPage({
                   sexto no aparece y parece que no existió. En el PDF salen
                   todos y este aviso se va. */}
               {topProducts.length > TOPE_PANTALLA && (
-                <p className="mt-4 text-xs text-gray-400 print:hidden">
+                <p className="mt-4 text-xs text-gray-400 panel-oscuro:text-gray-500 print:hidden">
                   Se muestran los {TOPE_PANTALLA} que más unidades vendieron.
                 </p>
               )}
             </div>
 
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
-                  <p className="text-xs text-gray-400">{subtituloPeriodo}</p>
+                  <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Pedidos por estado</h2>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">{subtituloPeriodo}</p>
                 </div>
-                <span className="text-sm font-semibold text-gray-400">
+                <span className="text-sm font-semibold text-gray-400 panel-oscuro:text-gray-500">
                   {totalOrdersAllStatuses} total
                   {cancelledInPeriod > 0 && (
                     <span className="block text-right text-xs font-normal">incluye cancelados</span>
@@ -2028,10 +2030,10 @@ export default async function MetricasPage({
               </div>
               {ordersByStatus.length === 0 ? (
                 <div className="py-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">
+                  <p className="text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">
                     Sin pedidos en estos {rangeDays} días
                   </p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                     Cuando lleguen pedidos vas a ver acá cómo se distribuyen por estado — cuántos están pendientes, confirmados, enviados y entregados.
                   </p>
                 </div>
@@ -2044,14 +2046,14 @@ export default async function MetricasPage({
                         <div className="mb-1 flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
                             <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusColor(s.status)}`} />
-                            <span className="text-gray-700">{statusLabel(s.status)}</span>
+                            <span className="text-gray-700 panel-oscuro:text-gray-300">{statusLabel(s.status)}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900">{s._count}</span>
-                            <span className="w-8 text-right text-xs text-gray-400">{pct}%</span>
+                            <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{s._count}</span>
+                            <span className="w-8 text-right text-xs text-gray-400 panel-oscuro:text-gray-500">{pct}%</span>
                           </div>
                         </div>
-                        <div className="h-1.5 rounded-full bg-gray-100">
+                        <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                           <div className={`h-1.5 rounded-full transition-all ${statusColor(s.status)}`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
@@ -2084,27 +2086,27 @@ export default async function MetricasPage({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Carritos abandonados */}
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <ShoppingCart className="h-4 w-4 text-amber-500 shrink-0" />
-                  <h2 className="font-bold text-gray-900 truncate">Carritos abandonados</h2>
+                  <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 truncate">Carritos abandonados</h2>
                 </div>
-                <span className="text-sm font-semibold text-gray-400 shrink-0">{resumenCarritos.cantidad}</span>
+                <span className="text-sm font-semibold text-gray-400 panel-oscuro:text-gray-500 shrink-0">{resumenCarritos.cantidad}</span>
               </div>
 
               {resumenCarritos.cantidad === 0 ? (
                 <div className="py-2">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Ninguno en el período</p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">Ninguno en el período</p>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                     Se registran cuando alguien deja datos y productos en el carrito pero no termina la compra.
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="mb-4">
-                    <p className="text-2xl font-bold text-gray-900">{money(resumenCarritos.montoPerdido)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{money(resumenCarritos.montoPerdido)}</p>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                       sin recuperar, de {money(resumenCarritos.monto)} en total
                     </p>
                   </div>
@@ -2112,7 +2114,7 @@ export default async function MetricasPage({
                     {[
                       { etapa: "Recuperados",   dato: resumenCarritos.recuperados,  color: "bg-emerald-500" },
                       { etapa: "Con recordatorio", dato: resumenCarritos.contactados, color: "bg-amber-500" },
-                      { etapa: "Sin contactar",  dato: resumenCarritos.sinContactar, color: "bg-gray-300" },
+                      { etapa: "Sin contactar",  dato: resumenCarritos.sinContactar, color: "bg-gray-300 panel-oscuro:bg-gray-600" },
                     ].map(({ etapa, dato, color }) => {
                       const pct = Math.round((dato.cantidad / resumenCarritos.cantidad) * 100);
                       return (
@@ -2120,14 +2122,14 @@ export default async function MetricasPage({
                           <div className="mb-1 flex items-center justify-between gap-2 text-sm">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${color}`} />
-                              <span className="text-gray-700 truncate">{etapa}</span>
+                              <span className="text-gray-700 panel-oscuro:text-gray-300 truncate">{etapa}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-bold text-gray-900">{dato.cantidad}</span>
-                              <span className="w-8 text-right text-xs text-gray-400">{pct}%</span>
+                              <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{dato.cantidad}</span>
+                              <span className="w-8 text-right text-xs text-gray-400 panel-oscuro:text-gray-500">{pct}%</span>
                             </div>
                           </div>
-                          <div className="h-1.5 rounded-full bg-gray-100">
+                          <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                             <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
@@ -2135,7 +2137,7 @@ export default async function MetricasPage({
                     })}
                   </div>
                   {resumenCarritos.sinContactar.cantidad > 0 && (
-                    <Link href="/dashboard/carritos-abandonados" className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                    <Link href="/dashboard/carritos-abandonados" className="mt-4 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300">
                       Escribirle a los {resumenCarritos.sinContactar.cantidad} sin contactar →
                     </Link>
                   )}
@@ -2144,21 +2146,21 @@ export default async function MetricasPage({
             </div>
 
             {/* Cupones */}
-            <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Ticket className="h-4 w-4 text-indigo-500 shrink-0" />
-                  <h2 className="font-bold text-gray-900 truncate">Cupones</h2>
+                  <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 truncate">Cupones</h2>
                 </div>
-                <span className="text-sm font-semibold text-gray-400 shrink-0">
+                <span className="text-sm font-semibold text-gray-400 panel-oscuro:text-gray-500 shrink-0">
                   {resumenCupones.usosTotales} uso{resumenCupones.usosTotales !== 1 ? "s" : ""}
                 </span>
               </div>
 
               {resumenCupones.filas.length === 0 ? (
                 <div className="py-2">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Sin usos en el período</p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">Sin usos en el período</p>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                     Acá vas a ver cuáles se usaron, cuánto trajeron y cuánta plata resignaste con cada uno.
                   </p>
                 </div>
@@ -2173,22 +2175,22 @@ export default async function MetricasPage({
                   <div className="mb-4">
                     {resumenCupones.gananciaTotal !== null ? (
                       <>
-                        <p className="text-2xl font-bold text-gray-900">
+                        <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">
                           Te dejó {money(resumenCupones.gananciaTotal)}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                           de {money(resumenCupones.facturadoTotal)} facturados en {resumenCupones.usosTotales} pedido{resumenCupones.usosTotales !== 1 ? "s" : ""},
                           {" "}descontando {money(resumenCupones.descuentoTotal)}
                         </p>
                       </>
                     ) : (
                       <>
-                        <p className="text-2xl font-bold text-gray-900">{money(resumenCupones.facturadoTotal)}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{money(resumenCupones.facturadoTotal)}</p>
+                        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                           facturado en {resumenCupones.usosTotales} pedido{resumenCupones.usosTotales !== 1 ? "s" : ""} con cupón
                           {" · descontaste "}{money(resumenCupones.descuentoTotal)}
                         </p>
-                        <p className="text-xs text-amber-600 mt-1.5 leading-relaxed">
+                        <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-1.5 leading-relaxed">
                           Cargá el costo de tus productos y acá vas a ver cuánto te dejaron de verdad.{" "}
                           <Link href="/dashboard/productos" className="font-semibold underline print:hidden">Ir a Productos</Link>
                         </p>
@@ -2222,18 +2224,18 @@ export default async function MetricasPage({
                   la que se puede hacer algo. Sólo aparece con base suficiente de
                   los dos lados: ver `MINIMO_PARA_COMPARAR`. */}
               {comparacionCompra.diferenciaPct !== null && (
-                <div className="mt-5 border-t border-gray-100 pt-3.5">
-                  <p className="text-xs font-semibold text-gray-500">¿Compran más con cupón?</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-gray-600 tabular-nums">
-                    <span className="font-bold text-gray-900">{money(comparacionCompra.conCupon.promedio)}</span> con cupón
+                <div className="mt-5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5">
+                  <p className="text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">¿Compran más con cupón?</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400 tabular-nums">
+                    <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{money(comparacionCompra.conCupon.promedio)}</span> con cupón
                     {" contra "}
-                    <span className="font-bold text-gray-900">{money(comparacionCompra.sinCupon.promedio)}</span> sin cupón
+                    <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{money(comparacionCompra.sinCupon.promedio)}</span> sin cupón
                     {" — "}
-                    <span className={comparacionCompra.diferenciaPct >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                    <span className={comparacionCompra.diferenciaPct >= 0 ? "font-semibold text-emerald-600 panel-oscuro:text-emerald-400" : "font-semibold text-rose-600 panel-oscuro:text-rose-400"}>
                       {comparacionCompra.diferenciaPct >= 0 ? "+" : ""}{comparacionCompra.diferenciaPct}%
                     </span>
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                  <p className="mt-1 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
                     {comparacionCompra.diferenciaPct >= MINIMO_PARA_COMPARAR
                       ? "Quien usa cupón se lleva más que el resto: el cupón está empujando la compra."
                       : comparacionCompra.diferenciaPct <= -MINIMO_PARA_COMPARAR
@@ -2255,8 +2257,8 @@ export default async function MetricasPage({
                   Pero la línea tiene que estar igual, porque si no nadie entiende
                   por qué los códigos WIN- no aparecen en el ranking de arriba. */}
               {resumenCupones.ruleta.usos > 0 && (
-                <div className="mt-5 border-t border-gray-100 pt-3.5">
-                  <p className="text-xs leading-relaxed text-gray-400">
+                <div className="mt-5 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5">
+                  <p className="text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
                     🎡 Los {resumenCupones.ruleta.usos} premio{resumenCupones.ruleta.usos !== 1 ? "s" : ""} de la ruleta
                     {" "}que se canjearon van aparte y no entran en estos totales.
                   </p>
@@ -2272,21 +2274,21 @@ export default async function MetricasPage({
             </div>
 
             {/* Promociones */}
-            <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Percent className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <h2 className="font-bold text-gray-900 truncate">Promociones</h2>
+                  <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 truncate">Promociones</h2>
                 </div>
-                <span className="text-sm font-semibold text-gray-400 shrink-0">
+                <span className="text-sm font-semibold text-gray-400 panel-oscuro:text-gray-500 shrink-0">
                   {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""}
                 </span>
               </div>
 
               {resumenPromos.filas.length === 0 ? (
                 <div className="py-2">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Sin promos aplicadas</p>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">Sin promos aplicadas</p>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                     Cuando una promo entre en un pedido vas a ver acá cuál fue, cuánto trajo y cuánto te costó.
                   </p>
                 </div>
@@ -2297,22 +2299,22 @@ export default async function MetricasPage({
                   <div className="mb-4">
                     {resumenPromos.gananciaTotal !== null ? (
                       <>
-                        <p className="text-2xl font-bold text-gray-900">
+                        <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">
                           Te dejó {money(resumenPromos.gananciaTotal)}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                           de {money(resumenPromos.facturadoTotal)} facturados en {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""},
                           {" "}resignando {money(resumenPromos.ahorroTotal)}
                         </p>
                       </>
                     ) : (
                       <>
-                        <p className="text-2xl font-bold text-gray-900">{money(resumenPromos.facturadoTotal)}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{money(resumenPromos.facturadoTotal)}</p>
+                        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                           facturado en {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""} con promo
                           {" · resignaste "}{money(resumenPromos.ahorroTotal)}
                         </p>
-                        <p className="text-xs text-amber-600 mt-1.5 leading-relaxed">
+                        <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-1.5 leading-relaxed">
                           Cargá el costo de tus productos y acá vas a ver cuánto te dejaron de verdad.{" "}
                           <Link href="/dashboard/productos" className="font-semibold underline print:hidden">Ir a Productos</Link>
                         </p>
@@ -2341,7 +2343,7 @@ export default async function MetricasPage({
                       en las dos: sin este aviso, alguien suma la columna a mano y
                       cree que la pantalla está mal. */}
                   {resumenPromos.filas.reduce((s, f) => s + f.pedidos, 0) > resumenPromos.pedidosConPromo && (
-                    <p className="mt-3 text-xs leading-relaxed text-gray-400">
+                    <p className="mt-3 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
                       Un pedido puede llevar dos promos: ahí aparece en las dos filas, así que la lista suma más que el total de arriba.
                     </p>
                   )}
@@ -2367,28 +2369,28 @@ export default async function MetricasPage({
                 entusiasmo; canjes mide si alguno volvió a comprar, que es todo
                 el negocio: estás cambiando un descuento por un email. */}
             {juegoWidget && (
-              <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
+              <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span aria-hidden className="shrink-0">{juegoWidget.type === "SCRATCH" ? "🪙" : "🎡"}</span>
-                    <h2 className="font-bold text-gray-900 truncate">
+                    <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 truncate">
                       {juegoWidget.type === "SCRATCH" ? "Raspadita" : "Ruleta"}
                     </h2>
                     {!juegoWidget.isActive && (
-                      <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">
+                      <span className="shrink-0 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">
                         Apagada
                       </span>
                     )}
                   </div>
-                  <span className="shrink-0 text-sm font-semibold text-gray-400">
+                  <span className="shrink-0 text-sm font-semibold text-gray-400 panel-oscuro:text-gray-500">
                     {resumenJuego.jugadas} jugada{resumenJuego.jugadas !== 1 ? "s" : ""}
                   </span>
                 </div>
 
                 {resumenJuego.jugadas === 0 ? (
                   <div className="py-2">
-                    <p className="text-sm font-medium text-gray-600 mb-1">Nadie jugó en el período</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p className="text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">Nadie jugó en el período</p>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                       {juegoWidget.isActive
                         ? "Cuando alguien juegue vas a ver acá cuántos ganaron y —lo que importa— cuántos volvieron a comprar con el premio."
                         : "Está apagada, así que no aparece en tu tienda. Prendela desde Cupones para que empiece a juntar emails."}
@@ -2397,10 +2399,10 @@ export default async function MetricasPage({
                 ) : (
                   <>
                     <div className="mb-4">
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">
                         {resumenJuego.canjeados} de {resumenJuego.ganaron} usaron su premio
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                         {resumenJuego.ganaron > 0
                           ? `${Math.round((resumenJuego.canjeados / resumenJuego.ganaron) * 100)}% de los que ganaron volvió a comprar`
                           : "Todavía nadie ganó un premio"}
@@ -2412,15 +2414,15 @@ export default async function MetricasPage({
                         premio es un cupón, y esa cuenta ya está hecha. Repetirla
                         con otra fuente sería invitar a que un día no coincidan. */}
                     {resumenCupones.ruleta.usos > 0 && (
-                      <p className="mb-4 text-xs leading-relaxed text-gray-400 tabular-nums">
+                      <p className="mb-4 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
                         {resumenCupones.ruleta.ganancia !== null ? (
-                          <>Te dejó <span className="font-bold text-gray-900">{money(resumenCupones.ruleta.ganancia)}</span>{" · "}</>
+                          <>Te dejó <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{money(resumenCupones.ruleta.ganancia)}</span>{" · "}</>
                         ) : null}
                         trajo {money(resumenCupones.ruleta.facturado)} · descontaste {money(resumenCupones.ruleta.descuento)}
                       </p>
                     )}
 
-                    <p className="mb-2 text-xs font-semibold text-gray-500">Qué salió</p>
+                    <p className="mb-2 text-xs font-semibold text-gray-500 panel-oscuro:text-gray-400">Qué salió</p>
                     <div className="space-y-2">
                       {resumenJuego.premios.slice(0, TOPE_PAPEL).map((p, i) => {
                         const pct = Math.round((p.veces / resumenJuego.jugadas) * 100);
@@ -2428,16 +2430,16 @@ export default async function MetricasPage({
                         return (
                           <div key={p.etiqueta} className={i >= TOPE_PANTALLA ? "hidden print:block" : undefined}>
                             <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                              <span className={`min-w-0 break-words ${nada ? "text-gray-400" : "text-gray-700 font-medium"}`}>
+                              <span className={`min-w-0 break-words ${nada ? "text-gray-400 panel-oscuro:text-gray-500" : "text-gray-700 panel-oscuro:text-gray-300 font-medium"}`}>
                                 {p.etiqueta}
                               </span>
-                              <span className="shrink-0 text-xs text-gray-400 tabular-nums">
-                                <span className="font-bold text-gray-900">{p.veces}</span> · {pct}%
+                              <span className="shrink-0 text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
+                                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{p.veces}</span> · {pct}%
                               </span>
                             </div>
-                            <div className="h-1.5 rounded-full bg-gray-100">
+                            <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
                               <div
-                                className={`h-1.5 rounded-full ${nada ? "bg-gray-300" : "bg-fuchsia-500"}`}
+                                className={`h-1.5 rounded-full ${nada ? "bg-gray-300 panel-oscuro:bg-gray-600" : "bg-fuchsia-500"}`}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -2452,19 +2454,19 @@ export default async function MetricasPage({
                         salen todos, así que ahí el aviso sólo aparece si la
                         ruleta tiene más de TOPE_PAPEL premios distintos. */}
                     {resumenJuego.premios.length > TOPE_PANTALLA && (
-                      <p className="mt-2 text-xs text-gray-400 print:hidden">
+                      <p className="mt-2 text-xs text-gray-400 panel-oscuro:text-gray-500 print:hidden">
                         y {resumenJuego.premios.length - TOPE_PANTALLA} premio{resumenJuego.premios.length - TOPE_PANTALLA !== 1 ? "s" : ""} más
                       </p>
                     )}
                     {resumenJuego.premios.length > TOPE_PAPEL && (
-                      <p className="mt-2 hidden print:block text-xs text-gray-400">
+                      <p className="mt-2 hidden print:block text-xs text-gray-400 panel-oscuro:text-gray-500">
                         y {resumenJuego.premios.length - TOPE_PAPEL} premio{resumenJuego.premios.length - TOPE_PAPEL !== 1 ? "s" : ""} más, que no entraron en el informe.
                       </p>
                     )}
 
                     <Link
                       href="/dashboard/cupones"
-                      className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700 print:hidden"
+                      className="mt-4 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 print:hidden"
                     >
                       Ver los premios entregados →
                     </Link>
@@ -2485,39 +2487,39 @@ export default async function MetricasPage({
             pantalla, pero al imprimir se suelta entera: el PDF es el informe y
             ahí no hay dónde scrollear. */}
         {!isAutos && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
-            <h2 className="font-bold text-gray-900">Día a día</h2>
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Día a día</h2>
 
             {resumenDias.mejor ? (
-              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+              <p className="mt-1 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
                 Tu mejor día fue el{" "}
-                <span className="font-bold text-gray-900">
+                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">
                   {diaDeLaSemana(resumenDias.mejor.dia)} {fechaCorta(resumenDias.mejor.dia)}
                 </span>
                 {" con "}
-                <span className="font-bold text-gray-900">{money(resumenDias.mejor.ingresos)}</span>.
+                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{money(resumenDias.mejor.ingresos)}</span>.
                 {" "}Promediás {money(resumenDias.promedio)} por día
                 {resumenDias.sinVentas > 0 && (
                   <> y {resumenDias.sinVentas} de estos {rangeDays} días cerraron sin ninguna venta</>
                 )}.
                 {resumenDias.mejorDiaSemana && (
                   <>
-                    {" "}Los <span className="font-bold text-gray-900">{resumenDias.mejorDiaSemana.nombre}s</span>
+                    {" "}Los <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{resumenDias.mejorDiaSemana.nombre}s</span>
                     {" "}son tu mejor día: promedian {money(resumenDias.mejorDiaSemana.promedio)} sobre
                     {" "}{resumenDias.mejorDiaSemana.veces} que cayeron en el período.
                   </>
                 )}
               </p>
             ) : (
-              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+              <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
                 Sin ventas en estos {rangeDays} días. Abajo quedan igual las visitas de cada día.
               </p>
             )}
 
             <div className="mt-4 max-h-96 overflow-y-auto print:max-h-none print:overflow-visible">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+                <thead className="sticky top-0 bg-white panel-oscuro:bg-gray-900">
+                  <tr className="border-b border-gray-100 panel-oscuro:border-gray-800 text-xs uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
                     <th className="py-2 pr-2 text-left font-semibold">
                       {grano === "mes" ? "Mes" : grano === "semana" ? "Semana" : "Día"}
                     </th>
@@ -2532,23 +2534,23 @@ export default async function MetricasPage({
                 <tbody className="tabular-nums">
                   {filasDelDiaADia.map((d) => {
                     return (
-                      <tr key={d.clave} className={`border-b border-gray-50 ${d.esMejor ? "bg-emerald-50/60" : ""}`}>
-                        <td className="py-1.5 pr-2 text-left text-gray-500 whitespace-nowrap">
+                      <tr key={d.clave} className={`border-b border-gray-50 panel-oscuro:border-gray-800 ${d.esMejor ? "bg-emerald-50/60 panel-oscuro:bg-emerald-500/10" : ""}`}>
+                        <td className="py-1.5 pr-2 text-left text-gray-500 panel-oscuro:text-gray-400 whitespace-nowrap">
                           {d.etiqueta}
-                          <span className="ml-1 text-xs text-gray-400">{d.sufijo}</span>
+                          <span className="ml-1 text-xs text-gray-400 panel-oscuro:text-gray-500">{d.sufijo}</span>
                         </td>
-                        <td className={`py-1.5 px-1 text-right ${d.ingresos > 0 ? "font-semibold text-gray-900" : "text-gray-300"}`}>
+                        <td className={`py-1.5 px-1 text-right ${d.ingresos > 0 ? "font-semibold text-gray-900 panel-oscuro:text-gray-100" : "text-gray-300 panel-oscuro:text-gray-600"}`}>
                           {d.ingresos > 0 ? money(d.ingresos) : "—"}
                         </td>
-                        <td className={`py-1.5 px-1 text-right ${d.pedidos > 0 ? "text-gray-700" : "text-gray-300"}`}>
+                        <td className={`py-1.5 px-1 text-right ${d.pedidos > 0 ? "text-gray-700 panel-oscuro:text-gray-300" : "text-gray-300 panel-oscuro:text-gray-600"}`}>
                           {d.pedidos || "—"}
                         </td>
-                        <td className={`py-1.5 px-1 text-right ${d.visitas > 0 ? "text-gray-700" : "text-gray-300"}`}>
+                        <td className={`py-1.5 px-1 text-right ${d.visitas > 0 ? "text-gray-700 panel-oscuro:text-gray-300" : "text-gray-300 panel-oscuro:text-gray-600"}`}>
                           {d.visitas || "—"}
                         </td>
                         {profitCurrentAgg.totalNetRevenueKnownCost > 0 && (
-                          <td className="py-1.5 pl-1 text-right text-gray-700">
-                            {d.ganancia !== null ? money(d.ganancia) : <span className="text-gray-300">—</span>}
+                          <td className="py-1.5 pl-1 text-right text-gray-700 panel-oscuro:text-gray-300">
+                            {d.ganancia !== null ? money(d.ganancia) : <span className="text-gray-300 panel-oscuro:text-gray-600">—</span>}
                           </td>
                         )}
                       </tr>
@@ -2560,7 +2562,7 @@ export default async function MetricasPage({
 
             {/* El guion no es cero: es "no pasó nada ese día". La columna de
                 ganancia además tiene su propio "no se sabe", que es distinto. */}
-            <p className="mt-3 text-xs leading-relaxed text-gray-400">
+            <p className="mt-3 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
               El guion quiere decir que {grano === "dia" ? "ese día" : grano === "semana" ? "esa semana" : "ese mes"} no hubo nada.
               {profitCurrentAgg.totalNetRevenueKnownCost > 0 &&
                 ` En Ganancia, que ${grano === "dia" ? "ese día" : grano === "semana" ? "esa semana" : "ese mes"} no se vendió nada con el costo cargado.`}
@@ -2571,16 +2573,16 @@ export default async function MetricasPage({
         {/* ── Rentabilidad ── */}
         {isAutos ? (
           soldVehiclesPeriod.length === 0 ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="font-bold text-gray-900 mb-1">Rentabilidad</h2>
-              <p className="text-sm text-gray-500">Sin vehículos vendidos en el período.</p>
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Rentabilidad</h2>
+              <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">Sin vehículos vendidos en el período.</p>
             </div>
           ) : soldVehiclesWithGastos.length === 0 ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="font-bold text-gray-900 mb-1">Rentabilidad</h2>
-              <p className="text-sm text-gray-500">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Rentabilidad</h2>
+              <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">
                 Cargá los gastos de tus vehículos vendidos para ver la ganancia acá.{" "}
-                <Link href="/dashboard/productos" className="text-indigo-600 font-semibold hover:underline">Ir a Productos</Link>
+                <Link href="/dashboard/productos" className="text-indigo-600 panel-oscuro:text-indigo-400 font-semibold hover:underline">Ir a Productos</Link>
               </p>
             </div>
           ) : (
@@ -2594,22 +2596,22 @@ export default async function MetricasPage({
                 value={money(totalVehicleProfit)}
                 sub={`${soldVehiclesWithGastos.length} de ${soldVehiclesPeriod.length} vehículo${soldVehiclesPeriod.length !== 1 ? "s" : ""} vendido${soldVehiclesPeriod.length !== 1 ? "s" : ""} con gastos cargados`}
                 icon={Wallet}
-                iconBg="bg-emerald-50 text-emerald-600"
+                iconBg="bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-600 panel-oscuro:text-emerald-400"
               />
               <KPICard
                 label="Ganancia promedio por vehículo vendido"
                 value={avgVehicleProfit !== null ? money(avgVehicleProfit) : "—"}
                 icon={TrendingUp}
-                iconBg="bg-indigo-50 text-indigo-600"
+                iconBg="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400"
               />
             </div>
           )
         ) : profitCurrentAgg.totalNetRevenueKnownCost === 0 ? (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <h2 className="font-bold text-gray-900 mb-1">Rentabilidad</h2>
-            <p className="text-sm text-gray-500">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Rentabilidad</h2>
+            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">
               Cargá el costo de tus productos para ver tu rentabilidad acá.{" "}
-              <Link href="/dashboard/productos" className="text-indigo-600 font-semibold hover:underline">Ir a Productos</Link>
+              <Link href="/dashboard/productos" className="text-indigo-600 panel-oscuro:text-indigo-400 font-semibold hover:underline">Ir a Productos</Link>
             </p>
           </div>
         ) : (
@@ -2621,14 +2623,14 @@ export default async function MetricasPage({
                 sub={profitDiff === null ? "Sin datos del período anterior" : undefined}
                 trend={profitDiff}
                 icon={Wallet}
-                iconBg="bg-emerald-50 text-emerald-600"
+                iconBg="bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-600 panel-oscuro:text-emerald-400"
               />
               <KPICard
                 label="Margen promedio"
                 value={marginPctPeriod !== null ? `${marginPctPeriod.toFixed(0)}%` : "—"}
                 sub={`${costCoveragePct}% de tus ventas del período tienen costo cargado`}
                 icon={TrendingUp}
-                iconBg="bg-indigo-50 text-indigo-600"
+                iconBg="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400"
               />
             </div>
 
@@ -2636,37 +2638,37 @@ export default async function MetricasPage({
                 verdad se regaló algún envío en el período: una tienda sin promos
                 de envío no tiene por qué ver una fila en cero. */}
             {shippingWaivedPeriod > 0 && (
-              <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div>
-                    <h2 className="font-bold text-gray-900">Envíos que regalaste</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Envíos que regalaste</h2>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                       Lo que te costaron los envíos bonificados por tus promociones. No se lo cobraste al cliente, pero lo pagaste vos.
                     </p>
                   </div>
-                  <p className="text-xl font-black text-rose-600">−{money(shippingWaivedPeriod)}</p>
+                  <p className="text-xl font-black text-rose-600 panel-oscuro:text-rose-400">−{money(shippingWaivedPeriod)}</p>
                 </div>
-                <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700">Ganancia después de los envíos</p>
-                  <p className="text-xl font-black text-gray-900">{money(profitCurrentAgg.totalProfit - shippingWaivedPeriod)}</p>
+                <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">Ganancia después de los envíos</p>
+                  <p className="text-xl font-black text-gray-900 panel-oscuro:text-gray-100">{money(profitCurrentAgg.totalProfit - shippingWaivedPeriod)}</p>
                 </div>
               </div>
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
                 <div className="flex items-center justify-between gap-3 mb-0.5">
-                  <h2 className="font-bold text-gray-900">Ganancia diaria</h2>
-                  <p className="shrink-0 text-xl font-black text-violet-600">{money(profitCurrentAgg.totalProfit)}</p>
+                  <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Ganancia diaria</h2>
+                  <p className="shrink-0 text-xl font-black text-violet-600 panel-oscuro:text-violet-400">{money(profitCurrentAgg.totalProfit)}</p>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">{granoPeriodo} — solo ventas con costo cargado</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">{granoPeriodo} — solo ventas con costo cargado</p>
                 <LineChart data={conGrano(profitChartData)} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
               </div>
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
-                <h2 className="font-bold text-gray-900 mb-5">Rentabilidad por producto</h2>
+              <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-5">Rentabilidad por producto</h2>
                 {profitByProductRanked.length === 0 ? (
-                  <p className="text-sm text-gray-500">Ningún producto vendido en el período tiene costo cargado todavía.</p>
+                  <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">Ningún producto vendido en el período tiene costo cargado todavía.</p>
                 ) : (
                   <div className="space-y-3">
                     {profitByProductRanked.map(([productId, p], i) => (
@@ -2677,14 +2679,14 @@ export default async function MetricasPage({
                         } items-center justify-between gap-2 text-sm`}
                       >
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-medium text-gray-800 truncate">{nameMap[productId] ?? "Producto eliminado"}</span>
+                          <span className="font-medium text-gray-800 panel-oscuro:text-gray-200 truncate">{nameMap[productId] ?? "Producto eliminado"}</span>
                           {p.hasCoupon && (
                             <span title="Incluye pedidos con cupón — ganancia parcialmente estimada">
                               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                             </span>
                           )}
                         </div>
-                        <span className="font-bold text-emerald-600 shrink-0">{money(p.profit ?? 0)}</span>
+                        <span className="font-bold text-emerald-600 panel-oscuro:text-emerald-400 shrink-0">{money(p.profit ?? 0)}</span>
                       </div>
                     ))}
                   </div>
@@ -2695,17 +2697,17 @@ export default async function MetricasPage({
                     la pantalla y el del papel— y cada uno tiene que decir el
                     suyo, porque el número que sigue no es el mismo. */}
                 {profitByProductTotal > TOPE_PANTALLA_RENTABILIDAD && (
-                  <p className="mt-4 text-xs text-gray-400 print:hidden">
+                  <p className="mt-4 text-xs text-gray-400 panel-oscuro:text-gray-500 print:hidden">
                     Se muestran los {TOPE_PANTALLA_RENTABILIDAD} que más ganancia dejaron, de {profitByProductTotal}.
                   </p>
                 )}
                 {profitByProductTotal > TOPE_PAPEL && (
-                  <p className="mt-4 hidden print:block text-xs text-gray-400">
+                  <p className="mt-4 hidden print:block text-xs text-gray-400 panel-oscuro:text-gray-500">
                     Se muestran los {TOPE_PAPEL} que más ganancia dejaron, de {profitByProductTotal}.
                   </p>
                 )}
                 {productsWithoutCostCount > 0 && (
-                  <p className="mt-4 text-xs text-gray-400">
+                  <p className="mt-4 text-xs text-gray-400 panel-oscuro:text-gray-500">
                     {productsWithoutCostCount} producto{productsWithoutCostCount !== 1 ? "s" : ""} vendido{productsWithoutCostCount !== 1 ? "s" : ""} sin costo cargado no aparece{productsWithoutCostCount === 1 ? "" : "n"} en el ranking.
                   </p>
                 )}
@@ -2723,13 +2725,13 @@ export default async function MetricasPage({
             conclusión equivocada — sobre todo la de la ganancia, que si cubre
             el 40% de lo facturado no es "lo que ganaste" sino "lo que ganaste
             en la parte que se puede medir". */}
-        <div className="hidden print:block rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <div className="hidden print:block rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 panel-oscuro:text-gray-400">
             Cómo se calcularon estos números
           </h2>
-          <dl className="mt-3 space-y-2.5 text-xs leading-relaxed text-gray-600">
+          <dl className="mt-3 space-y-2.5 text-xs leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
             <div>
-              <dt className="inline font-semibold text-gray-800">Venta confirmada. </dt>
+              <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">Venta confirmada. </dt>
               <dd className="inline">
                 Sólo los pedidos en estado Confirmado, Enviado o Entregado. Los pendientes
                 de pago no suman a los ingresos ni a la ganancia: es plata que puede no
@@ -2738,7 +2740,7 @@ export default async function MetricasPage({
             </div>
             {!isAutos && (
               <div>
-                <dt className="inline font-semibold text-gray-800">Ganancia. </dt>
+                <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">Ganancia. </dt>
                 <dd className="inline">
                   Lo que se cobró por el producto menos lo que costó, con el descuento del
                   pedido repartido entre sus renglones. Sólo entran los productos que tienen
@@ -2750,18 +2752,18 @@ export default async function MetricasPage({
               </div>
             )}
             <div>
-              <dt className="inline font-semibold text-gray-800">Las comparaciones. </dt>
+              <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">Las comparaciones. </dt>
               <dd className="inline">
                 Contra los {rangeDays} días inmediatamente anteriores, cortados a la misma
                 hora del día para que un período a medias no compita contra uno completo.
               </dd>
             </div>
             <div>
-              <dt className="inline font-semibold text-gray-800">Cuánto se guarda. </dt>
+              <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">Cuánto se guarda. </dt>
               <dd className="inline">{AVISO_RETENCION}</dd>
             </div>
             <div>
-              <dt className="inline font-semibold text-gray-800">Las visitas. </dt>
+              <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">Las visitas. </dt>
               <dd className="inline">
                 Se guardan por día entero y no por hora, así que el día de hoy entra a
                 medias y su comparación es aproximada. Los pedidos sí tienen hora exacta.
@@ -2773,7 +2775,7 @@ export default async function MetricasPage({
               </dd>
             </div>
           </dl>
-          <p className="mt-4 text-xs text-gray-400">
+          <p className="mt-4 text-xs text-gray-400 panel-oscuro:text-gray-500">
             {store.name} · Período {fechaLarga(periodStartStr)} a {fechaLarga(periodEndStr)} · Generado el{" "}
             {new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
           </p>

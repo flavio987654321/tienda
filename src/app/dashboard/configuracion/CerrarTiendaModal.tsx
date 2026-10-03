@@ -23,7 +23,7 @@ const CORREO_SOPORTE = "mailto:soporte@tiendaapps.com?subject=Antes%20de%20cerra
    dibuja como `<a>` o como `<Link>` segun a donde vaya. Escrita una sola vez
    para que las dos se vean igual. */
 const CLASE_CTA_RETENCION =
-  "inline-block mt-2.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 underline underline-offset-2";
+  "inline-block mt-2.5 text-xs font-bold text-indigo-700 panel-oscuro:text-indigo-300 hover:text-indigo-900 panel-oscuro:hover:text-indigo-200 underline underline-offset-2";
 
 const RETENTION: Partial<Record<ClosureReason, { text: string; cta?: { label: string; href: string } }>> = {
   PRICE: {
@@ -118,16 +118,16 @@ export default function CerrarTiendaModal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col">
-        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-            <Store className="h-5 w-5 text-gray-600" />
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gray-100 panel-oscuro:bg-gray-800 flex items-center justify-center shrink-0">
+            <Store className="h-5 w-5 text-gray-600 panel-oscuro:text-gray-400" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-bold text-gray-900 text-base">Cerrar mi tienda</h2>
-            <p className="text-xs text-gray-500">Podés reactivarla cuando quieras</p>
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-base">Cerrar mi tienda</h2>
+            <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Podés reactivarla cuando quieras</p>
           </div>
-          <button onClick={onClose} aria-label="Cerrar" className="ml-auto text-gray-400 hover:text-gray-600 shrink-0">
+          <button onClick={onClose} aria-label="Cerrar" className="ml-auto text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 shrink-0">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -135,32 +135,32 @@ export default function CerrarTiendaModal({
         <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400 panel-oscuro:text-gray-500" />
             </div>
           ) : isBlocked ? (
             <div className="space-y-3">
-              <p className="text-sm text-gray-700 font-medium">Todavía no podés cerrar porque hay cosas sin resolver:</p>
+              <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium">Todavía no podés cerrar porque hay cosas sin resolver:</p>
               {blockers!.pendingOrders > 0 && (
-                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-800">
+                    <p className="text-sm font-semibold text-amber-800 panel-oscuro:text-amber-300">
                       {blockers!.pendingOrders} pedido{blockers!.pendingOrders !== 1 ? "s" : ""} en curso
                     </p>
-                    <p className="text-xs text-amber-600 mt-0.5">
+                    <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-0.5">
                       Alguien te compró y todavía espera. Completalos o cancelalos desde tu panel de pedidos.
                     </p>
                   </div>
                 </div>
               )}
               {blockers!.pendingBalances > 0 && (
-                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl p-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-800">
+                    <p className="text-sm font-semibold text-amber-800 panel-oscuro:text-amber-300">
                       {fmt(blockers!.pendingBalances)} sin pagar a tus afiliados
                     </p>
-                    <p className="text-xs text-amber-600 mt-0.5">
+                    <p className="text-xs text-amber-600 panel-oscuro:text-amber-400 mt-0.5">
                       Esa plata es de ellas. Tienen que retirarla antes de que puedas cerrar.
                     </p>
                   </div>
@@ -169,19 +169,19 @@ export default function CerrarTiendaModal({
             </div>
           ) : step === "info" ? (
             <div className="space-y-4">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2">No se borra nada</p>
-                <ul className="space-y-1.5 text-sm text-gray-700">
-                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tu diseño y tus bloques</li>
-                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tus productos y tus fotos</li>
-                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tu historial de pedidos</li>
-                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tus afiliados, que recuperan su lugar si volvés</li>
+              <div className="bg-emerald-50 panel-oscuro:bg-emerald-500/10 border border-emerald-200 panel-oscuro:border-emerald-500/30 rounded-xl p-4">
+                <p className="text-xs font-bold text-emerald-800 panel-oscuro:text-emerald-300 uppercase tracking-wider mb-2">No se borra nada</p>
+                <ul className="space-y-1.5 text-sm text-gray-700 panel-oscuro:text-gray-300">
+                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 panel-oscuro:text-emerald-400 shrink-0 mt-0.5" /> Tu diseño y tus bloques</li>
+                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 panel-oscuro:text-emerald-400 shrink-0 mt-0.5" /> Tus productos y tus fotos</li>
+                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 panel-oscuro:text-emerald-400 shrink-0 mt-0.5" /> Tu historial de pedidos</li>
+                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 panel-oscuro:text-emerald-400 shrink-0 mt-0.5" /> Tus afiliados, que recuperan su lugar si volvés</li>
                 </ul>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Qué pasa al cerrar</p>
-                <ul className="space-y-1.5 text-sm text-gray-600 list-disc list-inside marker:text-gray-300">
+              <div className="bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-xl p-4">
+                <p className="text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 uppercase tracking-wider mb-2">Qué pasa al cerrar</p>
+                <ul className="space-y-1.5 text-sm text-gray-600 panel-oscuro:text-gray-400 list-disc list-inside marker:text-gray-300 panel-oscuro:marker:text-gray-600">
                   <li>Tu tienda sale de línea y deja de vender</li>
                   <li>Dejamos de cobrarte la suscripción</li>
                   <li>El link de tus afiliados queda pausado</li>
@@ -190,9 +190,9 @@ export default function CerrarTiendaModal({
               </div>
 
               {paidUntilLabel && (
-                <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                  <AlertTriangle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-blue-800 leading-relaxed">
+                <div className="flex items-start gap-2.5 bg-blue-50 panel-oscuro:bg-blue-500/10 border border-blue-200 panel-oscuro:border-blue-500/30 rounded-xl p-3">
+                  <AlertTriangle className="h-4 w-4 text-blue-600 panel-oscuro:text-blue-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-800 panel-oscuro:text-blue-300 leading-relaxed">
                     Tenés la suscripción paga hasta el <strong>{paidUntilLabel}</strong>. Esos días son tuyos:
                     si reactivás antes de esa fecha, volvés sin pagar de nuevo. Ojo que el tiempo corre igual
                     mientras la tienda está cerrada.
@@ -202,7 +202,7 @@ export default function CerrarTiendaModal({
             </div>
           ) : step === "reason" ? (
             <div className="space-y-3">
-              <p className="text-sm text-gray-700 font-medium">¿Por qué cerrás tu tienda?</p>
+              <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium">¿Por qué cerrás tu tienda?</p>
               <div className="space-y-2">
                 {CLOSURE_REASON_KEYS.map((key) => (
                   <button
@@ -210,8 +210,8 @@ export default function CerrarTiendaModal({
                     onClick={() => setReason(key)}
                     className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors ${
                       reason === key
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-900 font-semibold"
-                        : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                        ? "border-indigo-400 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-900 panel-oscuro:text-indigo-200 font-semibold"
+                        : "border-gray-200 panel-oscuro:border-gray-700 text-gray-600 panel-oscuro:text-gray-400 hover:border-gray-300 panel-oscuro:hover:border-gray-600 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
                     }`}
                   >
                     {CLOSURE_REASONS[key]}
@@ -220,11 +220,11 @@ export default function CerrarTiendaModal({
               </div>
 
               {retention && (
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mt-3">
+                <div className="bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-200 panel-oscuro:border-indigo-500/30 rounded-xl p-4 mt-3">
                   <div className="flex items-start gap-2.5">
-                    <MessageCircle className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <MessageCircle className="h-4 w-4 text-indigo-600 panel-oscuro:text-indigo-400 shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-sm text-indigo-900 leading-relaxed">{retention.text}</p>
+                      <p className="text-sm text-indigo-900 panel-oscuro:text-indigo-200 leading-relaxed">{retention.text}</p>
                       {/* La tabla mezcla dos clases de destino: una pantalla
                           del panel y un correo. El correo va en un `<a>` — hoy
                           `next/link` se aparta solo cuando la direccion no es
@@ -251,8 +251,8 @@ export default function CerrarTiendaModal({
           ) : (
             <div className="space-y-4">
               <div>
-                <label htmlFor="closure-comment" className="block text-sm text-gray-700 mb-2">
-                  ¿Querés contarnos algo más? <span className="text-gray-400">(opcional)</span>
+                <label htmlFor="closure-comment" className="block text-sm text-gray-700 panel-oscuro:text-gray-300 mb-2">
+                  ¿Querés contarnos algo más? <span className="text-gray-400 panel-oscuro:text-gray-500">(opcional)</span>
                 </label>
                 <textarea
                   id="closure-comment"
@@ -260,14 +260,14 @@ export default function CerrarTiendaModal({
                   onChange={(e) => setComment(e.target.value.slice(0, CLOSURE_COMMENT_MAX))}
                   rows={3}
                   placeholder="Nos sirve para mejorar…"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
-                <p className="text-xs text-gray-400 mt-1 text-right">{comment.length}/{CLOSURE_COMMENT_MAX}</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1 text-right">{comment.length}/{CLOSURE_COMMENT_MAX}</p>
               </div>
 
               <div>
-                <label htmlFor="closure-confirm" className="block text-sm text-gray-700 mb-2">
-                  Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900">{storeName}</strong>
+                <label htmlFor="closure-confirm" className="block text-sm text-gray-700 panel-oscuro:text-gray-300 mb-2">
+                  Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900 panel-oscuro:text-gray-100">{storeName}</strong>
                 </label>
                 <input
                   id="closure-confirm"
@@ -275,12 +275,12 @@ export default function CerrarTiendaModal({
                   value={confirmText}
                   onChange={(e) => { setConfirmText(e.target.value); setErrorMsg(""); }}
                   placeholder={storeName}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
 
               {errorMsg && (
-                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">{errorMsg}</p>
+                <p className="text-sm text-red-600 panel-oscuro:text-red-400 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl px-4 py-2.5">{errorMsg}</p>
               )}
             </div>
           )}
@@ -290,29 +290,29 @@ export default function CerrarTiendaModal({
           <div className="px-6 pb-6 pt-2 flex gap-3 shrink-0">
             {step === "info" ? (
               <>
-                <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
                   Mejor no
                 </button>
-                <button onClick={() => setStep("reason")} className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                <button onClick={() => setStep("reason")} className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white transition-colors">
                   Continuar
                 </button>
               </>
             ) : step === "reason" ? (
               <>
-                <button onClick={() => setStep("info")} className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                <button onClick={() => setStep("info")} className="py-2.5 px-4 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors flex items-center gap-1.5">
                   <ArrowLeft className="h-4 w-4" /> Atrás
                 </button>
                 <button
                   onClick={() => setStep("confirm")}
                   disabled={!reason}
-                  className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-40 hover:bg-gray-800 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-40 hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white transition-colors"
                 >
                   Continuar
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => setStep("reason")} disabled={closing} className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors flex items-center gap-1.5">
+                <button onClick={() => setStep("reason")} disabled={closing} className="py-2.5 px-4 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 disabled:opacity-40 transition-colors flex items-center gap-1.5">
                   <ArrowLeft className="h-4 w-4" /> Atrás
                 </button>
                 <button
@@ -329,7 +329,7 @@ export default function CerrarTiendaModal({
 
         {!loading && isBlocked && (
           <div className="px-6 pb-6 pt-2 shrink-0">
-            <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+            <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
               Entendido
             </button>
           </div>

@@ -35,14 +35,14 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
     if (!showBanner) return null;
     return (
       <>
-        <div className="mx-4 mt-4 rounded-2xl border border-yellow-300 bg-yellow-50 text-yellow-800 px-4 py-3 flex items-center gap-3 text-sm">
+        <div className="mx-4 mt-4 rounded-2xl border border-yellow-300 panel-oscuro:border-yellow-500/40 bg-yellow-50 panel-oscuro:bg-yellow-500/10 text-yellow-800 panel-oscuro:text-yellow-300 px-4 py-3 flex items-center gap-3 text-sm">
           <Clock className="h-4 w-4 shrink-0" />
           <span className="flex-1">
             Tu suscripción vence en {daysLeft === 0 ? "menos de 24 hs" : `${daysLeft} día${daysLeft !== 1 ? "s" : ""}`}. Renovála para no perder el acceso.
           </span>
           <button
             onClick={() => setPayModal(true)}
-            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-200 hover:bg-yellow-300 text-yellow-900 transition-colors"
+            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-200 panel-oscuro:bg-yellow-500/25 hover:bg-yellow-300 text-yellow-900 panel-oscuro:text-yellow-200 transition-colors"
           >
             Renovar
           </button>
@@ -67,8 +67,8 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
       <>
         <div className={`mx-4 mt-4 rounded-2xl border px-4 py-3 flex items-center gap-3 text-sm ${
           isGrace
-            ? "border-red-200 bg-red-50 text-red-700"
-            : "border-amber-200 bg-amber-50 text-amber-800"
+            ? "border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 text-red-700 panel-oscuro:text-red-300"
+            : "border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-800 panel-oscuro:text-amber-300"
         }`}>
           <Clock className="h-4 w-4 shrink-0" />
           <span className="flex-1">
@@ -80,8 +80,8 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
             onClick={() => setPayModal(true)}
             className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
               isGrace
-                ? "bg-red-100 hover:bg-red-200 text-red-800"
-                : "bg-amber-200 hover:bg-amber-300 text-amber-900"
+                ? "bg-red-100 panel-oscuro:bg-red-500/15 hover:bg-red-200 panel-oscuro:hover:bg-red-500/25 text-red-800 panel-oscuro:text-red-300"
+                : "bg-amber-200 panel-oscuro:bg-amber-500/25 hover:bg-amber-300 text-amber-900 panel-oscuro:text-amber-200"
             }`}
           >
             Suscribirme
@@ -109,15 +109,15 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
     const cancelada = status === "CANCELLED";
     return (
       <>
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full text-center">
-            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 panel-oscuro:bg-gray-950/90 backdrop-blur-md p-4">
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 panel-oscuro:border-gray-700 p-8 max-w-sm w-full text-center">
+            <div className="w-12 h-12 bg-red-50 panel-oscuro:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-6 w-6 text-red-500" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-gray-900 panel-oscuro:text-gray-100 mb-2">
               {cancelada ? "Tu suscripción está dada de baja" : "Tu suscripción venció"}
             </h2>
-            <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+            <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mb-6 leading-relaxed">
               {cancelada
                 ? "Para volver a usar la plataforma necesitás suscribirte de nuevo. Tus datos y tu configuración están guardados tal cual los dejaste."
                 : "Renová para seguir usando la plataforma. Tus datos y configuración están guardados."}
@@ -139,7 +139,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
                 Adentro de la app no se muestra. Queda "Cerrar sesión", que lleva
                 al login del propio panel — un lugar del que sí se puede volver. */}
             {!inPwa && (
-              <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
+              <Link href="/" className="block text-sm text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 transition-colors mb-3">
                 Volver al inicio
               </Link>
             )}

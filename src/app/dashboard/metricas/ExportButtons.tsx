@@ -44,7 +44,7 @@ export function ExportButtons({
       <button
         onClick={downloadCsv}
         disabled={loadingCsv}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 rounded-lg hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
       >
         {/* Corto en angosto. Los tres botones de esta fila —CSV, PDF y
             Compartir— con el texto completo suman casi 400px y no entran en 360:
@@ -62,7 +62,7 @@ export function ExportButtons({
       </button>
       <button
         onClick={() => window.print()}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 transition-colors print:hidden"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 rounded-lg hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors print:hidden"
       >
         <FileText className="h-3.5 w-3.5 shrink-0" />
         <span className="sm:hidden">PDF</span>

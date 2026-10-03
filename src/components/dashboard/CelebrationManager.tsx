@@ -185,12 +185,12 @@ export default function CelebrationManager({ storeId }: Props) {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: -16 }}
               transition={{ type: "spring", stiffness: 280, damping: 22 }}
-              className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center overflow-visible"
+              className="relative bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center overflow-visible"
             >
               <Confetti />
               <div className="text-5xl mb-4 select-none">{meta.emoji}</div>
-              <h2 className="text-xl font-black text-gray-900 mb-2">{meta.title}</h2>
-              <p className="text-sm text-gray-500 mb-6">{meta.body}</p>
+              <h2 className="text-xl font-black text-gray-900 panel-oscuro:text-gray-100 mb-2">{meta.title}</h2>
+              <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mb-6">{meta.body}</p>
               <button
                 type="button"
                 disabled={loading}

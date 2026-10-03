@@ -66,27 +66,27 @@ export default function StoreClosedGate({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4 [color-scheme:light]">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full text-center">
-        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Power className="h-6 w-6 text-gray-500" />
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 panel-oscuro:bg-gray-950/90 backdrop-blur-md p-4 [color-scheme:light] panel-oscuro:[color-scheme:dark]">
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 panel-oscuro:border-gray-700 p-8 max-w-sm w-full text-center">
+        <div className="w-12 h-12 bg-gray-100 panel-oscuro:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Power className="h-6 w-6 text-gray-500 panel-oscuro:text-gray-400" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Tu tienda está cerrada</h2>
-        <p className="text-gray-500 text-sm mb-5 leading-relaxed">
+        <h2 className="text-xl font-bold text-gray-900 panel-oscuro:text-gray-100 mb-2">Tu tienda está cerrada</h2>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mb-5 leading-relaxed">
           La cerraste el {fecha}. Está todo guardado tal cual lo dejaste.
         </p>
 
-        <ul className="text-left bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 mb-5 space-y-1.5">
+        <ul className="text-left bg-emerald-50 panel-oscuro:bg-emerald-500/10 border border-emerald-200 panel-oscuro:border-emerald-500/30 rounded-xl p-3.5 mb-5 space-y-1.5">
           {["Tu diseño y tus productos", "Tus fotos y tu historial", "Tus afiliados recuperan su lugar"].map((t) => (
-            <li key={t} className="flex items-start gap-2 text-[13px] text-gray-700">
-              <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+            <li key={t} className="flex items-start gap-2 text-[13px] text-gray-700 panel-oscuro:text-gray-300">
+              <Check className="h-3.5 w-3.5 text-emerald-600 panel-oscuro:text-emerald-400 shrink-0 mt-0.5" />
               {t}
             </li>
           ))}
         </ul>
 
         {errorMsg && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-4">{errorMsg}</p>
+          <p className="text-sm text-red-600 panel-oscuro:text-red-400 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-xl px-4 py-2.5 mb-4">{errorMsg}</p>
         )}
 
         <button
@@ -96,7 +96,7 @@ export default function StoreClosedGate({
         >
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Reactivando…</> : <><Power className="h-4 w-4" /> Reactivar mi tienda</>}
         </button>
-        <p className="text-[11px] text-gray-400 mb-4 leading-relaxed">
+        <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mb-4 leading-relaxed">
           {credit
             ? credit.status === "ACTIVE"
               ? `Tenés la suscripción paga hasta el ${fmtFecha(credit.until)}: volvés sin pagar de nuevo. Después la publicás cuando quieras.`
@@ -107,7 +107,7 @@ export default function StoreClosedGate({
         {/* Mismo caso que `SubscriptionGate`: tapa bloqueante, y este link
             llevaba fuera del `scope`. El detalle está en el comentario de allá. */}
         {!inPwa && (
-          <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
+          <Link href="/" className="block text-sm text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 transition-colors mb-3">
             Volver al inicio
           </Link>
         )}
