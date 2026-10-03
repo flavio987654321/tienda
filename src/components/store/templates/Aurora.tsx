@@ -3,6 +3,7 @@ import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/t
 import type { CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { CatalogoAurora, type EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
 import { ColeccionEnFoco } from "@/components/store/templates/aurora/ColeccionEnFoco";
+import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFoco";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -148,7 +149,7 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
    social: se sacaron de la portada por decision de disenio, para que la home sea
    mas corta. Los productos en oferta y los mas vistos siguen estando en el
    catalogo, que tiene sus filtros. */
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-productos"];
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-producto-foco", "au-productos"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -515,7 +516,9 @@ export default function Aurora() {
   useEffect(() => {
     const check = () => {
       setIsMobile(window.innerWidth < 768);
-      setNavApretada(window.innerWidth < 980);
+      // 1060 y no 980: con la letra propia (Sora y Unbounded, más anchas que
+      // Helvetica) el menú chocaba con los íconos a 980. Medido el 03/10/26.
+      setNavApretada(window.innerWidth < 1060);
     };
     check();
     window.addEventListener("resize", check);
@@ -927,7 +930,7 @@ export default function Aurora() {
             <div style={{ position:"relative" }}
               onMouseEnter={() => setHoveredNavCat("__open__")}
               onMouseLeave={() => setHoveredNavCat(null)}>
-              <button style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, display:"flex", alignItems:"center", gap:5 }}
+              <button style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing: navApretada ? 1.2 : 3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, display:"flex", alignItems:"center", gap:5 }}
                 onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.color=G; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}>
                 Categorías <span style={{ fontSize:9, opacity:0.7 }}>▾</span>
@@ -974,14 +977,14 @@ export default function Aurora() {
               <>
                 {/* MUJER */}
                 <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); irASeccion("productos"); }}
-                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? GT : T, opacity: activeGender==="mujer" ? 1 : 0.8, ...esperandoGeneros }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing: navApretada ? 1.2 : 3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? GT : T, opacity: activeGender==="mujer" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
                   Mujer
                 </button>
                 {/* HOMBRE */}
                 <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); irASeccion("productos"); }}
-                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? GT : T, opacity: activeGender==="hombre" ? 1 : 0.8, ...esperandoGeneros }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing: navApretada ? 1.2 : 3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? GT : T, opacity: activeGender==="hombre" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
                   Hombre
@@ -991,7 +994,7 @@ export default function Aurora() {
             {/* NOSOTROS / CONTACTO */}
             {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
               <button key={label} onClick={() => irAPantalla(target)}
-                style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, transition:"opacity 0.2s, color 0.2s" }}
+                style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing: navApretada ? 1.2 : 3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, transition:"opacity 0.2s, color 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.color=G; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}>
                 {label}
@@ -1302,6 +1305,13 @@ export default function Aurora() {
           <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
         </div>
       </section>
+      </SectionBlock>
+
+      {/* ── PRODUCTO EN FOCO (ver `aurora/ProductoEnFoco`) ── */}
+      <SectionBlock id="au-producto-foco" label="Producto en foco" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+        <ProductoEnFoco products={products} promotions={promotions} fmt={fmt} ocultarPrecios={ocultarPrecios}
+          favorites={favorites} onFavorito={toggleFavorite} onAbrir={abrirFicha}
+          escena={escenaAurora} isMobile={isMobile} rebaja={REBAJA} tachado={TACHADO} />
       </SectionBlock>
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}

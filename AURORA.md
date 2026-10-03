@@ -133,7 +133,7 @@ Aurora no tiene dónde. Lo que falta, por orden de importancia para vender:
 | # | Bloque | Para qué | Cómo sería en Aurora |
 |---|---|---|---|
 | ~~B-1~~ ✅ | **Colección en foco** (hecho 03/10/26, `aurora/ColeccionEnFoco.tsx`) | Mostrar UNA colección o categoría ("Otoño", "Denim") con su portada y sus productos, en vez de todo mezclado | La colección como una escena propia: su foto de fondo con la luz de Aurora y los productos de esa colección entrando en profundidad. La dueña elige qué categoría. |
-| B-2 | **Producto en foco** | Empujar UN producto (el más vendido, el lanzamiento) | Un solo producto enorme, la luz sigue al mouse (en el celular, al inclinar), precio y talles flotando en paneles de vidrio, y "agregar al carrito" ahí mismo. |
+| ~~B-2~~ ✅ | **Producto en foco** (hecho 03/10/26, `aurora/ProductoEnFoco.tsx`; "Ver y comprar" abre la ficha en vez de comprar acá, para no duplicar la lógica de talles y stock) | Empujar UN producto (el más vendido, el lanzamiento) | Un solo producto enorme, la luz sigue al mouse (en el celular, al inclinar), precio y talles flotando en paneles de vidrio, y "agregar al carrito" ahí mismo. |
 | B-3 | **Recién llegado** | Que el cliente que vuelve vea lo nuevo sin buscar | Automático (los últimos que entraron), en una franja que se desliza con profundidad. |
 | B-4 | **Lo que dicen** (reseñas de la tienda) | Confianza: hoy las reseñas solo están adentro de cada ficha | Las mejores reseñas como tarjetas de vidrio en órbita. Solo aparece si hay reseñas reales. |
 | B-5 | **Preguntas frecuentes** | Envíos, cambios, talles, medios de pago: lo que todos preguntan por WhatsApp | Acordeón de vidrio; las respuestas salen de lo que la tienda ya cargó (envíos, políticas) para no escribirlo dos veces. |
