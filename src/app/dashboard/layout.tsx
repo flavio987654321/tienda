@@ -13,6 +13,8 @@ import PanelSplash from "@/components/panel/PanelSplash";
 import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
 import { DASHBOARD_VERSION } from "@/lib/app-versions";
+import { OSCURO_TIENDAS_LISTO, SCRIPT_TEMA_TIENDAS } from "@/lib/tema-tiendas";
+import TemaDelPanelTiendas from "@/components/dashboard/TemaDelPanelTiendas";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
@@ -170,11 +172,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
+      {/* El tema claro/oscuro, apagado hasta que estén pasadas todas las
+          pantallas (ver `tema-tiendas`). El script pinta antes del primer
+          dibujo; el componente se ocupa del resto de la visita. */}
+      {OSCURO_TIENDAS_LISTO && <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_TIENDAS }} />}
+      {OSCURO_TIENDAS_LISTO && <TemaDelPanelTiendas />}
       <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" scope="/dashboard" />
       <PanelSplash nombre="TiendaApps Panel" />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
-      {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}
+      {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light] panel-oscuro:bg-gray-950 panel-oscuro:[color-scheme:dark]">{gate}</div>}
       {storeTypeGate}
       {/* Las celebraciones van acá y no adentro del componente DashboardLayout,
           que es donde estaban.

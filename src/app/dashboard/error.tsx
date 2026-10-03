@@ -23,12 +23,12 @@ export default function DashboardError({
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-red-100 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+      <div className="w-full max-w-md rounded-2xl border border-red-100 panel-oscuro:border-red-500/30 bg-white panel-oscuro:bg-gray-900 p-8 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 panel-oscuro:bg-red-500/10">
           <AlertTriangle className="h-6 w-6 text-red-500" />
         </div>
-        <h1 className="mb-2 text-lg font-bold text-gray-900">Algo salió mal</h1>
-        <p className="mb-6 text-sm text-gray-500">
+        <h1 className="mb-2 text-lg font-bold text-gray-900 panel-oscuro:text-gray-100">Algo salió mal</h1>
+        <p className="mb-6 text-sm text-gray-500 panel-oscuro:text-gray-400">
           Hubo un error al cargar esta sección. Podés intentar recargar.
         </p>
         <button

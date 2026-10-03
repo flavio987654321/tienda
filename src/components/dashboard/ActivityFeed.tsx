@@ -53,7 +53,7 @@ function formatEvent(type: string, data: Record<string, unknown>): EventMeta {
         dot: "bg-emerald-500",
       };
     default:
-      return { label: type, detail: "", dot: "bg-gray-300" };
+      return { label: type, detail: "", dot: "bg-gray-300 panel-oscuro:bg-gray-600" };
   }
 }
 
@@ -109,8 +109,8 @@ export default function ActivityFeed({ storeId, initialEvents }: Props) {
   if (events.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-6 mt-6">
-      <h2 className="font-bold text-gray-900 mb-4">Actividad reciente</h2>
+    <div className="bg-white panel-oscuro:bg-gray-900 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-6 mt-6">
+      <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 mb-4">Actividad reciente</h2>
       <div className="space-y-0">
         <AnimatePresence initial={false}>
           {events.map((ev) => {
@@ -122,14 +122,14 @@ export default function ActivityFeed({ storeId, initialEvents }: Props) {
                 initial={isNew ? { opacity: 0, height: 0 } : false}
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ duration: 0.22, ease: "easeOut" }}
-                className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+                className="flex items-center gap-3 py-2.5 border-b border-gray-50 panel-oscuro:border-gray-800 last:border-0"
               >
                 <span className={`h-2 w-2 rounded-full shrink-0 ${meta.dot}`} />
                 <p className="flex-1 min-w-0 text-sm truncate">
-                  <span className="font-medium text-gray-800">{meta.label}</span>
-                  {meta.detail && <span className="text-gray-400 ml-1.5">{meta.detail}</span>}
+                  <span className="font-medium text-gray-800 panel-oscuro:text-gray-200">{meta.label}</span>
+                  {meta.detail && <span className="text-gray-400 panel-oscuro:text-gray-500 ml-1.5">{meta.detail}</span>}
                 </p>
-                <span className="text-xs text-gray-300 shrink-0">{relativeTime(ev.createdAt)}</span>
+                <span className="text-xs text-gray-300 panel-oscuro:text-gray-600 shrink-0">{relativeTime(ev.createdAt)}</span>
               </motion.div>
             );
           })}

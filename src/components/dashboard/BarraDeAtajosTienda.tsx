@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Plus, ExternalLink, UserRound, CreditCard, LogOut, Loader2, ChevronDown, BadgeCheck,
+  Plus, ExternalLink, UserRound, CreditCard, LogOut, Loader2, ChevronDown, BadgeCheck, Moon, Sun,
 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import { useAuth } from "@/components/AuthProvider";
 import { useIsPwa } from "@/hooks/useIsPwa";
+import { ATRIBUTO_TEMA, EVENTO_TEMA_TIENDAS, OSCURO_TIENDAS_LISTO, aplicarTemaTiendas } from "@/lib/tema-tiendas";
 
 /**
  * Los atajos de arriba a la derecha del panel de tiendas, en computadora.
@@ -62,14 +63,15 @@ export default function BarraDeAtajosTienda({
           target="_blank"
           rel="noreferrer"
           title="Abre tu tienda en otra pestaña, como la ven tus clientes"
-          className="mr-1 inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-[13px] font-bold text-gray-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+          className="mr-1 inline-flex items-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-3.5 py-2 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300 transition-colors hover:border-indigo-200 panel-oscuro:hover:border-indigo-500/30 hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           <ExternalLink className="h-4 w-4" /> Ver mi tienda
         </a>
       )}
-      <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
+      <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors text-gray-500 panel-oscuro:text-gray-400" />
       <HelpButton onStartTour={onTour} />
       {userId && <NotificationBell userId={userId} />}
+      <BotonTemaTiendas />
       <MenuDeCuenta userName={userName} isVerified={isVerified} />
     </div>
   );
@@ -122,35 +124,35 @@ function MenuDeCuenta({ userName, isVerified }: { userName?: string | null; isVe
         aria-haspopup="menu"
         aria-expanded={abierto}
         aria-label="Tu cuenta"
-        className="flex items-center gap-1 rounded-xl py-1 pl-1 pr-1.5 transition-colors hover:bg-gray-100"
+        className="flex items-center gap-1 rounded-xl py-1 pl-1 pr-1.5 transition-colors hover:bg-gray-100 panel-oscuro:hover:bg-gray-800"
       >
-        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-sm font-bold text-indigo-700 panel-oscuro:text-indigo-300">
           {nombre[0].toUpperCase()}
-          <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+          <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white panel-oscuro:bg-gray-900 ${isVerified ? "text-blue-500" : "text-gray-300 panel-oscuro:text-gray-600"}`} />
         </span>
-        <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${abierto ? "rotate-180" : ""}`} />
+        <ChevronDown className={`h-3.5 w-3.5 text-gray-400 panel-oscuro:text-gray-500 transition-transform ${abierto ? "rotate-180" : ""}`} />
       </button>
       {abierto && (
-        <div role="menu" className="absolute right-0 top-full z-[70] mt-1.5 w-56 overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-xl">
-          <div className="border-b border-gray-100 px-3.5 pb-2.5 pt-1.5">
-            <p className="truncate text-sm font-bold text-gray-900">{nombre}</p>
-            <p className={`text-[11.5px] font-medium ${isVerified ? "text-blue-600" : "text-gray-400"}`}>
+        <div role="menu" className="absolute right-0 top-full z-[70] mt-1.5 w-56 overflow-hidden rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 py-1.5 shadow-xl">
+          <div className="border-b border-gray-100 panel-oscuro:border-gray-800 px-3.5 pb-2.5 pt-1.5">
+            <p className="truncate text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{nombre}</p>
+            <p className={`text-[11.5px] font-medium ${isVerified ? "text-blue-600 panel-oscuro:text-blue-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
               {isVerified ? "Tienda verificada" : "Tienda sin verificar"}
             </p>
           </div>
-          <Link role="menuitem" href="/dashboard/perfil" onClick={() => setAbierto(false)} className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50">
-            <UserRound className="h-4 w-4 text-gray-400" /> Mi perfil
+          <Link role="menuitem" href="/dashboard/perfil" onClick={() => setAbierto(false)} className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50">
+            <UserRound className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" /> Mi perfil
           </Link>
-          <Link role="menuitem" href="/dashboard/mi-plan" onClick={() => setAbierto(false)} className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50">
-            <CreditCard className="h-4 w-4 text-gray-400" /> Mi plan
+          <Link role="menuitem" href="/dashboard/mi-plan" onClick={() => setAbierto(false)} className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50">
+            <CreditCard className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" /> Mi plan
           </Link>
-          <div className="my-1 h-px bg-gray-100" />
+          <div className="my-1 h-px bg-gray-100 panel-oscuro:bg-gray-800" />
           <button
             type="button"
             role="menuitem"
             onClick={() => void salir()}
             disabled={saliendo}
-            className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
+            className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-red-600 panel-oscuro:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 disabled:opacity-60"
           >
             {saliendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
             {saliendo ? "Cerrando…" : "Cerrar sesión"}
@@ -158,5 +160,39 @@ function MenuDeCuenta({ userName, isVerified }: { userName?: string | null; isVe
         </div>
       )}
     </div>
+  );
+}
+
+function suscribirTema(avisar: () => void) {
+  window.addEventListener(EVENTO_TEMA_TIENDAS, avisar);
+  return () => window.removeEventListener(EVENTO_TEMA_TIENDAS, avisar);
+}
+
+/**
+ * La luna / el sol del panel de tiendas. Muestra lo que se ESTÁ viendo y al
+ * tocarlo elige el otro, a mano. Es `BotonTema` de digitales con la
+ * preferencia de tiendas (`tema-tiendas`).
+ *
+ * ⚠️ No se dibuja mientras el modo oscuro de tiendas esté apagado
+ * (`OSCURO_TIENDAS_LISTO`): un botón que no cambia nada parece roto.
+ */
+export function BotonTemaTiendas({ className = "" }: { className?: string }) {
+  const oscuro = useSyncExternalStore(
+    suscribirTema,
+    () => document.documentElement.getAttribute(ATRIBUTO_TEMA) === "oscuro",
+    () => false,
+  );
+  if (!OSCURO_TIENDAS_LISTO) return null;
+  const texto = oscuro ? "Pasar a modo claro" : "Pasar a modo oscuro";
+  return (
+    <button
+      type="button"
+      onClick={() => aplicarTemaTiendas(oscuro ? "claro" : "oscuro")}
+      aria-label={texto}
+      title={texto}
+      className={`flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 panel-oscuro:text-gray-300 transition-colors hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 ${className}`}
+    >
+      {oscuro ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+    </button>
   );
 }

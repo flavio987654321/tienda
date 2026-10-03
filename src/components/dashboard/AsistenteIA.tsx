@@ -371,7 +371,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 18 }}
-              className="absolute -right-0.5 -top-0.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-xs font-bold text-white shadow"
+              className="absolute -right-0.5 -top-0.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white panel-oscuro:border-gray-900 bg-rose-500 px-1 text-xs font-bold text-white shadow"
             >
               {/* Con más de 9 el número no entra en el círculo, y el tope diario es
                   3 — pero si quedaron varios días sin abrir, se acumulan. */}
@@ -400,18 +400,18 @@ export default function AsistenteIA({ userId }: { userId: string }) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 z-[60] flex h-full w-full flex-col bg-white shadow-2xl md:w-[380px] md:rounded-l-2xl print:hidden"
+              className="fixed right-0 top-0 z-[60] flex h-full w-full flex-col bg-white panel-oscuro:bg-gray-900 shadow-2xl md:w-[380px] md:rounded-l-2xl print:hidden"
             >
-              <div className="flex items-center gap-3 border-b border-gray-100 p-4">
+              <div className="flex items-center gap-3 border-b border-gray-100 panel-oscuro:border-gray-800 p-4">
                 <AsistentePersonaje estado={enviando ? "pensando" : "sonriente"} size={36} />
                 <div className="flex-1">
                   <p className="font-bold text-gray-950">Sasha</p>
-                  <p className="text-xs text-gray-400">Asistente con IA de TiendaApps</p>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Asistente con IA de TiendaApps</p>
                 </div>
                 <button
                   onClick={() => setAbierto(false)}
                   aria-label="Cerrar chat"
-                  className="rounded-xl p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                  className="rounded-xl p-2 text-gray-400 panel-oscuro:text-gray-500 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 hover:text-gray-700 panel-oscuro:hover:text-gray-300"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -419,13 +419,13 @@ export default function AsistenteIA({ userId }: { userId: string }) {
 
               <div ref={mensajesRef} className="flex-1 space-y-3 overflow-y-auto p-4">
                 {historialError && (
-                  <div className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+                  <div className="rounded-2xl bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 panel-oscuro:text-amber-300">
                     No pudimos cargar tu conversación de hoy — puede estar incompleta. Probá recargar la página.
                   </div>
                 )}
                 {mostrarIntro && (
                   <div className="flex justify-start">
-                    <div className="max-w-[85%] rounded-2xl bg-gray-100 px-4 py-2.5 text-sm whitespace-pre-wrap text-gray-800">
+                    <div className="max-w-[85%] rounded-2xl bg-gray-100 panel-oscuro:bg-gray-800 px-4 py-2.5 text-sm whitespace-pre-wrap text-gray-800 panel-oscuro:text-gray-200">
                       {INTRO_TEXTO}
                     </div>
                   </div>
@@ -436,7 +436,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                     <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"} gap-1.5`}>
                       <div
                         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
-                          m.role === "user" ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-800"
+                          m.role === "user" ? "bg-orange-500 text-white" : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-800 panel-oscuro:text-gray-200"
                         }`}
                       >
                         {texto || (enviando && i === mensajes.length - 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : "")}
@@ -459,7 +459,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                               href={accion.href}
                               target={accion.externo ? "_blank" : undefined}
                               onClick={accion.externo ? undefined : () => setAbierto(false)}
-                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100"
+                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-orange-50 panel-oscuro:bg-orange-500/10 px-3.5 py-2 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-100 panel-oscuro:hover:bg-orange-500/15"
                             >
                               {accion.icon && <accion.icon className="h-3.5 w-3.5 shrink-0" />}
                               {accion.label}
@@ -472,11 +472,11 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                   );
                 })}
                 {error && (
-                  <div className="rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</div>
+                  <div className="rounded-2xl bg-red-50 panel-oscuro:bg-red-500/10 px-4 py-2.5 text-sm text-red-600 panel-oscuro:text-red-400">{error}</div>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 border-t border-gray-100 p-3">
+              <div className="flex items-center gap-2 border-t border-gray-100 panel-oscuro:border-gray-800 p-3">
                 <input
                   ref={inputRef}
                   value={input}
@@ -485,7 +485,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                   disabled={enviando}
                   placeholder="Escribile a Sasha..."
                   maxLength={2000}
-                  className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60"
+                  className="flex-1 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60"
                 />
                 <button
                   onClick={enviarMensaje}

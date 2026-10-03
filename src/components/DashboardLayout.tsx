@@ -19,7 +19,7 @@ import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import TourGuide from "@/components/TourGuide";
 import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
-import BarraDeAtajosTienda from "@/components/dashboard/BarraDeAtajosTienda";
+import BarraDeAtajosTienda, { BotonTemaTiendas } from "@/components/dashboard/BarraDeAtajosTienda";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
 
@@ -347,7 +347,7 @@ export default function DashboardLayout({
   function getBadge(href: string) {
     const badge = badges[href];
     const count = badge?.count ?? 0;
-    return { has: count > 0, count, color: badge?.color ?? "bg-gray-400" };
+    return { has: count > 0, count, color: badge?.color ?? "bg-gray-400 panel-oscuro:bg-gray-500" };
   }
 
   const anyBadge = Object.values(badges).some((b) => b.count > 0);
@@ -387,7 +387,7 @@ export default function DashboardLayout({
         href={href}
         {...(tourId ? { "data-tour": tourId } : {})}
         className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-          active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          active ? "bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 hover:text-gray-900 panel-oscuro:hover:text-gray-100"
         }`}
       >
         <Icon className="h-4 w-4 shrink-0" />
@@ -429,7 +429,7 @@ export default function DashboardLayout({
         {...(tourId ? { "data-tour": tourId } : {})}
         onClick={onNavigate}
         className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors active:scale-[0.98] ${
-          active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+          active ? "bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 active:bg-gray-100 panel-oscuro:active:bg-gray-800"
         }`}
       >
         <Icon className="h-5 w-5 shrink-0" />
@@ -438,7 +438,7 @@ export default function DashboardLayout({
         <span className="flex-1 min-w-0">
           {label}
           {hasWarning && (
-            <span className="block text-[11px] font-normal leading-tight text-red-600 truncate">
+            <span className="block text-[11px] font-normal leading-tight text-red-600 panel-oscuro:text-red-400 truncate">
               {hasWarning.titulo}
             </span>
           )}
@@ -459,13 +459,13 @@ export default function DashboardLayout({
     // `data-panel-root`: al imprimir hay que devolverle el flujo normal a esta
     // caja (ver el bloque @media print de globals.css). En pantalla es del alto
     // de la ventana con el scroll adentro; en papel eso sería una sola hoja.
-    <div data-panel-root className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
+    <div data-panel-root className="h-screen bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 [color-scheme:light] panel-oscuro:[color-scheme:dark]">
 
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
-      <aside data-tour-scope="panel-desktop" className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
-        <Link href={hrefLogo} className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
+      <aside data-tour-scope="panel-desktop" className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white panel-oscuro:bg-gray-900 border-r border-gray-100 panel-oscuro:border-gray-800 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
+        <Link href={hrefLogo} className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
           <AppLogo size={52} className="shrink-0" />
-          <span className={`font-bold text-gray-900 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
+          <span className={`font-bold text-gray-900 panel-oscuro:text-gray-100 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
             TiendaApps
           </span>
         </Link>
@@ -478,13 +478,13 @@ export default function DashboardLayout({
               <div key={gi}>
                 {gi > 0 && (
                   <div className="flex items-center gap-2 pt-3 pb-1 px-1">
-                    <div className="h-px bg-gray-100 flex-1" />
+                    <div className="h-px bg-gray-100 panel-oscuro:bg-gray-800 flex-1" />
                     {group.label && (
-                      <span className={`overflow-hidden transition-[max-width] duration-200 text-[10px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
+                      <span className={`overflow-hidden transition-[max-width] duration-200 text-[10px] font-semibold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500 whitespace-nowrap ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
                         {group.label}
                       </span>
                     )}
-                    <div className="h-px bg-gray-100 flex-1" />
+                    <div className="h-px bg-gray-100 panel-oscuro:bg-gray-800 flex-1" />
                   </div>
                 )}
                 <div className="space-y-0.5">
@@ -495,11 +495,11 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
+        <div className="p-2 border-t border-gray-100 panel-oscuro:border-gray-800 space-y-0.5 shrink-0">
           <button
             onClick={async () => { setSigningOut(true); await signOut(inPwa ? "/dashboard" : "/login"); }}
             disabled={signingOut}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-60"
           >
             {signingOut ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <LogOut className="h-4 w-4 shrink-0" />}
             <span className={`whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
@@ -509,28 +509,28 @@ export default function DashboardLayout({
           <Link
             href="/dashboard/perfil"
             title={isVerified ? "Mi perfil — Verificado" : "Mi perfil"}
-            className="flex items-center gap-2.5 px-1 py-2.5 rounded-xl bg-gray-50 border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
+            className="flex items-center gap-2.5 px-1 py-2.5 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 hover:border-indigo-100 panel-oscuro:hover:border-indigo-500/30 transition-colors"
           >
             <div className="relative shrink-0">
-              <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+              <div className="h-8 w-8 rounded-full bg-indigo-100 panel-oscuro:bg-indigo-500/15 flex items-center justify-center text-indigo-700 panel-oscuro:text-indigo-300 font-bold text-sm">
                 {(userName ?? "U")[0].toUpperCase()}
               </div>
-              <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+              <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white panel-oscuro:bg-gray-900 rounded-full ${isVerified ? "text-blue-500" : "text-gray-300 panel-oscuro:text-gray-600"}`} />
             </div>
             <div className={`flex-1 min-w-0 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
               <div className="flex items-center gap-1">
-                <p className="text-xs font-semibold text-gray-800 truncate whitespace-nowrap">{userName}</p>
+                <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200 truncate whitespace-nowrap">{userName}</p>
                 {avisoNoVerificada && (
                   <span title={avisoNoVerificada.titulo}><AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" /></span>
                 )}
               </div>
               <p className="text-[10px] text-indigo-400 font-medium whitespace-nowrap">Ver perfil →</p>
             </div>
-            <ChevronRight className={`h-3.5 w-3.5 text-gray-300 shrink-0 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`} />
+            <ChevronRight className={`h-3.5 w-3.5 text-gray-300 panel-oscuro:text-gray-600 shrink-0 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`} />
           </Link>
           {!isOnline && (
-            <div className="mx-2 mb-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2">
-              <p className="text-[11px] font-semibold text-orange-600 leading-tight">Sin conexión</p>
+            <div className="mx-2 mb-2 rounded-xl bg-orange-50 panel-oscuro:bg-orange-500/10 border border-orange-200 panel-oscuro:border-orange-500/30 px-3 py-2">
+              <p className="text-[11px] font-semibold text-orange-600 panel-oscuro:text-orange-400 leading-tight">Sin conexión</p>
               <p className="text-[10px] text-orange-400 leading-tight">Los datos pueden estar desactualizados</p>
             </div>
           )}
@@ -538,13 +538,13 @@ export default function DashboardLayout({
       </aside>
 
       {/* ── MOBILE Top Bar (< lg) ────────────────────────────────────────── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] h-14 bg-white panel-oscuro:bg-gray-900 border-b border-gray-100 panel-oscuro:border-gray-800 flex items-center justify-between px-3">
         <button
           onClick={() => setMobileOpen(true)}
-          className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 active:bg-gray-200 panel-oscuro:active:bg-gray-700 transition-colors"
           aria-label="Abrir menú"
         >
-          <Menu className="h-5 w-5 text-gray-600" />
+          <Menu className="h-5 w-5 text-gray-600 panel-oscuro:text-gray-400" />
           {anyBadge && (
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
           )}
@@ -552,11 +552,11 @@ export default function DashboardLayout({
 
         <Link href={hrefLogo} className="flex items-center gap-2">
           <AppLogo size={52} />
-          <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
+          <span className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-sm">TiendaApps</span>
         </Link>
 
         <div className="flex items-center gap-1">
-          <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
+          <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors text-gray-500 panel-oscuro:text-gray-400" />
           {/* En Diseño la pantalla trae su propia ayuda, con el tour del editor:
               dos `?` pegados abriendo guías distintas confunden más de lo que
               ayudan. En escritorio ya estaba escondido más abajo; acá faltaba
@@ -564,6 +564,7 @@ export default function DashboardLayout({
           {!pathname.startsWith("/dashboard/configuracion") && (
             <HelpButton onStartTour={() => setShowTour(true)} />
           )}
+          <BotonTemaTiendas />
           {userId && <NotificationBell userId={userId} />}
         </div>
       </header>
@@ -580,21 +581,21 @@ export default function DashboardLayout({
           />
           <div
             data-tour-scope="panel-mobile"
-            className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-slide-in-left"
+            className="relative w-72 max-w-[85vw] h-full bg-white panel-oscuro:bg-gray-900 flex flex-col shadow-2xl animate-slide-in-left"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
-            <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 shrink-0">
+            <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0">
               <Link href={hrefLogo} className="flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5 text-indigo-600" />
-                <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
+                <ShoppingBag className="h-5 w-5 text-indigo-600 panel-oscuro:text-indigo-400" />
+                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-sm">TiendaApps</span>
               </Link>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 active:bg-gray-200 panel-oscuro:active:bg-gray-700 transition-colors"
                 aria-label="Cerrar menú"
               >
-                <X className="h-4 w-4 text-gray-500" />
+                <X className="h-4 w-4 text-gray-500 panel-oscuro:text-gray-400" />
               </button>
             </div>
 
@@ -607,7 +608,7 @@ export default function DashboardLayout({
                     {gi > 0 && (
                       <div className="pt-3 pb-1 px-3">
                         {group.label && (
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 panel-oscuro:text-gray-500">
                             {group.label}
                           </p>
                         )}
@@ -621,11 +622,11 @@ export default function DashboardLayout({
               })}
             </nav>
 
-            <div className="p-3 border-t border-gray-100 space-y-0.5 shrink-0">
+            <div className="p-3 border-t border-gray-100 panel-oscuro:border-gray-800 space-y-0.5 shrink-0">
               <button
                 onClick={async () => { setSigningOut(true); await signOut(inPwa ? "/dashboard" : "/login"); }}
                 disabled={signingOut}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-60"
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 active:bg-red-100 panel-oscuro:active:bg-red-500/15 transition-colors disabled:opacity-60"
               >
                 {signingOut ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> : <LogOut className="h-5 w-5 shrink-0" />}
                 <span>{signingOut ? "Cerrando..." : "Cerrar sesión"}</span>
@@ -633,28 +634,28 @@ export default function DashboardLayout({
               <Link
                 href="/dashboard/perfil"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 active:bg-indigo-100 transition-colors"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 hover:border-indigo-100 panel-oscuro:hover:border-indigo-500/30 active:bg-indigo-100 panel-oscuro:active:bg-indigo-500/15 transition-colors"
               >
                 <div className="relative shrink-0">
-                  <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-base">
+                  <div className="h-9 w-9 rounded-full bg-indigo-100 panel-oscuro:bg-indigo-500/15 flex items-center justify-center text-indigo-700 panel-oscuro:text-indigo-300 font-bold text-base">
                     {(userName ?? "U")[0].toUpperCase()}
                   </div>
-                  <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                  <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white panel-oscuro:bg-gray-900 rounded-full ${isVerified ? "text-blue-500" : "text-gray-300 panel-oscuro:text-gray-600"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{userName}</p>
+                    <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200 truncate">{userName}</p>
                     {avisoNoVerificada && (
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                     )}
                   </div>
                   <p className="text-xs text-indigo-400 font-medium">Ver mi perfil →</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                <ChevronRight className="h-4 w-4 text-gray-300 panel-oscuro:text-gray-600 shrink-0" />
               </Link>
               {!isOnline && (
-                <div className="mt-1 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
-                  <p className="text-xs font-semibold text-orange-600">Sin conexión</p>
+                <div className="mt-1 rounded-xl bg-orange-50 panel-oscuro:bg-orange-500/10 border border-orange-200 panel-oscuro:border-orange-500/30 px-3 py-2.5">
+                  <p className="text-xs font-semibold text-orange-600 panel-oscuro:text-orange-400">Sin conexión</p>
                   <p className="text-[11px] text-orange-400 leading-tight mt-0.5">Los datos pueden estar desactualizados</p>
                 </div>
               )}
@@ -680,7 +681,7 @@ export default function DashboardLayout({
       )}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
+      <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 panel-oscuro:bg-gray-950 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
         {!hideHelp && !pathname.startsWith("/dashboard/configuracion") && (
           // Los atajos son botones del panel, no del informe: la barra se
           // esconde al imprimir (`data-print="ocultar"` adentro).

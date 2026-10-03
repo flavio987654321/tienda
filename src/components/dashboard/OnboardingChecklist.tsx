@@ -34,19 +34,19 @@ export default function OnboardingChecklist({ steps }: { steps: OnboardingStep[]
   const pendientes = steps.filter((s) => !s.done);
 
   return (
-    <div className="mb-6 bg-white rounded-2xl border border-indigo-100 p-5 shadow-sm">
+    <div className="mb-6 bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-indigo-100 panel-oscuro:border-indigo-500/30 p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-          <h2 className="font-bold text-gray-900 text-sm">Completá la configuración de tu tienda</h2>
+          <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-sm">Completá la configuración de tu tienda</h2>
         </div>
-        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full shrink-0">
+        <span className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 bg-indigo-50 panel-oscuro:bg-indigo-500/10 px-2.5 py-1 rounded-full shrink-0">
           {hechos.length}/{steps.length} pasos
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
+      <div className="h-1.5 bg-gray-100 panel-oscuro:bg-gray-800 rounded-full mb-4 overflow-hidden">
         <div
           className="h-full bg-indigo-500 rounded-full transition-all duration-500"
           style={{ width: `${(hechos.length / steps.length) * 100}%` }}
@@ -59,12 +59,12 @@ export default function OnboardingChecklist({ steps }: { steps: OnboardingStep[]
           <Link
             key={step.label}
             href={step.href}
-            className="flex items-center gap-3 p-3 rounded-xl transition-all group hover:bg-indigo-50 hover:border-indigo-100 border border-transparent"
+            className="flex items-center gap-3 p-3 rounded-xl transition-all group hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 hover:border-indigo-100 panel-oscuro:hover:border-indigo-500/30 border border-transparent"
           >
-            <Circle className="h-5 w-5 text-gray-300 shrink-0 group-hover:text-indigo-400 transition-colors" />
+            <Circle className="h-5 w-5 text-gray-300 panel-oscuro:text-gray-600 shrink-0 group-hover:text-indigo-400 transition-colors" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800">{step.label}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{step.tip}</p>
+              <p className="text-sm font-medium text-gray-800 panel-oscuro:text-gray-200">{step.label}</p>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">{step.tip}</p>
             </div>
             {/* En pantalla chica se muestra siempre: colgado de `group-hover` no
                 aparecía nunca en un teléfono, y era la única pista de que la
@@ -80,19 +80,19 @@ export default function OnboardingChecklist({ steps }: { steps: OnboardingStep[]
           Sólo aparece si hay algo hecho: en una tienda recién creada no tiene
           sentido una fila que diga "0 pasos ya completados". */}
       {hechos.length > 0 && (
-        <div className={pendientes.length > 0 ? "mt-3 pt-3 border-t border-gray-100" : ""}>
+        <div className={pendientes.length > 0 ? "mt-3 pt-3 border-t border-gray-100 panel-oscuro:border-gray-800" : ""}>
           <button
             type="button"
             onClick={() => setVerHechos((v) => !v)}
             aria-expanded={verHechos}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-left hover:bg-gray-50 transition-colors group"
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-left hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors group"
           >
             <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-            <span className="text-xs font-medium text-gray-500 flex-1 min-w-0">
+            <span className="text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 flex-1 min-w-0">
               {hechos.length === 1 ? "1 paso ya completado" : `${hechos.length} pasos ya completados`}
             </span>
             <ChevronDown
-              className={`h-4 w-4 text-gray-400 shrink-0 transition-transform duration-200 group-hover:text-gray-600 ${
+              className={`h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 shrink-0 transition-transform duration-200 group-hover:text-gray-600 panel-oscuro:group-hover:text-gray-400 ${
                 verHechos ? "rotate-180" : ""
               }`}
             />
@@ -115,7 +115,7 @@ export default function OnboardingChecklist({ steps }: { steps: OnboardingStep[]
                       className="flex items-center gap-3 p-3 rounded-xl opacity-60"
                     >
                       <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                      <p className="text-sm font-medium line-through text-gray-400 flex-1 min-w-0">
+                      <p className="text-sm font-medium line-through text-gray-400 panel-oscuro:text-gray-500 flex-1 min-w-0">
                         {step.label}
                       </p>
                     </div>

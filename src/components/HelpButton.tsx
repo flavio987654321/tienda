@@ -56,29 +56,29 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
           if (!open) setHayBorrador(hayCambiosSinGuardar());
           setOpen((v) => !v);
         }}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors"
+        className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 transition-colors"
         aria-label="Ayuda"
         title="Ayuda"
       >
-        <HelpCircle className="h-5 w-5 text-gray-500" />
+        <HelpCircle className="h-5 w-5 text-gray-500 panel-oscuro:text-gray-400" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-gray-100 bg-white shadow-xl p-2">
+        <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 shadow-xl p-2">
           {onStartTour && (
             <button
               onClick={() => {
                 setOpen(false);
                 onStartTour();
               }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 transition-colors text-left"
             >
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 shrink-0">
-                <Play className="h-3.5 w-3.5 text-indigo-600" />
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 panel-oscuro:bg-indigo-500/10 shrink-0">
+                <Play className="h-3.5 w-3.5 text-indigo-600 panel-oscuro:text-indigo-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-800">Tour guiado</p>
-                <p className="text-[11px] text-gray-400 leading-tight">Ver cómo usar el panel</p>
+                <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Tour guiado</p>
+                <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 leading-tight">Ver cómo usar el panel</p>
               </div>
             </button>
           )}
@@ -117,14 +117,14 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
               href={`${base}/${pantalla.slug}`}
               {...enOtraPestana}
               onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 transition-colors text-left"
             >
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 shrink-0">
-                <FileText className="h-3.5 w-3.5 text-indigo-600" />
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 panel-oscuro:bg-indigo-500/10 shrink-0">
+                <FileText className="h-3.5 w-3.5 text-indigo-600 panel-oscuro:text-indigo-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-800">Ayuda de esta pantalla</p>
-                <p className="text-[11px] text-gray-400 leading-tight truncate">{pantalla.titulo}</p>
+                <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Ayuda de esta pantalla</p>
+                <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 leading-tight truncate">{pantalla.titulo}</p>
               </div>
             </Link>
           )}
@@ -133,14 +133,14 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
             href={base}
             {...enOtraPestana}
             onClick={() => setOpen(false)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10 transition-colors text-left"
           >
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 shrink-0">
-              <BookOpen className="h-3.5 w-3.5 text-indigo-600" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 panel-oscuro:bg-indigo-500/10 shrink-0">
+              <BookOpen className="h-3.5 w-3.5 text-indigo-600 panel-oscuro:text-indigo-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800">Centro de ayuda</p>
-              <p className="text-[11px] text-gray-400 leading-tight">Cómo funciona cada cosa</p>
+              <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Centro de ayuda</p>
+              <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 leading-tight">Cómo funciona cada cosa</p>
             </div>
           </Link>
         </div>

@@ -28,12 +28,12 @@ export default function LimitePlanBanner({
   queGanas: string;
 }) {
   return (
-    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5">
+    <div className="mb-6 rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3.5">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 panel-oscuro:text-amber-400" />
         <div className="min-w-0 text-sm">
-          <p className="font-semibold text-amber-900">{titulo}</p>
-          <p className="mt-0.5 leading-relaxed text-amber-800">{comoLiberar}</p>
+          <p className="font-semibold text-amber-900 panel-oscuro:text-amber-200">{titulo}</p>
+          <p className="mt-0.5 leading-relaxed text-amber-800 panel-oscuro:text-amber-300">{comoLiberar}</p>
         </div>
       </div>
 

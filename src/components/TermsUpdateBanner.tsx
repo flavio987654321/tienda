@@ -60,7 +60,7 @@ export default function TermsUpdateBanner() {
   if (!visible) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-indigo-50 border border-indigo-200 text-indigo-900 px-4 py-3 rounded-xl mb-4 text-sm">
+    <div className="flex flex-wrap items-center gap-3 bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-200 panel-oscuro:border-indigo-500/30 text-indigo-900 panel-oscuro:text-indigo-200 px-4 py-3 rounded-xl mb-4 text-sm">
       <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
       <p className="flex-1 min-w-[200px]">
         Actualizamos nuestros{" "}
@@ -81,7 +81,7 @@ export default function TermsUpdateBanner() {
         type="button"
         onClick={dismiss}
         aria-label="Cerrar"
-        className="text-indigo-400 hover:text-indigo-600 transition-colors"
+        className="text-indigo-400 hover:text-indigo-600 panel-oscuro:hover:text-indigo-400 transition-colors"
       >
         <X className="h-4 w-4" />
       </button>

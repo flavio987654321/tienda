@@ -24,17 +24,17 @@ export default function AvisosDeSeccion({ avisos }: { avisos: Aviso[] }) {
           <div
             key={aviso.id}
             className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
-              rojo ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"
+              rojo ? "border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10" : "border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10"
             }`}
           >
             <AlertTriangle
               className={`h-5 w-5 shrink-0 mt-0.5 ${rojo ? "text-red-500" : "text-amber-500"}`}
             />
             <div className="min-w-0 flex-1">
-              <p className={`text-sm font-semibold ${rojo ? "text-red-800" : "text-amber-900"}`}>
+              <p className={`text-sm font-semibold ${rojo ? "text-red-800 panel-oscuro:text-red-300" : "text-amber-900 panel-oscuro:text-amber-200"}`}>
                 {aviso.titulo}
               </p>
-              <p className={`text-xs mt-0.5 ${rojo ? "text-red-700" : "text-amber-800"}`}>
+              <p className={`text-xs mt-0.5 ${rojo ? "text-red-700 panel-oscuro:text-red-300" : "text-amber-800 panel-oscuro:text-amber-300"}`}>
                 {aviso.detalle}
               </p>
             </div>

@@ -238,15 +238,15 @@ export default function TourGuide({
   const contenido = (
     <>
       <div className="flex items-start gap-3">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-50 shrink-0">
-          <Icono className="h-[18px] w-[18px] text-indigo-600" />
+        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 shrink-0">
+          <Icono className="h-[18px] w-[18px] text-indigo-600 panel-oscuro:text-indigo-400" />
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
-          <h3 id="tour-titulo" className="font-bold text-gray-900 text-[15px] leading-tight">
+          <h3 id="tour-titulo" className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-[15px] leading-tight">
             {texto.title}
           </h3>
           {total > 0 && (
-            <span className="text-[11px] font-medium text-gray-400">
+            <span className="text-[11px] font-medium text-gray-400 panel-oscuro:text-gray-500">
               Paso {paso + 1} de {total}
             </span>
           )}
@@ -254,13 +254,13 @@ export default function TourGuide({
         <button
           onClick={terminar}
           aria-label="Cerrar la guía"
-          className="-mt-1 -mr-1 flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+          className="-mt-1 -mr-1 flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 panel-oscuro:text-gray-600 hover:text-gray-600 panel-oscuro:hover:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors shrink-0"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <p className="text-[13px] text-gray-500 leading-relaxed mt-2.5">{texto.body}</p>
+      <p className="text-[13px] text-gray-500 panel-oscuro:text-gray-400 leading-relaxed mt-2.5">{texto.body}</p>
 
       {total > 1 && (
         <div className="flex items-center gap-1 mt-3.5" role="tablist" aria-label="Pasos de la guía">
@@ -272,7 +272,7 @@ export default function TourGuide({
               aria-label={`Paso ${i + 1}: ${guion[id].title}`}
               onClick={() => setPaso(i)}
               className={`h-1.5 rounded-full transition-all duration-200 ${
-                i === paso ? "bg-indigo-500 w-5" : i < paso ? "bg-indigo-200 w-1.5" : "bg-gray-200 w-1.5 hover:bg-gray-300"
+                i === paso ? "bg-indigo-500 w-5" : i < paso ? "bg-indigo-200 panel-oscuro:bg-indigo-500/25 w-1.5" : "bg-gray-200 panel-oscuro:bg-gray-700 w-1.5 hover:bg-gray-300 panel-oscuro:hover:bg-gray-600"
               }`}
             />
           ))}
@@ -283,7 +283,7 @@ export default function TourGuide({
         <button
           onClick={anterior}
           disabled={paso === 0}
-          className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-600 disabled:invisible transition-colors py-1.5 pr-2"
+          className="flex items-center gap-1 text-[13px] text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 disabled:invisible transition-colors py-1.5 pr-2"
         >
           <ChevronLeft className="h-4 w-4" />
           Anterior
@@ -292,7 +292,7 @@ export default function TourGuide({
           {!ultimo && (
             <button
               onClick={terminar}
-              className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors px-2 py-1.5"
+              className="text-[13px] text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400 transition-colors px-2 py-1.5"
             >
               Saltar
             </button>
@@ -310,7 +310,7 @@ export default function TourGuide({
   );
 
   const claseGlobo =
-    "bg-white rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 p-4 animate-fade-slide";
+    "bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 p-4 animate-fade-slide";
 
   /* Sin elemento que señalar, el tour se planta en el medio con su propio
      fondo oscuro. Nunca queda invisible. */
@@ -380,7 +380,7 @@ export default function TourGuide({
         {lado && (
           <div
             aria-hidden
-            className="absolute w-3 h-3 bg-white border-black/5 rotate-45"
+            className="absolute w-3 h-3 bg-white panel-oscuro:bg-gray-900 border-black/5 rotate-45"
             style={flecha[lado]}
           />
         )}
