@@ -394,9 +394,34 @@ function normalizarFicha(crudo: unknown, esBono: boolean): FichaDelEmbudo | null
 
   /* La bajada sí puede quedar vacía: una ficha sin descripción se completa a
      mano en dos minutos. Un título vacío, en cambio, es una tarjeta sin nombre. */
-  const bajada = limpiarTexto(f.bajada, LARGO_BAJADA_IA) ?? "";
+  const bajada = cortarEnOracion(limpiarTexto(f.bajada, Number.MAX_SAFE_INTEGER) ?? "", LARGO_BAJADA_IA);
 
   return { titulo, bajada, precio: esBono ? 0 : precioSano(f.precio) };
+}
+
+/**
+ * Un texto del modelo que entra en `tope`, cortado donde termina una oración.
+ *
+ * El modelo se pasa del largo que le pedimos aunque el esquema lo diga, y el
+ * corte seco dejaba la descripción terminada en "trucos para que te duren má".
+ * Se queda con las oraciones completas que entran; si ni la primera entra,
+ * corta en el último espacio y cierra con "…", que nunca a mitad de palabra.
+ */
+export function cortarEnOracion(texto: string, tope: number): string {
+  if (texto.length <= tope) return texto;
+  const corto = texto.slice(0, tope);
+  /* El fin de la última oración: un . ! ? (o …) seguido de espacio, o justo en
+     el borde del tope si el texto sigue con un espacio. */
+  let fin = -1;
+  for (let i = 0; i < corto.length; i++) {
+    if (/[.!?…]/.test(corto[i]) && (i + 1 === corto.length ? /\s/.test(texto[i + 1] ?? "") : /\s/.test(corto[i + 1]))) fin = i + 1;
+  }
+  /* Una sola oración cortita no sirve de descripción: menos de un tercio del
+     tope y es mejor la frase larga con puntos suspensivos. */
+  if (fin >= tope / 3) return corto.slice(0, fin).trim();
+  const espacio = corto.lastIndexOf(" ");
+  const base = (espacio >= tope / 3 ? corto.slice(0, espacio) : corto.slice(0, tope - 1)).replace(/[\s,;:—–-]+$/, "");
+  return `${base}…`;
 }
 
 /**

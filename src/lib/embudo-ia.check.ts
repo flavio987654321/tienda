@@ -22,7 +22,7 @@ import {
   normalizarEmbudo, precioSano, INSTRUCCIONES, ESQUEMA_DEL_EMBUDO,
   LARGO_TITULO_IA, LARGO_BAJADA_IA, PRECIO_MINIMO_IA, PRECIO_MAXIMO_IA,
   MINIMO_DEL_NICHO, LARGO_DEL_NICHO, LARGO_TITULO_PROPIO, MINIMO_BAJADA_IA,
-  pedidoDeUnaFicha,
+  pedidoDeUnaFicha, cortarEnOracion,
 } from "./embudo-ia";
 import { LARGO_PADRE_EN_PEDIDO, LARGO_TEMA } from "./ebook-ia";
 import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
@@ -102,6 +102,26 @@ check("EMB-L",
   (largo?.principal.titulo.length ?? 0) === LARGO_TITULO_IA &&
   (largo?.principal.bajada.length ?? 0) === LARGO_BAJADA_IA,
   "un modelo que se va de largo se corta acá, no en el CSS");
+
+/* El caso real del 02/10/26: la bajada del modelo pasaba los 400 y el corte
+   seco la dejaba en "trucos para que te duren má". Ahora corta en la última
+   oración completa. */
+const perfume = "Descubrí qué notas te representan, para elegir perfumes con criterio y no por moda. " +
+  "Incluye un test para descubrir tu perfil olfativo y consejos para elegir según tu personalidad, la ocasión y la estación del año. " +
+  "También vas a encontrar técnicas para probar perfumes sin confundirte y trucos para que te duren más horas en la piel, " +
+  "incluso en verano y con calor, sin gastar de más en el intento ni repetir errores.";
+const cortado = cortarEnOracion(perfume, LARGO_BAJADA_IA);
+check("EMB-L2",
+  perfume.length > LARGO_BAJADA_IA && cortado.length <= LARGO_BAJADA_IA && cortado.endsWith("estación del año."),
+  "la bajada larga se corta en la última oración completa, no a mitad de palabra");
+const unaSola = cortarEnOracion("palabra ".repeat(80).trim(), LARGO_BAJADA_IA);
+check("EMB-L3",
+  unaSola.length <= LARGO_BAJADA_IA && unaSola.endsWith("palabra…"),
+  "sin oración que entre, corta en un espacio y cierra con puntos suspensivos");
+check("EMB-L4",
+  cortarEnOracion("Corto y entero.", LARGO_BAJADA_IA) === "Corto y entero." &&
+  cortarEnOracion("Una. " + "x".repeat(500), LARGO_BAJADA_IA).endsWith("…"),
+  "lo que entra no se toca, y una primera oración diminuta no deja una descripción flaca");
 
 /* ⚠️ COHERENCIA CON LA RUTA DE CREAR. Si esta lima aceptara más de lo que acepta
    el producto, la IA propondría fichas que la creación rechaza: tres tarjetas
