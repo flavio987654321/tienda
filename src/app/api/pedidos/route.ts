@@ -16,7 +16,7 @@ export async function GET() {
      esto viene a cerrar (ver el tour en DashboardLayout). */
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, tipoTienda: true, tipoTiendaConfigurado: true },
+    select: { id: true, slug: true, tipoTienda: true, tipoTiendaConfigurado: true },
   });
   if (!store) return NextResponse.json({ pendingCount: 0, tipoTienda: "ROPA", tipoTiendaConfigurado: false });
 
@@ -28,5 +28,8 @@ export async function GET() {
     pendingCount,
     tipoTienda: store.tipoTienda || "ROPA",
     tipoTiendaConfigurado: store.tipoTiendaConfigurado,
+    /* Para el "Ver mi tienda" de la barra de arriba: es la dirección de SU
+       tienda, la misma que ya muestra el panel en otras pantallas. */
+    slug: store.slug,
   });
 }

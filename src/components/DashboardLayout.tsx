@@ -19,6 +19,7 @@ import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import TourGuide from "@/components/TourGuide";
 import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
+import BarraDeAtajosTienda from "@/components/dashboard/BarraDeAtajosTienda";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
 
@@ -139,6 +140,8 @@ export default function DashboardLayout({
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [newCartsCount, setNewCartsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
+  /* La dirección de la tienda, para "Ver mi tienda" en la barra de arriba. */
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
   // Arranca en false, no en null: mientras no sepamos, el tour NO se abre.
   // Al revés se abriría durante la espera del fetch, que es el escenario malo.
   const [rubroElegido, setRubroElegido] = useState(false);
@@ -263,6 +266,7 @@ export default function DashboardLayout({
       .then((data) => {
         setPendingOrderCount(data?.pendingCount ?? 0);
         if (data?.tipoTienda) setStoreType(data.tipoTienda);
+        if (typeof data?.slug === "string" && data.slug) setStoreSlug(data.slug);
         if (data?.tipoTiendaConfigurado) setRubroElegido(true);
       })
       .catch(() => {});
@@ -678,13 +682,16 @@ export default function DashboardLayout({
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
         {!hideHelp && !pathname.startsWith("/dashboard/configuracion") && (
-          // Favoritos, ayuda y campanita son botones del panel, no del informe:
-          // impresos quedan tres iconos sueltos arriba de todo.
-          <div data-print="ocultar" className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
-            <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
-            <HelpButton onStartTour={() => setShowTour(true)} />
-            {userId && <NotificationBell userId={userId} />}
-          </div>
+          // Los atajos son botones del panel, no del informe: la barra se
+          // esconde al imprimir (`data-print="ocultar"` adentro).
+          <BarraDeAtajosTienda
+            userId={userId}
+            userName={userName}
+            isVerified={isVerified}
+            storeSlug={storeSlug}
+            storeType={storeType}
+            onTour={() => setShowTour(true)}
+          />
         )}
         <div className={`flex-1 ${fullHeight ? "overflow-hidden min-h-0" : "p-4 pt-2"}`}>
           {!fullHeight && <TermsUpdateBanner />}
