@@ -12,7 +12,7 @@ import {
   CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO, contextoDelPadre,
   leerFotoDeTapa,
 } from "@/lib/ebook-ia";
-import { normalizarOpciones, unidadesElegidas } from "@/lib/ebook-opciones";
+import { normalizarOpciones, unidadesElegidas, leerOpciones } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import { estadoDelBorrador, CANDADO_MS } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
@@ -366,7 +366,9 @@ export async function POST(req: NextRequest) {
     indice: JSON.stringify({
       promesa: indice.promesa,
       capitulos: indice.capitulos,
-      opciones,
+      /* La firma de la tapa sobrevive al rehacer, por lo mismo que la foto:
+         es de la tapa, no del texto, y esta ventana no la pregunta. */
+      opciones: { ...opciones, firma: yaHay ? leerOpciones(yaHay.indice).firma : null },
       tapa: yaHay ? leerFotoDeTapa(yaHay.indice) : undefined,
     }),
     /* Se arranca de cero: el temario nuevo no tiene nada que ver con los

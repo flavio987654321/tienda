@@ -24,6 +24,7 @@ import {
   RECETAS_OPCIONES, RECETAS_DE_FABRICA, LAMINAS_OPCIONES, LAMINAS_DE_FABRICA,
   QUE_ES_CADA_FORMATO, COMO_SE_LLAMA,
   normalizarOpciones, leerOpciones, unidadesElegidas,
+  firmaDeLaTapa, LARGO_FIRMA, conEstilo,
 } from "./ebook-opciones";
 import {
   CAPITULOS_MAX, RECETAS_POR_LLAMADA, seccionesParaRecetas, recetasDeLaSeccion,
@@ -264,6 +265,50 @@ const check = (id: string, ok: boolean, desc: string) => {
     FORMATOS.every((f) => opciones.includes(`  ${f}: {`)) &&
     TEMAS.every((x) => opciones.includes(`  ${x}: {`)),
     "cada formato y cada tema tienen su nombre y su explicación para la pantalla");
+}
+
+/* ── La firma de la tapa (02/10/26) ─────────────────────────────────────
+   Una guía de perfumes salía firmada "QUE ANTOJO RECETAS": la tapa llevaba
+   siempre el nombre de la tienda. Ahora se elige por ebook. */
+{
+  check("FIR-A", OPCIONES_DE_FABRICA.firma === null && normalizarOpciones({}).firma === null,
+    "sin elegir nada, firma el nombre de la tienda (null), como siempre");
+  check("FIR-B", normalizarOpciones({ firma: "" }).firma === "" && firmaDeLaTapa({ firma: "" }, "Mi tienda") === "",
+    "vacío es SIN firma, que no es lo mismo que la de la tienda");
+  check("FIR-C",
+    firmaDeLaTapa({ firma: null }, "Que antojo recetas") === "Que antojo recetas" &&
+    firmaDeLaTapa({ firma: "Tu Perfume Ideal" }, "Que antojo recetas") === "Tu Perfume Ideal",
+    "con firma elegida va ésa; sin elegir, la de la tienda");
+  const sucia = normalizarOpciones({ firma: "  Tu\nPerfume\u0000  Ideal " + "x".repeat(200) }).firma ?? "";
+  check("FIR-D", !/[\u0000-\u001F]/.test(sucia) && sucia.length <= LARGO_FIRMA && sucia.startsWith("Tu Perfume Ideal"),
+    "la firma es un renglón: sin saltos ni caracteres de control, y con tope");
+  check("FIR-E", normalizarOpciones({ firma: 5 }).firma === null,
+    "una firma que no es texto cae a la de la tienda, no corta nada");
+  const guardado = JSON.stringify({ promesa: "p", capitulos: [], opciones: { ...OPCIONES_DE_FABRICA, firma: "Tu Perfume Ideal" } });
+  check("FIR-F", leerOpciones(conEstilo(guardado, "revista")).firma === "Tu Perfume Ideal",
+    "cambiar el estilo no le borra la firma");
+
+  const texto = readFileSync("src/app/api/digitales/ia/ebook/texto/route.ts", "utf8");
+  check("FIR-G", texto.includes("\"firma\" in body") && texto.includes("limpiarFirma(body.firma)"),
+    "el editor guarda la firma, y sólo si la manda");
+  const armar = readFileSync("src/app/api/digitales/ia/ebook/armar/route.ts", "utf8");
+  check("FIR-H", armar.includes("const autor = firmaDeLaTapa(opciones, "),
+    "el PDF y la portada firman con la elegida");
+  const crear = readFileSync("src/app/api/digitales/ia/ebook/route.ts", "utf8");
+  check("FIR-I", crear.includes("firma: yaHay ? leerOpciones(yaHay.indice).firma : null"),
+    "rehacer el ebook no le borra la firma");
+  const pagina = readFileSync("src/app/digitales/productos/[id]/ebook/page.tsx", "utf8");
+  const editor = readFileSync("src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");
+  check("FIR-J", pagina.includes("firma={opciones.firma}") && /Firma de la tapa/.test(editor) &&
+    editor.includes("firmaDeLaTapa({ firma }, nombreDeLaTienda)") && editor.includes("tapa, firma })"),
+    "el editor muestra la firma, la previa la usa y el guardado la manda");
+}
+
+/* El bloque "Contexto para la IA" se sacó: se guardaba y nadie lo leía. */
+{
+  const tab = readFileSync("src/app/digitales/configuracion/TabGeneral.tsx", "utf8");
+  check("FIR-K", !/titulo="Contexto para la IA"/.test(tab) && !/p.iaProd/.test(tab),
+    "Configuración ya no muestra un contexto de IA que ninguna IA usaba");
 }
 
 console.log(fallos === 0

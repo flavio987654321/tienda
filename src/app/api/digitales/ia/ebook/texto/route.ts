@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import {
   leerCapitulos, leerIndice, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas, leerGruposDeLaminas,
 } from "@/lib/ebook-ia";
-import { leerOpciones } from "@/lib/ebook-opciones";
+import { leerOpciones, limpiarFirma } from "@/lib/ebook-opciones";
 import {
   revisarTexto, sePuedeEditarElTexto, pegarLasFotos, pegarLaTapa,
 } from "@/lib/ebook-texto";
@@ -147,7 +147,13 @@ export async function POST(req: NextRequest) {
      están en `revisarRecetas` y las de una infografía en `revisarLaminas`, y no
      son las mismas: ahí lo que desaparece en silencio no es un capítulo, es una
      receta o una lámina entera. */
-  const opciones = leerOpciones(fresco.indice);
+  /* De las opciones, la firma de la tapa es lo único que se cambia desde acá:
+     viene sólo si la pantalla la manda, y si no viene queda la guardada. El
+     formato y lo demás salen siempre de lo guardado (ver `/indice`). */
+  const guardadas = leerOpciones(fresco.indice);
+  const opciones = body && "firma" in body
+    ? { ...guardadas, firma: body.firma === null ? null : limpiarFirma(body.firma) }
+    : guardadas;
   const esRecetario = opciones.formato === "recetario";
   const esInfografia = opciones.formato === "infografia";
 

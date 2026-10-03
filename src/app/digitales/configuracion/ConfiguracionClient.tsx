@@ -6,7 +6,6 @@ import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock } from 
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   normalizarSlug, validarSlug, validarNombre, validarCheckoutName, validarEmail,
-  validarContextoIA,
 } from "@/lib/configuracion-digital";
 import { validarGaId, validarPixelId, validarClarityId } from "@/lib/tracking-ids";
 import { puedeVer } from "@/lib/estadisticas-digitales";
@@ -29,8 +28,6 @@ type Props = {
   pixelId: string;
   gaId: string;
   clarityId: string;
-  iaProducto: string;
-  iaDescripcion: string;
   cobroConectado: boolean;
   conectadoEl: string | null;
   publicados: number;
@@ -115,8 +112,6 @@ export default function ConfiguracionClient(p: Props) {
   const [img, setImg] = useState<string | null>(p.logo);
   const [mail, setMail] = useState(p.supportEmail);
   const [mailPorVenta, setMailPorVenta] = useState(p.avisoMailVentas);
-  const [iaProd, setIaProd] = useState(p.iaProducto);
-  const [iaDesc, setIaDesc] = useState(p.iaDescripcion);
   const [pixel, setPixel] = useState(p.pixelId);
   const [ga, setGa] = useState(p.gaId);
   const [clarity, setClarity] = useState(p.clarityId);
@@ -170,7 +165,6 @@ export default function ConfiguracionClient(p: Props) {
   const problemaCheckout = validarCheckoutName(checkout);
   const problemaDir = dir.trim() === "" ? null : validarSlug(dir);
   const problemaMail = validarEmail(mail);
-  const problemaIA = validarContextoIA({ producto: iaProd, descripcion: iaDesc });
   const problemaPixel = validarPixelId(pixel);
   const problemaGa = validarGaId(ga);
   const problemaClarity = validarClarityId(clarity);
@@ -312,8 +306,6 @@ export default function ConfiguracionClient(p: Props) {
           mail={mail} setMail={setMail}
           mailPorVenta={mailPorVenta} setMailPorVenta={setMailPorVenta}
           img={img} setImg={setImg}
-          iaProd={iaProd} setIaProd={setIaProd}
-          iaDesc={iaDesc} setIaDesc={setIaDesc}
           tema={tema} setTema={setTema}
           guardando={guardando}
           listo={listo}
@@ -330,7 +322,6 @@ export default function ConfiguracionClient(p: Props) {
           problemaCheckout={problemaCheckout}
           problemaDir={problemaDir}
           problemaMail={problemaMail}
-          problemaIA={problemaIA}
         />
       )}
 

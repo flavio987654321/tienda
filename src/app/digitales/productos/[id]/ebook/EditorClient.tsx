@@ -15,6 +15,7 @@ import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
 import ElegirFoto from "../../ElegirFoto";
 import { moldeDe } from "@/lib/ebook-estilos";
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
+import { firmaDeLaTapa, LARGO_FIRMA } from "@/lib/ebook-opciones";
 
 /**
  * El editor del texto: a la izquierda lo que se escribe, a la derecha cómo queda.
@@ -56,7 +57,8 @@ export default function EditorDeEbook({
   producto,
   titulo,
   promesa,
-  autor,
+  autor: nombreDeLaTienda,
+  firma: firmaInicial,
   capitulos: guardadosIniciales,
   recetas: recetasIniciales,
   laminas: laminasIniciales,
@@ -72,7 +74,13 @@ export default function EditorDeEbook({
   producto: string;
   titulo: string;
   promesa: string;
+  /** El nombre de la tienda: lo que firma la tapa si no eligió otra cosa. */
   autor: string;
+  /**
+   * La firma elegida para ESTE ebook: `null` es el nombre de la tienda y `""`
+   * es sin firma. Ver `OpcionesDelEbook.firma`.
+   */
+  firma: string | null;
   capitulos: CapituloEscrito[];
   /**
    * Las recetas, agrupadas por sección, cuando esto es un recetario.
@@ -127,6 +135,12 @@ export default function EditorDeEbook({
   const [fotosGuardadas, setFotosGuardadas] = useState(fotosIniciales);
   const [tapaGuardada, setTapaGuardada] = useState(tapaInicial);
   const [tapaAbierta, setTapaAbierta] = useState(false);
+
+  /* La firma de la tapa, con su línea de "lo guardado" igual que la foto. */
+  const [firma, setFirma] = useState<string | null>(firmaInicial);
+  const [firmaGuardada, setFirmaGuardada] = useState<string | null>(firmaInicial);
+  const autor = firmaDeLaTapa({ firma }, nombreDeLaTienda);
+  const tapaCambiada = JSON.stringify(tapa) !== JSON.stringify(tapaGuardada) || firma !== firmaGuardada;
 
   /* ── El recetario ────────────────────────────────────────────────────────
      Mismo molde: lo guardado y lo que se está corrigiendo, separados. Lo que
@@ -243,6 +257,7 @@ export default function EditorDeEbook({
       marcarGuardado();
       setFotosGuardadas(fotos);
       setTapaGuardada(tapa);
+      setFirmaGuardada(firma);
       setListo(`Se habría guardado: ${resumen}. Y después se rehacía el PDF.`);
       return;
     }
@@ -253,7 +268,7 @@ export default function EditorDeEbook({
     setListo(null);
 
     try {
-      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { ...cuerpo, tapa });
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { ...cuerpo, tapa, firma });
       if (!vivo.current) return;
 
       if (!ok) {
@@ -264,6 +279,7 @@ export default function EditorDeEbook({
       marcarGuardado();
       setFotosGuardadas(fotos);
       setTapaGuardada(tapa);
+      setFirmaGuardada(firma);
 
       if (datos.hayQueArmar === true) {
         const armado = await pedir("/api/digitales/ia/ebook/armar", {});
@@ -296,7 +312,7 @@ export default function EditorDeEbook({
       enVuelo.current = false;
       if (vivo.current) setGuardando(false);
     }
-  }, [pedir, router, deMentira, fotos, tapa]);
+  }, [pedir, router, deMentira, fotos, tapa, firma]);
 
   const guardarRecetario = useCallback(async (corregidas: Receta[][]) => {
     const conFotos = conSusFotos(corregidas);
@@ -328,6 +344,7 @@ export default function EditorDeEbook({
       setCapitulos(corregidos);
       setFotosGuardadas(fotos);
       setTapaGuardada(tapa);
+      setFirmaGuardada(firma);
       setListo(
         `Se habría guardado: ${corregidos.length} capítulos, ${pedazos} pedazos. Y después se rehacía el PDF.`,
       );
@@ -340,7 +357,7 @@ export default function EditorDeEbook({
     setListo(null);
 
     try {
-      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { capitulos: corregidos, fotos, tapa });
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { capitulos: corregidos, fotos, tapa, firma });
       if (!vivo.current) return;
 
       if (!ok) {
@@ -358,6 +375,7 @@ export default function EditorDeEbook({
       setCapitulos(corregidos);
       setFotosGuardadas(fotos);
       setTapaGuardada(tapa);
+      setFirmaGuardada(firma);
 
       if (datos.hayQueArmar === true) {
         const armado = await pedir("/api/digitales/ia/ebook/armar", {});
@@ -399,7 +417,7 @@ export default function EditorDeEbook({
       enVuelo.current = false;
       if (vivo.current) setGuardando(false);
     }
-  }, [pedir, router, deMentira, fotos, tapa]);
+  }, [pedir, router, deMentira, fotos, tapa, firma]);
 
   return (
     <div>
@@ -518,6 +536,46 @@ export default function EditorDeEbook({
                 </span>
               </button>
             )}
+
+            {/* ── La firma ─────────────────────────────────────────────────
+                Al pie de la tapa va el nombre de la tienda. Con una sola tienda
+                y temas distintos —recetas y perfumes— una guía de perfumes
+                salía firmada por el recetario. Acá se cambia por ebook. */}
+            <div className="mt-4 border-t border-gray-100 panel-oscuro:border-gray-800 pt-4">
+              <label htmlFor="firma-de-la-tapa" className="block text-[12.5px] font-bold text-gray-800 panel-oscuro:text-gray-200">
+                Firma de la tapa
+              </label>
+              <input
+                id="firma-de-la-tapa"
+                type="text"
+                value={firma ?? nombreDeLaTienda}
+                maxLength={LARGO_FIRMA}
+                disabled={guardando}
+                onChange={(e) => setFirma(e.target.value)}
+                placeholder="Sin firma"
+                className="mt-1.5 w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-800 px-3 py-2 text-sm text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-50"
+              />
+              <p className="mt-1 text-[11.5px] text-gray-500 panel-oscuro:text-gray-400">
+                {firma === null
+                  ? "Va el nombre de tu tienda. Cambialo si este ebook es de otro tema."
+                  : firma.trim() === ""
+                    ? "Vacío: la tapa sale sin firma."
+                    : "Sale esto al pie de la tapa, sólo en este ebook."}
+                {firma !== null && nombreDeLaTienda && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() => setFirma(null)}
+                      disabled={guardando}
+                      className="font-bold text-orange-700 panel-oscuro:text-orange-300 hover:underline disabled:opacity-50"
+                    >
+                      Volver al nombre de la tienda
+                    </button>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
@@ -537,7 +595,7 @@ export default function EditorDeEbook({
                 onFotos={setFotos}
                 otrosCambios={
                   JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
-                  || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
+                  || tapaCambiada
                 }
                 seleccion={seleccion}
                 onSeleccion={setSeleccion}
@@ -556,7 +614,7 @@ export default function EditorDeEbook({
                 onFotos={setFotos}
                 otrosCambios={
                   JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
-                  || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
+                  || tapaCambiada
                 }
                 seleccion={seleccion}
                 onSeleccion={setSeleccion}
@@ -577,7 +635,7 @@ export default function EditorDeEbook({
                  apagado: aquel mide si cambió el texto, y una foto no es texto. */
               otrosCambios={
                 JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
-                || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
+                || tapaCambiada
               }
               seleccion={seleccion}
               onSeleccion={setSeleccion}

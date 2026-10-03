@@ -1523,9 +1523,10 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
        de cada sección, los subtítulos, cada ítem de la lista de beneficios, cada
        pregunta frecuente—: son decenas de campos con un solo elemento. */
     ["src/app/digitales/productos/[id]/pagina/EditorClient.tsx", 1],
-    /* Nombre de la marca, nombre en el checkout, dirección de la tienda y el
-       producto principal que lee la IA. */
-    ["src/app/digitales/configuracion/TabGeneral.tsx", 4],
+    /* Nombre de la marca, nombre en el checkout y dirección de la tienda. El
+       cuarto era el producto principal de "Contexto para la IA", que se sacó
+       el 02/10/26 porque ninguna IA lo leía. */
+    ["src/app/digitales/configuracion/TabGeneral.tsx", 3],
   ] as const) {
     const src = readFileSync(archivo, "utf8");
     chequear(`${archivo.split("/").pop()} usa CampoAuto en su campo largo`,

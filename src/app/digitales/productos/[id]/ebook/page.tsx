@@ -85,6 +85,7 @@ export default async function EditorDeEbookPage({ params }: Props) {
           titulo={PRODUCTO_DE_EJEMPLO.ebook?.titulo ?? ""}
           promesa="Cómo pasar de tener algo para enseñar a la primera venta cobrada, sin público y sin publicidad."
           autor="Tu tienda"
+          firma={null}
           capitulos={CAPITULOS_DE_EJEMPLO}
           fotos={FOTOS_DE_EJEMPLO.map((frase) => ({ frase, elegida: null }))}
           tapa={{ frase: "libro abierto sobre un escritorio de madera", elegida: null }}
@@ -159,6 +160,8 @@ export default async function EditorDeEbookPage({ params }: Props) {
           promesa={leerPromesa(fila.ebookIA.indice)}
           /* Quién lo vende: el ebook es de esa persona, no nuestro. */
           autor={fila.store?.name ?? ""}
+          /* La de este ebook, si eligió otra. Ver `OpcionesDelEbook.firma`. */
+          firma={opciones.firma}
           capitulos={capitulos}
           /* Su presencia es lo que decide qué editor se dibuja. */
           recetas={esRecetario ? grupos : undefined}

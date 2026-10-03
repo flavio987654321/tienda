@@ -190,7 +190,37 @@ export type OpcionesDelEbook = {
    * igual en los otros formatos, por lo mismo que `recetas`.
    */
   laminas: number;
+  /**
+   * Lo que va firmado al pie de la tapa.
+   *
+   * `null` es **el nombre de la tienda**, que es lo que iba siempre y sigue
+   * siendo lo de fábrica. `""` es **sin firma**. Cualquier otro texto, ése.
+   *
+   * ⚠️ Existe porque una cuenta puede vender temas que no tienen nada que ver
+   * entre sí, y la tapa de una guía de perfumes salía firmada "QUE ANTOJO
+   * RECETAS" (02/10/26): parecía que se habían mezclado dos productos. Es de
+   * las que se cambian después, igual que el estilo: no toca el texto.
+   */
+  firma: string | null;
 };
+
+/** Lo más largo que puede ser la firma. Va en un renglón al pie de la tapa. */
+export const LARGO_FIRMA = 60;
+
+/** Quién firma la tapa: la elegida, o el nombre de la tienda si no eligió. */
+export function firmaDeLaTapa(opciones: Pick<OpcionesDelEbook, "firma">, nombreDeLaTienda: string): string {
+  return opciones.firma ?? nombreDeLaTienda;
+}
+
+/**
+ * Lo que llegó como firma, limpio. `null` si no vino un texto — o sea, la de
+ * la tienda —. Los saltos de línea y los caracteres de control se vuelven un
+ * espacio: es un renglón.
+ */
+export function limpiarFirma(crudo: unknown): string | null {
+  if (typeof crudo !== "string") return null;
+  return crudo.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, LARGO_FIRMA).trim();
+}
 
 export const OPCIONES_DE_FABRICA: OpcionesDelEbook = {
   formato: "texto",
@@ -202,6 +232,7 @@ export const OPCIONES_DE_FABRICA: OpcionesDelEbook = {
   paleta: "",
   recetas: RECETAS_DE_FABRICA,
   laminas: LAMINAS_DE_FABRICA,
+  firma: null,
 };
 
 /**
@@ -255,7 +286,7 @@ export function normalizarOpciones(crudo: unknown): OpcionesDelEbook {
     ? cuantasLaminas
     : LAMINAS_DE_FABRICA;
 
-  return { formato, estilo, tema, paleta, recetas, laminas };
+  return { formato, estilo, tema, paleta, recetas, laminas, firma: limpiarFirma(c.firma) };
 }
 
 /**

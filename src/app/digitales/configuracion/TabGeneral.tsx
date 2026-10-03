@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Store as Tienda, Sparkles, Moon, Bell, AlertTriangle, Image as ImageIcon,
+  Store as Tienda, Moon, Bell, AlertTriangle, Image as ImageIcon,
   Trash2, Loader2,
 } from "lucide-react";
 import {
@@ -11,7 +11,7 @@ import AvisosDeVenta from "./AvisosDeVenta";
 import ZonaDePeligro from "./ZonaDePeligro";
 import { AgregarContrasena } from "@/components/AgregarContrasena";
 import {
-  LARGO_NOMBRE, LARGO_CHECKOUT, LARGO_EMAIL, LARGO_IA_PRODUCTO, LARGO_IA_DESCRIPCION,
+  LARGO_NOMBRE, LARGO_CHECKOUT, LARGO_EMAIL,
   SLUG_MAXIMO,
 } from "@/lib/configuracion-digital";
 import { TEMAS, COPY_TEMA, type Tema } from "@/lib/tema-digitales";
@@ -29,8 +29,6 @@ type Props = {
   mailPorVenta: boolean; setMailPorVenta: (v: boolean) => void;
   img: string | null; setImg: (v: string | null) => void;
   // Contexto de la IA
-  iaProd: string; setIaProd: (v: string) => void;
-  iaDesc: string; setIaDesc: (v: string) => void;
   // Apariencia
   tema: Tema; setTema: (t: Tema) => void;
   // Estado compartido
@@ -52,7 +50,6 @@ type Props = {
   problemaCheckout: string | null;
   problemaDir: string | null;
   problemaMail: string | null;
-  problemaIA: string | null;
 };
 
 /**
@@ -289,70 +286,11 @@ export default function TabGeneral(p: Props) {
         </div>
       </Seccion>
 
-      {/* ── 2. Contexto para la IA ─────────────────────────────────────────── */}
-      <Seccion
-        Icono={Sparkles}
-        titulo="Contexto para la IA"
-        bajada="Qué vendés. Es lo que la IA usa como referencia para todo lo que te genere."
-      >
-        {/* La caja que explica para qué sirve. Va arriba de los campos porque
-            sin ella son dos cuadritos de texto más, y en realidad son la pieza
-            de la que dependen el ebook, los bonos, los upsells y los textos de
-            venta. */}
-        <div className="rounded-2xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 px-4 py-3.5 mb-4">
-          <p className="text-xs text-gray-600 panel-oscuro:text-gray-400 leading-relaxed">
-            Estos dos textos son <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">tu nicho</span>: la IA
-            los usa como referencia de todo lo que genera — el ebook, los bonos, los upsells y los
-            textos de venta. Si cambiás de tema, actualizalos acá; si no, lo próximo que generes va
-            a salir con el tema anterior.
-          </p>
-        </div>
-
-        <div className="mb-4">
-          <Etiqueta htmlFor="iaprod">Producto principal</Etiqueta>
-          {/* Éste es el que más lo necesitaba de la pantalla: 120 caracteres, y
-              el ejemplo de abajo ya no entra en un renglón. */}
-          <CampoAuto
-            id="iaprod"
-            value={p.iaProd}
-            maxLength={LARGO_IA_PRODUCTO}
-            onChange={p.setIaProd}
-            placeholder="Mecánica del automotor — Guía práctica para entender y cuidar tu vehículo"
-            estilo={CLASE_INPUT}
-          />
-          <Ayuda>Qué vendés hoy. La IA entiende cualquier palabra ambigua dentro de este tema.</Ayuda>
-        </div>
-
-        <div className="mb-5">
-          <Etiqueta htmlFor="iadesc">Descripción corta</Etiqueta>
-          <textarea
-            id="iadesc"
-            value={p.iaDesc}
-            maxLength={LARGO_IA_DESCRIPCION}
-            rows={4}
-            onChange={(e) => p.setIaDesc(e.target.value)}
-            placeholder="Una guía clara y práctica para principiantes: motor, frenos, combustible y eléctrico."
-            className={`${CLASE_INPUT} resize-y`}
-          />
-          <Ayuda>
-            Una o dos frases. {p.iaDesc.length.toLocaleString("es-AR")} /{" "}
-            {LARGO_IA_DESCRIPCION.toLocaleString("es-AR")}
-          </Ayuda>
-          {p.problemaIA && <p className="text-sm text-red-600 font-medium mt-2">{p.problemaIA}</p>}
-        </div>
-
-        <div className="flex justify-end">
-          <BotonGuardar
-            id="ia"
-            guardando={p.guardando}
-            listo={p.listo}
-            disabled={p.problemaIA !== null}
-            onClick={() =>
-              p.guardar("ia", { iaProducto: p.iaProd, iaDescripcion: p.iaDesc })
-            }
-          />
-        </div>
-      </Seccion>
+      {/* "Contexto para la IA" estaba acá y se sacó el 02/10/26: se guardaba y
+          ninguna IA lo leía — cada producto le cuenta su tema por su cuenta —
+          y prometía "si no lo cambiás, lo próximo sale con el tema anterior",
+          que no era cierto. Las columnas `iaProducto`/`iaDescripcion` quedan
+          en la base, quietas. */}
 
       {/* ── 3. Apariencia ──────────────────────────────────────────────────── */}
       {/* Zona horaria salía acá y se sacó: vendemos en Argentina, así que era un

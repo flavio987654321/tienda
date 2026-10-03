@@ -57,7 +57,7 @@ export default async function ConfiguracionPage({
       where: { ownerId: user.id },
       select: {
         id: true, name: true, slug: true, logo: true, mpConnectedAt: true,
-        checkoutName: true, supportEmail: true, iaProducto: true, iaDescripcion: true,
+        checkoutName: true, supportEmail: true,
         storeConfig: true, avisoMailVentas: true,
         /* Las politicas que publica quien vende. Ver TabLegales. */
         policyReturns: true, policyReturnsActive: true,
@@ -150,8 +150,6 @@ export default async function ConfiguracionPage({
         pixelId={medicion.pixelId}
         gaId={medicion.gaId}
         clarityId={medicion.clarityId}
-        iaProducto={store?.iaProducto ?? ""}
-        iaDescripcion={store?.iaDescripcion ?? ""}
         publicados={publicados}
         avisoMp={avisoMp}
         cobroConectado={Boolean(store?.mpConnectedAt)}

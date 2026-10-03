@@ -13,7 +13,7 @@ import { armarPDF } from "@/lib/ebook-pdf";
 import { dibujarLaTapa } from "@/lib/tapa-imagen";
 import { configDeImagenes, guardarImagen, guardarImagenEnDisco } from "@/lib/deposito-imagenes";
 import { buscarFoto, buscarFotos, bajarElegida, comoFue } from "@/lib/fotos-pexels";
-import { leerOpciones, conEstilo } from "@/lib/ebook-opciones";
+import { leerOpciones, conEstilo, firmaDeLaTapa } from "@/lib/ebook-opciones";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
 
@@ -303,7 +303,8 @@ export async function POST(req: NextRequest) {
      la portada. Repetida, la tapa del PDF y la imagen que se muestra en la
      página de venta se separarían con el primer cambio. */
   const promesaDeLaTapa = leerPromesa(ebook.indice) || indice[0]?.resumen || "";
-  const autor = producto.store?.name ?? "";
+  /* La firma que eligió para este ebook, o el nombre de la tienda. */
+  const autor = firmaDeLaTapa(opciones, producto.store?.name ?? "");
 
   let pdf: Buffer;
   try {
