@@ -5,6 +5,7 @@ import { CatalogoAurora, type EscenaCatalogo } from "@/components/store/template
 import { ColeccionEnFoco } from "@/components/store/templates/aurora/ColeccionEnFoco";
 import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFoco";
 import { FichaAurora } from "@/components/store/templates/aurora/FichaAurora";
+import { ResenasAurora } from "@/components/store/templates/aurora/ResenasAurora";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -128,7 +129,7 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
    social: se sacaron de la portada por decision de disenio, para que la home sea
    mas corta. Los productos en oferta y los mas vistos siguen estando en el
    catalogo, que tiene sus filtros. */
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-producto-foco", "au-productos"];
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-producto-foco", "au-productos", "au-resenas"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -1277,6 +1278,13 @@ export default function Aurora() {
         </div>
         </div>
       </section>
+      </SectionBlock>
+      {/* ── LO QUE DICEN (ver `aurora/ResenasAurora`) ── */}
+      <SectionBlock id="au-resenas" label="Reseñas de la tienda" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}
+        avisoAlOcultar="Ocultarlo también saca el botón para dejar reseñas de la tienda: es el único lugar desde donde se dejan.">
+        <ResenasAurora slug={storeConfig?.slug} isPreview={isPreview} enEditor={enEditor} isOwner={isOwner}
+          products={products} onAbrirProducto={openModal} escena={escenaAurora} isMobile={isMobile}
+          capa={isPreview ? CAPAS.previaModal : CAPAS.modalTemplate} />
       </SectionBlock>
       {/* Cierra el `flex column` que abre despues del hero y que le da el orden a
           los bloques. Antes cerraba despues de Contacto; ahora Contacto y Nosotros
