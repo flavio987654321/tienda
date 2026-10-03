@@ -30,18 +30,18 @@ const fecha = (iso: string) =>
 const ETIQUETA_ESTADO: Record<Suscriptor["estado"], { texto: string; clase: string; ayuda: string }> = {
   confirmado: {
     texto: "Confirmado",
-    clase: "bg-emerald-50 text-emerald-600",
+    clase: "bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-600 panel-oscuro:text-emerald-400",
     ayuda: "Recibe las campañas.",
   },
   pendiente: {
     // Este es el estado que explica por qué "tengo 20 y le llegó a 12".
     texto: "Sin confirmar",
-    clase: "bg-amber-50 text-amber-600",
+    clase: "bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-600 panel-oscuro:text-amber-400",
     ayuda: "Le mandamos el mail de confirmación y todavía no lo tocó. No recibe campañas.",
   },
   baja: {
     texto: "Se dio de baja",
-    clase: "bg-gray-100 text-gray-400",
+    clase: "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400 panel-oscuro:text-gray-500",
     ayuda: "Pidió no recibir más. No recibe campañas.",
   },
 };
@@ -113,24 +113,24 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+        className="w-full max-w-md rounded-2xl bg-white panel-oscuro:bg-gray-900 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 panel-oscuro:border-gray-800">
           <div>
-            <p className="text-sm font-bold text-gray-900">Tu audiencia</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">A quiénes les llega una campaña</p>
+            <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Tu audiencia</p>
+            <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">A quiénes les llega una campaña</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 transition-colors" aria-label="Cerrar">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 panel-oscuro:text-gray-500 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors" aria-label="Cerrar">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex gap-1 px-5 pt-3 pb-2 border-b border-gray-100">
+        <div className="flex gap-1 px-5 pt-3 pb-2 border-b border-gray-100 panel-oscuro:border-gray-800">
           <button
             onClick={() => { setPestana("mail"); setBusqueda(""); }}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              pestana === "mail" ? "bg-indigo-50 text-indigo-600" : "text-gray-400 hover:bg-gray-50"
+              pestana === "mail" ? "bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" : "text-gray-400 panel-oscuro:text-gray-500 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
             }`}
           >
             <Mail className="h-3.5 w-3.5" /> Por mail ({confirmados})
@@ -138,7 +138,7 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={() => { setPestana("push"); setBusqueda(""); }}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              pestana === "push" ? "bg-indigo-50 text-indigo-600" : "text-gray-400 hover:bg-gray-50"
+              pestana === "push" ? "bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400" : "text-gray-400 panel-oscuro:text-gray-500 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
             }`}
           >
             <Bell className="h-3.5 w-3.5" /> Por push ({seguidores.length})
@@ -152,19 +152,19 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
             nueva ni endpoint. Por eso NO encuentra a los que quedaron fuera del
             tope de 500; el aviso del pie lo aclara. */}
         {!cargando && !error && lista.length > UMBRAL_BUSCADOR && (
-          <div className="px-5 py-2.5 border-b border-gray-100">
+          <div className="px-5 py-2.5 border-b border-gray-100 panel-oscuro:border-gray-800">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300 pointer-events-none" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300 panel-oscuro:text-gray-600 pointer-events-none" />
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder={pestana === "mail" ? "Buscar por correo…" : "Buscar por nombre…"}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-8 text-xs text-gray-700 outline-none focus:border-indigo-300 focus:bg-white transition-colors"
+                className="w-full rounded-lg border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50 py-1.5 pl-8 pr-8 text-xs text-gray-700 panel-oscuro:text-gray-300 outline-none focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40 focus:bg-white panel-oscuro:focus:bg-gray-900 transition-colors"
               />
               {busqueda && (
                 <button
                   onClick={() => setBusqueda("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-300 hover:text-gray-500 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-300 panel-oscuro:text-gray-600 hover:text-gray-500 panel-oscuro:hover:text-gray-400 transition-colors"
                   aria-label="Limpiar búsqueda"
                 >
                   <X className="h-3 w-3" />
@@ -180,9 +180,9 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
               suscribió todavía", diría una mentira. */}
           {!cargando && !error && q && visibles === 0 && lista.length > 0 && (
             <div className="px-6 py-10 text-center">
-              <Search className="h-6 w-6 text-gray-200 mx-auto mb-3" />
-              <p className="text-xs font-medium text-gray-600">Sin resultados para “{busqueda}”</p>
-              <p className="text-[11px] text-gray-400 mt-1">
+              <Search className="h-6 w-6 text-gray-200 panel-oscuro:text-gray-700 mx-auto mb-3" />
+              <p className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400">Sin resultados para “{busqueda}”</p>
+              <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1">
                 {ocultos > 0
                   ? `Ojo: la búsqueda mira los ${lista.length} que están cargados, no los ${ocultos} más antiguos.`
                   : "Probá con una parte más corta."}
@@ -191,7 +191,7 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
           )}
           {cargando && (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+              <Loader2 className="h-5 w-5 animate-spin text-gray-300 panel-oscuro:text-gray-600" />
             </div>
           )}
 
@@ -200,29 +200,29 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
           {!cargando && !error && pestana === "mail" && (
             suscriptores.length === 0 ? (
               <div className="px-6 py-10 text-center">
-                <Mail className="h-7 w-7 text-gray-200 mx-auto mb-3" />
-                <p className="text-xs font-medium text-gray-600">Nadie se suscribió todavía</p>
-                <p className="text-[11px] text-gray-400 mt-1 max-w-[16rem] mx-auto leading-relaxed">
+                <Mail className="h-7 w-7 text-gray-200 panel-oscuro:text-gray-700 mx-auto mb-3" />
+                <p className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400">Nadie se suscribió todavía</p>
+                <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1 max-w-[16rem] mx-auto leading-relaxed">
                   El formulario está en el bloque de novedades de tu tienda. Cuando alguien deje su
                   correo y lo confirme, aparece acá.
                 </p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-50">
+              <ul className="divide-y divide-gray-50 panel-oscuro:divide-gray-800">
                 {suscriptoresVisibles.map((s) => {
                   const et = ETIQUETA_ESTADO[s.estado];
                   return (
                     <li key={s.id} className="flex items-center gap-3 px-5 py-3 group">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 shrink-0">
-                        <Mail className="h-3.5 w-3.5 text-gray-400" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 panel-oscuro:bg-gray-800/50 shrink-0">
+                        <Mail className="h-3.5 w-3.5 text-gray-400 panel-oscuro:text-gray-500" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-gray-800 truncate">{s.email}</p>
+                        <p className="text-xs font-medium text-gray-800 panel-oscuro:text-gray-200 truncate">{s.email}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${et.clase}`} title={et.ayuda}>
                             {et.texto}
                           </span>
-                          <span className="text-[10px] text-gray-400">{fecha(s.desde)}</span>
+                          <span className="text-[10px] text-gray-400 panel-oscuro:text-gray-500">{fecha(s.desde)}</span>
                         </div>
                       </div>
                       {s.estado !== "baja" && (
@@ -233,7 +233,7 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
                              hay hover, así que colgado de `group-hover` este
                              botón no aparecía nunca y no había ninguna otra
                              forma de sacar a alguien de la lista. */
-                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+                          className="p-1.5 rounded-lg text-gray-300 panel-oscuro:text-gray-600 hover:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                           title="Sacar de la lista"
                         >
                           {borrando === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -249,25 +249,25 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
           {!cargando && !error && pestana === "push" && (
             seguidores.length === 0 ? (
               <div className="px-6 py-10 text-center">
-                <Bell className="h-7 w-7 text-gray-200 mx-auto mb-3" />
-                <p className="text-xs font-medium text-gray-600">Todavía no te sigue nadie</p>
-                <p className="text-[11px] text-gray-400 mt-1 max-w-[16rem] mx-auto leading-relaxed">
+                <Bell className="h-7 w-7 text-gray-200 panel-oscuro:text-gray-700 mx-auto mb-3" />
+                <p className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400">Todavía no te sigue nadie</p>
+                <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1 max-w-[16rem] mx-auto leading-relaxed">
                   Los clientes registrados que toquen 👍 en tu tienda aparecen acá.
                 </p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-50">
+              <ul className="divide-y divide-gray-50 panel-oscuro:divide-gray-800">
                 {seguidoresVisibles.map((f) => (
                   <li key={f.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 shrink-0 overflow-hidden">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 panel-oscuro:bg-gray-800/50 shrink-0 overflow-hidden">
                       {f.imagen
                         // eslint-disable-next-line @next/next/no-img-element -- foto de perfil externa (Google), sin dominio fijo que configurar en next.config
                         ? <img src={f.imagen} alt="" className="h-full w-full object-cover" />
-                        : <UserRound className="h-3.5 w-3.5 text-gray-400" />}
+                        : <UserRound className="h-3.5 w-3.5 text-gray-400 panel-oscuro:text-gray-500" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-800 truncate">{f.nombre}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">Sigue tu tienda desde el {fecha(f.desde)}</p>
+                      <p className="text-xs font-medium text-gray-800 panel-oscuro:text-gray-200 truncate">{f.nombre}</p>
+                      <p className="text-[10px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Sigue tu tienda desde el {fecha(f.desde)}</p>
                     </div>
                   </li>
                 ))}
@@ -279,8 +279,8 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
         {/* El aviso de truncado. Va antes que el de pendientes porque contradice
             lo que la lista parece decir: sin esto, 500 se leen como "todos". */}
         {!cargando && ocultos > 0 && (
-          <div className="px-5 py-2.5 border-t border-gray-100 bg-gray-50 text-center">
-            <p className="text-[11px] text-gray-500">
+          <div className="px-5 py-2.5 border-t border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 text-center">
+            <p className="text-[11px] text-gray-500 panel-oscuro:text-gray-400">
               Mostrando los <strong>{lista.length}</strong> más recientes de <strong>{totalDeLaPestana}</strong>.
               Los otros {ocultos} reciben las campañas igual.
             </p>
@@ -288,9 +288,9 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
         )}
 
         {!cargando && pestana === "mail" && suscriptores.some((s) => s.estado === "pendiente") && (
-          <div className="px-5 py-3 border-t border-gray-100 bg-amber-50/60 flex items-start gap-2">
+          <div className="px-5 py-3 border-t border-gray-100 panel-oscuro:border-gray-800 bg-amber-50/60 panel-oscuro:bg-amber-500/10 flex items-start gap-2">
             <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-amber-700 leading-relaxed">
+            <p className="text-[11px] text-amber-700 panel-oscuro:text-amber-300 leading-relaxed">
               Los que dicen <strong>sin confirmar</strong> todavía no tocaron el link del mail. No les
               llega nada hasta que lo hagan — es lo que evita que alguien anote una dirección ajena.
             </p>

@@ -114,13 +114,13 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={lowStockCount} avisosIniciales={avisos}
     >
-      <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
+      <div className="-m-4 -mt-2 bg-slate-50 panel-oscuro:bg-gray-800/50 min-h-screen">
 
         {/* Page header */}
-        <div className="border-b border-slate-200 bg-white px-6 py-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-2">Mi tienda</p>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{isAutos ? "Legal" : "Pagos y legales"}</h1>
-          <p className="text-slate-500 text-sm mt-1.5 max-w-xl">
+        <div className="border-b border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-6 py-8">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 panel-oscuro:text-gray-500 mb-2">Mi tienda</p>
+          <h1 className="text-3xl font-black text-slate-900 panel-oscuro:text-gray-100 tracking-tight">{isAutos ? "Legal" : "Pagos y legales"}</h1>
+          <p className="text-slate-500 panel-oscuro:text-gray-400 text-sm mt-1.5 max-w-xl">
             {isAutos
               ? "Acá redactás las políticas legales de tu tienda. Como vendés por consulta, el cobro y la entrega se coordinan directamente con cada comprador."
               : "Configurá cómo querés cobrar. Cuando un cliente hace un pedido, recibe un email automático con los datos que cargues acá para saber cómo pagarte."}
@@ -186,8 +186,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-4 mb-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">{children}</p>
-      <div className="h-px bg-slate-200 flex-1" />
+      <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 panel-oscuro:text-gray-500 whitespace-nowrap">{children}</p>
+      <div className="h-px bg-slate-200 panel-oscuro:bg-gray-700 flex-1" />
     </div>
   );
 }

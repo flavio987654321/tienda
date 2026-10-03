@@ -66,9 +66,9 @@ export async function getJson<T>(url: string, fallback: string): Promise<T> {
 
 export function AvisoError({ mensaje }: { mensaje: string }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 mb-3">
+    <div className="flex items-start gap-2.5 rounded-lg border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-3.5 py-2.5 mb-3">
       <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-      <p className="text-sm text-red-700 leading-relaxed">{mensaje}</p>
+      <p className="text-sm text-red-700 panel-oscuro:text-red-300 leading-relaxed">{mensaje}</p>
     </div>
   );
 }
@@ -86,11 +86,11 @@ export function ErrorDePaso({ mensaje, onReintentar }: { mensaje: string; onRein
   const [reintentando, setReintentando] = useState(false);
 
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3.5">
+    <div className="rounded-lg border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-4 py-3.5">
       <div className="flex items-start gap-2.5">
         <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
         <div className="min-w-0">
-          <p className="text-sm text-red-800 leading-relaxed">{mensaje}</p>
+          <p className="text-sm text-red-800 panel-oscuro:text-red-300 leading-relaxed">{mensaje}</p>
           <div className="flex flex-wrap items-center gap-3 mt-2.5">
             <button
               onClick={() => { setReintentando(true); onReintentar(); }}
@@ -106,7 +106,7 @@ export function ErrorDePaso({ mensaje, onReintentar }: { mensaje: string; onRein
               href="https://business.facebook.com/settings"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 hover:text-red-800"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 panel-oscuro:text-red-300 hover:text-red-800 panel-oscuro:hover:text-red-300"
             >
               Abrir Meta Business <ExternalLink className="h-3 w-3" />
             </a>
@@ -123,19 +123,19 @@ export function StepCard({
   index: number; title: string; status: StepStatus; children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-xl border bg-white shadow-sm transition-opacity ${status === "locked" ? "border-slate-200 opacity-50" : "border-slate-200"}`}>
+    <div className={`rounded-xl border bg-white panel-oscuro:bg-gray-900 shadow-sm transition-opacity ${status === "locked" ? "border-slate-200 panel-oscuro:border-gray-700 opacity-50" : "border-slate-200 panel-oscuro:border-gray-700"}`}>
       <div className="flex items-center gap-3 px-5 py-4">
         {status === "done" ? (
           <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
         ) : status === "locked" ? (
-          <Lock className="h-4 w-4 text-slate-300 shrink-0" />
+          <Lock className="h-4 w-4 text-slate-300 panel-oscuro:text-gray-600 shrink-0" />
         ) : (
-          <span className="h-5 w-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">{index}</span>
+          <span className="h-5 w-5 rounded-full bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-indigo-700 panel-oscuro:text-indigo-300 text-xs font-bold flex items-center justify-center shrink-0">{index}</span>
         )}
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">{title}</h3>
       </div>
       {status !== "locked" && (
-        <div className="px-5 pb-5 border-t border-slate-100 pt-4">{children}</div>
+        <div className="px-5 pb-5 border-t border-slate-100 panel-oscuro:border-gray-800 pt-4">{children}</div>
       )}
     </div>
   );
@@ -165,38 +165,38 @@ export function ConfirmarDesconexion({
   desconectando: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
-      <p className="text-sm font-bold text-slate-900 mb-3">¿Desconectar tu cuenta de Facebook?</p>
+    <div className="rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-4 py-4">
+      <p className="text-sm font-bold text-slate-900 panel-oscuro:text-gray-100 mb-3">¿Desconectar tu cuenta de Facebook?</p>
 
       <ul className="space-y-2.5 mb-4">
         <li className="flex items-start gap-2.5">
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
-          <span className="text-xs text-slate-600 leading-relaxed">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400 panel-oscuro:bg-gray-500" />
+          <span className="text-xs text-slate-600 panel-oscuro:text-gray-400 leading-relaxed">
             Se corta el envío diario de tus productos: Meta deja de leer tu tienda y tu catálogo
             no se actualiza más.
           </span>
         </li>
         <li className="flex items-start gap-2.5">
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-          <span className="text-xs text-slate-600 leading-relaxed">
-            <strong className="text-slate-800">Tu catálogo y tus productos NO se borran.</strong>{" "}
+          <span className="text-xs text-slate-600 panel-oscuro:text-gray-400 leading-relaxed">
+            <strong className="text-slate-800 panel-oscuro:text-gray-200">Tu catálogo y tus productos NO se borran.</strong>{" "}
             Son tuyos y quedan en tu cuenta de Meta, tal como están hoy. Simplemente dejan de
             actualizarse.
           </span>
         </li>
         <li className="flex items-start gap-2.5">
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
-          <span className="text-xs text-slate-600 leading-relaxed">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400 panel-oscuro:bg-gray-500" />
+          <span className="text-xs text-slate-600 panel-oscuro:text-gray-400 leading-relaxed">
             Nada de tu tienda acá se pierde. Podés volver a conectarla cuando quieras.
           </span>
         </li>
       </ul>
 
-      <div className="rounded-md border border-slate-200 bg-white px-3.5 py-3 mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-2">
+      <div className="rounded-md border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-3.5 py-3 mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400 panel-oscuro:text-gray-500 mb-2">
           Si querés borrar todo del lado de Meta
         </p>
-        <p className="text-xs text-slate-500 leading-relaxed mb-2.5">
+        <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 leading-relaxed mb-2.5">
           Eso se hace desde Meta, no desde acá — son tus datos y no los tocamos. En Commerce
           Manager podés borrar el catálogo con todos sus productos. Y en tu Facebook podés
           quitarle el permiso a la aplicación, que queda dado aunque desconectes.
@@ -206,7 +206,7 @@ export function ConfirmarDesconexion({
             href="https://business.facebook.com/commerce_manager"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
           >
             Abrir Commerce Manager <ExternalLink className="h-3 w-3" />
           </a>
@@ -214,7 +214,7 @@ export function ConfirmarDesconexion({
             href="https://www.facebook.com/settings?tab=applications"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
           >
             Quitar el permiso en Facebook <ExternalLink className="h-3 w-3" />
           </a>
@@ -233,7 +233,7 @@ export function ConfirmarDesconexion({
         <button
           onClick={onCancelar}
           disabled={desconectando}
-          className="text-xs font-bold text-slate-500 hover:text-slate-700 disabled:opacity-50"
+          className="text-xs font-bold text-slate-500 panel-oscuro:text-gray-400 hover:text-slate-700 panel-oscuro:hover:text-gray-300 disabled:opacity-50"
         >
           Cancelar
         </button>
@@ -245,11 +245,11 @@ export function ConfirmarDesconexion({
 /** El aviso de arriba de todo cuando el token de Meta ya venció. */
 export function AvisoTokenVencido() {
   return (
-    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3.5">
-      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+    <div className="flex items-start gap-2.5 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-lg px-4 py-3.5">
+      <AlertCircle className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 shrink-0 mt-0.5" />
       <div>
-        <p className="text-sm font-bold text-amber-900">Tu conexión con Facebook venció</p>
-        <p className="text-sm text-amber-900/80 mt-0.5 leading-relaxed">
+        <p className="text-sm font-bold text-amber-900 panel-oscuro:text-amber-200">Tu conexión con Facebook venció</p>
+        <p className="text-sm text-amber-900/80 panel-oscuro:text-amber-200 mt-0.5 leading-relaxed">
           Meta corta el permiso cada dos meses por seguridad. Tu catálogo y tus productos siguen
           ahí — solo hay que volver a conectar la cuenta para que se sigan actualizando.
           Desconectá abajo y conectá de nuevo.

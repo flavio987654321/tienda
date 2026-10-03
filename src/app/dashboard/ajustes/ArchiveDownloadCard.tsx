@@ -16,14 +16,14 @@ type ArchiveItem = {
 // así que no hace falta manejar estados de fetch/blob acá.
 export default function ArchiveDownloadCard({ archives }: { archives: ArchiveItem[] }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100">
+    <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-slate-200 panel-oscuro:border-gray-700 divide-y divide-slate-100 panel-oscuro:divide-gray-800">
       <div className="px-5 py-4 flex items-start gap-3">
-        <div className="p-2 bg-slate-100 rounded-xl shrink-0">
-          <Archive className="h-4 w-4 text-slate-500" />
+        <div className="p-2 bg-slate-100 panel-oscuro:bg-gray-800 rounded-xl shrink-0">
+          <Archive className="h-4 w-4 text-slate-500 panel-oscuro:text-gray-400" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-800">Respaldos de ciclos anteriores</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">Respaldos de ciclos anteriores</p>
+          <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mt-0.5">
             Cada vez que cambiás de rubro guardamos una copia de tus ventas, pagos y cupones de ese ciclo.
             Descargala cuando la necesites para tu contabilidad o ante un reclamo.
           </p>
@@ -36,10 +36,10 @@ export default function ArchiveDownloadCard({ archives }: { archives: ArchiveIte
         return (
           <div key={a.id} className="px-5 py-4 flex flex-wrap items-center gap-x-4 gap-y-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-700">
+              <p className="text-sm font-medium text-slate-700 panel-oscuro:text-gray-300">
                 {rubro?.emoji} {rubro?.label ?? a.tipoTiendaAnterior} — hasta el {fecha}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 mt-0.5">
                 {a.ordersCount} pedido{a.ordersCount !== 1 ? "s" : ""} · ${a.totalFacturado.toLocaleString("es-AR")} facturados por Mercado Pago
               </p>
             </div>
@@ -58,7 +58,7 @@ export default function ArchiveDownloadCard({ archives }: { archives: ArchiveIte
                 <a
                   key={tipo}
                   href={`/api/store/archives/${a.id}?tipo=${tipo}`}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 panel-oscuro:border-gray-700 text-xs font-medium text-slate-600 panel-oscuro:text-gray-400 hover:bg-slate-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
                 >
                   <Download className="h-3 w-3 shrink-0" /> <span className="truncate">{label}</span>
                 </a>

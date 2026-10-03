@@ -56,16 +56,16 @@ function Fila({ articulo, base }: { articulo: Articulo; base: BaseAyuda }) {
     <li>
       <Link
         href={`${base}/${articulo.slug}`}
-        className="group flex items-start justify-between gap-4 border-b border-gray-100 py-4 transition-colors hover:bg-gray-50"
+        className="group flex items-start justify-between gap-4 border-b border-gray-100 panel-oscuro:border-gray-800 py-4 transition-colors hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[15px] font-semibold text-gray-950">{articulo.titulo}</span>
             <Chip clase={articulo.clase} />
           </div>
-          <p className="mt-1 text-sm leading-6 text-gray-500">{articulo.resumen}</p>
+          <p className="mt-1 text-sm leading-6 text-gray-500 panel-oscuro:text-gray-400">{articulo.resumen}</p>
         </div>
-        <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-gray-500" />
+        <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 panel-oscuro:text-gray-600 transition-all group-hover:translate-x-0.5 group-hover:text-gray-500 panel-oscuro:group-hover:text-gray-400" />
       </Link>
     </li>
   );
@@ -98,11 +98,11 @@ export default function PanelAyuda({
   const grupos = buscando && resultados.length > 0 ? [] : porGrupo(lector);
 
   return (
-    <div className="min-h-screen bg-white [color-scheme:light]">
+    <div className="min-h-screen bg-white panel-oscuro:bg-gray-900 [color-scheme:light]">
       <div className="mx-auto max-w-3xl px-5 py-6 sm:px-8 sm:py-10">
         <Link
           href={volverA}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 transition-colors hover:text-gray-950"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 transition-colors hover:text-gray-950"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver al panel
@@ -112,7 +112,7 @@ export default function PanelAyuda({
           <h1 className="text-2xl font-black tracking-tight text-gray-950 sm:text-3xl">
             Centro de ayuda
           </h1>
-          <p className="mt-2 text-[15px] leading-7 text-gray-500">
+          <p className="mt-2 text-[15px] leading-7 text-gray-500 panel-oscuro:text-gray-400">
             {rol === "afiliado"
               ? "Cómo compartir, cómo se cuentan tus comisiones y cómo cobrarlas."
               : "Cómo publicar tu tienda, armar promociones, cobrar y aparecer en Google."}
@@ -126,7 +126,7 @@ export default function PanelAyuda({
         <form action={base} method="get" className="mt-7 flex gap-2" role="search">
           <div className="relative flex-1">
             <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500"
               aria-hidden="true"
             />
             <input
@@ -135,12 +135,12 @@ export default function PanelAyuda({
               defaultValue={consulta}
               placeholder="Buscar — ej. cómo cobro"
               aria-label="Buscar en la ayuda"
-              className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-[15px] text-gray-950 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
+              className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 py-3 pl-10 pr-4 text-[15px] text-gray-950 placeholder:text-gray-400 panel-oscuro:placeholder:text-gray-500 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 panel-oscuro:focus:ring-orange-500/30"
             />
           </div>
           <button
             type="submit"
-            className="shrink-0 rounded-xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+            className="shrink-0 rounded-xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white"
           >
             Buscar
           </button>
@@ -148,16 +148,16 @@ export default function PanelAyuda({
 
         {buscando ? (
           <section className="mt-8">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 panel-oscuro:border-gray-800 pb-3">
               <h2 className="text-lg font-bold tracking-tight text-gray-950">
                 {resultados.length === 0
                   ? "Sin resultados"
                   : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"}`}{" "}
-                <span className="font-medium text-gray-400">para «{consulta}»</span>
+                <span className="font-medium text-gray-400 panel-oscuro:text-gray-500">para «{consulta}»</span>
               </h2>
               <Link
                 href={base}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 transition-colors hover:text-gray-950"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 transition-colors hover:text-gray-950"
               >
                 <X className="h-3.5 w-3.5" />
                 Limpiar
@@ -174,7 +174,7 @@ export default function PanelAyuda({
               /* Sin resultados se muestra el índice igual. Una pantalla vacía
                  con "no encontramos nada" deja a la persona en un callejón; con
                  los temas abajo, al menos puede mirar. */
-              <p className="mt-4 text-sm leading-6 text-gray-500">
+              <p className="mt-4 text-sm leading-6 text-gray-500 panel-oscuro:text-gray-400">
                 No hay ningún artículo con esas palabras. Mirá los temas de abajo,
                 o escribinos desde Soporte si lo que necesitás no está.
               </p>
@@ -185,7 +185,7 @@ export default function PanelAyuda({
         {grupos.map((g) => (
           <section key={g.key} className="mt-9">
             <h2 className="text-lg font-bold tracking-tight text-gray-950">{g.titulo}</h2>
-            <p className="mt-1 text-sm leading-6 text-gray-500">{g.bajada}</p>
+            <p className="mt-1 text-sm leading-6 text-gray-500 panel-oscuro:text-gray-400">{g.bajada}</p>
             <ul className="mt-3 flex flex-col">
               {g.articulos.map((a) => (
                 <Fila key={a.slug} articulo={a} base={base} />

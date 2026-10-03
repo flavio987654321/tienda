@@ -303,11 +303,11 @@ export default function NotificacionesPage() {
 
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-gray-900 panel-oscuro:text-gray-100 flex items-center gap-2">
             <Bell className="h-5 w-5 text-indigo-500" />
             Notificaciones push
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
             Un mensaje que sale por dos vías: push al celular de tus seguidores y mail a los suscriptores de tu tienda.
           </p>
         </div>
@@ -321,21 +321,21 @@ export default function NotificacionesPage() {
             type="button"
             onClick={() => !loadingStats && setShowAudiencia(true)}
             disabled={loadingStats}
-            className="rounded-2xl border border-gray-100 bg-white p-4 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50/30 disabled:cursor-default"
+            className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4 text-left transition-colors hover:border-indigo-200 panel-oscuro:hover:border-indigo-500/30 hover:bg-indigo-50/30 panel-oscuro:hover:bg-indigo-500/10 disabled:cursor-default"
           >
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tu audiencia</span>
+              <span className="text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 uppercase tracking-wide">Tu audiencia</span>
             </div>
             {loadingStats ? (
-              <div className="h-7 w-12 rounded bg-gray-100 animate-pulse" />
+              <div className="h-7 w-12 rounded bg-gray-100 panel-oscuro:bg-gray-800 animate-pulse" />
             ) : (
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalAlcance ?? 0}</p>
+              <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">{stats?.totalAlcance ?? 0}</p>
             )}
             {/* El desglose va siempre, no sólo cuando hay de los dos: son dos
                 canales distintos —al seguidor le llega un push, al suscriptor un
                 mail— y un total pelado haría creer que todos reciben lo mismo. */}
-            <p className="text-[11px] text-gray-400 mt-0.5">
+            <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
               {loadingStats
                 ? " "
                 : `${stats?.followerCount ?? 0} por push · ${stats?.emailCount ?? 0} por mail`}
@@ -355,23 +355,23 @@ export default function NotificacionesPage() {
             )}
           </button>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="h-4 w-4 text-amber-400" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Esta semana</span>
+              <span className="text-xs font-medium text-gray-500 panel-oscuro:text-gray-400 uppercase tracking-wide">Esta semana</span>
             </div>
             {loadingStats ? (
-              <div className="h-7 w-16 rounded bg-gray-100 animate-pulse" />
+              <div className="h-7 w-16 rounded bg-gray-100 panel-oscuro:bg-gray-800 animate-pulse" />
             ) : (
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">
                 {stats?.weeklyUsed ?? 0}
                 {/* El respaldo sale de la constante y no de un 3 a mano: es el
                     número que se muestra mientras el servidor no contestó, y ya
                     hubo una vez que este tope decía uno y se aplicaba otro. */}
-                <span className="text-base font-normal text-gray-400">/{stats?.weeklyLimit ?? PUSH_CAMPAIGNS_PER_WEEK}</span>
+                <span className="text-base font-normal text-gray-400 panel-oscuro:text-gray-500">/{stats?.weeklyLimit ?? PUSH_CAMPAIGNS_PER_WEEK}</span>
               </p>
             )}
-            <p className="text-[11px] text-gray-400 mt-0.5">
+            <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
               {stats && stats.weeklyRemaining > 0
                 ? `Te ${stats.weeklyRemaining === 1 ? "queda" : "quedan"} ${stats.weeklyRemaining} disponible${stats.weeklyRemaining !== 1 ? "s" : ""}`
                 : "Límite semanal alcanzado"}
@@ -390,34 +390,34 @@ export default function NotificacionesPage() {
             es plata para el que lo entiende y estaba al final, donde ya nadie
             llega. Mismo contenido; cada idea con su renglón, y la trampa del
             iPhone pegada a "Push" en vez de perdida en el medio. */}
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3.5">
-          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">¿Cómo funciona?</p>
-          <div className="grid gap-2.5 text-xs text-blue-800 sm:grid-cols-3">
+        <div className="rounded-2xl border border-blue-100 panel-oscuro:border-blue-500/30 bg-blue-50 panel-oscuro:bg-blue-500/10 px-4 py-3.5">
+          <p className="text-xs font-bold text-blue-700 panel-oscuro:text-blue-300 uppercase tracking-wide mb-2">¿Cómo funciona?</p>
+          <div className="grid gap-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300 sm:grid-cols-3">
             {[
               <>Escribís el mensaje <strong>una sola vez</strong> y sale por dos vías distintas.</>,
               <><strong>Push</strong> al celular de los que tocan 👍 en tu tienda, aunque la tengan cerrada. En iPhone solo si instalaron la tienda en su pantalla de inicio.</>,
               <><strong>Mail</strong> a los que dejaron su correo en el bloque de novedades y lo confirmaron.</>,
             ].map((texto, i) => (
               <div key={i} className="flex items-start gap-2">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 text-[10px] font-bold text-blue-700">{i + 1}</span>
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 panel-oscuro:bg-blue-500/25 text-[10px] font-bold text-blue-700 panel-oscuro:text-blue-300">{i + 1}</span>
                 <p>{texto}</p>
               </div>
             ))}
           </div>
-          <p className="mt-3 border-t border-blue-100 pt-2.5 text-xs text-blue-800">
+          <p className="mt-3 border-t border-blue-100 panel-oscuro:border-blue-500/30 pt-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300">
             El límite de <strong>{PUSH_CAMPAIGNS_PER_WEEK} por semana</strong> cuenta mensajes, no envíos: mandar por las dos vías gasta uno solo.
           </p>
         </div>
 
         {/* Gate: solo Premium */}
         {loadState === "not_premium" && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-6 flex flex-col items-center text-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100">
+          <div className="rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-5 py-6 flex flex-col items-center text-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 panel-oscuro:bg-amber-500/15">
               <Crown className="h-6 w-6 text-amber-500" />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-900">Función exclusiva de Plan Premium</p>
-              <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+              <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Función exclusiva de Plan Premium</p>
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1 max-w-xs mx-auto">
                 Actualizate a Tienda Premium para enviar notificaciones push directamente al celular o computadora de tus visitantes, aunque tengan el navegador cerrado.
               </p>
             </div>
@@ -437,12 +437,12 @@ export default function NotificacionesPage() {
 
         {/* Formulario (solo Premium) */}
         {loadState !== "not_premium" && (
-          <div ref={formRef} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-800">Nueva notificación</h2>
+          <div ref={formRef} className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Nueva notificación</h2>
 
             {/* Tipos predefinidos */}
             <div>
-              <p className="text-xs text-gray-500 mb-2">Tipo de anuncio</p>
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mb-2">Tipo de anuncio</p>
               {/* En angosto van en dos columnas y no sueltas. Los tres nombres
                   miden casi lo mismo pero no exactamente, así que dejándolas
                   fluir entraban dos en el primer renglón y la tercera caía
@@ -457,7 +457,7 @@ export default function NotificacionesPage() {
                     className={`truncate px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                       presetIdx === i
                         ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                        : "bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700 hover:border-indigo-300 panel-oscuro:hover:border-indigo-500/40"
                     }`}
                   >
                     {p.label}
@@ -470,9 +470,9 @@ export default function NotificacionesPage() {
               {/* Título */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-gray-700">Título</label>
+                  <label className="text-xs font-medium text-gray-700 panel-oscuro:text-gray-300">Título</label>
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-[11px] ${titleLen >= TITLE_MAX ? "text-amber-500" : "text-gray-400"}`}>
+                    <span className={`text-[11px] ${titleLen >= TITLE_MAX ? "text-amber-500" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
                       {titleLen}/{TITLE_MAX}
                     </span>
                     <SelectorEmoji
@@ -502,16 +502,16 @@ export default function NotificacionesPage() {
                   onChange={(v) => { setTitle(recortar(v, TITLE_MAX)); setResult(null); }}
                   placeholder="ej: ¡Nuevo producto disponible!"
                   ariaLabel="Título de la notificación"
-                  className="text-gray-900 placeholder-gray-400"
+                  className="text-gray-900 panel-oscuro:text-gray-100 placeholder-gray-400 panel-oscuro:placeholder-gray-500"
                 />
               </div>
 
               {/* Mensaje */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-gray-700">Mensaje</label>
+                  <label className="text-xs font-medium text-gray-700 panel-oscuro:text-gray-300">Mensaje</label>
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-[11px] ${bodyLen >= BODY_MAX ? "text-amber-500" : "text-gray-400"}`}>
+                    <span className={`text-[11px] ${bodyLen >= BODY_MAX ? "text-amber-500" : "text-gray-400 panel-oscuro:text-gray-500"}`}>
                       {bodyLen}/{BODY_MAX}
                     </span>
                     <SelectorEmoji
@@ -526,7 +526,7 @@ export default function NotificacionesPage() {
                   placeholder="ej: Entrá a la tienda y mirá los nuevos productos que llegaron esta semana."
                   required
                   rows={3}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none"
+                  className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2.5 text-sm text-gray-900 panel-oscuro:text-gray-100 placeholder-gray-400 panel-oscuro:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none"
                 />
               </div>
 
@@ -534,11 +534,11 @@ export default function NotificacionesPage() {
               {showUrlField ? (
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
-                      <Link2 className="h-3.5 w-3.5 text-gray-400" />
-                      Link de destino <span className="text-gray-400 font-normal">(opcional)</span>
+                    <label className="text-xs font-medium text-gray-700 panel-oscuro:text-gray-300 flex items-center gap-1.5">
+                      <Link2 className="h-3.5 w-3.5 text-gray-400 panel-oscuro:text-gray-500" />
+                      Link de destino <span className="text-gray-400 panel-oscuro:text-gray-500 font-normal">(opcional)</span>
                     </label>
-                    <button type="button" onClick={() => { setUrl(""); setShowUrlField(false); }} className="text-[11px] text-gray-400 hover:text-red-400 transition-colors">
+                    <button type="button" onClick={() => { setUrl(""); setShowUrlField(false); }} className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 hover:text-red-400 transition-colors">
                       Quitar
                     </button>
                   </div>
@@ -547,15 +547,15 @@ export default function NotificacionesPage() {
                     value={url}
                     onChange={(e) => setUrl(e.target.value.slice(0, URL_MAX))}
                     placeholder="https://www.tiendaapps.com/tienda/mi-tienda"
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
+                    className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2.5 text-sm text-gray-900 panel-oscuro:text-gray-100 placeholder-gray-400 panel-oscuro:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
                   />
-                  <p className="text-[11px] text-gray-400 mt-1">Al tocar la notificación, el cliente irá a esta URL. Si no ponés ninguna, va a tu tienda.</p>
+                  <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1">Al tocar la notificación, el cliente irá a esta URL. Si no ponés ninguna, va a tu tienda.</p>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setShowUrlField(true)}
-                  className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 transition-colors"
                 >
                   <Link2 className="h-3.5 w-3.5" />
                   Agregar link de destino
@@ -564,7 +564,7 @@ export default function NotificacionesPage() {
 
               {/* Duración de la novedad */}
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1.5 block">
+                <label className="text-xs font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5 block">
                   Visible durante
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -576,22 +576,22 @@ export default function NotificacionesPage() {
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                         expiresInDays === opt.days
                           ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                          : "bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700 hover:border-indigo-300 panel-oscuro:hover:border-indigo-500/40"
                       }`}
                     >
                       {opt.label}
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1.5">
+                <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1.5">
                   Pasado ese tiempo desaparece del banner de novedades de la tienda, pero queda en tu historial.
                 </p>
               </div>
 
               {/* Preview */}
               {(title || message) && (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                <div className="rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide mb-1">
                     Vista previa
                   </p>
                   <div className="flex items-start gap-2">
@@ -603,8 +603,8 @@ export default function NotificacionesPage() {
                         sea que el recorte se hacía DESPUÉS del borde de la
                         tarjeta y el link se salía igual. */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-gray-800 leading-tight break-words">{title || "Título"}</p>
-                      <p className="text-[11px] text-gray-500 leading-tight mt-0.5 break-words">{message || "Mensaje..."}</p>
+                      <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200 leading-tight break-words">{title || "Título"}</p>
+                      <p className="text-[11px] text-gray-500 panel-oscuro:text-gray-400 leading-tight mt-0.5 break-words">{message || "Mensaje..."}</p>
                       {url && <p className="text-[10px] text-indigo-400 mt-0.5 truncate">{url}</p>}
                     </div>
                   </div>
@@ -617,15 +617,15 @@ export default function NotificacionesPage() {
                   type="checkbox"
                   checked={tosAccepted}
                   onChange={(e) => setTosAccepted(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 panel-oscuro:border-gray-600 text-indigo-600 panel-oscuro:text-indigo-400 focus:ring-indigo-500 shrink-0"
                 />
-                <span className="text-[11px] text-gray-500 leading-relaxed">
+                <span className="text-[11px] text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
                   Acepto usar las notificaciones solo para contenido relacionado con mi tienda
                   (productos, ofertas, novedades). El uso indebido puede resultar en la suspensión
                   del servicio según los{" "}
                   {/* `?panel=dashboard`: el documento se abre sin el encabezado
                       que lleva a la home y al registro. Ver `desde-el-panel`. */}
-                  <a href="/terminos?panel=dashboard" target="_blank" className="text-indigo-600 underline">
+                  <a href="/terminos?panel=dashboard" target="_blank" className="text-indigo-600 panel-oscuro:text-indigo-400 underline">
                     términos de uso
                   </a>
                   .
@@ -636,8 +636,8 @@ export default function NotificacionesPage() {
               {result && (
                 <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium ${
                   result.ok
-                    ? "bg-green-50 border border-green-100 text-green-700"
-                    : "bg-red-50 border border-red-100 text-red-700"
+                    ? "bg-green-50 panel-oscuro:bg-green-500/10 border border-green-100 panel-oscuro:border-green-500/30 text-green-700 panel-oscuro:text-green-300"
+                    : "bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/30 text-red-700 panel-oscuro:text-red-300"
                 }`}>
                   {result.ok
                     ? <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -648,7 +648,7 @@ export default function NotificacionesPage() {
 
               {/* Límite semanal */}
               {!loadingStats && !canSend && (
-                <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700">
+                <div className="flex items-center gap-2 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/30 px-3 py-2.5 text-xs text-amber-700 panel-oscuro:text-amber-300">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   Alcanzaste el límite de {stats?.weeklyLimit} notificaciones por semana. Podés enviar más el próximo lunes.
                 </div>
@@ -679,29 +679,29 @@ export default function NotificacionesPage() {
             onClick={() => setShowConfirm(false)}
           >
             <div
-              className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 space-y-4"
+              className="w-full max-w-sm rounded-2xl bg-white panel-oscuro:bg-gray-900 shadow-2xl p-6 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 shrink-0">
-                  <Send className="h-5 w-5 text-indigo-600" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 shrink-0">
+                  <Send className="h-5 w-5 text-indigo-600 panel-oscuro:text-indigo-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">¿Confirmar envío?</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">¿Confirmar envío?</p>
+                  <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
                     Le llega a {stats?.pushConfigurado ? (stats?.followerCount ?? 0) : 0} por push
                     y a {stats?.emailCount ?? 0} por mail. Consume 1 notificación semanal.
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 space-y-1">
-                <p className="text-xs font-semibold text-gray-800">{title}</p>
-                <p className="text-[11px] text-gray-500">{message}</p>
+              <div className="rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 px-3 py-2.5 space-y-1">
+                <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200">{title}</p>
+                <p className="text-[11px] text-gray-500 panel-oscuro:text-gray-400">{message}</p>
                 {url && <p className="text-[10px] text-indigo-400 truncate">{url}</p>}
               </div>
 
-              <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+              <p className="text-[11px] text-amber-600 panel-oscuro:text-amber-400 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/30 rounded-xl px-3 py-2">
                 Esta acción no se puede deshacer. Un push ya entregado no se borra del celular, y un mail
                 enviado no se puede recuperar.
               </p>
@@ -709,7 +709,7 @@ export default function NotificacionesPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 py-2.5 text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
                 >
                   Cancelar
                 </button>
@@ -726,25 +726,25 @@ export default function NotificacionesPage() {
 
         {/* Historial */}
         {stats && stats.campaigns.length > 0 && (
-          <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 overflow-hidden">
             <button
               onClick={() => setShowHistory((v) => !v)}
-              className="w-full flex items-center justify-between px-5 py-4 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-5 py-4 text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
             >
               {/* El total, no la cantidad traída: el listado se corta en
                   `historialMax` y poner ese número acá diría que ésas son todas. */}
               <span>Historial de envíos ({stats.totalCampanas ?? stats.campaigns.length})</span>
-              {showHistory ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+              {showHistory ? <ChevronUp className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />}
             </button>
             {showHistory && (
               <>
-                <div className="flex items-center justify-between gap-2 px-5 py-2.5 border-t border-gray-50 bg-gray-50/50">
-                  <label className="flex items-center gap-2 text-[11px] font-medium text-gray-500 cursor-pointer">
+                <div className="flex items-center justify-between gap-2 px-5 py-2.5 border-t border-gray-50 panel-oscuro:border-gray-800 bg-gray-50/50 panel-oscuro:bg-gray-800/50">
+                  <label className="flex items-center gap-2 text-[11px] font-medium text-gray-500 panel-oscuro:text-gray-400 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedIds.length === stats.campaigns.length}
                       onChange={toggleSelectAll}
-                      className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      className="h-3.5 w-3.5 rounded border-gray-300 panel-oscuro:border-gray-600 text-indigo-600 panel-oscuro:text-indigo-400 focus:ring-indigo-500"
                     />
                     Seleccionar todo
                   </label>
@@ -752,7 +752,7 @@ export default function NotificacionesPage() {
                     <button
                       onClick={handleBulkDelete}
                       disabled={bulkDeleting}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-red-500 hover:text-red-600 panel-oscuro:hover:text-red-400 disabled:opacity-50 transition-colors"
                     >
                       {bulkDeleting
                         ? <Loader2 className="h-3 w-3 animate-spin" />
@@ -761,7 +761,7 @@ export default function NotificacionesPage() {
                     </button>
                   )}
                 </div>
-                <div className="divide-y divide-gray-50">
+                <div className="divide-y divide-gray-50 panel-oscuro:divide-gray-800">
                   {stats.campaigns.map((c) => {
                     const expired = isExpired(c.expiresAt);
                     return (
@@ -770,7 +770,7 @@ export default function NotificacionesPage() {
                           type="checkbox"
                           checked={selectedIds.includes(c.id)}
                           onChange={() => toggleSelect(c.id)}
-                          className="mt-1 h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                          className="mt-1 h-3.5 w-3.5 rounded border-gray-300 panel-oscuro:border-gray-600 text-indigo-600 panel-oscuro:text-indigo-400 focus:ring-indigo-500 shrink-0"
                         />
                         {/* En angosto el titulo se lleva el ancho completo y los
                             numeros bajan a su propio renglon. La columna de la
@@ -781,16 +781,16 @@ export default function NotificacionesPage() {
                         <div className="flex flex-col gap-1.5 flex-1 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-semibold text-gray-800 truncate">{c.title}</p>
+                              <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200 truncate">{c.title}</p>
                               {expired && (
-                                <span className="shrink-0 text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                                <span className="shrink-0 text-[9px] font-semibold text-gray-400 panel-oscuro:text-gray-500 bg-gray-100 panel-oscuro:bg-gray-800 px-1.5 py-0.5 rounded-full">
                                   Expirada
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{c.body}</p>
+                            <p className="text-[11px] text-gray-500 panel-oscuro:text-gray-400 mt-0.5 line-clamp-2">{c.body}</p>
                             {c.expiresAt && (
-                              <p className="text-[10px] text-gray-400 mt-0.5">
+                              <p className="text-[10px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                                 {expired ? "Dejó de mostrarse el " : "Visible hasta el "}
                                 {new Date(c.expiresAt).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
                               </p>
@@ -798,13 +798,13 @@ export default function NotificacionesPage() {
                           </div>
                           <div className="flex items-start justify-between gap-2 sm:shrink-0 sm:justify-end sm:text-right">
                             <div>
-                              <span className="text-[11px] font-medium text-indigo-600">
+                              <span className="text-[11px] font-medium text-indigo-600 panel-oscuro:text-indigo-400">
                                 {c.sentCount} push
                               </span>
                               {c.emailStatus !== "SIN_MAIL" && (
-                                <span className="text-[11px] font-medium text-indigo-600"> · {c.sentEmail} mail</span>
+                                <span className="text-[11px] font-medium text-indigo-600 panel-oscuro:text-indigo-400"> · {c.sentEmail} mail</span>
                               )}
-                              <p className="text-[10px] text-gray-400 mt-0.5">
+                              <p className="text-[10px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
                                 {/* 24 horas: "11:06 p. m." mide casi el doble que
                                     "23:06" y no aporta nada — acá nadie usa el
                                     reloj de 12. */}
@@ -820,7 +820,7 @@ export default function NotificacionesPage() {
                                 <button
                                   onClick={() => handleContinuar(c.id)}
                                   disabled={continuando === c.id}
-                                  className="mt-1 inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-600 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                                  className="mt-1 inline-flex items-center gap-1 rounded-lg bg-amber-50 panel-oscuro:bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-600 panel-oscuro:text-amber-400 hover:bg-amber-100 panel-oscuro:hover:bg-amber-500/15 transition-colors disabled:opacity-50"
                                 >
                                   {continuando === c.id
                                     ? <><Loader2 className="h-2.5 w-2.5 animate-spin" /> Enviando…</>
@@ -836,7 +836,7 @@ export default function NotificacionesPage() {
                                  —no hay hover en una pantalla táctil— así que la
                                  única forma de borrar del historial era el
                                  seleccionar-y-eliminar de arriba. */
-                              className="mt-0.5 p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+                              className="mt-0.5 p-1.5 rounded-lg text-gray-300 panel-oscuro:text-gray-600 hover:text-red-400 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                               title="Eliminar del historial"
                             >
                               {deletingId === c.id
@@ -850,7 +850,7 @@ export default function NotificacionesPage() {
                   })}
                 </div>
                 {stats.totalCampanas > stats.campaigns.length && (
-                  <p className="border-t border-gray-50 bg-gray-50/50 px-5 py-2.5 text-center text-[11px] text-gray-500">
+                  <p className="border-t border-gray-50 panel-oscuro:border-gray-800 bg-gray-50/50 panel-oscuro:bg-gray-800/50 px-5 py-2.5 text-center text-[11px] text-gray-500 panel-oscuro:text-gray-400">
                     Mostrando las <strong>{stats.campaigns.length}</strong> más recientes de{" "}
                     <strong>{stats.totalCampanas}</strong>.
                   </p>
@@ -864,10 +864,10 @@ export default function NotificacionesPage() {
             miraba únicamente los seguidores, así que una tienda con la lista de
             mail llena seguía viendo "todavía no tenés seguidores". */}
         {!loadingStats && stats?.totalAlcance === 0 && (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-8 text-center">
-            <Bell className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-700">Todavía no tenés a quién escribirle</p>
-            <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">
+          <div className="rounded-2xl border border-dashed border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-6 py-8 text-center">
+            <Bell className="h-8 w-8 text-gray-300 panel-oscuro:text-gray-600 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Todavía no tenés a quién escribirle</p>
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1 max-w-sm mx-auto leading-relaxed">
               Se suma gente por dos lados: los clientes registrados que tocan 👍 en tu tienda para
               seguirla, y los que dejan su correo en el bloque de novedades y lo confirman por mail.
             </p>

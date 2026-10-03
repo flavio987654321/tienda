@@ -99,7 +99,7 @@ export default async function AplicacionesPage() {
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={lowStockCount} avisosIniciales={avisos}
     >
-      <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
+      <div className="-m-4 -mt-2 bg-slate-50 panel-oscuro:bg-gray-800/50 min-h-screen">
 
         {/* Hero — es una vidriera, así que se ve como una vidriera y no como
             otra pantalla más del panel. */}
@@ -115,13 +115,13 @@ export default async function AplicacionesPage() {
             <h1 className="mt-4 text-3xl sm:text-4xl font-black text-white tracking-tight">
               Aplicaciones
             </h1>
-            <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
+            <p className="mt-3 text-sm sm:text-base text-slate-300 panel-oscuro:text-gray-600 leading-relaxed max-w-2xl">
               Las aplicaciones conectan tu tienda con los lugares donde ya está tu gente: Facebook,
               Instagram, WhatsApp y Google. Tus productos aparecen ahí solos, sin que tengas que
               volver a cargarlos ni saber nada técnico.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400 panel-oscuro:text-gray-500">
               <span className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 {APPS_REGISTRY.length} aplicaciones disponibles
@@ -151,29 +151,29 @@ export default async function AplicacionesPage() {
         )}
 
         {/* Cómo funciona */}
-        <div className="border-b border-slate-200 bg-white px-6 py-9">
+        <div className="border-b border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-6 py-9">
           <div className="max-w-3xl mx-auto">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 panel-oscuro:text-gray-500 mb-6">
               Cómo funciona
             </p>
             <div className="grid gap-5 sm:grid-cols-3">
               {HOW_IT_WORKS.map((step, i) => (
                 <div key={i}>
                   <div className="flex items-center gap-2.5 mb-2">
-                    <div className="h-9 w-9 shrink-0 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-                      <step.icon className="h-4 w-4 text-indigo-600" />
+                    <div className="h-9 w-9 shrink-0 rounded-lg bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-100 panel-oscuro:border-indigo-500/30 flex items-center justify-center">
+                      <step.icon className="h-4 w-4 text-indigo-600 panel-oscuro:text-indigo-400" />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-300">0{i + 1}</span>
+                    <span className="text-[10px] font-bold text-slate-300 panel-oscuro:text-gray-600">0{i + 1}</span>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900">{step.title}</h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{step.text}</p>
+                  <h3 className="text-sm font-bold text-slate-900 panel-oscuro:text-gray-100">{step.title}</h3>
+                  <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mt-1 leading-relaxed">{step.text}</p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-7 flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <ShieldCheck className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-slate-500 leading-relaxed">
+            <div className="mt-7 flex items-start gap-2.5 rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-4 py-3">
+              <ShieldCheck className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 leading-relaxed">
                 Podés desinstalar cualquier aplicación cuando quieras, sin costo y sin perder nada de
                 tu tienda. Ninguna de estas aplicaciones puede ver tus ventas, tus clientes ni tus
                 datos de cobro.

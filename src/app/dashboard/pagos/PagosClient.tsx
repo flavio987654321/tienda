@@ -221,38 +221,38 @@ export default function PagosClient({ initial }: Props) {
 
       {/* How it works banner */}
       {isAutos ? (
-        <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
+        <div className="flex items-start gap-3 rounded-xl border border-blue-200 panel-oscuro:border-blue-500/30 bg-blue-50 panel-oscuro:bg-blue-500/10 px-4 py-3.5">
           <Mail className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
-            <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+            <p className="text-sm font-semibold text-blue-900 panel-oscuro:text-blue-200">¿Para qué sirve esto?</p>
+            <p className="text-xs text-blue-700 panel-oscuro:text-blue-300 mt-0.5 leading-relaxed">
               Como tu tienda funciona por consulta, no hace falta configurar métodos de pago ni de envío acá — eso lo coordinás directo con cada interesado. Esta pantalla es solo para las políticas legales de tu tienda.
             </p>
           </div>
         </div>
       ) : (
         <>
-          <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
+          <div className="flex items-start gap-3 rounded-xl border border-blue-200 panel-oscuro:border-blue-500/30 bg-blue-50 panel-oscuro:bg-blue-500/10 px-4 py-3.5">
             <Mail className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
-              <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+              <p className="text-sm font-semibold text-blue-900 panel-oscuro:text-blue-200">¿Para qué sirve esto?</p>
+              <p className="text-xs text-blue-700 panel-oscuro:text-blue-300 mt-0.5 leading-relaxed">
                 Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (MercadoPago, transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
               </p>
             </div>
           </div>
 
           {/* Security notice */}
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3">
+            <Lock className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800 panel-oscuro:text-amber-300 leading-relaxed">
               Los datos sensibles (CBU, CVU, CUIL) se ocultan automáticamente si dejás la pantalla sin atención o cambiás de pestaña.
             </p>
           </div>
         </>
       )}
 
-      {!isAutos && <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo te cobran</p>}
+      {!isAutos && <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 panel-oscuro:text-gray-500 pt-2">Cómo te cobran</p>}
 
       {/* MERCADOPAGO — cobro automático. Va primero porque es el único medio
           que confirma el pago solo; los de abajo dependen de que la dueña
@@ -320,7 +320,7 @@ export default function PagosClient({ initial }: Props) {
                   />
                 </Row>
               </div>
-              <p className="text-[11px] text-slate-400 -mt-1 px-0.5">
+              <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 -mt-1 px-0.5">
                 CBU = bancos tradicionales (Galicia, Santander, BBVA…) · CVU = billeteras virtuales (Mercado Pago, Ualá, Naranja X)
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -359,7 +359,7 @@ export default function PagosClient({ initial }: Props) {
                   maxLength={500}
                 />
               </Row>
-              <div className="flex items-start gap-2.5 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700 leading-relaxed">
+              <div className="flex items-start gap-2.5 bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-100 panel-oscuro:border-indigo-500/30 rounded-lg p-3 text-xs text-indigo-700 panel-oscuro:text-indigo-300 leading-relaxed">
                 <Mail className="h-3.5 w-3.5 shrink-0 mt-0.5 text-indigo-400" />
                 Estos datos van incluidos en el email que el cliente recibe al confirmar su pedido.
               </div>
@@ -399,7 +399,7 @@ export default function PagosClient({ initial }: Props) {
         </div>
       </Section>
 
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo se entrega</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 panel-oscuro:text-gray-500 pt-2">Cómo se entrega</p>
 
       {/* MÉTODOS DE ENVÍO */}
       <Section
@@ -411,7 +411,7 @@ export default function PagosClient({ initial }: Props) {
         badge={shippingMethods.filter(m => m.enabled && !m.isPickup).length > 0 ? "Configurado" : undefined}
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-2.5 bg-sky-50 border border-sky-100 rounded-lg p-3.5 text-xs text-sky-700 leading-relaxed">
+          <div className="flex items-start gap-2.5 bg-sky-50 panel-oscuro:bg-sky-500/10 border border-sky-100 panel-oscuro:border-sky-500/30 rounded-lg p-3.5 text-xs text-sky-700 panel-oscuro:text-sky-300 leading-relaxed">
             <Truck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-sky-400" />
             Estas opciones aparecen en el checkout cuando el cliente elige cómo recibir su compra. Podés poner precio fijo o &quot;A coordinar&quot; para acordarlo por WhatsApp.
           </div>
@@ -421,7 +421,7 @@ export default function PagosClient({ initial }: Props) {
             return (
               <div
                 key={method.id}
-                className={`rounded-lg border p-4 space-y-3 transition-colors ${disabled ? "border-slate-150 bg-slate-50/50 opacity-60" : "border-slate-200 bg-white"}`}
+                className={`rounded-lg border p-4 space-y-3 transition-colors ${disabled ? "border-slate-150 bg-slate-50/50 panel-oscuro:bg-gray-800/50 opacity-60" : "border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900"}`}
               >
                 {/* Fila superior: toggle + etiqueta del método.
                     En angosto envuelve: el interruptor y "Opción N" se quedan
@@ -431,7 +431,7 @@ export default function PagosClient({ initial }: Props) {
                     estándar" ya salía partido en dos. */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   {method.isPickup ? (
-                    <span className="shrink-0 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    <span className="shrink-0 text-[11px] font-semibold text-emerald-700 panel-oscuro:text-emerald-300 bg-emerald-50 panel-oscuro:bg-emerald-500/10 border border-emerald-200 panel-oscuro:border-emerald-500/30 px-2 py-0.5 rounded-md">
                       Siempre activo
                     </span>
                   ) : (
@@ -440,8 +440,8 @@ export default function PagosClient({ initial }: Props) {
                       className="shrink-0 flex items-center gap-1.5 text-xs font-semibold"
                     >
                       {method.enabled
-                        ? <><ToggleRight className="h-5 w-5 text-sky-500" /><span className="text-sky-600">Activo</span></>
-                        : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Inactivo</span></>}
+                        ? <><ToggleRight className="h-5 w-5 text-sky-500" /><span className="text-sky-600 panel-oscuro:text-sky-400">Activo</span></>
+                        : <><ToggleLeft className="h-5 w-5 text-slate-300 panel-oscuro:text-gray-600" /><span className="text-slate-400 panel-oscuro:text-gray-500">Inactivo</span></>}
                     </button>
                   )}
                   {/* `order-last` + `w-full`: en angosto baja al segundo renglón,
@@ -458,17 +458,17 @@ export default function PagosClient({ initial }: Props) {
                       ariaLabel="Nombre del método de envío"
                       placeholder={method.isPickup ? "Ej: Retiro en local / acordar" : "Ej: Envío a domicilio"}
                       disabled={disabled}
-                      estilo="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors disabled:cursor-not-allowed"
+                      estilo="rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-3 py-2 text-sm text-slate-900 panel-oscuro:text-gray-100 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 panel-oscuro:focus:border-gray-500 transition-colors disabled:cursor-not-allowed"
                     />
                   </div>
                   {!method.isPickup && (
-                    <span className="shrink-0 text-[11px] text-slate-400">Opción {idx}</span>
+                    <span className="shrink-0 text-[11px] text-slate-400 panel-oscuro:text-gray-500">Opción {idx}</span>
                   )}
                 </div>
 
                 {/* Costo cotizado en vivo — no editable, se calcula por CP + peso */}
                 {method.liveQuote && !disabled && (
-                  <p className="text-[11px] text-sky-600 sm:pl-[72px]">Se cotiza automáticamente según el código postal y el peso del pedido (Correo Argentino / OCA / Andreani vía Envíopack).</p>
+                  <p className="text-[11px] text-sky-600 panel-oscuro:text-sky-400 sm:pl-[72px]">Se cotiza automáticamente según el código postal y el peso del pedido (Correo Argentino / OCA / Andreani vía Envíopack).</p>
                 )}
 
                 {/* Costo — solo envíos fijos/a coordinar */}
@@ -477,20 +477,20 @@ export default function PagosClient({ initial }: Props) {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: true, price: 0 } : m))}
-                        className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${method.coordinar ? "bg-sky-50 panel-oscuro:bg-sky-500/10 border-sky-300 panel-oscuro:border-sky-500/40 text-sky-700 panel-oscuro:text-sky-300" : "bg-white panel-oscuro:bg-gray-900 border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400 hover:bg-slate-50 panel-oscuro:hover:bg-gray-800/50"}`}
                       >
                         A coordinar
                       </button>
                       <button
                         onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: false } : m))}
-                        className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${!method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${!method.coordinar ? "bg-sky-50 panel-oscuro:bg-sky-500/10 border-sky-300 panel-oscuro:border-sky-500/40 text-sky-700 panel-oscuro:text-sky-300" : "bg-white panel-oscuro:bg-gray-900 border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400 hover:bg-slate-50 panel-oscuro:hover:bg-gray-800/50"}`}
                       >
                         Precio fijo
                       </button>
                     </div>
                     {!method.coordinar ? (
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400 panel-oscuro:text-gray-500">$</span>
                         <input
                           type="number"
                           min={0}
@@ -498,36 +498,36 @@ export default function PagosClient({ initial }: Props) {
                           value={method.price || ""}
                           onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, price: Math.max(0, Math.floor(Number(e.target.value) || 0)) } : m))}
                           placeholder="0"
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-7 pr-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
+                          className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 pl-7 pr-3.5 py-2 text-sm text-slate-900 panel-oscuro:text-gray-100 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 panel-oscuro:focus:border-gray-500 transition-colors"
                         />
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-400">El cliente ve &quot;A coordinar&quot; en el checkout. Acordás el costo por WhatsApp u otro medio.</p>
+                      <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500">El cliente ve &quot;A coordinar&quot; en el checkout. Acordás el costo por WhatsApp u otro medio.</p>
                     )}
                   </div>
                 )}
 
                 {method.isPickup && (
-                  <p className="text-[11px] text-slate-400 sm:pl-[72px]">Siempre gratuito — el comprador retira en persona o coordinan directamente.</p>
+                  <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 sm:pl-[72px]">Siempre gratuito — el comprador retira en persona o coordinan directamente.</p>
                 )}
               </div>
             );
           })}
 
           {/* COTIZACIÓN AUTOMÁTICA — Envíopack */}
-          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+          <div className="rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 space-y-3">
             <Toggle
               enabled={liveQuoteEnabled}
               onChange={(v) => toggleLiveQuote(v)}
               label="Cotizar el envío automáticamente con Correo Argentino / OCA / Andreani"
             />
-            <p className="text-[11px] text-slate-400 pl-9">
+            <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 pl-9">
               Agrega una opción nueva de envío a domicilio en el checkout, con el precio real calculado según destino y peso. No necesitás contrato propio con ningún correo.
             </p>
 
             {liveQuoteEnabled && (
-              <div className="space-y-3 pt-2 border-t border-slate-100">
-                <p className="text-xs font-semibold text-slate-600 pt-2">Dirección desde donde despachás los pedidos</p>
+              <div className="space-y-3 pt-2 border-t border-slate-100 panel-oscuro:border-gray-800">
+                <p className="text-xs font-semibold text-slate-600 panel-oscuro:text-gray-400 pt-2">Dirección desde donde despachás los pedidos</p>
                 <Row label="Calle y altura" required>
                   <Input value={originStreet} onChange={setOriginStreet} placeholder="Ej: Av. Siempre Viva 742" maxLength={200} />
                 </Row>
@@ -539,7 +539,7 @@ export default function PagosClient({ initial }: Props) {
                     <select
                       value={originProvince}
                       onChange={(e) => setOriginProvince(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-3 py-2.5 text-sm text-slate-900 panel-oscuro:text-gray-100 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 panel-oscuro:focus:border-gray-500"
                     >
                       <option value="">Elegir...</option>
                       {PROVINCES.map((p) => (
@@ -552,7 +552,7 @@ export default function PagosClient({ initial }: Props) {
                   </Row>
                 </div>
                 {!hasFullOrigin && (
-                  <p className="text-[11px] text-amber-600">Completá los 4 datos para poder guardar con la cotización automática activada.</p>
+                  <p className="text-[11px] text-amber-600 panel-oscuro:text-amber-400">Completá los 4 datos para poder guardar con la cotización automática activada.</p>
                 )}
               </div>
             )}
@@ -562,22 +562,22 @@ export default function PagosClient({ initial }: Props) {
       </>
       )}
 
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Legal</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 panel-oscuro:text-gray-500 pt-2">Legal</p>
 
       {/* POLÍTICAS LEGALES */}
       <Section
         open={openSection === "policies"}
         onToggle={() => setOpenSection(openSection === "policies" ? null : "policies")}
-        icon={<Shield className="h-4 w-4 text-slate-400" />}
+        icon={<Shield className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500" />}
         title="Políticas y términos legales"
         subtitle="Se muestran en el footer de tu tienda y en los emails de confirmación"
         badge={publicadas > 0 ? `${publicadas} de 4 publicadas` : undefined}
         badgeVariant="neutral"
       >
         <div className="space-y-5">
-          <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100 leading-relaxed">
+          <div className="text-xs text-slate-500 panel-oscuro:text-gray-400 bg-slate-50 panel-oscuro:bg-gray-800/50 rounded-lg p-3 border border-slate-100 panel-oscuro:border-gray-800 leading-relaxed">
             Cada política que escribas aparece como link en el pie de tu tienda y en los emails de confirmación.
-            Las que dejes vacías o marques como <strong className="font-semibold text-slate-600">Oculta</strong> no
+            Las que dejes vacías o marques como <strong className="font-semibold text-slate-600 panel-oscuro:text-gray-400">Oculta</strong> no
             se muestran en ningún lado — el link tampoco aparece.
           </div>
 
@@ -585,9 +585,9 @@ export default function PagosClient({ initial }: Props) {
               es lo que más se olvida de declarar y es justo lo que la ley pide
               informar. El aviso solo sale si de verdad hay algo corriendo. */}
           {(hechos.usaAnalytics || hechos.usaPixel) && !policyPrivacy.trim() && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 p-3">
               <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-800 leading-relaxed">
+              <p className="text-xs text-amber-800 panel-oscuro:text-amber-300 leading-relaxed">
                 Tu tienda tiene {hechos.usaAnalytics && hechos.usaPixel
                   ? "Google Analytics y Meta Pixel activos"
                   : hechos.usaAnalytics ? "Google Analytics activo" : "Meta Pixel activo"}.
@@ -600,7 +600,7 @@ export default function PagosClient({ initial }: Props) {
           <button
             type="button"
             onClick={() => setLegalWizardOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300 text-xs font-bold hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15 transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5" />
             {policyReturns || policyShipping || policyTerms ? "Regenerar con asistente" : "Generar con asistente"}
@@ -656,9 +656,9 @@ export default function PagosClient({ initial }: Props) {
       {/* SAVE BUTTON */}
       <div className="sticky bottom-4 pt-2">
         {validationError && (
-          <div className="flex items-start gap-2 mb-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5">
+          <div className="flex items-start gap-2 mb-2 rounded-lg border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-3.5 py-2.5">
             <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-700">{validationError}</p>
+            <p className="text-xs text-red-700 panel-oscuro:text-red-300">{validationError}</p>
           </div>
         )}
         <button
@@ -734,15 +734,15 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white panel-oscuro:bg-gray-900 p-6 shadow-xl">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-indigo-500" />
-            <h3 className="text-base font-bold text-slate-900">Generar políticas</h3>
+            <h3 className="text-base font-bold text-slate-900 panel-oscuro:text-gray-100">Generar políticas</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} className="text-slate-400 panel-oscuro:text-gray-500 hover:text-slate-600 panel-oscuro:hover:text-gray-400"><X className="h-4 w-4" /></button>
         </div>
-        <p className="text-xs text-slate-500 mb-5">
+        <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mb-5">
           Completá esto y armamos las 4 políticas con las cláusulas que exige la ley argentina (derecho de
           arrepentimiento, garantía, datos personales) más lo que respondas. La de privacidad se arma sola con lo
           que tu tienda ya tiene configurado. Después podés editar cualquier párrafo a mano.
@@ -751,14 +751,14 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
         {!preview ? (
           <div className="space-y-4">
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Hacés envíos a todo el país, o solo entregás en tu zona / retiro en persona?</p>
+              <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">¿Hacés envíos a todo el país, o solo entregás en tu zona / retiro en persona?</p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setShipsNationwide(true)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${shipsNationwide ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${shipsNationwide ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                   Envío a todo el país
                 </button>
                 <button type="button" onClick={() => setShipsNationwide(false)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!shipsNationwide ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!shipsNationwide ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                   Solo en persona
                 </button>
               </div>
@@ -766,19 +766,19 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
 
             {shipsNationwide && (
               <div>
-                <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Cuántos días tarda el envío en promedio?</p>
+                <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">¿Cuántos días tarda el envío en promedio?</p>
                 <input
                   value={avgDeliveryDays}
                   onChange={(e) => setAvgDeliveryDays(e.target.value)}
                   maxLength={MAX_LARGO_DEMORA}
                   placeholder="Ej: 3 a 7"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
+                  className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
                 />
               </div>
             )}
 
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">
+              <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">
                 Además de los 10 días que exige la ley, ¿le das más días al comprador para cambios por simple arrepentimiento?
               </p>
               {/* El `max` del input no frena a quien tipea: el tope de verdad
@@ -792,15 +792,15 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
                 value={extraReturnDays}
                 onChange={(e) => setExtraReturnDays(acotarDiasExtra(Number(e.target.value)))}
                 placeholder="0"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
+                className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-1">
                 Dejá 0 si solo aplicás el mínimo legal. Máximo {MAX_DIAS_EXTRA_DEVOLUCION}.
               </p>
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">
+              <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">
                 Si alguien cancela un pedido ya confirmado, ¿le cobrás un % administrativo?
               </p>
               <input
@@ -810,9 +810,9 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
                 value={cancellationFeePercent}
                 onChange={(e) => setCancellationFeePercent(acotarPorcentaje(Number(e.target.value)))}
                 placeholder="0"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
+                className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-1">
                 Dejá 0 si no cobrás nada. No puede pasar de {MAX_PORCENTAJE_CANCELACION}%.
               </p>
             </div>
@@ -833,13 +833,13 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
               { label: "Términos y condiciones", text: preview.terms },
               { label: "Política de privacidad", text: preview.privacy },
             ].map(({ label, text }) => (
-              <div key={label} className="rounded-lg border border-slate-200 p-3">
-                <p className="text-xs font-bold text-slate-700 mb-1.5">{label}</p>
-                <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">{text}</p>
+              <div key={label} className="rounded-lg border border-slate-200 panel-oscuro:border-gray-700 p-3">
+                <p className="text-xs font-bold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">{label}</p>
+                <p className="text-xs text-slate-600 panel-oscuro:text-gray-400 whitespace-pre-line leading-relaxed">{text}</p>
               </div>
             ))}
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold">
+              <button type="button" onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-lg border border-slate-200 panel-oscuro:border-gray-700 text-slate-600 panel-oscuro:text-gray-400 text-sm font-semibold">
                 Volver
               </button>
               <button type="button" onClick={() => onApply(answers)} className="flex-[2] py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
@@ -877,29 +877,29 @@ function LegalWizardModalAutos({ storeInfo, hechos, onClose, onApply }: {
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white panel-oscuro:bg-gray-900 p-6 shadow-xl">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-indigo-500" />
-            <h3 className="text-base font-bold text-slate-900">Generar políticas</h3>
+            <h3 className="text-base font-bold text-slate-900 panel-oscuro:text-gray-100">Generar políticas</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} className="text-slate-400 panel-oscuro:text-gray-500 hover:text-slate-600 panel-oscuro:hover:text-gray-400"><X className="h-4 w-4" /></button>
         </div>
-        <p className="text-xs text-slate-500 mb-5">
+        <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mb-5">
           Como tu tienda funciona por consulta, estas políticas se enfocan en cómo se coordina la entrega y las condiciones de la operación, no en envíos ni pagos online. Después podés editar cualquier párrafo a mano.
         </p>
 
         {!preview ? (
           <div className="space-y-4">
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Pedís una seña para reservar el vehículo?</p>
+              <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">¿Pedís una seña para reservar el vehículo?</p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setRequiresDeposit(false)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!requiresDeposit ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!requiresDeposit ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                   No
                 </button>
                 <button type="button" onClick={() => setRequiresDeposit(true)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${requiresDeposit ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${requiresDeposit ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                   Sí
                 </button>
               </div>
@@ -907,14 +907,14 @@ function LegalWizardModalAutos({ storeInfo, hechos, onClose, onApply }: {
 
             {requiresDeposit && (
               <div>
-                <p className="text-xs font-semibold text-slate-700 mb-1.5">Si quien reserva se baja antes de concretar la compra, ¿devolvés la seña?</p>
+                <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">Si quien reserva se baja antes de concretar la compra, ¿devolvés la seña?</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setDepositRefundable(true)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${depositRefundable ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${depositRefundable ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                     Sí, se devuelve
                   </button>
                   <button type="button" onClick={() => setDepositRefundable(false)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!depositRefundable ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!depositRefundable ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                     No se devuelve
                   </button>
                 </div>
@@ -922,14 +922,14 @@ function LegalWizardModalAutos({ storeInfo, hechos, onClose, onApply }: {
             )}
 
             <div>
-              <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Tus vehículos suelen tener garantía vigente?</p>
+              <p className="text-xs font-semibold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">¿Tus vehículos suelen tener garantía vigente?</p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setHasWarranty(false)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!hasWarranty ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!hasWarranty ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                   No, se venden como están
                 </button>
                 <button type="button" onClick={() => setHasWarranty(true)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${hasWarranty ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${hasWarranty ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 text-slate-500 panel-oscuro:text-gray-400"}`}>
                   Sí, suelen tener
                 </button>
               </div>
@@ -951,13 +951,13 @@ function LegalWizardModalAutos({ storeInfo, hechos, onClose, onApply }: {
               { label: "Términos y condiciones", text: preview.terms },
               { label: "Política de privacidad", text: preview.privacy },
             ].map(({ label, text }) => (
-              <div key={label} className="rounded-lg border border-slate-200 p-3">
-                <p className="text-xs font-bold text-slate-700 mb-1.5">{label}</p>
-                <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">{text}</p>
+              <div key={label} className="rounded-lg border border-slate-200 panel-oscuro:border-gray-700 p-3">
+                <p className="text-xs font-bold text-slate-700 panel-oscuro:text-gray-300 mb-1.5">{label}</p>
+                <p className="text-xs text-slate-600 panel-oscuro:text-gray-400 whitespace-pre-line leading-relaxed">{text}</p>
               </div>
             ))}
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold">
+              <button type="button" onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-lg border border-slate-200 panel-oscuro:border-gray-700 text-slate-600 panel-oscuro:text-gray-400 text-sm font-semibold">
                 Volver
               </button>
               <button type="button" onClick={() => onApply(answers)} className="flex-[2] py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
@@ -986,28 +986,28 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50/60 panel-oscuro:hover:bg-gray-800/50 transition-colors"
       >
         {icon}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-slate-800">{title}</span>
+            <span className="text-sm font-bold text-slate-800 panel-oscuro:text-gray-200">{title}</span>
             {badge && (
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeVariant === "green" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeVariant === "green" ? "bg-emerald-100 panel-oscuro:bg-emerald-500/15 text-emerald-700 panel-oscuro:text-emerald-300" : "bg-slate-100 panel-oscuro:bg-gray-800 text-slate-600 panel-oscuro:text-gray-400"}`}>
                 {badge}
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+          <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 mt-0.5">{subtitle}</p>
         </div>
-        {open ? <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" /> : <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />}
+        {open ? <ChevronUp className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500 shrink-0" /> : <ChevronDown className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500 shrink-0" />}
       </button>
 
       {open && (
-        <div className="px-5 pb-5 border-t border-slate-100">
+        <div className="px-5 pb-5 border-t border-slate-100 panel-oscuro:border-gray-800">
           <div className="pt-4">{children}</div>
         </div>
       )}
@@ -1022,9 +1022,9 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
       className="flex items-center gap-3 group"
     >
       {enabled
-        ? <ToggleRight className="h-6 w-6 text-indigo-600 shrink-0" />
-        : <ToggleLeft className="h-6 w-6 text-slate-300 shrink-0" />}
-      <span className="text-sm text-slate-700 text-left leading-snug">{label}</span>
+        ? <ToggleRight className="h-6 w-6 text-indigo-600 panel-oscuro:text-indigo-400 shrink-0" />
+        : <ToggleLeft className="h-6 w-6 text-slate-300 panel-oscuro:text-gray-600 shrink-0" />}
+      <span className="text-sm text-slate-700 panel-oscuro:text-gray-300 text-left leading-snug">{label}</span>
     </button>
   );
 }
@@ -1032,7 +1032,7 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
 function Row({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-slate-600">
+      <label className="text-xs font-semibold text-slate-600 panel-oscuro:text-gray-400">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -1043,7 +1043,7 @@ function Row({ label, required, children }: { label: string; required?: boolean;
 /* La paleta de esta pantalla, en un solo lugar: la usan el input nativo de acá
    abajo y el CampoAuto del nombre del método de envío. */
 const ESTILO_CAMPO =
-  "rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors";
+  "rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-3.5 py-2.5 text-sm text-slate-900 panel-oscuro:text-gray-100 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 panel-oscuro:focus:border-gray-500 transition-colors";
 
 function Input({ value, onChange, placeholder, maxLength, inputMode }: {
   value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number; inputMode?: "numeric" | "text";
@@ -1095,12 +1095,12 @@ function SensitiveInput({ value, onChange, placeholder, maxLength, inputMode, re
         maxLength={maxLength}
         inputMode={inputMode}
         autoComplete="off"
-        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors font-mono tracking-wider"
+        className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-3.5 py-2.5 pr-10 text-sm text-slate-900 panel-oscuro:text-gray-100 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 panel-oscuro:focus:border-gray-500 transition-colors font-mono tracking-wider"
       />
       <button
         type="button"
         onClick={onToggleReveal}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 panel-oscuro:text-gray-500 hover:text-slate-600 panel-oscuro:hover:text-gray-400 transition-colors p-1"
         aria-label={revealed ? "Ocultar" : "Mostrar"}
         tabIndex={-1}
       >
@@ -1120,7 +1120,7 @@ function Textarea({ value, onChange, placeholder, maxLength }: {
       placeholder={placeholder}
       maxLength={maxLength}
       rows={3}
-      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors resize-none"
+      className="w-full rounded-lg border border-slate-200 panel-oscuro:border-gray-700 bg-slate-50 panel-oscuro:bg-gray-800/50 px-3.5 py-2.5 text-sm text-slate-900 panel-oscuro:text-gray-100 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 panel-oscuro:focus:border-gray-500 transition-colors resize-none"
     />
   );
 }
@@ -1140,12 +1140,12 @@ function PolicyBlock({ icon, label, active, onToggle, value, onChange, placehold
   // algo publicado.
   const vacia = !value.trim();
   return (
-    <div className="rounded-lg border border-slate-200 overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-3 bg-slate-50 border-b border-slate-100">
-        <span className="text-slate-400">{icon}</span>
+    <div className="rounded-lg border border-slate-200 panel-oscuro:border-gray-700 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-3 bg-slate-50 panel-oscuro:bg-gray-800/50 border-b border-slate-100 panel-oscuro:border-gray-800">
+        <span className="text-slate-400 panel-oscuro:text-gray-500">{icon}</span>
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-bold text-slate-700">{label}</span>
-          {nota && <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{nota}</p>}
+          <span className="text-xs font-bold text-slate-700 panel-oscuro:text-gray-300">{label}</span>
+          {nota && <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-0.5 leading-snug">{nota}</p>}
         </div>
         <button
           onClick={onToggle}
@@ -1154,23 +1154,23 @@ function PolicyBlock({ icon, label, active, onToggle, value, onChange, placehold
           className="flex items-center gap-1.5 text-xs font-semibold shrink-0 disabled:cursor-not-allowed"
         >
           {vacia
-            ? <><ToggleLeft className="h-5 w-5 text-slate-200" /><span className="text-slate-300">Sin escribir</span></>
+            ? <><ToggleLeft className="h-5 w-5 text-slate-200 panel-oscuro:text-gray-700" /><span className="text-slate-300 panel-oscuro:text-gray-600">Sin escribir</span></>
             : active
-            ? <><ToggleRight className="h-5 w-5 text-indigo-500" /><span className="text-indigo-600">Visible</span></>
-            : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Oculta</span></>}
+            ? <><ToggleRight className="h-5 w-5 text-indigo-500" /><span className="text-indigo-600 panel-oscuro:text-indigo-400">Visible</span></>
+            : <><ToggleLeft className="h-5 w-5 text-slate-300 panel-oscuro:text-gray-600" /><span className="text-slate-400 panel-oscuro:text-gray-500">Oculta</span></>}
         </button>
       </div>
-      <div className="px-4 py-3 bg-white">
+      <div className="px-4 py-3 bg-white panel-oscuro:bg-gray-900">
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           maxLength={MAX_LARGO_POLITICA}
           rows={4}
-          className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none resize-none leading-relaxed"
+          className="w-full bg-transparent text-sm text-slate-700 panel-oscuro:text-gray-300 placeholder:text-slate-300 panel-oscuro:placeholder:text-gray-600 focus:outline-none resize-none leading-relaxed"
         />
         <div className="text-right mt-1">
-          <span className="text-[10px] text-slate-300">{value.length}/{MAX_LARGO_POLITICA}</span>
+          <span className="text-[10px] text-slate-300 panel-oscuro:text-gray-600">{value.length}/{MAX_LARGO_POLITICA}</span>
         </div>
       </div>
     </div>

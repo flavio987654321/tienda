@@ -77,26 +77,26 @@ export function AgregarContrasena() {
   }
 
   const input =
-    "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
+    "w-full rounded-xl border border-gray-300 panel-oscuro:border-gray-600 bg-white panel-oscuro:bg-gray-900 px-3.5 py-3 text-sm text-gray-900 panel-oscuro:text-gray-100 placeholder-gray-400 panel-oscuro:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-5 dark:border-gray-800 dark:bg-gray-900">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-500/10">
-          <KeyRound className="h-5 w-5 text-orange-600" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 panel-oscuro:bg-orange-500/10 dark:bg-orange-500/10">
+          <KeyRound className="h-5 w-5 text-orange-600 panel-oscuro:text-orange-400" />
         </div>
         <div className="min-w-0 flex-1">
           {listo ? (
             <>
-              <p className="font-bold text-gray-900 dark:text-white">Contraseña guardada</p>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 dark:text-white">Contraseña guardada</p>
+              <p className="mt-1 text-sm text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-400 panel-oscuro:dark:text-gray-500">
                 Desde ahora podés entrar con Google o con tu mail y esta contraseña.
               </p>
             </>
           ) : (
             <>
-              <p className="font-bold text-gray-900 dark:text-white">Agregá una contraseña</p>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 dark:text-white">Agregá una contraseña</p>
+              <p className="mt-1 text-sm text-gray-600 panel-oscuro:text-gray-400 dark:text-gray-400 panel-oscuro:dark:text-gray-500">
                 Entrás con Google. Con una contraseña también podés entrar desde la app instalada,
                 y si un día perdés tu cuenta de Google no te quedás afuera.
               </p>
@@ -104,14 +104,14 @@ export function AgregarContrasena() {
                 <button
                   type="button"
                   onClick={() => setAbierto(true)}
-                  className="mt-3 text-sm font-bold text-orange-600 hover:text-orange-700"
+                  className="mt-3 text-sm font-bold text-orange-600 panel-oscuro:text-orange-400 hover:text-orange-700 panel-oscuro:hover:text-orange-300"
                 >
                   Agregar contraseña
                 </button>
               ) : (
                 <form onSubmit={guardar} className="mt-4 space-y-3">
                   {error && (
-                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+                    <p className="rounded-xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-3 py-2 text-sm text-red-600 panel-oscuro:text-red-400">{error}</p>
                   )}
                   <div className="relative">
                     <input
@@ -127,7 +127,7 @@ export function AgregarContrasena() {
                       type="button"
                       onClick={() => setVer(!ver)}
                       aria-label={ver ? "Ocultar contraseña" : "Mostrar contraseña"}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400"
                     >
                       {ver ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -154,7 +154,7 @@ export function AgregarContrasena() {
                       type="button"
                       onClick={() => { setAbierto(false); setError(""); setClave(""); setRepetir(""); }}
                       disabled={guardando}
-                      className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                      className="rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800 dark:text-gray-300 panel-oscuro:dark:text-gray-600 dark:hover:bg-gray-800"
                     >
                       Cancelar
                     </button>

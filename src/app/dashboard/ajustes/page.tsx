@@ -227,7 +227,7 @@ export default async function AjustesPage({ searchParams }: Props) {
     >
       {/* Sin barra de encabezado: el título vive arriba del menú lateral, como en
           los ajustes de Instagram. */}
-      <div className="-m-4 -mt-2 bg-slate-50 min-h-screen px-6 py-6">
+      <div className="-m-4 -mt-2 bg-slate-50 panel-oscuro:bg-gray-800/50 min-h-screen px-6 py-6">
         <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
         <ConfiguracionShell titulo="Configuración" secciones={secciones} seccionInicial={seccionInicial} />
       </div>

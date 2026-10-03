@@ -51,30 +51,30 @@ export default function PushNotificationToggle() {
   if (state === "unsupported") return null;
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+    <div className="flex items-center gap-2 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 px-3 py-2.5">
       {state === "loading" ? (
         <>
-          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-          <span className="flex-1 text-xs text-gray-400">Notificaciones push</span>
+          <Loader2 className="h-4 w-4 animate-spin text-gray-400 panel-oscuro:text-gray-500" />
+          <span className="flex-1 text-xs text-gray-400 panel-oscuro:text-gray-500">Notificaciones push</span>
         </>
       ) : state === "subscribed" ? (
         <>
-          <Bell className="h-4 w-4 fill-indigo-100 text-indigo-600" />
-          <span className="flex-1 text-xs font-medium text-gray-700">Notificaciones activas</span>
+          <Bell className="h-4 w-4 fill-indigo-100 text-indigo-600 panel-oscuro:text-indigo-400" />
+          <span className="flex-1 text-xs font-medium text-gray-700 panel-oscuro:text-gray-300">Notificaciones activas</span>
           <button
             onClick={unsubscribe}
-            className="text-xs text-gray-400 transition-colors hover:text-red-500"
+            className="text-xs text-gray-400 panel-oscuro:text-gray-500 transition-colors hover:text-red-500"
           >
             Desactivar
           </button>
         </>
       ) : (
         <>
-          <BellOff className="h-4 w-4 text-gray-400" />
-          <span className="flex-1 text-xs text-gray-500">Notificaciones push</span>
+          <BellOff className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
+          <span className="flex-1 text-xs text-gray-500 panel-oscuro:text-gray-400">Notificaciones push</span>
           <button
             onClick={subscribe}
-            className="text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-800"
+            className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 transition-colors hover:text-indigo-800 panel-oscuro:hover:text-indigo-300"
           >
             Activar
           </button>

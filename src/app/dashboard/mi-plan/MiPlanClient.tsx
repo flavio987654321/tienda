@@ -34,8 +34,8 @@ const PLAN_CONFIG = {
     BASIC: {
       name: "Tienda Pro",
       gradient: "from-indigo-600 to-violet-600",
-      lightGradient: "from-indigo-50 to-violet-50",
-      border: "border-indigo-200",
+      lightGradient: "from-indigo-50 panel-oscuro:from-indigo-500/10 to-violet-50 panel-oscuro:to-violet-500/10",
+      border: "border-indigo-200 panel-oscuro:border-indigo-500/30",
       icon: Store,
       // Con los números adentro: sin ellos, la dueña se enteraba del tope recién
       // cuando el sistema la frenaba. Y salen de las constantes que los aplican,
@@ -54,8 +54,8 @@ const PLAN_CONFIG = {
     PREMIUM: {
       name: "Tienda Premium",
       gradient: "from-violet-600 to-fuchsia-600",
-      lightGradient: "from-violet-50 to-fuchsia-50",
-      border: "border-violet-200",
+      lightGradient: "from-violet-50 panel-oscuro:from-violet-500/10 to-fuchsia-50 panel-oscuro:to-fuchsia-500/10",
+      border: "border-violet-200 panel-oscuro:border-violet-500/30",
       icon: Crown,
       // Antes prometía tres cosas que NO son exclusivas —métricas, diseños y el
       // badge de verificación son idénticos en los dos planes— y no nombraba
@@ -86,11 +86,11 @@ function Store(props: React.SVGProps<SVGSVGElement>) {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; textColor: string; bgColor: string; borderColor: string; icon: typeof CheckCircle }> = {
-  TRIAL:     { label: "Período de prueba", textColor: "text-amber-700",   bgColor: "bg-amber-50",   borderColor: "border-amber-200",   icon: Clock },
-  ACTIVE:    { label: "Activa",            textColor: "text-emerald-700", bgColor: "bg-emerald-50", borderColor: "border-emerald-200", icon: CheckCircle },
-  GRACE:     { label: "Período de gracia", textColor: "text-orange-700",  bgColor: "bg-orange-50",  borderColor: "border-orange-200",  icon: AlertTriangle },
-  EXPIRED:   { label: "Vencida",           textColor: "text-red-700",     bgColor: "bg-red-50",     borderColor: "border-red-200",     icon: AlertTriangle },
-  CANCELLED: { label: "Cancelada",         textColor: "text-gray-600",    bgColor: "bg-gray-100",   borderColor: "border-gray-200",    icon: AlertTriangle },
+  TRIAL:     { label: "Período de prueba", textColor: "text-amber-700 panel-oscuro:text-amber-300",   bgColor: "bg-amber-50 panel-oscuro:bg-amber-500/10",   borderColor: "border-amber-200 panel-oscuro:border-amber-500/30",   icon: Clock },
+  ACTIVE:    { label: "Activa",            textColor: "text-emerald-700 panel-oscuro:text-emerald-300", bgColor: "bg-emerald-50 panel-oscuro:bg-emerald-500/10", borderColor: "border-emerald-200 panel-oscuro:border-emerald-500/30", icon: CheckCircle },
+  GRACE:     { label: "Período de gracia", textColor: "text-orange-700 panel-oscuro:text-orange-300",  bgColor: "bg-orange-50 panel-oscuro:bg-orange-500/10",  borderColor: "border-orange-200 panel-oscuro:border-orange-500/30",  icon: AlertTriangle },
+  EXPIRED:   { label: "Vencida",           textColor: "text-red-700 panel-oscuro:text-red-300",     bgColor: "bg-red-50 panel-oscuro:bg-red-500/10",     borderColor: "border-red-200 panel-oscuro:border-red-500/30",     icon: AlertTriangle },
+  CANCELLED: { label: "Cancelada",         textColor: "text-gray-600 panel-oscuro:text-gray-400",    bgColor: "bg-gray-100 panel-oscuro:bg-gray-800",   borderColor: "border-gray-200 panel-oscuro:border-gray-700",    icon: AlertTriangle },
 };
 
 export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Props) {
@@ -119,27 +119,27 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
   // una suscripción vieja en la base (de antes de este cambio).
   if (userRole === "SELLER") {
     return (
-      <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-10 text-center shadow-sm">
-        <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+      <div className="rounded-3xl border border-emerald-200 panel-oscuro:border-emerald-500/30 bg-gradient-to-br from-emerald-50 panel-oscuro:from-emerald-500/10 to-teal-50 panel-oscuro:to-teal-500/10 p-10 text-center shadow-sm">
+        <div className="w-16 h-16 bg-emerald-100 panel-oscuro:bg-emerald-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="h-8 w-8 text-emerald-500" />
         </div>
-        <p className="text-gray-900 font-bold text-lg mb-1">Tu cuenta de afiliado es gratis</p>
-        <p className="text-gray-500 text-sm">Acceso completo al panel de afiliados, sin costo y sin límite de tiempo.</p>
+        <p className="text-gray-900 panel-oscuro:text-gray-100 font-bold text-lg mb-1">Tu cuenta de afiliado es gratis</p>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm">Acceso completo al panel de afiliados, sin costo y sin límite de tiempo.</p>
       </div>
     );
   }
 
   if (!sub) {
     return (
-      <div className="rounded-3xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-        <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+      <div className="rounded-3xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-10 text-center shadow-sm">
+        <div className="w-16 h-16 bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <CreditCard className="h-8 w-8 text-indigo-400" />
         </div>
-        <p className="text-gray-700 font-semibold mb-1">Sin suscripción activa</p>
-        <p className="text-gray-400 text-sm mb-6">Elegí un plan para empezar a usar la plataforma.</p>
+        <p className="text-gray-700 panel-oscuro:text-gray-300 font-semibold mb-1">Sin suscripción activa</p>
+        <p className="text-gray-400 panel-oscuro:text-gray-500 text-sm mb-6">Elegí un plan para empezar a usar la plataforma.</p>
         <button
           onClick={() => setPayModal({ plan: "OWNER_BASIC", billing: "MONTHLY" })}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-200"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-200 panel-oscuro:shadow-none"
         >
           <CreditCard className="h-4 w-4" /> Suscribirme
         </button>
@@ -175,7 +175,7 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
     <div className="space-y-4">
 
       {/* Hero card del plan */}
-      <div className={`rounded-3xl bg-gradient-to-br ${planCfg.gradient} p-6 text-white shadow-xl shadow-violet-200/50 relative overflow-hidden`}>
+      <div className={`rounded-3xl bg-gradient-to-br ${planCfg.gradient} p-6 text-white shadow-xl shadow-violet-200/50 panel-oscuro:shadow-none relative overflow-hidden`}>
         {/* Círculos decorativos */}
         <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
         <div className="absolute -bottom-12 -left-6 w-32 h-32 bg-white/10 rounded-full" />
@@ -206,7 +206,7 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-white rounded-full transition-all"
+                  className="h-full bg-white panel-oscuro:bg-gray-900 rounded-full transition-all"
                   style={{ width: `${Math.min(100, (days / totalDays) * 100)}%` }}
                 />
               </div>
@@ -233,15 +233,15 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
       </div>
 
       {/* Qué incluye */}
-      <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Incluido en tu plan</p>
+      <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
+        <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest mb-4">Incluido en tu plan</p>
         <div className="grid grid-cols-1 gap-2.5">
           {planCfg.features.map((feature) => (
             <div key={feature} className="flex items-center gap-3">
               <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${planCfg.gradient} flex items-center justify-center shrink-0`}>
                 <CheckCircle className="h-3 w-3 text-white" />
               </div>
-              <span className="text-sm text-gray-700">{feature}</span>
+              <span className="text-sm text-gray-700 panel-oscuro:text-gray-300">{feature}</span>
             </div>
           ))}
         </div>
@@ -249,38 +249,38 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
 
       {/* Features exclusivas Premium */}
       {planTier === "PREMIUM" ? (
-          <div className="rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-6 shadow-sm">
+          <div className="rounded-3xl border border-violet-100 panel-oscuro:border-violet-500/30 bg-gradient-to-br from-violet-50 panel-oscuro:from-violet-500/10 to-fuchsia-50 panel-oscuro:to-fuchsia-500/10 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <Crown className="h-4 w-4 text-violet-500" />
-              <p className="text-xs font-bold text-violet-600 uppercase tracking-widest">Tus beneficios exclusivos</p>
+              <p className="text-xs font-bold text-violet-600 panel-oscuro:text-violet-400 uppercase tracking-widest">Tus beneficios exclusivos</p>
             </div>
             <div className="space-y-3">
               <a
                 href="/dashboard/ajustes"
-                className="flex items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
+                className="flex items-center justify-between gap-3 p-4 bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-violet-100 panel-oscuro:border-violet-500/30 hover:border-violet-300 panel-oscuro:hover:border-violet-500/40 transition-colors group shadow-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
-                    <Zap className="h-5 w-5 text-violet-600" />
+                  <div className="w-10 h-10 bg-violet-100 panel-oscuro:bg-violet-500/15 rounded-xl flex items-center justify-center shrink-0">
+                    <Zap className="h-5 w-5 text-violet-600 panel-oscuro:text-violet-400" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800">Tu tienda como app (PWA)</p>
-                    <p className="text-xs text-gray-500">Los clientes pueden instalarla en su celular</p>
+                    <p className="text-sm font-bold text-gray-800 panel-oscuro:text-gray-200">Tu tienda como app (PWA)</p>
+                    <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Los clientes pueden instalarla en su celular</p>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-violet-400 group-hover:translate-x-0.5 transition-transform" />
               </a>
               <a
                 href="/dashboard/configuracion"
-                className="flex items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
+                className="flex items-center justify-between gap-3 p-4 bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-violet-100 panel-oscuro:border-violet-500/30 hover:border-violet-300 panel-oscuro:hover:border-violet-500/40 transition-colors group shadow-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 bg-fuchsia-100 rounded-xl flex items-center justify-center shrink-0">
-                    <Star className="h-5 w-5 text-fuchsia-600" />
+                  <div className="w-10 h-10 bg-fuchsia-100 panel-oscuro:bg-fuchsia-500/15 rounded-xl flex items-center justify-center shrink-0">
+                    <Star className="h-5 w-5 text-fuchsia-600 panel-oscuro:text-fuchsia-400" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800">Flyers publicitarios</p>
-                    <p className="text-xs text-gray-500">Popup automático al entrar a tu tienda</p>
+                    <p className="text-sm font-bold text-gray-800 panel-oscuro:text-gray-200">Flyers publicitarios</p>
+                    <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Popup automático al entrar a tu tienda</p>
                   </div>
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-fuchsia-400 group-hover:translate-x-0.5 transition-transform" />
@@ -288,12 +288,12 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
             </div>
           </div>
         ) : (
-          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Crown className="h-4 w-4 text-violet-400" />
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Solo en Premium</p>
+              <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest">Solo en Premium</p>
             </div>
-            <p className="text-sm text-gray-500 mb-4">Desbloqueá estas funciones mejorando tu plan.</p>
+            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mb-4">Desbloqueá estas funciones mejorando tu plan.</p>
             <div className="space-y-3">
               {/* Faltaban las notificaciones y el dominio: la lista mostraba 2 de
                   las 4 funciones exclusivas, o sea que escondía media diferencia
@@ -305,20 +305,20 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
                   lo usa literal); el fucsia no existía en ningún lado y el círculo
                   salía sin color. */}
               {[
-                { icon: Zap, tile: "bg-violet-100", ink: "text-violet-400", label: "Tu tienda como app (PWA)", desc: "Los clientes la instalan en su celular" },
-                { icon: Bell, tile: "bg-indigo-100", ink: "text-indigo-400", label: "Notificaciones push", desc: `Avisales novedades, hasta ${PUSH_CAMPAIGNS_PER_WEEK} por semana` },
-                { icon: Globe, tile: "bg-sky-100", ink: "text-sky-400", label: "Dominio propio", desc: "Tu tienda en tudominio.com, lo configuramos nosotros" },
-                { icon: Star, tile: "bg-fuchsia-100", ink: "text-fuchsia-400", label: "Flyers publicitarios", desc: "Aviso automático al entrar a tu tienda" },
+                { icon: Zap, tile: "bg-violet-100 panel-oscuro:bg-violet-500/15", ink: "text-violet-400", label: "Tu tienda como app (PWA)", desc: "Los clientes la instalan en su celular" },
+                { icon: Bell, tile: "bg-indigo-100 panel-oscuro:bg-indigo-500/15", ink: "text-indigo-400", label: "Notificaciones push", desc: `Avisales novedades, hasta ${PUSH_CAMPAIGNS_PER_WEEK} por semana` },
+                { icon: Globe, tile: "bg-sky-100 panel-oscuro:bg-sky-500/15", ink: "text-sky-400", label: "Dominio propio", desc: "Tu tienda en tudominio.com, lo configuramos nosotros" },
+                { icon: Star, tile: "bg-fuchsia-100 panel-oscuro:bg-fuchsia-500/15", ink: "text-fuchsia-400", label: "Flyers publicitarios", desc: "Aviso automático al entrar a tu tienda" },
               ].map(({ icon: Icon, tile, ink, label, desc }) => (
-                <div key={label} className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 opacity-70">
+                <div key={label} className="flex items-center gap-3 p-4 bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 opacity-70">
                   <div className={`w-10 h-10 ${tile} rounded-xl flex items-center justify-center shrink-0`}>
                     <Icon className={`h-5 w-5 ${ink}`} />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-600">{label}</p>
-                    <p className="text-xs text-gray-400">{desc}</p>
+                    <p className="text-sm font-bold text-gray-600 panel-oscuro:text-gray-400">{label}</p>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">{desc}</p>
                   </div>
-                  <span className="ml-auto text-xs font-bold text-violet-500 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full shrink-0">Premium</span>
+                  <span className="ml-auto text-xs font-bold text-violet-500 bg-violet-50 panel-oscuro:bg-violet-500/10 border border-violet-200 panel-oscuro:border-violet-500/30 px-2.5 py-1 rounded-full shrink-0">Premium</span>
                 </div>
               ))}
             </div>
@@ -326,8 +326,8 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
         )}
 
       {/* Acciones */}
-      <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Opciones</p>
+      <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
+        <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest mb-4">Opciones</p>
         <div className="space-y-2.5">
 
           {showRenewButton && (
@@ -336,11 +336,11 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
                 const planKey = planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
                 setPayModal({ plan: planKey, billing: planBilling });
               }}
-              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors group"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15 transition-colors group"
             >
-              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-indigo-700">
-                <div className="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-indigo-200 transition-colors">
-                  <RefreshCw className="h-4 w-4 text-indigo-600" />
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-indigo-700 panel-oscuro:text-indigo-300">
+                <div className="w-8 h-8 bg-indigo-100 panel-oscuro:bg-indigo-500/15 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-indigo-200 panel-oscuro:group-hover:bg-indigo-500/25 transition-colors">
+                  <RefreshCw className="h-4 w-4 text-indigo-600 panel-oscuro:text-indigo-400" />
                 </div>
                 {status === "EXPIRED" || status === "CANCELLED" ? "Reactivar suscripción" : "Renovar ahora"}
               </div>
@@ -354,26 +354,26 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
                 const planKey = planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
                 setPayModal({ plan: planKey, billing: "ANNUAL" });
               }}
-              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors group"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50 panel-oscuro:bg-emerald-500/10 hover:bg-emerald-100 panel-oscuro:hover:bg-emerald-500/15 transition-colors group"
             >
-              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-emerald-700">
-                <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-                  <Zap className="h-4 w-4 text-emerald-600" />
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-emerald-700 panel-oscuro:text-emerald-300">
+                <div className="w-8 h-8 bg-emerald-100 panel-oscuro:bg-emerald-500/15 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-emerald-200 panel-oscuro:group-hover:bg-emerald-500/25 transition-colors">
+                  <Zap className="h-4 w-4 text-emerald-600 panel-oscuro:text-emerald-400" />
                 </div>
                 Cambiar a plan anual · 3 meses gratis
               </div>
-              <span className="shrink-0 text-right text-xs font-bold text-emerald-600">{money(getPriceForRole("OWNER", planTier, "ANNUAL"))}/año</span>
+              <span className="shrink-0 text-right text-xs font-bold text-emerald-600 panel-oscuro:text-emerald-400">{money(getPriceForRole("OWNER", planTier, "ANNUAL"))}/año</span>
             </button>
           )}
 
           {isActive && planTier === "BASIC" && (
             <button
               onClick={() => setPayModal({ plan: "OWNER_PREMIUM", billing: planBilling })}
-              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-violet-200 bg-violet-50 hover:bg-violet-100 transition-colors group"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-violet-200 panel-oscuro:border-violet-500/30 bg-violet-50 panel-oscuro:bg-violet-500/10 hover:bg-violet-100 panel-oscuro:hover:bg-violet-500/15 transition-colors group"
             >
-              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-violet-700">
-                <div className="w-8 h-8 bg-violet-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-violet-200 transition-colors">
-                  <Crown className="h-4 w-4 text-violet-600" />
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-violet-700 panel-oscuro:text-violet-300">
+                <div className="w-8 h-8 bg-violet-100 panel-oscuro:bg-violet-500/15 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-violet-200 panel-oscuro:group-hover:bg-violet-500/25 transition-colors">
+                  <Crown className="h-4 w-4 text-violet-600 panel-oscuro:text-violet-400" />
                 </div>
                 Mejorar a Premium
               </div>
@@ -388,15 +388,15 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
           <a
             href="/precios"
             {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors group"
+            className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors group"
           >
-            <div className="flex min-w-0 items-center gap-3 text-left text-sm font-medium text-gray-600">
-              <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-gray-200 transition-colors">
-                <Star className="h-4 w-4 text-gray-500" />
+            <div className="flex min-w-0 items-center gap-3 text-left text-sm font-medium text-gray-600 panel-oscuro:text-gray-400">
+              <div className="w-8 h-8 bg-gray-100 panel-oscuro:bg-gray-800 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-gray-200 panel-oscuro:group-hover:bg-gray-700 transition-colors">
+                <Star className="h-4 w-4 text-gray-500 panel-oscuro:text-gray-400" />
               </div>
               Ver todos los planes
             </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-gray-400" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 panel-oscuro:text-gray-500" />
           </a>
         </div>
       </div>

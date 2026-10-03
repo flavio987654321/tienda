@@ -48,24 +48,24 @@ export default async function ConsultasPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <MessageCircle className="h-6 w-6 text-indigo-500" />
-          <h1 className="text-2xl font-bold text-gray-900">Consultas</h1>
+          <h1 className="text-2xl font-bold text-gray-900 panel-oscuro:text-gray-100">Consultas</h1>
         </div>
-        <p className="text-gray-500 ml-9">Clientes que consultaron por tus productos</p>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 ml-9">Clientes que consultaron por tus productos</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Pendientes</p>
-          <p className="text-3xl font-black text-gray-900">{pendingCount}</p>
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-1">Pendientes</p>
+          <p className="text-3xl font-black text-gray-900 panel-oscuro:text-gray-100">{pendingCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Confirmadas</p>
-          <p className="text-3xl font-black text-green-600">{confirmedCount}</p>
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-1">Confirmadas</p>
+          <p className="text-3xl font-black text-green-600 panel-oscuro:text-green-400">{confirmedCount}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Comisiones acreditadas</p>
-          <p className="text-3xl font-black text-indigo-600">${totalCommissions.toLocaleString("es-AR")}</p>
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-1">Comisiones acreditadas</p>
+          <p className="text-3xl font-black text-indigo-600 panel-oscuro:text-indigo-400">${totalCommissions.toLocaleString("es-AR")}</p>
         </div>
       </div>
 

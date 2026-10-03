@@ -79,15 +79,15 @@ function AccountStep({ done }: { done: boolean }) {
         ) : (
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
+              <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Tu cuenta de Facebook está conectada.</p>
               <button
                 onClick={() => setConfirmando(true)}
-                className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 transition-colors"
+                className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 panel-oscuro:hover:text-red-400 transition-colors"
               >
                 <Unlink className="h-3 w-3" /> Desconectar
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5">
+            <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-1.5">
               Es la misma conexión que usa Catálogo de Meta — si la desconectás acá, también se desconecta ahí.
             </p>
           </>
@@ -98,7 +98,7 @@ function AccountStep({ done }: { done: boolean }) {
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Conectá la cuenta de Facebook que administra tu negocio para elegir tu píxel.
       </p>
       <a
@@ -147,24 +147,24 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   }
 
   if (done) {
-    return <p className="text-sm text-slate-500">Portfolio comercial conectado{businessId ? ` (ID: ${businessId})` : ""}.</p>;
+    return <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Portfolio comercial conectado{businessId ? ` (ID: ${businessId})` : ""}.</p>;
   }
 
   if (loadError) return <ErrorDePaso mensaje={loadError} onReintentar={reintentar} />;
 
   if (!businesses) {
-    return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando portfolios…</div>;
+    return <div className="flex items-center gap-2 text-sm text-slate-400 panel-oscuro:text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando portfolios…</div>;
   }
 
   if (businesses.length === 0) {
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-3">No encontramos ningún portfolio comercial en tu cuenta de Meta.</p>
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">No encontramos ningún portfolio comercial en tu cuenta de Meta.</p>
         <a
           href="https://business.facebook.com/overview"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           Crear uno en Meta Business <ExternalLink className="h-3.5 w-3.5" />
         </a>
@@ -175,24 +175,24 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
-      <p className="text-sm text-slate-500 mb-1">Elegí a qué portfolio comercial pertenece tu píxel.</p>
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-1">Elegí a qué portfolio comercial pertenece tu píxel.</p>
       {/* El portfolio es el MISMO dato que usa Catálogo de Meta (`fbBusinessId`),
           así que el que se elija acá es el que después va a alojar el catálogo.
           Ver el comentario largo en MetaCatalogoWizard: Meta lista también los
           portfolios ajenos donde a uno lo agregaron, y sin esta salida el dueño
           no tiene forma de crear el suyo. */}
-      <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+      <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mb-3 leading-relaxed">
         Es el mismo portfolio que va a usar tu catálogo. Si alguno de estos es de otra persona
         —una agencia, un socio, un familiar que te agregó—, mejor creá el tuyo abajo.
       </p>
       <div className="space-y-2">
         {businesses.map((b) => (
-          <div key={b.id} className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">
-            <span className="text-sm font-medium text-slate-800">{b.name}</span>
+          <div key={b.id} className="flex items-center justify-between border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-3">
+            <span className="text-sm font-medium text-slate-800 panel-oscuro:text-gray-200">{b.name}</span>
             <button
               onClick={() => connect(b.id)}
               disabled={connectingId !== null}
-              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
             >
               {connectingId === b.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronRight className="h-3 w-3" />}
               Conectar
@@ -201,18 +201,18 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
         ))}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="mt-3 pt-3 border-t border-slate-100 panel-oscuro:border-gray-800 flex flex-wrap items-center gap-x-4 gap-y-2">
         <a
           href="https://business.facebook.com/overview"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           <Plus className="h-3.5 w-3.5" /> Crear mi propio portfolio
         </a>
         <button
           onClick={reintentar}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 panel-oscuro:text-gray-400 hover:text-slate-700 panel-oscuro:hover:text-gray-300"
         >
           <RefreshCw className="h-3 w-3" /> Ya lo creé, buscar de nuevo
         </button>
@@ -265,12 +265,12 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
     return (
       <div>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">
             Píxel conectado{pixelId ? <> (ID: <span className="font-mono">{pixelId}</span>)</> : ""}.
           </p>
           <button
             onClick={() => { setPixels(null); setLoadError(null); setChanging(true); }}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 shrink-0"
+            className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 shrink-0"
           >
             Cambiar
           </button>
@@ -279,7 +279,7 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
           href="https://business.facebook.com/events_manager"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           Ver en el Administrador de eventos <ExternalLink className="h-3.5 w-3.5" />
         </a>
@@ -290,13 +290,13 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
   if (loadError) return <ErrorDePaso mensaje={loadError} onReintentar={reintentar} />;
 
   if (!pixels) {
-    return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando píxeles…</div>;
+    return <div className="flex items-center gap-2 text-sm text-slate-400 panel-oscuro:text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando píxeles…</div>;
   }
 
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
-      <p className="text-sm text-slate-500 mb-3">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">
         {pixels.length > 0
           ? "Elegí en qué píxel querés medir las visitas y compras de tu tienda. Si ya usás uno para tu publicidad, elegí ese."
           : "Tu portfolio comercial todavía no tiene ningún píxel. Creá uno para empezar a medir."}
@@ -305,15 +305,15 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
       {pixels.length > 0 && (
         <div className="space-y-2 mb-3">
           {pixels.map((p) => (
-            <div key={p.id} className="flex items-center justify-between gap-3 border border-slate-200 rounded-lg px-4 py-3">
+            <div key={p.id} className="flex items-center justify-between gap-3 border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{p.name}</p>
-                <p className="text-xs text-slate-400 font-mono truncate">ID: {p.id}</p>
+                <p className="text-sm font-medium text-slate-800 panel-oscuro:text-gray-200 truncate">{p.name}</p>
+                <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 font-mono truncate">ID: {p.id}</p>
               </div>
               <button
                 onClick={() => choose({ pixelId: p.id })}
                 disabled={busyId !== null}
-                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50 shrink-0"
+                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50 shrink-0"
               >
                 {busyId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronRight className="h-3 w-3" />}
                 {p.id === pixelId ? "En uso" : "Usar este píxel"}
@@ -329,12 +329,12 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nombre del píxel nuevo"
-            className="flex-1 min-w-0 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
+            className="flex-1 min-w-0 border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm text-slate-800 panel-oscuro:text-gray-200 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 panel-oscuro:focus:ring-indigo-500/30 focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
           />
           <button
             onClick={() => choose({ name: newName.trim() })}
             disabled={!newName.trim() || busyId !== null}
-            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-md disabled:opacity-40 shrink-0"
+            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-2 rounded-md disabled:opacity-40 shrink-0"
           >
             {busyId === "nuevo" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
             Crear píxel
@@ -343,7 +343,7 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
       ) : (
         <button
           onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           <Plus className="h-3.5 w-3.5" /> Crear un píxel nuevo
         </button>

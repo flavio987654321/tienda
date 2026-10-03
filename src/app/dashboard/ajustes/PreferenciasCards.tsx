@@ -101,7 +101,7 @@ function PieDeTarjeta({ onClick, guardando, guardado, sinCambios, error, aviso }
   return (
     <div className="space-y-3">
       {confirmado && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700">
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50 panel-oscuro:bg-emerald-500/10 px-3 py-2.5 text-xs font-semibold text-emerald-700 panel-oscuro:text-emerald-300">
           <Check className="h-4 w-4 shrink-0" />
           Listo, se guardó. Ya está aplicado en tu tienda.
         </div>
@@ -121,14 +121,14 @@ function PieDeTarjeta({ onClick, guardando, guardado, sinCambios, error, aviso }
   );
 }
 
-const inputCls = "w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400";
-const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5";
+const inputCls = "w-full border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-2.5 text-sm text-slate-800 panel-oscuro:text-gray-200 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400";
+const labelCls = "block text-xs font-semibold text-slate-500 panel-oscuro:text-gray-400 mb-1.5";
 
 function Cabecera({ icon: Icono, children }: { icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-      <Icono className="h-4 w-4 text-slate-400 shrink-0" />
-      <h2 className="text-sm font-semibold text-slate-900">{children}</h2>
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 panel-oscuro:border-gray-800">
+      <Icono className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500 shrink-0" />
+      <h2 className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">{children}</h2>
     </div>
   );
 }
@@ -138,12 +138,12 @@ function Cabecera({ icon: Icono, children }: { icon: React.ComponentType<{ class
    dice la etiqueta enseña que la ayuda es relleno, y el que aprende eso deja de
    leerla justo el día que el aviso importa. */
 function Nota({ children }: { children: React.ReactNode }) {
-  return <p className="mt-1.5 text-xs text-slate-400">{children}</p>;
+  return <p className="mt-1.5 text-xs text-slate-400 panel-oscuro:text-gray-500">{children}</p>;
 }
 
 function Advertencia({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
+    <div className="rounded-lg border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-800 panel-oscuro:text-amber-300">
       {children}
     </div>
   );
@@ -157,9 +157,9 @@ function Switch({ value, onChange, label }: { value: boolean; onChange: (v: bool
       aria-checked={value}
       aria-label={label}
       onClick={() => onChange(!value)}
-      className={`relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${value ? "bg-indigo-600" : "bg-slate-300"}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${value ? "bg-indigo-600" : "bg-slate-300 panel-oscuro:bg-gray-600"}`}
     >
-      <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-5" : "translate-x-0"}`} />
+      <span className={`block h-5 w-5 rounded-full bg-white panel-oscuro:bg-gray-900 shadow transition-transform ${value ? "translate-x-5" : "translate-x-0"}`} />
     </button>
   );
 }
@@ -176,13 +176,13 @@ export function WhatsappCard({ inicial }: { inicial: Whatsapp }) {
   const aviso = wa.enabled ? problemaDelTelefono(wa.number) : "";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
       <Cabecera icon={MessageCircle}>WhatsApp</Cabecera>
       <div className="px-5 py-4 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800">Botón flotante</p>
-            <p className="text-xs text-slate-400 mt-0.5">Visible en todas las páginas de tu tienda</p>
+            <p className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">Botón flotante</p>
+            <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 mt-0.5">Visible en todas las páginas de tu tienda</p>
           </div>
           <Switch value={wa.enabled} onChange={(v) => setWa({ ...wa, enabled: v })} label="Botón flotante de WhatsApp" />
         </div>
@@ -207,7 +207,7 @@ export function WhatsappCard({ inicial }: { inicial: Whatsapp }) {
               {/* El formato libre es real: los templates arman el link con
                   `number.replace(/\D/g,"")`, o sea que espacios, guiones y
                   paréntesis se descartan solos. Lo que sí importa es el país. */}
-              <Nota>Escribilo como quieras — los espacios y guiones se ignoran. Lo que no puede faltar es el código de país: <strong className="text-slate-500">+54</strong>.</Nota>
+              <Nota>Escribilo como quieras — los espacios y guiones se ignoran. Lo que no puede faltar es el código de país: <strong className="text-slate-500 panel-oscuro:text-gray-400">+54</strong>.</Nota>
             </div>
             <div>
               <label className={labelCls}>Mensaje de bienvenida</label>
@@ -218,7 +218,7 @@ export function WhatsappCard({ inicial }: { inicial: Whatsapp }) {
                 placeholder="Hola! Me gustaría consultar sobre sus productos 😊"
                 onChange={(e) => setWa({ ...wa, message: e.target.value })}
               />
-              <p className="mt-1.5 text-xs text-slate-400">Se pre-carga cuando el cliente toca el botón.</p>
+              <p className="mt-1.5 text-xs text-slate-400 panel-oscuro:text-gray-500">Se pre-carga cuando el cliente toca el botón.</p>
             </div>
           </>
         )}
@@ -248,14 +248,14 @@ export function RedesCard({ inicial }: { inicial: SocialLinks }) {
   const { guardar, guardando, guardado, error } = useGuardado();
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
       <Cabecera icon={Link2}>Redes sociales</Cabecera>
       <div className="px-5 py-4 space-y-4">
-        <p className="text-sm text-slate-500">Aparecen en el pie de tu tienda. Las que dejes vacías no se muestran.</p>
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Aparecen en el pie de tu tienda. Las que dejes vacías no se muestran.</p>
         {/* Se dice antes y no como error después: el servidor rechaza cualquier
             cosa que no sea una dirección web, y el motivo es que estos links se
             abren en el navegador de quien visita la tienda. */}
-        <Nota>Pegá el link completo, arrancando con <strong className="text-slate-500">https://</strong> — no el nombre de usuario suelto.</Nota>
+        <Nota>Pegá el link completo, arrancando con <strong className="text-slate-500 panel-oscuro:text-gray-400">https://</strong> — no el nombre de usuario suelto.</Nota>
         <div className="space-y-3">
           {REDES.map(([key, label, ph]) => (
             <div key={key}>
@@ -287,10 +287,10 @@ export function MonedaCard({ inicial }: { inicial: "ARS" | "USD" }) {
   const { guardar, guardando, guardado, error } = useGuardado();
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
       <Cabecera icon={DollarSign}>Moneda</Cabecera>
       <div className="px-5 py-4 space-y-4">
-        <p className="text-sm text-slate-500">Con la que se muestran los precios en tu tienda.</p>
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Con la que se muestran los precios en tu tienda.</p>
         {/* La advertencia más importante de esta pantalla. Cambiar la moneda
             sólo cambia el símbolo: no hay conversión en ningún lado del código
             —ni acá, ni en los formateadores propios de los templates—, así que
@@ -309,7 +309,7 @@ export function MonedaCard({ inicial }: { inicial: "ARS" | "USD" }) {
               type="button"
               onClick={() => setMoneda(m)}
               className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-bold transition-colors ${
-                moneda === m ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                moneda === m ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300" : "border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 text-slate-500 panel-oscuro:text-gray-400 hover:border-slate-300 panel-oscuro:hover:border-gray-600"
               }`}
             >
               {m === "ARS" ? "$ Pesos (ARS)" : "USD Dólares"}
@@ -333,13 +333,13 @@ export function SeoCard({ inicial }: { inicial: Seo }) {
   const { guardar, guardando, guardado, error } = useGuardado();
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
       <Cabecera icon={Search}>SEO / Google</Cabecera>
       <div className="px-5 py-4 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800">Activar SEO</p>
-            <p className="text-xs text-slate-400 mt-0.5">El título y la descripción con los que aparecés en Google</p>
+            <p className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">Activar SEO</p>
+            <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 mt-0.5">El título y la descripción con los que aparecés en Google</p>
           </div>
           <Switch value={seo.enabled} onChange={(v) => setSeo({ ...seo, enabled: v })} label="Activar SEO" />
         </div>
@@ -351,7 +351,7 @@ export function SeoCard({ inicial }: { inicial: Seo }) {
         {!seo.enabled && (
           <Nota>
             Apagado no te deja afuera de Google: se usa el nombre de tu tienda y la{" "}
-            <strong className="text-slate-500">descripción breve</strong> que cargaste en Identidad.
+            <strong className="text-slate-500 panel-oscuro:text-gray-400">descripción breve</strong> que cargaste en Identidad.
             Activalo sólo si querés escribir algo distinto.
           </Nota>
         )}
@@ -367,7 +367,7 @@ export function SeoCard({ inicial }: { inicial: Seo }) {
                 placeholder="Mi Tienda - Ropa y Accesorios"
                 onChange={(e) => setSeo({ ...seo, title: e.target.value })}
               />
-              <p className="mt-1.5 text-xs text-slate-400">{seo.title.length}/120 · Google suele cortar cerca de los 60.</p>
+              <p className="mt-1.5 text-xs text-slate-400 panel-oscuro:text-gray-500">{seo.title.length}/120 · Google suele cortar cerca de los 60.</p>
             </div>
             <div>
               <label className={labelCls}>Descripción</label>
@@ -379,7 +379,7 @@ export function SeoCard({ inicial }: { inicial: Seo }) {
                 placeholder="Encontrá los mejores productos en nuestra tienda..."
                 onChange={(e) => setSeo({ ...seo, description: e.target.value })}
               />
-              <p className="mt-1.5 text-xs text-slate-400">{seo.description.length}/320 · Google suele cortar cerca de los 160.</p>
+              <p className="mt-1.5 text-xs text-slate-400 panel-oscuro:text-gray-500">{seo.description.length}/320 · Google suele cortar cerca de los 160.</p>
             </div>
           </>
         )}

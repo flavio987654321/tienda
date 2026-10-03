@@ -36,8 +36,8 @@ export default async function MiPlanPage({
     <DashboardLayout userName={user.name} userId={user.id}>
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-gray-900">Mi plan</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestioná tu suscripción y método de pago.</p>
+          <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">Mi plan</h1>
+          <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mt-1">Gestioná tu suscripción y método de pago.</p>
         </div>
 
         <MiPlanClient sub={sub} userRole={user.role as "OWNER" | "SELLER"} autoUpgrade={autoUpgrade} />

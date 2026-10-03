@@ -84,30 +84,30 @@ export default function PanelAyudaArticulo({
   );
 
   return (
-    <div className="min-h-screen bg-white [color-scheme:light]">
+    <div className="min-h-screen bg-white panel-oscuro:bg-gray-900 [color-scheme:light]">
       <div className="mx-auto max-w-3xl px-5 py-6 sm:px-8 sm:py-10">
         <Link
           href={base}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 transition-colors hover:text-gray-950"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 transition-colors hover:text-gray-950"
         >
           <ArrowLeft className="h-4 w-4" />
           Centro de ayuda
         </Link>
 
         <article className="mt-6 min-w-0">
-          <header className="flex flex-col gap-3 border-b border-gray-200 pb-7">
+          <header className="flex flex-col gap-3 border-b border-gray-200 panel-oscuro:border-gray-700 pb-7">
             <Chip clase={articulo.clase} />
             <h1 className="text-2xl font-black tracking-tight text-balance text-gray-950 sm:text-3xl">
               {articulo.titulo}
             </h1>
-            <p className="text-[15px] leading-relaxed text-gray-500">{articulo.resumen}</p>
+            <p className="text-[15px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{articulo.resumen}</p>
 
             {articulo.pantalla && (
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 panel-oscuro:text-gray-400">
                 En el panel:{" "}
                 <Link
                   href={articulo.pantalla.href}
-                  className="font-semibold text-orange-700 underline underline-offset-2 hover:text-orange-600"
+                  className="font-semibold text-orange-700 panel-oscuro:text-orange-300 underline underline-offset-2 hover:text-orange-600 panel-oscuro:hover:text-orange-400"
                 >
                   {articulo.pantalla.label}
                 </Link>
@@ -119,11 +119,11 @@ export default function PanelAyudaArticulo({
             <Cuerpo bloques={articulo.cuerpo} />
           </div>
 
-          <p className="mt-9 text-xs text-gray-400">Última actualización: {actualizado}</p>
+          <p className="mt-9 text-xs text-gray-400 panel-oscuro:text-gray-500">Última actualización: {actualizado}</p>
 
           {relacionados.length > 0 && (
-            <section className="mt-12 border-t border-gray-200 pt-7">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-400">
+            <section className="mt-12 border-t border-gray-200 panel-oscuro:border-gray-700 pt-7">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-400 panel-oscuro:text-gray-500">
                 Seguir por acá
               </h2>
               <ul className="mt-3 flex flex-col">
@@ -131,16 +131,16 @@ export default function PanelAyudaArticulo({
                   <li key={a.slug}>
                     <Link
                       href={`${base}/${a.slug}`}
-                      className="group flex items-start gap-4 border-b border-gray-100 py-4 transition-colors last:border-0 hover:bg-orange-50/40"
+                      className="group flex items-start gap-4 border-b border-gray-100 panel-oscuro:border-gray-800 py-4 transition-colors last:border-0 hover:bg-orange-50/40 panel-oscuro:hover:bg-orange-500/10"
                     >
                       <div className="flex min-w-0 flex-1 flex-col gap-1">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span className="font-semibold tracking-tight text-gray-950">{a.titulo}</span>
                           <Chip clase={a.clase} />
                         </div>
-                        <span className="text-sm leading-6 text-gray-500">{a.resumen}</span>
+                        <span className="text-sm leading-6 text-gray-500 panel-oscuro:text-gray-400">{a.resumen}</span>
                       </div>
-                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-orange-600" />
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 panel-oscuro:text-gray-600 transition-all group-hover:translate-x-0.5 group-hover:text-orange-600 panel-oscuro:group-hover:text-orange-400" />
                     </Link>
                   </li>
                 ))}

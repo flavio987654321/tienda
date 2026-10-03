@@ -47,10 +47,10 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       onClick={() => onChange(!checked)}
       title={checked ? "Visible públicamente" : "Oculto"}
       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed ${
-        checked ? "bg-blue-500" : "bg-gray-200"
+        checked ? "bg-blue-500" : "bg-gray-200 panel-oscuro:bg-gray-700"
       }`}
     >
-      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
+      <span className={`inline-block h-4 w-4 rounded-full bg-white panel-oscuro:bg-gray-900 shadow transform transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
     </button>
   );
 }
@@ -146,10 +146,10 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <p className="font-semibold text-gray-800 text-sm">{label}</p>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl overflow-hidden shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 panel-oscuro:border-gray-800">
+          <p className="font-semibold text-gray-800 panel-oscuro:text-gray-200 text-sm">{label}</p>
+          <button type="button" onClick={onClose} className="text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -178,7 +178,7 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
           >
             Cancelar
           </button>
@@ -247,9 +247,9 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
           onClose={() => setShowCamera(false)}
         />
       )}
-      <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
+      <p className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">{label}</p>
       <div className={`border-2 border-dashed rounded-xl overflow-hidden transition-colors ${
-        error ? "border-red-300 bg-red-50" : file ? "border-indigo-300 bg-indigo-50" : "border-gray-200"
+        error ? "border-red-300 panel-oscuro:border-red-500/40 bg-red-50 panel-oscuro:bg-red-500/10" : file ? "border-indigo-300 panel-oscuro:border-indigo-500/40 bg-indigo-50 panel-oscuro:bg-indigo-500/10" : "border-gray-200 panel-oscuro:border-gray-700"
       }`}>
         {file && preview ? (
           <div className="relative">
@@ -262,13 +262,13 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
             <button
               type="button"
               onClick={() => handleFile(null)}
-              className="absolute top-1.5 right-1.5 bg-white/90 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-full p-1 shadow transition-colors"
+              className="absolute top-1.5 right-1.5 bg-white/90 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 text-gray-500 panel-oscuro:text-gray-400 hover:text-red-500 rounded-full p-1 shadow transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
-            <div className="px-3 py-1.5 flex items-center gap-1.5 bg-indigo-50">
-              <BadgeCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-              <span className="text-xs text-indigo-700 truncate">{file.name}</span>
+            <div className="px-3 py-1.5 flex items-center gap-1.5 bg-indigo-50 panel-oscuro:bg-indigo-500/10">
+              <BadgeCheck className="h-3.5 w-3.5 text-indigo-600 panel-oscuro:text-indigo-400 shrink-0" />
+              <span className="text-xs text-indigo-700 panel-oscuro:text-indigo-300 truncate">{file.name}</span>
             </div>
           </div>
         ) : (
@@ -276,23 +276,23 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
             <button
               type="button"
               onClick={() => galleryRef.current?.click()}
-              className="flex-1 flex items-center gap-2 px-3 py-2.5 hover:bg-indigo-50/50 transition-colors"
+              className="flex-1 flex items-center gap-2 px-3 py-2.5 hover:bg-indigo-50/50 panel-oscuro:hover:bg-indigo-500/10 transition-colors"
             >
-              <Upload className="h-4 w-4 text-gray-400 shrink-0" />
-              <span className="text-xs text-gray-500 text-left">Elegir foto (máx 5MB)</span>
+              <Upload className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 shrink-0" />
+              <span className="text-xs text-gray-500 panel-oscuro:text-gray-400 text-left">Elegir foto (máx 5MB)</span>
             </button>
             <button
               type="button"
               onClick={() => setShowCamera(true)}
               title="Usar cámara"
-              className="px-3 border-l border-dashed border-gray-200 hover:bg-indigo-50/50 text-gray-400 hover:text-indigo-600 transition-colors"
+              className="px-3 border-l border-dashed border-gray-200 panel-oscuro:border-gray-700 hover:bg-indigo-50/50 panel-oscuro:hover:bg-indigo-500/10 text-gray-400 panel-oscuro:text-gray-500 hover:text-indigo-600 panel-oscuro:hover:text-indigo-400 transition-colors"
             >
               <Camera className="h-4 w-4" />
             </button>
           </div>
         )}
       </div>
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {error && <p className="text-xs text-red-600 panel-oscuro:text-red-400 mt-1">{error}</p>}
       <input
         ref={galleryRef}
         type="file"
@@ -307,11 +307,11 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
 function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center p-4" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-        <p className="text-sm font-semibold text-gray-800 mb-1">¿Estás seguro?</p>
-        <p className="text-sm text-gray-500 mb-5">{message}</p>
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+        <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200 mb-1">¿Estás seguro?</p>
+        <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mb-5">{message}</p>
         <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors">
             Cancelar
           </button>
           <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors">
@@ -436,32 +436,32 @@ export default function PerfilPage() {
             <span className="text-white text-2xl font-bold leading-none">{initials}</span>
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900">{profile?.name || "Mi perfil"}</h1>
+            <h1 className="text-xl font-bold text-gray-900 panel-oscuro:text-gray-100">{profile?.name || "Mi perfil"}</h1>
             {isVerified && <span title="Identidad verificada"><BadgeCheck className="h-5 w-5 text-blue-500" /></span>}
           </div>
-          <p className="text-gray-400 text-sm mt-0.5">{profile?.email}</p>
+          <p className="text-gray-400 panel-oscuro:text-gray-500 text-sm mt-0.5">{profile?.email}</p>
         </div>
 
         {/* Layout 2 columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Columna izquierda — Datos del perfil */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-bold text-gray-900">Datos personales</h2>
-              {verifStore && <p className="text-xs text-gray-400 mt-0.5">El toggle azul indica si ese dato se muestra al público cuando verificás tu identidad.</p>}
+          <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+              <h2 className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Datos personales</h2>
+              {verifStore && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">El toggle azul indica si ese dato se muestra al público cuando verificás tu identidad.</p>}
             </div>
             <div className="px-6 py-5 space-y-4">
               {/* Email — sin toggle, siempre privado */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                <input type="email" value={profile?.email || ""} disabled className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
-                <p className="text-xs text-gray-400 mt-1">Siempre privado, no se muestra al público.</p>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Email</label>
+                <input type="email" value={profile?.email || ""} disabled className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm bg-gray-50 panel-oscuro:bg-gray-800/50 text-gray-400 panel-oscuro:text-gray-500 cursor-not-allowed" />
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1">Siempre privado, no se muestra al público.</p>
               </div>
 
               {/* Nombre */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre y apellido</label>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Nombre y apellido</label>
                 <div className="flex gap-2 items-center">
                   {/* Al lado hay un interruptor de ~44px, así que al campo le
                       quedan unos 230px en un teléfono. Un nombre y apellido
@@ -484,13 +484,13 @@ export default function PerfilPage() {
 
               {/* Teléfono */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono / WhatsApp</label>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Teléfono / WhatsApp</label>
                 <div className="flex gap-2 items-center">
                   <input
                     type="text" value={form.phone}
                     onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                     placeholder="5491112345678"
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   {verifStore && (
                     <div className="shrink-0" title={toggleDisabled && !isVerified ? "Solo disponible tras verificación" : ""}>
@@ -498,12 +498,12 @@ export default function PerfilPage() {
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Con código de país, sin + ni espacios. Ej: 5491112345678</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1">Con código de país, sin + ni espacios. Ej: 5491112345678</p>
               </div>
 
               {/* Ciudad */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Ciudad</label>
+                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Ciudad</label>
                 <div className="flex gap-2 items-center">
                   <CampoAuto
                     value={form.city}
@@ -524,14 +524,14 @@ export default function PerfilPage() {
               {verifStore && (
                 <div className="flex items-center justify-between py-1">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Fecha de ingreso</p>
-                    <p className="text-xs text-gray-400">Ej: &quot;Vendedor desde junio 2024&quot;</p>
+                    <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Fecha de ingreso</p>
+                    <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Ej: &quot;Vendedor desde junio 2024&quot;</p>
                   </div>
                   <Toggle checked={verifStore.verifiedShowSince} onChange={(v) => handleToggle("verifiedShowSince", v)} disabled={toggleDisabled} />
                 </div>
               )}
 
-              {saveError && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-center">{saveError}</p>}
+              {saveError && <p className="text-sm text-red-600 panel-oscuro:text-red-400 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/30 rounded-xl px-4 py-2.5 text-center">{saveError}</p>}
 
               <button
                 type="button"
@@ -543,36 +543,36 @@ export default function PerfilPage() {
                 {saving ? "Guardando..." : saved ? "¡Guardado!" : "Guardar cambios"}
               </button>
               {verifStore && !isVerified && (
-                <p className="text-xs text-gray-400 text-center">Los toggles se activan una vez que tu identidad esté verificada.</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 text-center">Los toggles se activan una vez que tu identidad esté verificada.</p>
               )}
             </div>
           </div>
 
           {/* Columna derecha — Verificación */}
           {verifStore !== null && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                <BadgeCheck className={`h-5 w-5 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
-                <h2 className="text-sm font-bold text-gray-900">Verificación de identidad</h2>
+            <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 panel-oscuro:border-gray-800 flex items-center gap-2">
+                <BadgeCheck className={`h-5 w-5 ${isVerified ? "text-blue-500" : "text-gray-300 panel-oscuro:text-gray-600"}`} />
+                <h2 className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Verificación de identidad</h2>
               </div>
 
               {verifLoading ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-300" /></div>
+                <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-300 panel-oscuro:text-gray-600" /></div>
               ) : isVerified ? (
                 <div className="px-6 py-5 space-y-4">
-                  <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-                    <BadgeCheck className="h-5 w-5 text-blue-600 shrink-0" />
+                  <div className="flex items-center gap-2.5 bg-blue-50 panel-oscuro:bg-blue-500/10 border border-blue-100 panel-oscuro:border-blue-500/30 rounded-xl px-4 py-3">
+                    <BadgeCheck className="h-5 w-5 text-blue-600 panel-oscuro:text-blue-400 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-blue-800">Identidad verificada</p>
-                      <p className="text-xs text-blue-600">Tu tienda tiene el badge azul. Activá los toggles en &quot;Datos personales&quot; para elegir qué se muestra al público.</p>
+                      <p className="text-sm font-semibold text-blue-800 panel-oscuro:text-blue-300">Identidad verificada</p>
+                      <p className="text-xs text-blue-600 panel-oscuro:text-blue-400">Tu tienda tiene el badge azul. Activá los toggles en &quot;Datos personales&quot; para elegir qué se muestra al público.</p>
                     </div>
                   </div>
 
                   {/* Certificado de identidad */}
-                  <div className="relative border border-blue-100 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-5">
+                  <div className="relative border border-blue-100 panel-oscuro:border-blue-500/30 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50 panel-oscuro:from-blue-500/10 via-white panel-oscuro:via-gray-900 to-indigo-50 panel-oscuro:to-indigo-500/10 p-5">
                     {/* Marca de agua */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none">
-                      <BadgeCheck className="h-48 w-48 text-blue-600" />
+                      <BadgeCheck className="h-48 w-48 text-blue-600 panel-oscuro:text-blue-400" />
                     </div>
                     <div className="relative space-y-3">
                       <div className="flex items-center justify-between">
@@ -580,14 +580,14 @@ export default function PerfilPage() {
                         <BadgeCheck className="h-4 w-4 text-blue-400" />
                       </div>
                       <div>
-                        <p className="text-base font-bold text-gray-900">{profile?.name || "—"}</p>
+                        <p className="text-base font-bold text-gray-900 panel-oscuro:text-gray-100">{profile?.name || "—"}</p>
                         {profile?.city && (
-                          <p className="text-xs text-gray-500 mt-0.5">{profile.city}</p>
+                          <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{profile.city}</p>
                         )}
                       </div>
-                      <div className="pt-3 border-t border-blue-100 flex items-center justify-between">
-                        <span className="text-[11px] text-gray-400">Verificado por TiendaApps</span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
+                      <div className="pt-3 border-t border-blue-100 panel-oscuro:border-blue-500/30 flex items-center justify-between">
+                        <span className="text-[11px] text-gray-400 panel-oscuro:text-gray-500">Verificado por TiendaApps</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 panel-oscuro:text-blue-300 bg-blue-100 panel-oscuro:bg-blue-500/15 px-2.5 py-1 rounded-full">
                           <Check className="h-3 w-3" /> Verificado
                         </span>
                       </div>
@@ -596,22 +596,22 @@ export default function PerfilPage() {
                 </div>
               ) : verifStatus === "PENDING" ? (
                 <div className="px-6 py-5">
-                  <div className="flex items-center gap-2.5 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3">
-                    <Clock className="h-5 w-5 text-yellow-600 shrink-0" />
+                  <div className="flex items-center gap-2.5 bg-yellow-50 panel-oscuro:bg-yellow-500/10 border border-yellow-100 panel-oscuro:border-yellow-500/30 rounded-xl px-4 py-3">
+                    <Clock className="h-5 w-5 text-yellow-600 panel-oscuro:text-yellow-400 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-yellow-800">Solicitud en revisión</p>
-                      <p className="text-xs text-yellow-600">Te notificamos cuando esté aprobada. Puede tardar hasta 48hs.</p>
+                      <p className="text-sm font-semibold text-yellow-800 panel-oscuro:text-yellow-300">Solicitud en revisión</p>
+                      <p className="text-xs text-yellow-600 panel-oscuro:text-yellow-400">Te notificamos cuando esté aprobada. Puede tardar hasta 48hs.</p>
                     </div>
                   </div>
                 </div>
               ) : verificationBanned ? (
                 <div className="px-6 py-5">
-                  <div className="flex items-start gap-2.5 bg-gray-100 border border-gray-200 rounded-xl px-4 py-4">
-                    <ShieldAlert className="h-5 w-5 text-gray-500 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-2.5 bg-gray-100 panel-oscuro:bg-gray-800 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-4">
+                    <ShieldAlert className="h-5 w-5 text-gray-500 panel-oscuro:text-gray-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">Cuenta inhabilitada para verificación</p>
-                      {req?.reviewNote && <p className="text-xs text-gray-600 mt-0.5">{req.reviewNote}</p>}
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Cuenta inhabilitada para verificación</p>
+                      {req?.reviewNote && <p className="text-xs text-gray-600 panel-oscuro:text-gray-400 mt-0.5">{req.reviewNote}</p>}
+                      <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1">
                         Tu cuenta no puede enviar nuevas solicitudes de verificación. Si creés que fue un error escribinos a{" "}
                         <a href="mailto:soporte@tiendaapps.com" className="text-indigo-500 underline">soporte@tiendaapps.com</a>.
                       </p>
@@ -621,23 +621,23 @@ export default function PerfilPage() {
               ) : (
                 <div className="px-6 py-5 space-y-4">
                   {verifStatus === "REJECTED" && (
-                    <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                    <div className="flex items-start gap-2.5 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/30 rounded-xl px-4 py-3">
                       <ShieldAlert className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-red-800">Verificación no activa</p>
-                        {req?.reviewNote && <p className="text-xs text-red-600 mt-0.5">{req.reviewNote}</p>}
+                        <p className="text-sm font-semibold text-red-800 panel-oscuro:text-red-300">Verificación no activa</p>
+                        {req?.reviewNote && <p className="text-xs text-red-600 panel-oscuro:text-red-400 mt-0.5">{req.reviewNote}</p>}
                         <p className="text-xs text-red-500 mt-1">Podés volver a enviar una solicitud. Si tenés dudas escribinos a soporte@tiendaapps.com.</p>
                       </div>
                     </div>
                   )}
 
                   {verifStatus === "NONE" && (
-                    <p className="text-sm text-gray-500">Subí una foto de tu DNI (frente y dorso) y una selfie sosteniéndolo. Solo lo ve el equipo de TiendaApps.</p>
+                    <p className="text-sm text-gray-500 panel-oscuro:text-gray-400">Subí una foto de tu DNI (frente y dorso) y una selfie sosteniéndolo. Solo lo ve el equipo de TiendaApps.</p>
                   )}
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      CUIT / CUIL <span className="text-gray-400 font-normal">(opcional)</span>
+                    <label className="block text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1">
+                      CUIT / CUIL <span className="text-gray-400 panel-oscuro:text-gray-500 font-normal">(opcional)</span>
                     </label>
                     <input
                       type="text"
@@ -645,11 +645,11 @@ export default function PerfilPage() {
                       onChange={(e) => { setCuit(e.target.value); setCuitError(""); }}
                       placeholder="20-12345678-9"
                       maxLength={13}
-                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${cuitError ? "border-red-300 bg-red-50" : "border-gray-200"}`}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${cuitError ? "border-red-300 panel-oscuro:border-red-500/40 bg-red-50 panel-oscuro:bg-red-500/10" : "border-gray-200 panel-oscuro:border-gray-700"}`}
                     />
                     {cuitError
-                      ? <p className="text-xs text-red-600 mt-1">{cuitError}</p>
-                      : <p className="text-xs text-gray-400 mt-1">Tu número de contribuyente. Lo usamos para confirmar actividad comercial ante AFIP.</p>
+                      ? <p className="text-xs text-red-600 panel-oscuro:text-red-400 mt-1">{cuitError}</p>
+                      : <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1">Tu número de contribuyente. Lo usamos para confirmar actividad comercial ante AFIP.</p>
                     }
                   </div>
 
@@ -657,15 +657,15 @@ export default function PerfilPage() {
                   <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} error={fileErrors.dniBack} onError={(m) => setFileError("dniBack", m)} facingMode="environment" />
                   <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} error={fileErrors.selfie} onError={(m) => setFileError("selfie", m)} facingMode="user" />
 
-                  {submitError && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-center">{submitError}</p>}
-                  {submitted && <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 text-center">¡Solicitud enviada! Te avisamos cuando esté aprobada.</p>}
+                  {submitError && <p className="text-sm text-red-600 panel-oscuro:text-red-400 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/30 rounded-xl px-4 py-2.5 text-center">{submitError}</p>}
+                  {submitted && <p className="text-sm text-green-700 panel-oscuro:text-green-300 bg-green-50 panel-oscuro:bg-green-500/10 border border-green-100 panel-oscuro:border-green-500/30 rounded-xl px-4 py-2.5 text-center">¡Solicitud enviada! Te avisamos cuando esté aprobada.</p>}
 
-                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                  <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 leading-relaxed">
                     Al enviar aceptás que TiendaApps trate tus documentos de identidad con fines exclusivos de verificación, conforme al art. 7 de la Ley 25.326.
                     Los documentos son privados y solo los ve el equipo de TiendaApps. Podés solicitar su eliminación en cualquier momento.{" "}
-                    <a href="/privacidad?role=owner&panel=dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">Política de privacidad</a>
+                    <a href="/privacidad?role=owner&panel=dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600 panel-oscuro:hover:text-indigo-400">Política de privacidad</a>
                     {" · "}
-                    <a href="/terminos?role=owner&panel=dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">Términos</a>
+                    <a href="/terminos?role=owner&panel=dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600 panel-oscuro:hover:text-indigo-400">Términos</a>
                   </p>
 
                   <button

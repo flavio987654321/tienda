@@ -60,17 +60,17 @@ export function SelectorEmoji({
         title="Agregar emoji"
         aria-label="Agregar emoji"
         className={`p-1 rounded-md transition-colors ${
-          abierto ? "text-indigo-600 bg-indigo-50" : "text-gray-400 hover:text-indigo-500 hover:bg-gray-50"
+          abierto ? "text-indigo-600 panel-oscuro:text-indigo-400 bg-indigo-50 panel-oscuro:bg-indigo-500/10" : "text-gray-400 panel-oscuro:text-gray-500 hover:text-indigo-500 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
         } disabled:opacity-40 disabled:cursor-not-allowed`}
       >
         <Smile className="h-3.5 w-3.5" />
       </button>
 
       {abierto && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+        <div className="absolute right-0 top-full z-30 mt-1 w-56 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-2 shadow-lg">
           {GRUPOS.map((g) => (
             <div key={g.titulo} className="mb-1.5 last:mb-0">
-              <p className="px-1 pb-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+              <p className="px-1 pb-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
                 {g.titulo}
               </p>
               <div className="flex flex-wrap gap-0.5">
@@ -82,7 +82,7 @@ export function SelectorEmoji({
                     // emoji adelante y otro atrás, y cerrarlo obligaría a
                     // abrirlo de nuevo para el segundo.
                     onClick={() => onElegir(e)}
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-base leading-none transition-colors hover:bg-indigo-50"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-base leading-none transition-colors hover:bg-indigo-50 panel-oscuro:hover:bg-indigo-500/10"
                   >
                     {e}
                   </button>

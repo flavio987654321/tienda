@@ -101,29 +101,29 @@ export default function ConfiguracionShell({ titulo, secciones, seccionInicial }
             todo. La barra ocupaba un cuarto de pantalla para decir tres cosas
             que ya se saben —dónde estás—, y empujaba el contenido hacia abajo en
             una pantalla que ya es larga. Acá arranca pegado al primer ajuste. */}
-        <h1 className="mb-4 px-1 text-2xl font-black tracking-tight text-slate-900">{titulo}</h1>
+        <h1 className="mb-4 px-1 text-2xl font-black tracking-tight text-slate-900 panel-oscuro:text-gray-100">{titulo}</h1>
 
         <div className="relative mb-4">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 panel-oscuro:text-gray-500" />
           <input
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar en configuración"
             aria-label="Buscar en configuración"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 py-2.5 pl-9 pr-3 text-sm text-slate-800 panel-oscuro:text-gray-200 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-100 panel-oscuro:focus:ring-indigo-500/30"
           />
         </div>
 
         {grupos.length === 0 ? (
-          <p className="px-1 py-6 text-sm text-slate-400">
-            No hay nada que coincida con <span className="font-semibold text-slate-600">{busqueda}</span>.
+          <p className="px-1 py-6 text-sm text-slate-400 panel-oscuro:text-gray-500">
+            No hay nada que coincida con <span className="font-semibold text-slate-600 panel-oscuro:text-gray-400">{busqueda}</span>.
           </p>
         ) : (
           <nav className="space-y-6">
             {grupos.map(([grupo, items]) => (
               <div key={grupo}>
-                <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">{grupo}</p>
+                <p className="mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 panel-oscuro:text-gray-500">{grupo}</p>
                 <ul className="space-y-0.5">
                   {items.map((s) => {
                     const Icono = ICONOS[s.id] ?? Store;
@@ -136,13 +136,13 @@ export default function ConfiguracionShell({ titulo, secciones, seccionInicial }
                           aria-current={esActiva ? "page" : undefined}
                           className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                             esActiva
-                              ? esPeligro ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-900"
-                              : esPeligro ? "text-red-500 hover:bg-red-50/60" : "text-slate-600 hover:bg-slate-100/70"
+                              ? esPeligro ? "bg-red-50 panel-oscuro:bg-red-500/10 text-red-700 panel-oscuro:text-red-300" : "bg-slate-100 panel-oscuro:bg-gray-800 text-slate-900 panel-oscuro:text-gray-100"
+                              : esPeligro ? "text-red-500 hover:bg-red-50/60 panel-oscuro:hover:bg-red-500/10" : "text-slate-600 panel-oscuro:text-gray-400 hover:bg-slate-100/70 panel-oscuro:hover:bg-gray-800"
                           }`}
                         >
-                          <Icono className={`h-4 w-4 shrink-0 ${esActiva ? "" : "text-slate-400"}`} />
+                          <Icono className={`h-4 w-4 shrink-0 ${esActiva ? "" : "text-slate-400 panel-oscuro:text-gray-500"}`} />
                           <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.label}</span>
-                          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 lg:hidden" />
+                          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 panel-oscuro:text-gray-600 lg:hidden" />
                         </button>
                       </li>
                     );
@@ -158,7 +158,7 @@ export default function ConfiguracionShell({ titulo, secciones, seccionInicial }
       <div ref={contenidoRef} className={`min-w-0 flex-1 ${enDetalle ? "block" : "hidden lg:block"}`}>
         <button
           onClick={() => setEnDetalle(false)}
-          className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 lg:hidden"
+          className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-slate-500 panel-oscuro:text-gray-400 transition-colors hover:text-slate-800 panel-oscuro:hover:text-gray-200 lg:hidden"
         >
           <ChevronLeft className="h-4 w-4" />
           Configuración
@@ -176,8 +176,8 @@ export default function ConfiguracionShell({ titulo, secciones, seccionInicial }
         {secciones.map((s) => (
           <div key={s.id} className={s.id === activa?.id ? "block" : "hidden"}>
             <div className="mb-6">
-              <h2 className="text-xl font-black tracking-tight text-slate-900">{s.label}</h2>
-              <p className="mt-1 text-sm text-slate-500">{s.descripcion}</p>
+              <h2 className="text-xl font-black tracking-tight text-slate-900 panel-oscuro:text-gray-100">{s.label}</h2>
+              <p className="mt-1 text-sm text-slate-500 panel-oscuro:text-gray-400">{s.descripcion}</p>
             </div>
             <div className="space-y-3">{s.contenido}</div>
           </div>

@@ -108,16 +108,16 @@ function AccountStep({ done }: { done: boolean }) {
         ) : (
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
+              <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Tu cuenta de Facebook está conectada.</p>
               <button
                 onClick={() => setConfirmando(true)}
-                className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors shrink-0"
+                className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 panel-oscuro:hover:text-red-400 transition-colors shrink-0"
               >
                 <Unlink className="h-3 w-3" />
                 Desconectar
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5">
+            <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-1.5">
               Es la misma conexión que usan Catálogo de Meta y Meta Pixel — si la desconectás acá, también se desconecta ahí.
             </p>
           </>
@@ -129,7 +129,7 @@ function AccountStep({ done }: { done: boolean }) {
   return (
     <div>
       {error && <AvisoError mensaje={error} />}
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Conectá la cuenta de Facebook que administra tu negocio para vincular tu catálogo a WhatsApp.
       </p>
       <button
@@ -157,20 +157,20 @@ function AccountStep({ done }: { done: boolean }) {
  */
 function CatalogStep({ done }: { done: boolean }) {
   if (done) {
-    return <p className="text-sm text-slate-500">Ya tenés un catálogo de productos conectado.</p>;
+    return <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Ya tenés un catálogo de productos conectado.</p>;
   }
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-1">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-1">
         Todavía no conectaste un catálogo de productos — es el mismo que usa Facebook e Instagram.
       </p>
-      <p className="text-[11px] text-slate-400 mb-3.5 leading-relaxed">
-        Te llevamos a la aplicación <strong className="text-slate-500">Catálogo de Meta</strong> para
+      <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mb-3.5 leading-relaxed">
+        Te llevamos a la aplicación <strong className="text-slate-500 panel-oscuro:text-gray-400">Catálogo de Meta</strong> para
         crearlo. Cuando termines ahí, arriba de todo vas a tener un botón para volver acá y seguir.
       </p>
       <Link
         href="/dashboard/aplicaciones/meta-catalogo?desde=whatsapp-catalogo"
-        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
+        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
       >
         Ir a crear mi catálogo <ArrowRight className="h-3.5 w-3.5" />
       </Link>
@@ -210,19 +210,19 @@ function VincularStep({ done }: { done: boolean }) {
       <div>
         {error && <AvisoError mensaje={error} />}
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">
             Marcaste que tu catálogo ya está vinculado a WhatsApp.
           </p>
           <button
             onClick={() => cambiar("DELETE")}
             disabled={guardando}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 shrink-0"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 panel-oscuro:text-gray-400 hover:text-slate-700 panel-oscuro:hover:text-gray-300 transition-colors disabled:opacity-50 shrink-0"
           >
             {guardando && <Loader2 className="h-3 w-3 animate-spin" />}
             Deshacer
           </button>
         </div>
-        <p className="text-[11px] text-slate-400 mt-1.5">
+        <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-1.5">
           Esto lo marcaste vos: Meta no nos deja consultarlo. Si en WhatsApp no ves tu catálogo,
           revisá el paso en Meta y volvé a hacerlo.
         </p>
@@ -234,10 +234,10 @@ function VincularStep({ done }: { done: boolean }) {
     <div>
       {error && <AvisoError mensaje={error} />}
 
-      <p className="text-sm text-slate-500 mb-1">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-1">
         Este último paso lo hacés vos, desde la app de WhatsApp Business en tu celular.
       </p>
-      <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">
+      <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mb-4 leading-relaxed">
         No lo podemos hacer desde acá: Meta le da ese permiso solo a las empresas que envían
         mensajes por WhatsApp, y nosotros armamos tu catálogo, no mandamos mensajes.
       </p>
@@ -246,7 +246,7 @@ function VincularStep({ done }: { done: boolean }) {
           links sueltos a Meta. El camino se confirmó el 18/08/2026 en un celular
           real: la opción vive en la app de WhatsApp Business, no en la web de
           Meta, y por eso los links de antes no llevaban a ningún lado útil. */}
-      <ol className="text-sm text-slate-600 space-y-2 mb-4 list-decimal pl-4 leading-relaxed">
+      <ol className="text-sm text-slate-600 panel-oscuro:text-gray-400 space-y-2 mb-4 list-decimal pl-4 leading-relaxed">
         <li>Abrí la app de <strong>WhatsApp Business</strong> en tu celular.</li>
         <li>Entrá a <strong>Herramientas para la empresa</strong> → <strong>Catálogo</strong>.</li>
         <li>Arriba de todo vas a ver <strong>Administrador de catálogos</strong>.</li>
@@ -262,8 +262,8 @@ function VincularStep({ done }: { done: boolean }) {
       {/* El error que devuelve Meta cuando el catálogo está vacío no dice nada:
           "No se puede establecer la conexión. Se produjo un error." Sin esta
           advertencia, la dueña lo lee como que la app está rota. */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3.5 mb-4">
-        <p className="text-xs text-amber-900 leading-relaxed">
+      <div className="rounded-lg border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50/70 panel-oscuro:bg-amber-500/10 px-4 py-3.5 mb-4">
+        <p className="text-xs text-amber-900 panel-oscuro:text-amber-200 leading-relaxed">
           <strong>Antes de intentarlo, fijate que tu catálogo tenga productos.</strong> Si todavía
           está vacío, WhatsApp te va a contestar “No se puede establecer la conexión” sin explicarte
           por qué. Los productos aparecen del lado de Meta a los pocos minutos de terminar la app
@@ -282,7 +282,7 @@ function VincularStep({ done }: { done: boolean }) {
       <button
         onClick={() => cambiar("POST")}
         disabled={guardando}
-        className="inline-flex items-center gap-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 border border-slate-300 panel-oscuro:border-gray-600 hover:bg-slate-50 panel-oscuro:hover:bg-gray-800/50 text-slate-700 panel-oscuro:text-gray-300 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
       >
         {guardando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
         Ya lo vinculé
@@ -297,13 +297,13 @@ function EnlaceMeta({ href, titulo, detalle }: { href: string; titulo: string; d
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-start gap-3 rounded-lg border border-slate-200 px-4 py-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+      className="flex items-start gap-3 rounded-lg border border-slate-200 panel-oscuro:border-gray-700 px-4 py-3 hover:border-slate-300 panel-oscuro:hover:border-gray-600 hover:bg-slate-50 panel-oscuro:hover:bg-gray-800/50 transition-colors"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-800">{titulo}</p>
-        <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{detalle}</p>
+        <p className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">{titulo}</p>
+        <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 leading-relaxed mt-0.5">{detalle}</p>
       </div>
-      <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+      <ExternalLink className="h-3.5 w-3.5 text-slate-400 panel-oscuro:text-gray-500 shrink-0 mt-0.5" />
     </a>
   );
 }
@@ -332,15 +332,15 @@ async function fetchVinculo(method: "POST" | "DELETE"): Promise<string | null> {
 // Business. Esta card es solo una guía — no dispara ninguna llamada a nuestra API.
 function AiGuideCard() {
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-      <p className="text-sm font-bold text-emerald-900 mb-1.5">Último paso, gratis: activá la IA que contesta sola</p>
-      <p className="text-sm text-emerald-800 mb-3 leading-relaxed">
+    <div className="rounded-xl border border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50 panel-oscuro:bg-emerald-500/10 p-5">
+      <p className="text-sm font-bold text-emerald-900 panel-oscuro:text-emerald-200 mb-1.5">Último paso, gratis: activá la IA que contesta sola</p>
+      <p className="text-sm text-emerald-800 panel-oscuro:text-emerald-300 mb-3 leading-relaxed">
         Meta ofrece un asistente de IA gratuito para WhatsApp Business (“Meta Business Agent”) que responde
         preguntas de tus clientes usando tu catálogo y la info de tu negocio — sin que tengas que escribir nada
         vos. Ya cumplís los 3 requisitos: WhatsApp Business activo, cuenta de Meta Business verificada y catálogo
         con productos.
       </p>
-      <ol className="text-sm text-emerald-800 space-y-1.5 mb-3 list-decimal pl-4">
+      <ol className="text-sm text-emerald-800 panel-oscuro:text-emerald-300 space-y-1.5 mb-3 list-decimal pl-4">
         <li>Abrí la app de WhatsApp Business en tu celular.</li>
         <li>Entrá a Herramientas de empresa (o Configuración) → buscá “Agente de IA” / “Meta Business Agent”.</li>
         <li>Seguí los pasos para activarlo — Meta lo configura solo con tu catálogo y tu info de negocio.</li>
@@ -349,7 +349,7 @@ function AiGuideCard() {
         href="https://www.facebook.com/business/help/834508185328904"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 panel-oscuro:text-emerald-300 hover:text-emerald-800 panel-oscuro:hover:text-emerald-300"
       >
         Ver la guía oficial de Meta <ExternalLink className="h-3.5 w-3.5" />
       </a>

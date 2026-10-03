@@ -43,15 +43,15 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
   return (
     <div className="space-y-3">
       {fbStatus === "connected" && (
-        <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2.5 bg-emerald-50 panel-oscuro:bg-emerald-500/10 border border-emerald-200 panel-oscuro:border-emerald-500/30 rounded-lg px-4 py-3">
           <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
-          <p className="text-sm font-semibold text-emerald-800">¡Cuenta de Facebook conectada con éxito!</p>
+          <p className="text-sm font-semibold text-emerald-800 panel-oscuro:text-emerald-300">¡Cuenta de Facebook conectada con éxito!</p>
         </div>
       )}
       {fbStatus === "error" && (
-        <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+        <div className="flex items-center gap-2.5 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-lg px-4 py-3">
           <XCircle className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm font-semibold text-red-800">Hubo un error al conectar. Intentá de nuevo.</p>
+          <p className="text-sm font-semibold text-red-800 panel-oscuro:text-red-300">Hubo un error al conectar. Intentá de nuevo.</p>
         </div>
       )}
 
@@ -111,10 +111,10 @@ function AccountStep({ done }: { done: boolean }) {
           />
         ) : (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
+            <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Tu cuenta de Facebook está conectada.</p>
             <button
               onClick={() => setConfirmando(true)}
-              className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 transition-colors"
+              className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 panel-oscuro:hover:text-red-400 transition-colors"
             >
               <Unlink className="h-3 w-3" /> Desconectar
             </button>
@@ -126,7 +126,7 @@ function AccountStep({ done }: { done: boolean }) {
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Conectá la cuenta de Facebook que administra tu negocio para sincronizar tu catálogo de productos.
       </p>
       <a
@@ -187,7 +187,7 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   }
 
   if (done) {
-    return <p className="text-sm text-slate-500">Portfolio comercial conectado{businessId ? ` (ID: ${businessId})` : ""}.</p>;
+    return <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Portfolio comercial conectado{businessId ? ` (ID: ${businessId})` : ""}.</p>;
   }
 
   if (loadError) {
@@ -195,7 +195,7 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   }
 
   if (!businesses) {
-    return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando portfolios…</div>;
+    return <div className="flex items-center gap-2 text-sm text-slate-400 panel-oscuro:text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando portfolios…</div>;
   }
 
   // Sin portfolio no hay catálogo posible: es la pared con la que más se choca
@@ -204,12 +204,12 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   // es un portfolio ni por qué hace falta.
   if (businesses.length === 0) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-4">
+      <div className="rounded-lg border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50/70 panel-oscuro:bg-amber-500/10 px-4 py-4">
         <div className="flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <AlertCircle className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400 shrink-0 mt-0.5" />
           <div className="min-w-0">
-            <p className="text-sm font-bold text-amber-900">Todavía no tenés un portfolio comercial</p>
-            <p className="text-xs text-amber-900/80 mt-1.5 leading-relaxed">
+            <p className="text-sm font-bold text-amber-900 panel-oscuro:text-amber-200">Todavía no tenés un portfolio comercial</p>
+            <p className="text-xs text-amber-900/80 panel-oscuro:text-amber-200 mt-1.5 leading-relaxed">
               Es la cuenta gratuita donde Meta guarda tu negocio: tu página, tus catálogos y tus
               anuncios. Sin uno no se puede crear el catálogo. Se hace en dos minutos y es gratis.
             </p>
@@ -224,7 +224,7 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
               </a>
               <button
                 onClick={reintentar}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:text-amber-900"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 panel-oscuro:text-amber-300 hover:text-amber-900 panel-oscuro:hover:text-amber-200"
               >
                 <RefreshCw className="h-3 w-3" /> Ya lo creé, buscar de nuevo
               </button>
@@ -238,7 +238,7 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
-      <p className="text-sm text-slate-500 mb-1">Elegí a qué portfolio comercial pertenece tu catálogo.</p>
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-1">Elegí a qué portfolio comercial pertenece tu catálogo.</p>
       {/* Meta contesta TODOS los portfolios donde la cuenta figura, y no distingue
           los propios de aquellos donde a uno lo agregaron. Una comerciante que
           alguna vez entró al portfolio de una agencia, de un socio o de un familiar
@@ -246,18 +246,18 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
           catálogo termina viviendo adentro del negocio ajeno. Desde ahí su WhatsApp
           no lo encuentra nunca, porque cuelga de ella y el catálogo cuelga del otro.
           Pasó de verdad, y no había en la pantalla nada que lo insinuara. */}
-      <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+      <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mb-3 leading-relaxed">
         Tu catálogo va a vivir adentro del que elijas. Si alguno de estos es de otra persona
         —una agencia, un socio, un familiar que te agregó—, mejor creá el tuyo abajo.
       </p>
       <div className="space-y-2">
         {businesses.map((b) => (
-          <div key={b.id} className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">
-            <span className="text-sm font-medium text-slate-800">{b.name}</span>
+          <div key={b.id} className="flex items-center justify-between border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-3">
+            <span className="text-sm font-medium text-slate-800 panel-oscuro:text-gray-200">{b.name}</span>
             <button
               onClick={() => connect(b.id)}
               disabled={connectingId !== null}
-              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
             >
               {connectingId === b.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronRight className="h-3 w-3" />}
               Conectar
@@ -269,18 +269,18 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
       {/* Antes esto sólo existía cuando la lista venía VACÍA: si Meta devolvía aunque
           fuera un portfolio ajeno, no quedaba ninguna puerta para crear el propio.
           Es el caso que dejó a una tienda enganchada al portfolio de otro. */}
-      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="mt-3 pt-3 border-t border-slate-100 panel-oscuro:border-gray-800 flex flex-wrap items-center gap-x-4 gap-y-2">
         <a
           href="https://business.facebook.com/overview"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           <Plus className="h-3.5 w-3.5" /> Crear mi propio portfolio
         </a>
         <button
           onClick={reintentar}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 panel-oscuro:text-gray-400 hover:text-slate-700 panel-oscuro:hover:text-gray-300"
         >
           <RefreshCw className="h-3 w-3" /> Ya lo creé, buscar de nuevo
         </button>
@@ -336,12 +336,12 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
   if (!picking) {
     return (
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">
           Catálogo conectado{catalogId ? <> (ID: <span className="font-mono">{catalogId}</span>)</> : ""}.
         </p>
         <button
           onClick={() => { setCatalogs(null); setLoadError(null); setChanging(true); }}
-          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 shrink-0"
+          className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 shrink-0"
         >
           Cambiar
         </button>
@@ -354,13 +354,13 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
   }
 
   if (!catalogs) {
-    return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando catálogos…</div>;
+    return <div className="flex items-center gap-2 text-sm text-slate-400 panel-oscuro:text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando catálogos…</div>;
   }
 
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
-      <p className="text-sm text-slate-500 mb-3">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">
         {catalogs.length > 0
           ? "Elegí el catálogo de productos donde vamos a sincronizar tu tienda."
           : "Tu portfolio comercial todavía no tiene ningún catálogo de productos. Creá uno para empezar."}
@@ -369,15 +369,15 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
       {catalogs.length > 0 && (
         <div className="space-y-2 mb-3">
           {catalogs.map((c) => (
-            <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-200 rounded-lg px-4 py-3">
+            <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{c.name}</p>
-                <p className="text-xs text-slate-400 font-mono truncate">ID: {c.id}</p>
+                <p className="text-sm font-medium text-slate-800 panel-oscuro:text-gray-200 truncate">{c.name}</p>
+                <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 font-mono truncate">ID: {c.id}</p>
               </div>
               <button
                 onClick={() => choose({ catalogId: c.id })}
                 disabled={busyId !== null}
-                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50 shrink-0"
+                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50 shrink-0"
               >
                 {busyId === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronRight className="h-3 w-3" />}
                 {c.id === catalogId ? "En uso" : "Usar este catálogo"}
@@ -393,12 +393,12 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nombre del catálogo nuevo"
-            className="flex-1 min-w-0 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
+            className="flex-1 min-w-0 border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm text-slate-800 panel-oscuro:text-gray-200 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 panel-oscuro:focus:ring-indigo-500/30 focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
           />
           <button
             onClick={() => choose({ name: newName.trim() })}
             disabled={!newName.trim() || busyId !== null}
-            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-md disabled:opacity-40 shrink-0"
+            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-2 rounded-md disabled:opacity-40 shrink-0"
           >
             {busyId === "nuevo" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
             Crear catálogo
@@ -407,7 +407,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
       ) : (
         <button
           onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           <Plus className="h-3.5 w-3.5" /> Crear un catálogo nuevo
         </button>
@@ -417,15 +417,15 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
 }
 
 function DataSharingStep({ done, onConfirm }: { done: boolean; onConfirm: () => void }) {
-  if (done) return <p className="text-sm text-slate-500">Uso compartido de datos confirmado.</p>;
+  if (done) return <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Uso compartido de datos confirmado.</p>;
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Vamos a compartir con Meta la información de tu catálogo (nombre, precio, imágenes y stock de tus productos) para que puedan mostrarse en Facebook e Instagram.
       </p>
       <button
         onClick={onConfirm}
-        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
+        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
       >
         Entendido, continuar
       </button>
@@ -436,7 +436,7 @@ function DataSharingStep({ done, onConfirm }: { done: boolean; onConfirm: () => 
 function TermsStep({ done, onConfirm }: { done: boolean; onConfirm: () => void }) {
   const [accepted, setAccepted] = useState(false);
 
-  if (done) return <p className="text-sm text-slate-500">Condiciones aceptadas.</p>;
+  if (done) return <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Condiciones aceptadas.</p>;
 
   return (
     <div>
@@ -445,11 +445,11 @@ function TermsStep({ done, onConfirm }: { done: boolean; onConfirm: () => void }
           type="checkbox"
           checked={accepted}
           onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 panel-oscuro:border-gray-600 text-indigo-600 panel-oscuro:text-indigo-400"
         />
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-slate-600 panel-oscuro:text-gray-400">
           Acepto los{" "}
-          <a href="https://www.facebook.com/legal/commerce_product_merchant_agreement" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+          <a href="https://www.facebook.com/legal/commerce_product_merchant_agreement" target="_blank" rel="noopener noreferrer" className="text-indigo-600 panel-oscuro:text-indigo-400 hover:underline">
             Términos Comerciales de Meta
           </a>{" "}
           y los términos de uso de TiendaApps para catálogos de productos.
@@ -458,7 +458,7 @@ function TermsStep({ done, onConfirm }: { done: boolean; onConfirm: () => void }
       <button
         onClick={onConfirm}
         disabled={!accepted}
-        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40"
+        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40"
       >
         Continuar
       </button>
@@ -501,7 +501,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
   if (done) {
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-1.5">Tu catálogo ya está sincronizando con Facebook e Instagram.</p>
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-1.5">Tu catálogo ya está sincronizando con Facebook e Instagram.</p>
         {/* Antes decía sólo la línea de arriba, y la dueña entraba a Commerce Manager
             esperando ver sus productos ya. Meta tarda en procesar la carga aunque se
             la pidamos al toque, y de ahí en más viaja una vez por día: si eso no está
@@ -509,7 +509,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
 
             El texto no habla de "recién ahora" a propósito: esta tarjeta la sigue
             viendo una tienda conectada hace meses. */}
-        <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+        <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mb-3 leading-relaxed">
           La primera vez, tus productos pueden tardar unos minutos en aparecer del lado de Meta.
           Después, los cambios de precio o de stock viajan una vez por día.
         </p>
@@ -519,7 +519,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
             href={catalogUrl(catalogId)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
           >
             Ver mi catálogo en Meta <ExternalLink className="h-3.5 w-3.5" />
           </a>
@@ -532,18 +532,18 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
           <button
             onClick={connectFeed}
             disabled={connecting}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 panel-oscuro:text-gray-400 hover:text-slate-700 panel-oscuro:hover:text-gray-300 transition-colors disabled:opacity-50"
           >
             {connecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {connecting ? "Enviando…" : "Volver a enviar mis productos"}
           </button>
         </div>
         {reenviado ? (
-          <p className="text-[11px] text-emerald-600 font-semibold mt-2 leading-relaxed">
+          <p className="text-[11px] text-emerald-600 panel-oscuro:text-emerald-400 font-semibold mt-2 leading-relaxed">
             Listo, se lo pedimos a Meta. Tus productos deberían aparecer en unos minutos.
           </p>
         ) : (
-          <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+          <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-2 leading-relaxed">
             Usá “volver a enviar” si en Meta no ves tus productos y no querés esperar al envío de
             mañana. No duplica nada: es el mismo catálogo, actualizado.
           </p>
@@ -554,7 +554,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Último paso: enviamos tus productos al catálogo que elegiste y le pedimos a Meta que los vaya a buscar en el momento; de ahí en más se actualizan una vez por día. Meta puede tardar unos minutos en procesarlos y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
       </p>
       {error && <AvisoError mensaje={error} />}

@@ -173,7 +173,7 @@ export default async function AppDetailPage({
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={lowStockCount}
     >
-      <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
+      <div className="-m-4 -mt-2 bg-slate-50 panel-oscuro:bg-gray-800/50 min-h-screen">
 
         {/* ── De dónde venís ──────────────────────────────────────────────────
             Cuando otra aplicación te manda acá a resolver un requisito, esta
@@ -210,24 +210,24 @@ export default async function AppDetailPage({
             <div className="max-w-3xl mx-auto">
               <Link
                 href="/dashboard/aplicaciones"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white mb-7 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 panel-oscuro:text-gray-500 hover:text-white mb-7 transition-colors"
               >
                 <ArrowLeft className="h-3.5 w-3.5" /> Volver a Aplicaciones
               </Link>
 
               <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-                <div className="h-20 w-20 shrink-0 rounded-2xl bg-white shadow-lg flex items-center justify-center">
+                <div className="h-20 w-20 shrink-0 rounded-2xl bg-white panel-oscuro:bg-gray-900 shadow-lg flex items-center justify-center">
                   <AppIcon id={app.id} className="h-11 w-11" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <h1 className="text-3xl font-black text-white tracking-tight">{app.name}</h1>
-                  <p className="text-sm font-semibold text-slate-400 mt-0.5">
+                  <p className="text-sm font-semibold text-slate-400 panel-oscuro:text-gray-500 mt-0.5">
                     Proporcionado por {app.providerName}
                   </p>
 
                   {app.tagline && (
-                    <p className="text-sm text-slate-300 mt-3 leading-relaxed max-w-xl">{app.tagline}</p>
+                    <p className="text-sm text-slate-300 panel-oscuro:text-gray-600 mt-3 leading-relaxed max-w-xl">{app.tagline}</p>
                   )}
 
                   <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -246,7 +246,7 @@ export default async function AppDetailPage({
                         <AlertTriangle className="h-4 w-4" /> Hay que reconectar
                       </span>
                     ) : instaladoDeclarado ? (
-                      <span className="inline-flex items-center gap-2 bg-white/5 border border-white/20 text-slate-300 font-bold px-6 py-2.5 rounded-lg text-sm">
+                      <span className="inline-flex items-center gap-2 bg-white/5 border border-white/20 text-slate-300 panel-oscuro:text-gray-600 font-bold px-6 py-2.5 rounded-lg text-sm">
                         <CheckCircle className="h-4 w-4" /> Marcada por vos
                       </span>
                     ) : installed ? (
@@ -286,18 +286,18 @@ export default async function AppDetailPage({
               {app.about ? (
                 <div className="space-y-3.5">
                   {app.about.map((p, i) => (
-                    <p key={i} className="text-sm text-slate-600 leading-relaxed">{p}</p>
+                    <p key={i} className="text-sm text-slate-600 panel-oscuro:text-gray-400 leading-relaxed">{p}</p>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-600 leading-relaxed">{app.description}</p>
+                <p className="text-sm text-slate-600 panel-oscuro:text-gray-400 leading-relaxed">{app.description}</p>
               )}
 
               <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
                 {app.benefits.map((b, i) => (
-                  <div key={i} className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50 px-3.5 py-3">
+                  <div key={i} className="flex items-start gap-2.5 rounded-lg border border-slate-100 panel-oscuro:border-gray-800 bg-slate-50 panel-oscuro:bg-gray-800/50 px-3.5 py-3">
                     <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span className="text-xs text-slate-700 leading-relaxed">{b}</span>
+                    <span className="text-xs text-slate-700 panel-oscuro:text-gray-300 leading-relaxed">{b}</span>
                   </div>
                 ))}
               </div>
@@ -311,12 +311,12 @@ export default async function AppDetailPage({
                     const Icono = USAGE_ICONS[u.icon];
                     return (
                       <div key={i} className="flex gap-4">
-                        <span className="h-8 w-8 shrink-0 rounded-lg bg-slate-900 flex items-center justify-center">
+                        <span className="h-8 w-8 shrink-0 rounded-lg bg-slate-900 panel-oscuro:bg-gray-800 flex items-center justify-center">
                           <Icono className="h-4 w-4 text-white" />
                         </span>
                         <div className="min-w-0">
-                          <h3 className="text-sm font-bold text-slate-900">{u.title}</h3>
-                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{u.text}</p>
+                          <h3 className="text-sm font-bold text-slate-900 panel-oscuro:text-gray-100">{u.title}</h3>
+                          <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mt-1 leading-relaxed">{u.text}</p>
                         </div>
                       </div>
                     );
@@ -327,10 +327,10 @@ export default async function AppDetailPage({
 
             {/* Antes de empezar */}
             {app.requirements && !installed && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-6 py-5">
+              <div className="rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50/60 panel-oscuro:bg-amber-500/10 px-6 py-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <ListChecks className="h-4 w-4 text-amber-600" />
-                  <h2 className="text-sm font-bold text-amber-900">Antes de empezar necesitás</h2>
+                  <ListChecks className="h-4 w-4 text-amber-600 panel-oscuro:text-amber-400" />
+                  <h2 className="text-sm font-bold text-amber-900 panel-oscuro:text-amber-200">Antes de empezar necesitás</h2>
                 </div>
                 <ul className="space-y-3">
                   {app.requirements.map((r, i) => (
@@ -340,13 +340,13 @@ export default async function AppDetailPage({
                         {/* El texto va en bloque para que el botón caiga siempre
                             en su propia línea y no se pegue al final del párrafo
                             solo cuando justo sobra lugar. */}
-                        <p className="text-xs text-amber-900/80 leading-relaxed">{r.text}</p>
+                        <p className="text-xs text-amber-900/80 panel-oscuro:text-amber-200 leading-relaxed">{r.text}</p>
                         {r.link && (
                           <a
                             href={r.link.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:bg-amber-100 transition-colors"
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-300 panel-oscuro:border-amber-500/40 bg-white panel-oscuro:bg-gray-900 px-2.5 py-1 text-[11px] font-bold text-amber-800 panel-oscuro:text-amber-300 hover:bg-amber-100 panel-oscuro:hover:bg-amber-500/15 transition-colors"
                           >
                             {r.link.label} <ExternalLink className="h-3 w-3" />
                           </a>
@@ -362,10 +362,10 @@ export default async function AppDetailPage({
             {showInstall && (
               <SeccionInstalacion>
                 <div className="flex items-center gap-4 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 panel-oscuro:text-gray-500 whitespace-nowrap">
                     {installed ? "Configuración" : "Instalación"}
                   </p>
-                  <div className="h-px bg-slate-200 flex-1" />
+                  <div className="h-px bg-slate-200 panel-oscuro:bg-gray-700 flex-1" />
                 </div>
 
                 {app.id === "meta-catalogo" && (
@@ -407,14 +407,14 @@ export default async function AppDetailPage({
             {/* Preguntas frecuentes — <details> nativo: funciona sin JS */}
             {app.faq && (
               <Seccion titulo="Preguntas frecuentes">
-                <div className="divide-y divide-slate-100 -my-2">
+                <div className="divide-y divide-slate-100 panel-oscuro:divide-gray-800 -my-2">
                   {app.faq.map((f, i) => (
                     <details key={i} className="group py-2">
                       <summary className="flex items-center justify-between gap-3 cursor-pointer list-none py-1.5">
-                        <span className="text-sm font-semibold text-slate-800">{f.q}</span>
-                        <ChevronDown className="h-4 w-4 text-slate-400 shrink-0 transition-transform group-open:rotate-180" />
+                        <span className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">{f.q}</span>
+                        <ChevronDown className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500 shrink-0 transition-transform group-open:rotate-180" />
                       </summary>
-                      <p className="text-xs text-slate-500 leading-relaxed pb-2 pr-7">{f.a}</p>
+                      <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 leading-relaxed pb-2 pr-7">{f.a}</p>
                     </details>
                   ))}
                 </div>
@@ -430,7 +430,7 @@ export default async function AppDetailPage({
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[11px] font-bold text-slate-300 border border-white/15 bg-white/5 rounded-full px-2.5 py-0.5 backdrop-blur">
+    <span className="text-[11px] font-bold text-slate-300 panel-oscuro:text-gray-600 border border-white/15 bg-white/5 rounded-full px-2.5 py-0.5 backdrop-blur">
       {children}
     </span>
   );
@@ -438,9 +438,9 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="px-6 py-4 border-b border-slate-100">
-        <h2 className="text-sm font-bold text-slate-900">{titulo}</h2>
+    <section className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm">
+      <div className="px-6 py-4 border-b border-slate-100 panel-oscuro:border-gray-800">
+        <h2 className="text-sm font-bold text-slate-900 panel-oscuro:text-gray-100">{titulo}</h2>
       </div>
       <div className="px-6 py-5">{children}</div>
     </section>

@@ -140,7 +140,7 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
   if (success) {
     return (
       <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 panel-oscuro:border-gray-800 w-full max-w-sm overflow-hidden">
           {/* Header naranja */}
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-8 text-center">
             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -152,27 +152,27 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
 
           {/* Detalle */}
           <div className="px-6 py-5 space-y-3">
-            <div className="rounded-2xl bg-gray-50 border border-gray-200 overflow-hidden">
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-                <span className="text-xs text-gray-500">Plan</span>
-                <span className="text-sm font-bold text-gray-900">{planLabel}</span>
+            <div className="rounded-2xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-200 panel-oscuro:border-gray-700 overflow-hidden">
+              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 panel-oscuro:border-gray-800">
+                <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Plan</span>
+                <span className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{planLabel}</span>
               </div>
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-                <span className="text-xs text-gray-500">Facturación</span>
-                <span className="text-sm font-semibold text-gray-700">{billingLabel}</span>
+              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 panel-oscuro:border-gray-800">
+                <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Facturación</span>
+                <span className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">{billingLabel}</span>
               </div>
               <div className="flex justify-between items-center px-4 py-3">
-                <span className="text-xs text-gray-500">Próxima renovación</span>
-                <span className="text-xs font-semibold text-emerald-700">{renewalDate}</span>
+                <span className="text-xs text-gray-500 panel-oscuro:text-gray-400">Próxima renovación</span>
+                <span className="text-xs font-semibold text-emerald-700 panel-oscuro:text-emerald-300">{renewalDate}</span>
               </div>
             </div>
 
-            <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
+            <p className="text-center text-xs text-gray-400 panel-oscuro:text-gray-500 flex items-center justify-center gap-1.5">
               <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
               Confirmación enviada a tu email
             </p>
 
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center justify-center gap-2 text-xs text-gray-400 panel-oscuro:text-gray-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Redirigiendo al panel...
             </div>
@@ -185,23 +185,23 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
   // Pantalla QR
   if (checkoutUrl) {
     return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-xs overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <button onClick={() => setCheckoutUrl(null)} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors">
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 panel-oscuro:bg-gray-800 backdrop-blur-md p-4">
+        <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 panel-oscuro:border-gray-700 w-full max-w-xs overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 panel-oscuro:border-gray-800">
+            <button onClick={() => setCheckoutUrl(null)} className="flex items-center gap-1 text-sm text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-700 panel-oscuro:hover:text-gray-300 transition-colors">
               <ArrowLeft className="h-3.5 w-3.5" /> Volver
             </button>
-            <span className="text-sm font-bold text-gray-900">{money(finalAmount)}</span>
-            <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
-              <X className="h-3.5 w-3.5 text-gray-500" />
+            <span className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{money(finalAmount)}</span>
+            <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 flex items-center justify-center transition-colors">
+              <X className="h-3.5 w-3.5 text-gray-500 panel-oscuro:text-gray-400" />
             </button>
           </div>
 
           <div className="px-6 pt-5 pb-2 text-center">
-            <p className="text-sm font-semibold text-gray-800 mb-1">Escaneá para pagar desde tu celular</p>
-            <p className="text-xs text-gray-400 mb-5">O continuá desde esta pantalla</p>
+            <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200 mb-1">Escaneá para pagar desde tu celular</p>
+            <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-5">O continuá desde esta pantalla</p>
             <div className="flex justify-center mb-5">
-              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 inline-block">
+              <div className="p-3 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-200 panel-oscuro:border-gray-700 inline-block">
                 <QRCodeSVG value={checkoutUrl} size={160} bgColor="#f9fafb" fgColor="#1e293b" level="M" />
               </div>
             </div>
@@ -209,9 +209,9 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
 
           <div className="px-6 pb-6 space-y-3">
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400">o</span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <div className="flex-1 h-px bg-gray-200 panel-oscuro:bg-gray-700" />
+              <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">o</span>
+              <div className="flex-1 h-px bg-gray-200 panel-oscuro:bg-gray-700" />
             </div>
             <a
               href={checkoutUrl}
@@ -219,7 +219,7 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
             >
               Pagar en esta ventana
             </a>
-            <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
+            <p className="text-center text-xs text-gray-400 panel-oscuro:text-gray-500 flex items-center justify-center gap-1">
               <Lock className="h-3 w-3" /> Mercado Pago
             </p>
           </div>
@@ -230,35 +230,35 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
 
   // Pantalla principal
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm max-h-full overflow-y-auto">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 panel-oscuro:bg-gray-800 backdrop-blur-md p-4">
+      <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 panel-oscuro:border-gray-700 w-full max-w-sm max-h-full overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 panel-oscuro:border-gray-800">
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Suscripción</p>
-            <h2 className="text-base font-bold text-gray-900">{planLabel} · {billingLabel}</h2>
+            <p className="text-xs font-medium text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-wide">Suscripción</p>
+            <h2 className="text-base font-bold text-gray-900 panel-oscuro:text-gray-100">{planLabel} · {billingLabel}</h2>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
-            <X className="h-3.5 w-3.5 text-gray-500" />
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 flex items-center justify-center transition-colors">
+            <X className="h-3.5 w-3.5 text-gray-500 panel-oscuro:text-gray-400" />
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
           {/* Cupón disponible */}
           {availableCoupon && !appliedCoupon && (
-            <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex items-center justify-between rounded-xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3">
               <div className="flex items-center gap-2">
                 <Ticket className="h-4 w-4 text-amber-500 shrink-0" />
                 <div>
-                  <p className="text-xs font-semibold text-amber-800">
+                  <p className="text-xs font-semibold text-amber-800 panel-oscuro:text-amber-300">
                     {availableCoupon.discountValue === 100 ? "Mes gratis disponible" : `${availableCoupon.discountValue}% off disponible`}
                   </p>
-                  <p className="text-xs text-amber-600">Premio {availableCoupon.level === "SILVER" ? "Plata" : availableCoupon.level === "GOLD" ? "Oro" : "Diamante"}</p>
+                  <p className="text-xs text-amber-600 panel-oscuro:text-amber-400">Premio {availableCoupon.level === "SILVER" ? "Plata" : availableCoupon.level === "GOLD" ? "Oro" : "Diamante"}</p>
                 </div>
               </div>
               <button
                 onClick={() => setAppliedCoupon(availableCoupon)}
-                className="text-xs font-semibold text-amber-700 bg-amber-200 hover:bg-amber-300 px-3 py-1 rounded-lg transition-colors"
+                className="text-xs font-semibold text-amber-700 panel-oscuro:text-amber-300 bg-amber-200 panel-oscuro:bg-amber-500/25 hover:bg-amber-300 px-3 py-1 rounded-lg transition-colors"
               >
                 Aplicar
               </button>
@@ -266,43 +266,43 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
           )}
 
           {appliedCoupon && (
-            <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div className="flex items-center justify-between rounded-xl border border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50 panel-oscuro:bg-emerald-500/10 px-4 py-3">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
-                <p className="text-xs font-semibold text-emerald-800">
+                <CheckCircle className="h-4 w-4 text-emerald-600 panel-oscuro:text-emerald-400 shrink-0" />
+                <p className="text-xs font-semibold text-emerald-800 panel-oscuro:text-emerald-300">
                   {isFreeMonth ? "Este mes es gratis" : `Descuento de ${money(discount)} aplicado`}
                 </p>
               </div>
-              <button onClick={() => setAppliedCoupon(null)} className="text-xs text-gray-400 hover:text-gray-600">Quitar</button>
+              <button onClick={() => setAppliedCoupon(null)} className="text-xs text-gray-400 panel-oscuro:text-gray-500 hover:text-gray-600 panel-oscuro:hover:text-gray-400">Quitar</button>
             </div>
           )}
 
           {/* Resumen. Cada línea es una resta que se puede seguir con el dedo:
               precio de lista, lo que ya pagó, el cupón, y el total. */}
-          <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 overflow-hidden">
             {errorCotizacion ? (
               <div className="px-4 py-5 text-center">
-                <p className="text-sm text-gray-600">No pudimos calcular el precio.</p>
-                <p className="mt-1 text-xs text-gray-400">Cerrá y volvé a intentar en un momento.</p>
+                <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">No pudimos calcular el precio.</p>
+                <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">Cerrá y volvé a intentar en un momento.</p>
               </div>
             ) : !cotizacion ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-gray-400">
+              <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-gray-400 panel-oscuro:text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" /> Calculando tu precio…
               </div>
             ) : (
               <>
                 <div className="px-4 py-3 flex justify-between text-sm">
-                  <span className="text-gray-500">{planLabel} {billingLabel}</span>
-                  <span className="text-gray-900 font-medium">{money(cotizacion.precioLista)}</span>
+                  <span className="text-gray-500 panel-oscuro:text-gray-400">{planLabel} {billingLabel}</span>
+                  <span className="text-gray-900 panel-oscuro:text-gray-100 font-medium">{money(cotizacion.precioLista)}</span>
                 </div>
 
                 {cotizacion.credito > 0 && (
-                  <div className="px-4 py-3 border-t border-gray-100">
+                  <div className="px-4 py-3 border-t border-gray-100 panel-oscuro:border-gray-800">
                     <div className="flex justify-between text-sm">
-                      <span className="text-emerald-600">Días que ya pagaste</span>
-                      <span className="text-emerald-600 font-medium">−{money(cotizacion.credito)}</span>
+                      <span className="text-emerald-600 panel-oscuro:text-emerald-400">Días que ya pagaste</span>
+                      <span className="text-emerald-600 panel-oscuro:text-emerald-400 font-medium">−{money(cotizacion.credito)}</span>
                     </div>
-                    <p className="mt-1 text-xs text-gray-400">
+                    <p className="mt-1 text-xs text-gray-400 panel-oscuro:text-gray-500">
                       Te quedaban {cotizacion.diasRestantes} {cotizacion.diasRestantes === 1 ? "día" : "días"} de tu
                       plan anterior y te los descontamos.
                     </p>
@@ -310,22 +310,22 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
                 )}
 
                 {appliedCoupon && discount > 0 && (
-                  <div className="px-4 py-3 flex justify-between text-sm border-t border-gray-100">
-                    <span className="text-emerald-600">Cupón {appliedCoupon.code}</span>
-                    <span className="text-emerald-600 font-medium">−{money(discount)}</span>
+                  <div className="px-4 py-3 flex justify-between text-sm border-t border-gray-100 panel-oscuro:border-gray-800">
+                    <span className="text-emerald-600 panel-oscuro:text-emerald-400">Cupón {appliedCoupon.code}</span>
+                    <span className="text-emerald-600 panel-oscuro:text-emerald-400 font-medium">−{money(discount)}</span>
                   </div>
                 )}
 
-                <div className="px-4 py-3 flex justify-between border-t border-gray-200 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-900">Total a pagar hoy</span>
-                  <span className="text-sm font-bold text-gray-900">{isFreeMonth ? "Sin cargo" : money(finalAmount)}</span>
+                <div className="px-4 py-3 flex justify-between border-t border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50">
+                  <span className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">Total a pagar hoy</span>
+                  <span className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">{isFreeMonth ? "Sin cargo" : money(finalAmount)}</span>
                 </div>
               </>
             )}
           </div>
 
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-xs text-red-600 panel-oscuro:text-red-400 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-lg px-3 py-2">{error}</p>
           )}
 
           <button
@@ -340,7 +340,7 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
             {loading ? "Procesando..." : isFreeMonth ? "Activar mes gratis" : `Continuar — ${money(finalAmount)}`}
           </button>
 
-          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 panel-oscuro:text-gray-500">
             <ShieldCheck className="h-3.5 w-3.5" />
             Pago seguro vía Mercado Pago
           </div>

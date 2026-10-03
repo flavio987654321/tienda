@@ -25,24 +25,24 @@ export default function GoogleShoppingWizard() {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm">
       <div className="flex items-center gap-3 px-5 py-4">
         <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
-        <h3 className="text-sm font-semibold text-slate-900">Tus productos se están publicando</h3>
+        <h3 className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">Tus productos se están publicando</h3>
       </div>
-      <div className="px-5 pb-5 border-t border-slate-100 pt-4">
-        <p className="text-sm text-slate-500 mb-3">
+      <div className="px-5 pb-5 border-t border-slate-100 panel-oscuro:border-gray-800 pt-4">
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">
           Google revisa tu catálogo una vez por día. Tus productos pueden tardar hasta 3 días
           en aparecer en las búsquedas la primera vez — después se actualizan solos.
         </p>
         <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 panel-oscuro:text-gray-500">
             Cuando alguien te encuentre en Google, entra directo a tu tienda y te compra a vos, como siempre.
           </p>
           <button
             onClick={uninstall}
             disabled={uninstalling}
-            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50 shrink-0 ml-4"
+            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 panel-oscuro:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0 ml-4"
           >
             {uninstalling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
             Desinstalar

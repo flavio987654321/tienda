@@ -40,19 +40,19 @@ export default function GoogleAnalyticsWizard({ gaConnected, measurementId }: Pr
 
 function StepCard({ index, title, status, children }: { index: number; title: string; status: StepStatus; children: React.ReactNode }) {
   return (
-    <div className={`rounded-xl border bg-white shadow-sm transition-opacity ${status === "locked" ? "border-slate-200 opacity-50" : "border-slate-200"}`}>
+    <div className={`rounded-xl border bg-white panel-oscuro:bg-gray-900 shadow-sm transition-opacity ${status === "locked" ? "border-slate-200 panel-oscuro:border-gray-700 opacity-50" : "border-slate-200 panel-oscuro:border-gray-700"}`}>
       <div className="flex items-center gap-3 px-5 py-4">
         {status === "done" ? (
           <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
         ) : status === "locked" ? (
-          <Lock className="h-4 w-4 text-slate-300 shrink-0" />
+          <Lock className="h-4 w-4 text-slate-300 panel-oscuro:text-gray-600 shrink-0" />
         ) : (
-          <span className="h-5 w-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">{index}</span>
+          <span className="h-5 w-5 rounded-full bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-indigo-700 panel-oscuro:text-indigo-300 text-xs font-bold flex items-center justify-center shrink-0">{index}</span>
         )}
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">{title}</h3>
       </div>
       {status !== "locked" && (
-        <div className="px-5 pb-5 border-t border-slate-100 pt-4">{children}</div>
+        <div className="px-5 pb-5 border-t border-slate-100 panel-oscuro:border-gray-800 pt-4">{children}</div>
       )}
     </div>
   );
@@ -92,12 +92,12 @@ function AccountStep({ done }: { done: boolean }) {
   // muestra "Instalada"), así hay un único lugar que apaga todo. Acá el paso
   // ya hecho es solo informativo.
   if (done) {
-    return <p className="text-sm text-slate-500">Tu cuenta de Google está conectada.</p>;
+    return <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">Tu cuenta de Google está conectada.</p>;
   }
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Conectá la cuenta de Google donde tenés (o vas a tener) tu Google Analytics.
       </p>
       <button
@@ -170,26 +170,26 @@ function PropertyStep({ done }: { done: boolean }) {
   if (done) {
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-3">Tu tienda ya está midiendo visitas con Google Analytics.</p>
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">Tu tienda ya está midiendo visitas con Google Analytics.</p>
         <div className="flex items-center gap-4">
           <a
             href="https://analytics.google.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
           >
             Ver en Google Analytics <ExternalLink className="h-3.5 w-3.5" />
           </a>
           <button
             onClick={uninstall}
             disabled={disconnecting}
-            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 panel-oscuro:hover:text-red-400 transition-colors disabled:opacity-50"
           >
             {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
             Desinstalar
           </button>
         </div>
-        <p className="text-[11px] text-slate-400 mt-2">
+        <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-2">
           Al desinstalar se desconecta tu cuenta de Google y se borra el ID de Analytics — tu tienda deja de medir visitas hasta que vuelvas a instalar.
         </p>
         {disconnectError && <p className="text-xs text-red-500 mt-1.5">No se pudo desinstalar. Intentá de nuevo.</p>}
@@ -202,18 +202,18 @@ function PropertyStep({ done }: { done: boolean }) {
   }
 
   if (!accounts) {
-    return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando cuentas de Google Analytics…</div>;
+    return <div className="flex items-center gap-2 text-sm text-slate-400 panel-oscuro:text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando cuentas de Google Analytics…</div>;
   }
 
   if (accounts.length === 0) {
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-3">No encontramos ninguna cuenta de Google Analytics en tu cuenta de Google.</p>
+        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">No encontramos ninguna cuenta de Google Analytics en tu cuenta de Google.</p>
         <a
           href="https://analytics.google.com/analytics/web/#/provision/SignUp"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
           Crear una cuenta en Google Analytics <ExternalLink className="h-3.5 w-3.5" />
         </a>
@@ -223,7 +223,7 @@ function PropertyStep({ done }: { done: boolean }) {
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-3">
+      <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">
         Elegí tu cuenta de Google Analytics — si ya tenés una propiedad, la reusamos; si no, creamos una nueva sola.
       </p>
       {error && (
@@ -234,12 +234,12 @@ function PropertyStep({ done }: { done: boolean }) {
       )}
       <div className="space-y-2">
         {accounts.map((a) => (
-          <div key={a.accountId} className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">
-            <span className="text-sm font-medium text-slate-800">{a.accountName}</span>
+          <div key={a.accountId} className="flex items-center justify-between border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-3">
+            <span className="text-sm font-medium text-slate-800 panel-oscuro:text-gray-200">{a.accountName}</span>
             <button
               onClick={() => connect(a.accountId)}
               disabled={connectingId !== null}
-              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50"
             >
               {connectingId === a.accountId ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronRight className="h-3 w-3" />}
               Conectar
