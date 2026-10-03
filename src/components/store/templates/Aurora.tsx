@@ -1,7 +1,8 @@
 ﻿"use client";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import type { CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
-import { CatalogoAurora } from "@/components/store/templates/aurora/CatalogoAurora";
+import { CatalogoAurora, type EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
+import { ColeccionEnFoco } from "@/components/store/templates/aurora/ColeccionEnFoco";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -147,7 +148,7 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
    social: se sacaron de la portada por decision de disenio, para que la home sea
    mas corta. Los productos en oferta y los mas vistos siguen estando en el
    catalogo, que tiene sus filtros. */
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-statement", "au-productos"];
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-productos"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -795,6 +796,8 @@ export default function Aurora() {
   const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
   /** Los colores de la pieza de producto, iguales en la portada y en el catálogo. */
   const tintaTarjeta: TintaTarjeta = { G, GT, T, S, texto: productosText, mid: productosMid, rebaja: REBAJA };
+  /** La escena (fondo, tinta, filos y luz) para las piezas de Aurora que viven en su propio archivo. */
+  const escenaAurora: EscenaCatalogo = { BG, T, G, GT, LINEA, LINEA_FUERTE, luz, textoSobreAcento };
   const contactoBg     = scn["bgContacto"]    ?? BG;
   const contactoText   = contactoBgImg?.url
     ? (contactoBgImg.overlayType === "light" ? "#06070d" : T)
@@ -1276,6 +1279,14 @@ export default function Aurora() {
       )}
       </SectionBlock>
 
+      {/* ── COLECCIÓN EN FOCO (ver `aurora/ColeccionEnFoco`) ── */}
+      <SectionBlock id="au-coleccion" label="Colección en foco" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+        <ColeccionEnFoco products={products} categorias={categoriasBaldosa} promotions={promotions}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} favorites={favorites} onFavorito={toggleFavorite}
+          onAbrir={abrirFicha} onVerColeccion={cat => abrirCatalogo({ categoria: cat })}
+          tinta={tintaTarjeta} escena={escenaAurora} isMobile={isMobile} />
+      </SectionBlock>
+
       <SectionBlock id="au-statement" label="Frase de marca" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── STATEMENT ──────────────────────────────────────── */}
       <section data-reveal style={{ borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
@@ -1379,7 +1390,7 @@ export default function Aurora() {
             fmt={fmt} ocultarPrecios={ocultarPrecios}
             favorites={favorites} onFavorito={toggleFavorite} onAbrir={abrirFicha} onVolver={vista.irALaPortada}
             tinta={tintaTarjeta}
-            escena={{ BG, T, G, GT, LINEA, LINEA_FUERTE, luz, textoSobreAcento }}
+            escena={escenaAurora}
             isMobile={isMobile} topeBarra={72 + announcementBarHeight}
             capaPanel={isPreview ? CAPAS.previaModal : CAPAS.modalTemplate} />
         </div>
