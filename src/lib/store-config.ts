@@ -34,7 +34,7 @@ export const storeConfigSchema = z.object({
    *
    * Se acepta al entrar y no se ofrece en ningún lado, así que se apaga solo:
    * la primera vez que esa dueña toque el template, queda en uno de los diez. */
-  template: z.enum(["aire", "fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"]),
+  template: z.enum(["aire", "fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "aurora", "auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"]),
   storeName: z.string().max(120),
   storeTagline: z.string().max(200),
   colors: z.object({ accent: z.string().regex(HEX_RE) }),
