@@ -16,6 +16,7 @@ import { FraseAurora } from "@/components/store/templates/aurora/FraseAurora";
 import { MayoristaAurora } from "@/components/store/templates/aurora/MayoristaAurora";
 import { ElegirPortada, leerPiezasPortada, leerModoPortada, MAX_PORTADA } from "@/components/store/templates/aurora/ElegirPortada";
 import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
+import { ayudaDeBloque, idDeSuperficie } from "@/lib/ayudaBloques";
 import { VolverAurora } from "@/components/store/templates/aurora/VolverAurora";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -1091,7 +1092,7 @@ export default function Aurora() {
         {/* Sin "Fondo": en la portada el color nunca se veía (siempre hay una
             foto encima). Va la chapita y el botón "Portada", que elige entre
             productos y foto propia y abre el panel de la foto. */}
-        {editMode && <ChapitaBloque nombre="Banner principal" />}
+        {editMode && <ChapitaBloque nombre="Banner principal" ayuda={ayudaDeBloque(idDeSuperficie("Banner principal"))} />}
         {editMode && (
           <ElegirPortada productos={productosConFoto} elegidos={heroElegidos.filter(id => productosConFoto.some(p => p.id === id))} modo={modoPortada} foto={heroUrl}
             tinta={T} acento={G} textoAcento={textoSobreAcento} linea={LINEA_FUERTE} fondoPanel="rgba(14,15,26,0.94)" />
@@ -1309,7 +1310,7 @@ export default function Aurora() {
       {/* ── LO QUE DICEN (ver `aurora/ResenasAurora`) ── */}
       <SectionBlock id="au-resenas" label="Reseñas de la tienda" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}
         avisoAlOcultar="Ocultarlo también saca el botón para dejar reseñas de la tienda: es el único lugar desde donde se dejan.">
-        <ResenasAurora slug={storeConfig?.slug} isPreview={isPreview} enEditor={enEditor} isOwner={isOwner}
+        <ResenasAurora slug={storeConfig?.slug} isPreview={isPreview} isOwner={isOwner}
           products={products} onAbrirProducto={openModal} escena={escenaAurora} isMobile={isMobile}
           capa={isPreview ? CAPAS.previaModal : CAPAS.modalTemplate} />
       </SectionBlock>
@@ -1717,7 +1718,7 @@ export default function Aurora() {
       {modalProduct && (
         <FichaAurora producto={modalProduct} cart={cart} products={products} promotions={promotions}
           slug={storeConfig?.slug} ocultarPrecios={ocultarPrecios} isMobile={isMobile} isPreview={isPreview}
-          enEditor={enEditor} isOwner={isOwner} modoConsulta={isInquiryMode} isWholesale={isWholesale} hasWA={hasWA}
+          isOwner={isOwner} modoConsulta={isInquiryMode} isWholesale={isWholesale} hasWA={hasWA}
           escena={escenaAurora} tinta={tintaTarjeta} rebaja={REBAJA} tachado={TACHADO}
           apagadoFondo={APAGADO_FONDO} apagadoTexto={APAGADO_TEXTO}
           fichaRef={fichaRef} fotoFichaRef={fotoFichaRef} panelListo={panelListo}

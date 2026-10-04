@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { useHomeReviews, type EjemplosDeResenas, type HomeReview } from "@/hooks/useHomeReviews";
-import { EditableZone } from "@/contexts/EditContext";
+import { EditableZone, useEditContext } from "@/contexts/EditContext";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
@@ -50,11 +50,10 @@ const EJEMPLOS: EjemplosDeResenas = {
 };
 
 export function ResenasAurora({
-  slug, isPreview, enEditor, isOwner, products, onAbrirProducto, escena, isMobile, capa,
+  slug, isPreview, isOwner, products, onAbrirProducto, escena, isMobile, capa,
 }: {
   slug: string | undefined;
-  isPreview: boolean;
-  enEditor: boolean;
+  isPreview: boolean;
   isOwner: boolean;
   products: StorefrontProduct[];
   onAbrirProducto: (p: StorefrontProduct) => void;
@@ -66,6 +65,8 @@ export function ResenasAurora({
   const { BG, T, G, GT, LINEA_FUERTE, luz, textoSobreAcento } = escena;
   const productosMin = useMemo(() => products.map(p => ({ id: p.id, name: p.name, images: p.images })), [products]);
   const r = useHomeReviews({ slug, isPreview, isOwner, productos: productosMin, ejemplos: EJEMPLOS });
+  // Los avisos a la dueña, sólo EDITANDO: ni en la vista previa ni en la tienda.
+  const { editMode } = useEditContext();
 
   /* De producto y de tienda, intercaladas: la pista alterna entre una con foto
      y una de texto, en vez de amontonar todas las de un tipo de un lado. */
@@ -248,7 +249,7 @@ export function ResenasAurora({
           </p>
           <button type="button" onClick={r.abrirModal} style={pastilla(r.sinNada)}>Dejá tu opinión</button>
 
-          {enEditor && (
+          {editMode && (
             <div style={{ marginTop:18, display:"flex", gap:9, padding:"11px 13px", borderRadius:14, background:"rgba(253,230,138,0.08)", border:"1px solid rgba(253,230,138,0.28)", textAlign:"left" }}>
               <span aria-hidden style={{ flexShrink:0 }}>⚠️</span>
               <p style={{ margin:0, fontSize:11.5, color:"#fde68a", lineHeight:1.55 }}>

@@ -125,8 +125,9 @@ export default function PreviaCelular() {
       const items: ItemIndice[] = [];
       const vistos = new Set<string>();
       let bloque: string | null = null;
+      let bloqueId: string | null = null;
       document.querySelectorAll<HTMLElement>("[data-chapita], [data-edit-field]").forEach(el => {
-        if (el.dataset.chapita !== undefined) { bloque = el.dataset.chapita || null; return; }
+        if (el.dataset.chapita !== undefined) { bloque = el.dataset.chapita || null; bloqueId = el.dataset.chapitaId || null; return; }
         const field = el.dataset.editField!;
         // Un mismo campo puede dibujarse dos veces —una versión por pantalla,
         // con la otra escondida: Urban Pulse lo hace en el pie—. Va el que se ve,
@@ -134,7 +135,7 @@ export default function PreviaCelular() {
         if (vistos.has(field) || !seVe(el)) return;
         vistos.add(field);
         items.push({
-          field, bloque,
+          field, bloque, bloqueId,
           label: el.dataset.editLabel || field,
           texto: textoDe(el),
           original: el.dataset.editOriginal ?? "",

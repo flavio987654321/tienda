@@ -1,6 +1,7 @@
 "use client";
 import { createContext, isValidElement, useContext, useState } from "react";
 import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
+import { ayudaDeBloque, idDeSuperficie } from "@/lib/ayudaBloques";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
 import { colorRepresentativo } from "@/lib/section-bg";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -23,7 +24,11 @@ type EditContextType = {
      Sigue siendo `null` cuando el campo se abre desde otro lado (el carrusel de
      ChicParis, por ejemplo, que abre campos de imagen a mano). */
   activeLabel: string | null;
-  setActiveField: (field: string | null, label?: string) => void;
+  /** El bloque de la portada al que pertenece el campo abierto, si es de uno.
+   *  Lo pone `SectionBlock` solo (ver ahí), y el panel lo usa para decir de qué
+   *  bloque es lo que se está editando y para qué sirve (04/10/26). */
+  activeBloque?: BloqueActivo | null;
+  setActiveField: (field: string | null, label?: string, bloque?: BloqueActivo) => void;
   overrides: Record<string, TextOverride>;
   setOverride: (field: string, partial: Partial<TextOverride>) => void;
   resetOverride: (field: string) => void;
@@ -44,6 +49,9 @@ type EditContextType = {
    *  un doble clic alternaba dos veces y dejaba todo como estaba. */
   setHiddenSectionCelular?: (id: string, oculto: boolean) => void;
 };
+
+/** Un bloque de la portada: su id (para buscar su ayuda) y su nombre. */
+export type BloqueActivo = { id: string; nombre: string };
 
 export const EditContext = createContext<EditContextType>({
   editMode: false,
@@ -595,11 +603,11 @@ export function EditableSectionBg({ field, label, lado = "izquierda", nombreBloq
 
   return (
     <>
-    {nombreBloque && <ChapitaBloque nombre={nombreBloque} />}
+    {nombreBloque && <ChapitaBloque nombre={nombreBloque} ayuda={ayudaDeBloque(idDeSuperficie(nombreBloque))} id={idDeSuperficie(nombreBloque)} />}
     <button
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : bgKey); }}
+      onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : bgKey, undefined, nombreBloque ? { id: idDeSuperficie(nombreBloque), nombre: nombreBloque } : undefined); }}
       title={`Editar fondo: ${label}`}
       // Le deja al panel una forma de encontrar la sección y leer el fondo que
       // tiene puesto AHORA. Sin esto, el panel no sabe el color que trae el

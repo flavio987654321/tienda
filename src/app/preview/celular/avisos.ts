@@ -42,6 +42,8 @@ export type ItemIndice = {
   label: string;
   /** El nombre del bloque donde está (la chapita). `null` = arriba de todo. */
   bloque: string | null;
+  /** El id de ese bloque, para que el panel muestre para qué sirve (lib/ayudaBloques). */
+  bloqueId: string | null;
   /** Lo que dice hoy: para reconocerlo en la lista sin tener que buscarlo. */
   texto: string;
   /** El que trae el diseño, aunque ya se haya cambiado: arranca la caja del panel. */

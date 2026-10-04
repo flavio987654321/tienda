@@ -2649,7 +2649,7 @@ export default function Aire() {
 
           {/* El cartel del editor. Le dice a la dueña qué va a ver la gente en su
               tienda publicada, que no es lo que está viendo ella acá. */}
-          {enEditor && (
+          {editMode && (
             <div style={{ marginTop:14, display:"flex", gap:9, padding:"11px 14px", background:"rgba(245,158,11,0.10)", border:"1px solid rgba(245,158,11,0.30)", borderRadius:12 }}>
               <span aria-hidden style={{ flexShrink:0, fontSize:13, lineHeight:1.5 }}>⚠️</span>
               <p style={{ margin:0, fontSize:12, color:resenasText, opacity:0.85, lineHeight:1.6 }}>

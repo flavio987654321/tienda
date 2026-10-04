@@ -38,6 +38,7 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
+import { AvisoEditor } from "@/components/store/templates/shared/AvisoEditor";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
 import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
@@ -1467,7 +1468,7 @@ export default function ChicParis() {
               <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} style={{ marginBottom: 12, opacity: 0.5 }}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
               {/* El cliente no puede "agregar productos": esa instrucción es para la
                   dueña y la veía cualquiera que entrara a una tienda vacía. */}
-              <p style={{ fontSize: 14, margin: 0 }}>{enEditor ? "Todavía no hay productos. Agregalos desde Productos, en tu panel." : "Muy pronto, productos nuevos."}</p>
+              <p style={{ fontSize: 14, margin: 0 }}>{editMode ? "Todavía no hay productos. Agregalos desde Productos, en tu panel." : "Muy pronto, productos nuevos."}</p>
             </div>
           ) : (
             <>
@@ -1571,6 +1572,8 @@ export default function ChicParis() {
                   <p style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700, margin: "0 0 6px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
                   <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
                 </div>
+                {/* Sin ofertas, en la tienda este bloque no existe: el editor lo dice. */}
+                {allOfertas.length === 0 && <AvisoEditor margen="-24px auto 32px">No tenés productos en oferta, así que en tu tienda este bloque <strong>no aparece</strong>, aunque lo tengas activado. Acá se ven productos de tu catálogo para que veas cómo queda. Aparece solo cuando un producto tenga precio rebajado o una promoción que le baje el precio.</AvisoEditor>}
                 <div style={{ position: "relative" }}>
                   {/* minmax(0, 360px) y no 360px pelado. Con el ancho fijo, entre 768 y
                       848px de pantalla el bloque se desbordaba: `isMobile` corta en 768,
@@ -1692,7 +1695,7 @@ export default function ChicParis() {
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
                     relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && enEditor && (
+                {esRelleno && editMode && (
                   <p style={{ margin: "-24px 0 24px", fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "8px 12px" }}>
                     Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
                     para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
@@ -1803,7 +1806,7 @@ export default function ChicParis() {
                     el del medio: hay reseñas pero ninguna califica, así que el
                     bloque NO aparece en la tienda publicada. Eso, sin este cartel,
                     es imposible de descubrir: en el editor se ve lleno. */}
-                {enEditor && (() => {
+                {editMode && (() => {
                   const total = resenasHome.totalReal;
                   const enPortada = resenasHome.enPortadaReal;
                   // Sin reseñas en la portada, en la tienda publicada este bloque
@@ -2705,7 +2708,7 @@ export default function ChicParis() {
                 {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
                     esto el dueño cree que ya tiene reseñas — o peor, las busca en
                     el panel para contestarlas. */}
-                {resenasDeEjemplo && enEditor && (
+                {resenasDeEjemplo && editMode && (
                   <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8 }}>
                     <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
                     <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>

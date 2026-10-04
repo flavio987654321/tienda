@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEditContext } from "@/contexts/EditContext";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import type { useCartLogic } from "@/hooks/useCartLogic";
@@ -75,7 +76,7 @@ function suscribirAncho(avisar: () => void) {
 }
 
 export function FichaAurora({
-  producto, cart, products, promotions, slug, ocultarPrecios, isMobile, isPreview, enEditor, isOwner,
+  producto, cart, products, promotions, slug, ocultarPrecios, isMobile, isPreview, isOwner,
   modoConsulta, isWholesale, hasWA, escena, tinta, rebaja, tachado, apagadoFondo, apagadoTexto,
   fichaRef, fotoFichaRef, panelListo, capa, onCerrar, onAmpliar, onConsultar, onCopiarLink, onWhatsapp,
 }: {
@@ -87,7 +88,6 @@ export function FichaAurora({
   ocultarPrecios: boolean;
   isMobile: boolean;
   isPreview: boolean;
-  enEditor: boolean;
   isOwner: boolean;
   /** Consulta en vez de carrito (catálogo sin precios o modo consulta). */
   modoConsulta: boolean;
@@ -138,6 +138,8 @@ export function FichaAurora({
 
   /* ── Reseñas ── */
   const resenas = useResenasProducto({ slug, productId: producto.id, paso: PASO_RESENAS, ejemplos: RESENAS_EJEMPLO, isPreview });
+  // El aviso de "reseñas de ejemplo", sólo EDITANDO: ni en la vista previa ni en la tienda.
+  const { editMode } = useEditContext();
   const [formAbierto, setFormAbierto] = useState(false);
   const [form, setForm] = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const captcha = useTurnstile("review");
@@ -472,7 +474,7 @@ export function FichaAurora({
               {/* ── Reseñas ── */}
               <div>
                 <p style={rotulo}>Reseñas{resenas.total > 0 && ` · ${resenas.total}`}</p>
-                {resenas.usandoEjemplos && enEditor && (
+                {resenas.usandoEjemplos && editMode && (
                   <div style={{ display:"flex", gap:9, margin:"0 0 14px", padding:"10px 13px", borderRadius:14, background:"rgba(253,230,138,0.1)", border:"1px solid rgba(253,230,138,0.3)" }}>
                     <span style={{ flexShrink:0 }}>⚠️</span>
                     <p style={{ margin:0, fontSize:11.5, color:"#fde68a", lineHeight:1.55 }}>

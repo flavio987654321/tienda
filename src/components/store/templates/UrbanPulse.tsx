@@ -40,6 +40,7 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
+import { AvisoEditor } from "@/components/store/templates/shared/AvisoEditor";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
 import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
@@ -2158,7 +2159,7 @@ export default function UrbanPulse() {
 
           {/* Aviso, solo mientras se edita: que quede claro que esas cuatro no
               son reales y qué va a pasar en la tienda publicada. */}
-          {enEditor && (
+          {editMode && (
             <div style={{ display:"flex", gap:9, marginTop:16, padding:"11px 14px", background:"#fffbeb", border:"2px solid #fde68a", maxWidth:640 }}>
               <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
               <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
@@ -2354,6 +2355,8 @@ export default function UrbanPulse() {
                   <p style={{ fontSize:9, letterSpacing:5, color:accentSobre(ofertasBgUp, ofertasTextUp), textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
                   <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:ofertasTextUp }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
                 </div>
+                {/* Sin ofertas, en la tienda este bloque no existe: el editor lo dice. */}
+                {allOfertas.length === 0 && <AvisoEditor margen="-12px 0 24px">No tenés productos en oferta, así que en tu tienda este bloque <strong>no aparece</strong>, aunque lo tengas activado. Acá se ven productos de tu catálogo para que veas cómo queda. Aparece solo cuando un producto tenga precio rebajado o una promoción que le baje el precio.</AvisoEditor>}
                 <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap:2 }}>
                   {displayList.map(p => {
                     // El "-30%" tiene que coincidir con el precio: si hay promo de
@@ -2413,7 +2416,7 @@ export default function UrbanPulse() {
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
                     relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && enEditor && (
+                {esRelleno && editMode && (
                   <p style={{ margin:"-24px 0 24px", fontSize:12, color:"#b45309", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"8px 12px" }}>
                     Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
                     para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
@@ -3328,7 +3331,7 @@ export default function UrbanPulse() {
                   {tituloModal(resenasProd.total > 0 ? `Reseñas (${resenasProd.total})` : "Reseñas")}
                   {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
                       Dice que son de mentira ANTES de que la dueña las lea. */}
-                  {resenasProd.usandoEjemplos && enEditor && (
+                  {resenasProd.usandoEjemplos && editMode && (
                     <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:`2px solid #fde68a` }}>
                       <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
                       <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>

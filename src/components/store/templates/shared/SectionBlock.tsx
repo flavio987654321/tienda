@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { ordenEfectivo } from "@/lib/ordenBloques";
-import { useEditContext } from "@/contexts/EditContext";
+import { ayudaDeBloque } from "@/lib/ayudaBloques";
+import { EditContext, useEditContext, type BloqueActivo } from "@/contexts/EditContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { CAPAS } from "@/lib/capas-tienda";
 import { ChapitaBloque, LINEA_EDITOR, HALO_EDITOR } from "@/components/store/templates/shared/ChapitaBloque";
@@ -39,7 +40,17 @@ export function SectionBlock({
   defaultOrder: string[];
   children: React.ReactNode;
 }) {
-  const { editMode, hiddenSections, toggleHiddenSection, sectionOrder, moveSection, vistaCelular, setHiddenSectionCelular } = useEditContext();
+  const ctx = useEditContext();
+  const { editMode, hiddenSections, toggleHiddenSection, sectionOrder, moveSection, vistaCelular, setHiddenSectionCelular } = ctx;
+  /* Los campos de adentro se presentan con el bloque al abrirse: el panel dice
+     "Bloque: Garantías — para qué sirve". Se hace acá, envolviendo el contexto,
+     y no en cada `EditableZone` de los templates: son cientos, y un campo nuevo
+     se olvidaría de pasarlo. Un campo que ya trae su bloque, lo respeta. */
+  const ctxDelBloque = useMemo(() => ({
+    ...ctx,
+    setActiveField: (field: string | null, etiqueta?: string, bloque?: BloqueActivo) =>
+      ctx.setActiveField(field, etiqueta, bloque ?? { id, nombre: label }),
+  }), [ctx, id, label]);
   /** Sólo para resaltar ESTE bloque cuando el mouse está encima, en edición. */
   const [encima, setEncima] = useState(false);
   const config = useStoreConfig();
@@ -162,7 +173,7 @@ export function SectionBlock({
           el nombre de ése — un cartel en el lugar equivocado dice algo, y dice
           algo falso. Ver `ChapitaBloque`, que lo comparte con el botón "Fondo"
           de las superficies que no son bloques (el pie, contacto, catálogo). */}
-      <ChapitaBloque nombre={label} />
+      <ChapitaBloque nombre={label} ayuda={ayudaDeBloque(id)} id={id} />
 
       {/* El último bloque no tiene ninguno abajo que le ponga su línea de arriba,
           así que se cierra solo. Sin esto, el editor termina en un filo que no se
@@ -177,7 +188,7 @@ export function SectionBlock({
 
       {/* Contenido, dimmeado si oculto */}
       <div style={isHidden ? { opacity: 0.25, filter: "grayscale(1) brightness(0.5)", pointerEvents: "none", userSelect: "none" } : undefined}>
-        {children}
+        <EditContext.Provider value={ctxDelBloque}>{children}</EditContext.Provider>
       </div>
 
       {/* Mirando la computadora, un bloque oculto sólo en el celular se ve

@@ -1,13 +1,14 @@
 "use client";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { ordenEfectivo } from "@/lib/ordenBloques";
+import { ayudaDeBloque } from "@/lib/ayudaBloques";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, TextOverrideCelular, ImageOverride, TemplateId } from "@/types/store-config";
 import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, SECTION_BG_FOCO_CELULAR, SECTION_BG_SOLO_FOTO, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
-import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
+import { EditContext, useEditContext, getContrastColor, type BloqueActivo } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
 import { parseBg, serializeBg, extremo, extremosDe, DIR_LABELS, type SectionBg, type BgDir, type BgHacia } from "@/lib/section-bg";
 import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
@@ -1066,6 +1067,26 @@ function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, arrancaEnCelular =
   );
 }
 
+/* ── "De qué bloque es esto, y para qué sirve" ──────────────────────────────
+   Una línea debajo del encabezado de los tres paneles (texto, foto, fondo):
+   quien abre "Título" o "Fondo" no siempre sabe de qué parte de la tienda es,
+   ni para qué está esa parte (Flavio, 04/10/26). El bloque lo pone
+   `SectionBlock` al abrirse el campo; la ayuda sale de `lib/ayudaBloques`.
+   Fuera de un bloque (el pie, la barra) no dice nada. */
+function AyudaDelBloque() {
+  const { activeBloque } = useEditContext();
+  if (!activeBloque) return null;
+  const ayuda = ayudaDeBloque(activeBloque.id);
+  return (
+    <div style={{ padding: "9px 18px 10px", borderBottom: "1px solid #eef1f5", background: "#f8f7ff" }}>
+      <p style={{ margin: 0, fontSize: 10.5, lineHeight: 1.5, color: P.muted }}>
+        <span style={{ fontWeight: 700, color: P.accent }}>Bloque: {activeBloque.nombre}</span>
+        {ayuda && <> · {ayuda}</>}
+      </p>
+    </div>
+  );
+}
+
 function ImageFieldEditor({
   field, ov, tip, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
   msCarrusel, setMsCarrusel,
@@ -1205,6 +1226,8 @@ function ImageFieldEditor({
         <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, ...dkMuted, flexShrink: 0, lineHeight: 1, padding: 0 }}>×</button>
       </div>
+
+      <AyudaDelBloque />
 
       {/* ── Foto ── */}
       <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
@@ -1515,6 +1538,8 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = 
         <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: P.muted, lineHeight: 1, padding: 0 }}>×</button>
       </div>
+
+      <AyudaDelBloque />
 
       {/* Donde sólo va foto, el color y el difuminado no se ofrecen: ver
           SECTION_BG_SOLO_FOTO. */}
@@ -2042,6 +2067,8 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
         </button>
       </div>
 
+      <AyudaDelBloque />
+
       {/* ── Texto ── */}
       <div style={bloque}>
         {titulo("Texto")}
@@ -2432,11 +2459,12 @@ export default function ConfiguracionPage() {
   // distintas y hay un render en el que el panel ya cambió de campo pero todavía
   // se titula con el nombre del anterior. Juntos no puede pasar: o cambian los dos
   // o no cambia ninguno.
-  const [active, setActive] = useState<{ field: string; label?: string } | null>(null);
+  const [active, setActive] = useState<{ field: string; label?: string; bloque?: BloqueActivo } | null>(null);
   const activeField = active?.field ?? null;
   const activeLabel = active?.label ?? null;
-  const setActiveField = useCallback((field: string | null, label?: string) => {
-    setActive(field === null ? null : { field, label });
+  const activeBloque = active?.bloque ?? null;
+  const setActiveField = useCallback((field: string | null, label?: string, bloque?: BloqueActivo) => {
+    setActive(field === null ? null : { field, label, bloque });
   }, []);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
@@ -3183,6 +3211,7 @@ export default function ConfiguracionPage() {
           editMode: true,
           activeField,
           activeLabel,
+          activeBloque,
           setActiveField,
           overrides: config.textOverrides,
           setOverride,
@@ -3234,7 +3263,7 @@ export default function ConfiguracionPage() {
           {ancho === "celular" && !activeField && (
             <IndiceCelular items={indiceCelular} overrides={config.textOverrides}
               bloquesOcultos={config.hiddenSectionsCelular?.length ?? 0}
-              onElegir={(field, label) => setActiveField(field, label)}
+              onElegir={(field, label, bloque) => setActiveField(field, label, bloque)}
               onDeshacer={deshacerCelular}
               onSalir={() => setAncho("pc")} />
           )}

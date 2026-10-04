@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { BloqueActivo } from "@/contexts/EditContext";
 import type { TextOverride } from "@/types/store-config";
 import { esLargo, type ItemIndice } from "@/app/preview/celular/avisos";
 
@@ -50,7 +51,7 @@ export default function IndiceCelular({ items, overrides, bloquesOcultos, onEleg
   overrides: Record<string, TextOverride>;
   /** Cuántos bloques están ocultos sólo en el celular. */
   bloquesOcultos: number;
-  onElegir: (field: string, label: string) => void;
+  onElegir: (field: string, label: string, bloque?: BloqueActivo) => void;
   /** Vuelve todo lo del celular (textos y bloques) a como se ve en computadora. */
   onDeshacer: () => void;
   /** Vuelve a la vista de computadora. Sin esto, la única salida era el
@@ -203,7 +204,7 @@ export default function IndiceCelular({ items, overrides, bloquesOcultos, onEleg
                   const tipo = tipoDe(it.label);
                   const { oculto, propio } = estado(it.field);
                   return (
-                    <button key={it.field} type="button" onClick={() => onElegir(it.field, it.label)}
+                    <button key={it.field} type="button" onClick={() => onElegir(it.field, it.label, it.bloqueId ? { id: it.bloqueId, nombre: it.bloque ?? "" } : undefined)}
                       title={`${tipo.nombre}: ${it.label}`}
                       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
                         padding: "9px 12px", background: "white", border: "none", borderTop: `1px solid #f1f3f8`,
