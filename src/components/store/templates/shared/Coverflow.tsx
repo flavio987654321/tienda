@@ -417,19 +417,23 @@ export function Coverflow({
       ))}
 
       {/* Puntitos */}
-      <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
+      {/* El puntito se ve de 6px pero el botón mide 24 de alto y lleva aire a
+          los costados: con el dedo, un blanco de 6px es imposible de acertar. */}
+      <div style={{ position: "absolute", bottom: 7, left: "50%", transform: "translateX(-50%)", display: "flex", zIndex: 3 }}>
         {piezas.map((p, i) => (
           <button
             key={`punto-${p.id}`}
             type="button"
             onClick={() => mover(i - activo)}
             aria-label={`Ir a ${p.titulo}`}
-            style={{
-              width: i === activo ? 20 : 6, height: 6, borderRadius: 999, border: "none", padding: 0, cursor: "pointer",
+            style={{ height: 24, padding: "0 3.5px", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center" }}
+          >
+            <span aria-hidden style={{
+              display: "block", width: i === activo ? 20 : 6, height: 6, borderRadius: 999,
               background: i === activo ? acento : "rgba(255,255,255,.32)",
               transition: "width .4s ease, background .4s ease",
-            }}
-          />
+            }} />
+          </button>
         ))}
       </div>
     </div>
