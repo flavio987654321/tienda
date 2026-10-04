@@ -43,11 +43,14 @@ export function GarantiasAurora({ items, fondo, tinta, escena, isMobile, childre
     <section data-reveal className="au-garantias" style={{ position:"relative", overflow:"hidden", background:fondo }}>
       <style>{`
         @keyframes au-haz { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
-        .au-garantia { transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s, border-color .45s }
+        .au-garantia { transition: box-shadow .45s, border-color .45s }
         .au-garantia .au-filo { opacity: .35; transition: opacity .45s }
         .au-garantia .au-esfera { transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s }
+        /* Al pasar el mouse el panel se ENCIENDE, no se levanta: con el vidrio
+           (backdrop-filter) un translate hacía que el navegador redibujara el
+           texto como imagen y quedaba borroso, justo donde se edita (04/10/26). */
         @media (hover: hover) {
-          .au-garantia:hover { transform: translateY(-5px) }
+          .au-garantia:hover { border-color: ${luz(0.5)} !important; box-shadow: 0 18px 40px rgba(0,0,0,0.35), 0 0 36px ${luz(0.2)} !important }
           .au-garantia:hover .au-filo { opacity: 1 }
           .au-garantia:hover .au-esfera { transform: scale(1.08) }
         }
