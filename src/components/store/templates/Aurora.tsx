@@ -14,7 +14,8 @@ import { PreguntasAurora } from "@/components/store/templates/aurora/PreguntasAu
 import { GarantiasAurora } from "@/components/store/templates/aurora/GarantiasAurora";
 import { FraseAurora } from "@/components/store/templates/aurora/FraseAurora";
 import { MayoristaAurora } from "@/components/store/templates/aurora/MayoristaAurora";
-import { ElegirPortada, leerPiezasPortada, MAX_PORTADA } from "@/components/store/templates/aurora/ElegirPortada";
+import { ElegirPortada, leerPiezasPortada, leerModoPortada, MAX_PORTADA } from "@/components/store/templates/aurora/ElegirPortada";
+import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
 import { VolverAurora } from "@/components/store/templates/aurora/VolverAurora";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -596,23 +597,29 @@ export default function Aurora() {
      sus propios productos. Nunca una foto de stock — una imagen de un
      desconocido haciéndose pasar por la colección es peor que no tener foto. */
   const heroUrl = heroBgImg?.url;
-  /* Sin foto propia, las de hasta cuatro productos: cada una lleva su producto
-     detrás, que el hero muestra en una tarjeta con nombre, precio y "Ver". */
-  /* La dueña puede elegirlos en el editor (`heroPiezas`). Con foto propia y
-     productos elegidos, se combinan: la foto primero y los productos después. */
+  /* La portada muestra UNA de dos cosas, la que la dueña eligió en el editor
+     (`portadaModo`, ver `aurora/ElegirPortada`):
+     - "productos": hasta cuatro productos con foto, cada uno con su tarjeta de
+       nombre, precio y "Ver". Los elige ella (`heroPiezas`) o van los primeros.
+     - "foto": su foto, sola y a pantalla completa, sin cuadraditos ni tarjeta.
+     Antes se mezclaban (la foto primero y los productos después); ya no. Si
+     eligió foto pero todavía no subió ninguna, siguen los productos: una
+     portada vacía es peor. */
+  const modoPortada = leerModoPortada(textOverrides["portadaModo"]?.text, !!heroUrl);
+  const conFotoPropia = modoPortada === "foto" && !!heroUrl;
   const productosConFoto = useMemo(() => products.filter(p => p.images[0]), [products]);
   const heroElegidos = leerPiezasPortada(textOverrides["heroPiezas"]?.text);
   const claveElegidos = heroElegidos.join();
   const heroProductos = useMemo(() => {
+    if (conFotoPropia) return [];
     const elegidos = claveElegidos
       ? claveElegidos.split(",").map(id => productosConFoto.find(p => p.id === id)).filter((p): p is StorefrontProduct => !!p)
       : [];
-    if (elegidos.length) return elegidos;
-    return heroUrl ? [] : productosConFoto.slice(0, MAX_PORTADA);
-  }, [heroUrl, productosConFoto, claveElegidos]);
+    return elegidos.length ? elegidos : productosConFoto.slice(0, MAX_PORTADA);
+  }, [conFotoPropia, productosConFoto, claveElegidos]);
   const heroFotos = useMemo(
-    () => [...(heroUrl ? [heroUrl] : []), ...heroProductos.map(p => p.images[0])],
-    [heroUrl, heroProductos],
+    () => conFotoPropia && heroUrl ? [heroUrl] : heroProductos.map(p => p.images[0]),
+    [conFotoPropia, heroUrl, heroProductos],
   );
 
   /* Los dos mazos del coverflow. Antes esto eran TRES baldosas de categoría
@@ -1087,19 +1094,23 @@ export default function Aurora() {
       {vista.enPortada && (<>
 
       <section id="hero" style={{ position:"relative" }}>
-        <BgDragHandle imgKey="sectionbg_bgHero" />
-        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
+        {/* Sin "Fondo": en la portada el color nunca se veía (siempre hay una
+            foto encima). Va la chapita y el botón "Portada", que elige entre
+            productos y foto propia y abre el panel de la foto. */}
+        {editMode && <ChapitaBloque nombre="Banner principal" />}
         {editMode && (
-          <ElegirPortada productos={productosConFoto} elegidos={heroElegidos} conFotoPropia={!!heroUrl}
+          <ElegirPortada productos={productosConFoto} elegidos={heroElegidos} modo={modoPortada} foto={heroUrl}
             tinta={T} acento={G} textoAcento={textoSobreAcento} linea={LINEA_FUERTE} fondoPanel="rgba(14,15,26,0.94)" />
         )}
         <HeroFoto
           imagenes={heroFotos}
-          posicion={heroBgImg ? `${heroBgImg.posX ?? 50}% ${heroBgImg.posY ?? 50}%` : "center"}
+          // El encuadre y la foto de celular son de la foto propia: con
+          // productos no van (moverían las fotos de los productos).
+          posicion={conFotoPropia && heroBgImg ? `${heroBgImg.posX ?? 50}% ${heroBgImg.posY ?? 50}%` : "center"}
           // La foto y el encuadre para el celular, si la dueña los eligió. Sin
           // ellos el celular usa los de PC, como siempre.
-          imagenCelular={heroBgImg?.urlMobile}
-          posicionCelular={heroBgImg && (heroBgImg.posXMobile !== undefined || heroBgImg.posYMobile !== undefined)
+          imagenCelular={conFotoPropia ? heroBgImg?.urlMobile : undefined}
+          posicionCelular={conFotoPropia && heroBgImg && (heroBgImg.posXMobile !== undefined || heroBgImg.posYMobile !== undefined)
             ? `${heroBgImg.posXMobile ?? heroBgImg.posX ?? 50}% ${heroBgImg.posYMobile ?? heroBgImg.posY ?? 50}%`
             : undefined}
           base={BG}
@@ -1111,15 +1122,15 @@ export default function Aurora() {
           // su lugar en el flujo: reservarlo otra vez sería un hueco de 72px.
           margenNav={isPreview ? 0 : 72}
           celular={isMobile}
-          // La foto propia, si la hay, va primera y no es de ningún producto.
-          piezas={[...(heroUrl ? [null] : []), ...heroProductos.map(p => {
+          // Con foto propia no hay piezas: ni cuadraditos de productos ni tarjeta.
+          piezas={conFotoPropia ? undefined : heroProductos.map(p => {
             const promoHero = resolveProductPromo(p, promotions);
             return {
               titulo: p.name,
               precio: ocultarPrecios ? undefined : fmt(promoHero.hasPriceDrop ? promoHero.effectivePrice : p.price),
               onVer: (e: React.MouseEvent) => abrirFicha(p, e),
             };
-          })]}
+          })}
           kicker={<EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>}
           titulo={<EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>}
           texto={<EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad.</EditableZone>}

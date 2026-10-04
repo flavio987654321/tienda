@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, TextOverrideCelular, ImageOverride, TemplateId } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, SECTION_BG_FOCO_CELULAR, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, SECTION_BG_FOCO_CELULAR, SECTION_BG_SOLO_FOTO, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
@@ -1358,7 +1358,7 @@ function ImageFieldEditor({
 }
 
 /* ── Background + image editor for section bg fields ────────── */
-function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = false, celular = false }: {
+function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = false, celular = false, soloFoto = false }: {
   field: string;
   base: React.CSSProperties;
   setActiveField: (f: string | null) => void;
@@ -1368,6 +1368,8 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = 
   focoCelular?: boolean;
   /** Se está editando la vista de celular. */
   celular?: boolean;
+  /** Sólo la foto: sin color ni difuminado (SECTION_BG_SOLO_FOTO). */
+  soloFoto?: boolean;
 }) {
   const { sectionColors, setSectionColor, imageOverrides, setImageOverride } = useEditContext();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1506,13 +1508,16 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = 
       {/* ── Encabezado ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: P.accent, background: P.accentSoft, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
-          🎨 Fondo
+          {soloFoto ? "🖼 Foto de portada" : "🎨 Fondo"}
         </span>
         <div style={{ flex: 1 }} />
         <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: P.muted, lineHeight: 1, padding: 0 }}>×</button>
       </div>
 
+      {/* Donde sólo va foto, el color y el difuminado no se ofrecen: ver
+          SECTION_BG_SOLO_FOTO. */}
+      {!soloFoto && (<>
       {/* ── Color ── */}
       {/* Con foto puesta, el color se PLIEGA — no se apaga.
           Apagarlo sería mentir por el otro lado: el color se sigue viendo, es lo
@@ -1679,6 +1684,8 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = 
         </>)}
       </div>
       )}
+
+      </>)}
 
       {/* ── Foto ── */}
       {/* Solo donde el template de verdad la dibuja. Ofrecerla en todos lados era
@@ -1879,6 +1886,7 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
     return <BgFieldEditor field={field} base={base} setActiveField={setActiveField}
       aceptaFoto={SECTION_BG_PHOTO[template]?.includes(field) ?? false}
       focoCelular={SECTION_BG_FOCO_CELULAR[template]?.includes(field) ?? false}
+      soloFoto={SECTION_BG_SOLO_FOTO[template]?.includes(field) ?? false}
       celular={celular} />;
   }
 

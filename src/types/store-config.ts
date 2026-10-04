@@ -99,6 +99,15 @@ export const SECTION_BG_FOCO_CELULAR: Partial<Record<TemplateId, string[]>> = {
   "aurora": ["bgHero"],
 };
 
+/* Secciones donde el panel de fondo ofrece SÓLO la foto, sin color ni
+   difuminado. Es para las que siempre tienen una foto encima: el hero de Aurora
+   muestra o la foto propia o las fotos de los productos, nunca el fondo pelado,
+   así que el color que se elegía no cambiaba nada (Flavio, 04/10/26). Un control
+   que no hace nada es peor que no tenerlo. */
+export const SECTION_BG_SOLO_FOTO: Partial<Record<TemplateId, string[]>> = {
+  "aurora": ["bgHero"],
+};
+
 export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   // Sólo el hero. El resto de Aurora no acepta foto de fondo a propósito: el
   // fondo ES la escena de luz, y una foto encima la tapa y le saca al template
