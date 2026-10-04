@@ -106,7 +106,7 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
           <select value={producto?.id ?? ""} aria-label="Producto del lanzamiento"
             onChange={e => setOverride("lanzamientoProducto", { text: e.target.value })}
             style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer", maxWidth:200 }}>
-            <option value="" style={{ color:"#111" }}>Sin producto (todavía no cargado)</option>
+            <option value="" style={{ color:"#111" }}>Sin producto</option>
             {conFoto.map(p => <option key={p.id} value={p.id} style={{ color:"#111" }}>{p.name}</option>)}
           </select>
           <label style={{ display:"flex", alignItems:"center", gap:5, fontWeight:500, cursor:"pointer" }}>
@@ -190,9 +190,11 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
                 </div>
               </>
             )}
-            <EditableImageButton field="lanzamientoImagen" label="Imagen del lanzamiento"
-              panelNote="Si elegiste un producto, sin imagen propia se usa la foto del producto." />
           </div>
+          {/* El botón va AFUERA del arco: adentro se apoyaba en la esquina de
+              arriba, que en el arco es pura curva, y lo cortaba ("Imagen del la…"). */}
+          <EditableImageButton field="lanzamientoImagen" label="Imagen del lanzamiento"
+            panelNote="Si elegiste un producto, sin imagen propia se usa la foto del producto." />
         </div>
       </div>
     </section>
