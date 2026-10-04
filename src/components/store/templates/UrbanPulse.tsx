@@ -41,6 +41,9 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { PreguntasUrban } from "@/components/store/templates/urban/PreguntasUrban";
+import { LookbookUrban } from "@/components/store/templates/urban/LookbookUrban";
+import { MAX_LOOKS } from "@/lib/lookbook";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
@@ -143,7 +146,7 @@ const UP_STRIP_ICONS: React.ReactNode[][] = [
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
-const UP_SECTION_IDS = ["up-garantias", "up-banner", "up-categorias", "up-mayorista", "up-featured", "up-productos", "up-testimonios", "up-ofertas", "up-masvisto", "up-nosotros", "up-contacto"];
+const UP_SECTION_IDS = ["up-garantias", "up-banner", "up-categorias", "up-mayorista", "up-featured", "up-productos", "up-lookbook", "up-testimonios", "up-ofertas", "up-masvisto", "up-nosotros", "up-preguntas", "up-contacto"];
 
 /** Qué hace un link del pie con un clic normal. El `href` sigue siendo el de
  *  verdad: esto sólo evita el viaje cuando el destino se puede dibujar acá. */
@@ -211,7 +214,7 @@ export default function UrbanPulse() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
+  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, shippingMethods, hasMercadoPago } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
 
   /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
@@ -513,6 +516,15 @@ export default function UrbanPulse() {
   const productosBotonText = textoSobre(productosTextUp);
   const ofertasBgUp   = scu["bgOfertas"]  ?? DARK;
   const ofertasTextUp = getContrastColor(ofertasBgUp) === "light" ? WHITE : DARK;
+  /* Comprá el look y Preguntas frecuentes (04/10/26): blancos, porque cada uno
+     queda entre un bloque gris claro y uno negro. El gris suave del texto es
+     más oscuro que MID: #777 sobre blanco no llega a leerse cómodo. */
+  const lookbookBgUp    = scu["bgLookbook"]  ?? WHITE;
+  const lookbookTextUp  = getContrastColor(lookbookBgUp) === "light" ? WHITE : DARK;
+  const lookbookMidUp   = getContrastColor(lookbookBgUp) === "light" ? "rgba(255,255,255,0.7)" : "#555555";
+  const preguntasBgUp   = scu["bgPreguntas"] ?? WHITE;
+  const preguntasTextUp = getContrastColor(preguntasBgUp) === "light" ? WHITE : DARK;
+  const preguntasMidUp  = getContrastColor(preguntasBgUp) === "light" ? "rgba(255,255,255,0.7)" : "#555555";
   const masVistoBgUp   = scu["bgMasVisto"]  ?? DARK;
   const masVistoTextUp = getContrastColor(masVistoBgUp) === "light" ? WHITE : DARK;
 
@@ -2063,6 +2075,17 @@ export default function UrbanPulse() {
           carrusel horizontal de tarjetas claras con Playfair en itálica; acá es la
           grilla dura del resto de Urban Pulse — bordes rectos, mayúsculas,
           estrellas dibujadas, sin curvas. */}
+      {/* ── COMPRÁ EL LOOK (ver `urban/LookbookUrban`): sin fotos no existe ── */}
+      <SectionBlock id="up-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+        <LookbookUrban products={products} promotions={promotions}
+          imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
+          fondo={lookbookBgUp} tinta={lookbookTextUp} suave={lookbookMidUp} acentoTexto={accentSobre(lookbookBgUp, lookbookTextUp)}
+          ACC={ACC} acentoSobreNegro={accSobreDark} isMobile={isMobile}>
+          <EditableSectionBg field="bgLookbook" label="Fondo del look" />
+        </LookbookUrban>
+      </SectionBlock>
+
       <SectionBlock id="up-testimonios" label="Reseñas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}
         avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
       <section data-reveal style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
@@ -2443,6 +2466,17 @@ export default function UrbanPulse() {
         </div>
         </div>
       </section>
+      </SectionBlock>
+
+      {/* ── PREGUNTAS FRECUENTES (ver `urban/PreguntasUrban`) ── */}
+      <SectionBlock id="up-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+        <PreguntasUrban envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
+          legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
+          onContacto={() => irASeccion("contacto")} conWhatsapp={hasWA}
+          fondo={preguntasBgUp} tinta={preguntasTextUp} suave={preguntasMidUp} acentoTexto={accentSobre(preguntasBgUp, preguntasTextUp)}
+          ACC={ACC} textoSobreACC={accentText} isMobile={isMobile}>
+          <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
+        </PreguntasUrban>
       </SectionBlock>
 
       <SectionBlock id="up-contacto" label="Contacto" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>

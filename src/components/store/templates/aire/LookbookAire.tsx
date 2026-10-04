@@ -231,7 +231,7 @@ export function LookbookAire({
                 );
               }) : (
                 <p style={{ margin:"16px 0 0", fontSize:14, lineHeight:1.6, color:T2 }}>
-                  {editMode ? "Todavía no marcaste productos en este look: tocá “📍 Marcar productos” sobre la foto." : "Consultanos por las prendas de este look."}
+                  {editMode ? "Todavía no marcaste productos en este look: tocá “📍 Marcar productos” abajo de la foto." : "Consultanos por las prendas de este look."}
                 </p>
               )}
             </div>

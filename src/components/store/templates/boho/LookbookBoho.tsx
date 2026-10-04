@@ -235,7 +235,7 @@ export function LookbookBoho({
                   );
                 }) : (
                   <p style={{ margin:"16px 0 0", fontSize:14, lineHeight:1.7, color:suave }}>
-                    {editMode ? "Todavía no marcaste productos en este look: tocá “📍 Marcar productos” sobre la foto." : "Consultanos por las prendas de este look."}
+                    {editMode ? "Todavía no marcaste productos en este look: tocá “📍 Marcar productos” abajo de la foto." : "Consultanos por las prendas de este look."}
                   </p>
                 )}
               </div>
