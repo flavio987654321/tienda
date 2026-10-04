@@ -1,9 +1,8 @@
 "use client";
-import { useMemo, useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
-import { resolveProductPromo } from "@/lib/promoDisplay";
-import { EditableZone, EditableImageButton, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton } from "@/contexts/EditContext";
+import { useLookbook, MAX_LOOKS, MAX_PUNTOS } from "@/components/store/templates/shared/useLookbook";
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
 import type { EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
 
@@ -21,26 +20,13 @@ import type { EscenaCatalogo } from "@/components/store/templates/aurora/Catalog
    Lo arma la dueña en el editor:
    - hasta MAX_LOOKS fotos (`lookbook1`…, con el botón de imagen de siempre);
    - "📍 Marcar productos": toca la foto donde está cada prenda y elige cuál es.
-     Los puntos se guardan por look en el override `lookbookPuntos<n>` como
-     JSON [{ id, x, y }] con x/y en % de la foto, así valen en cualquier ancho.
+     Los puntos se guardan por look en `lookbookPuntos<n>` (ver `lib/lookbook`).
+   Lo que hace —looks, puntos, marcar— está en `shared/useLookbook` y lo
+   comparten los templates de moda; acá sólo cómo se ve en Aurora.
 
    Sin ninguna foto, en la tienda no existe. */
 
-export const MAX_LOOKS = 3;
-const MAX_PUNTOS = 6;
-
-type Punto = { id: string; x: number; y: number };
-
-function leerPuntos(texto: string | undefined): Punto[] {
-  try {
-    const crudo = JSON.parse(texto ?? "[]");
-    if (!Array.isArray(crudo)) return [];
-    return crudo
-      .filter(p => p && typeof p.id === "string" && Number.isFinite(p.x) && Number.isFinite(p.y))
-      .map(p => ({ id: p.id, x: Math.max(0, Math.min(100, p.x)), y: Math.max(0, Math.min(100, p.y)) }))
-      .slice(0, MAX_PUNTOS);
-  } catch { return []; }
-}
+export { MAX_LOOKS };
 
 /** El ancho de la columna de la foto en compu: lo que le da 72% del alto de la
  *  pantalla (tope 640px) en 4/5, y nunca más de 55% del ancho, para que en
@@ -59,41 +45,15 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
   isMobile: boolean;
 }) {
   const { BG, T, G, GT, LINEA_FUERTE, luz, textoSobreAcento } = escena;
-  const { editMode, overrides, setOverride } = useEditContext();
-  const [elegido, setElegido] = useState(0);
-  const [puntoAbierto, setPuntoAbierto] = useState<number | null>(null);
-  const [marcando, setMarcando] = useState(false);
+  const {
+    editMode, existe, looks, indice, look, huecoLibre, cambiarLook,
+    puntos, puntosVisibles, enEsteLook, sinProducto, porId, elegibles,
+    marcando, alternarMarcar, marcar, elegirProducto, borrarPunto,
+    puntoAbierto, setPuntoAbierto, prodAbierto, precio,
+  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios });
 
-  const porId = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
-  /* Los looks que existen: los que tienen foto. En el editor se suma el
-     siguiente hueco vacío, para poder subir uno más. */
-  const looks = imagenes.map((url, i) => ({ n: i + 1, url })).filter(l => !!l.url);
-  /* El "+" para sumar otro look aparece recién cuando ya hay uno: sin ninguno,
-     repetía lo mismo que el botón grande de la foto y confundía (04/10/26). */
-  const huecoLibre = editMode && looks.length > 0 && looks.length < MAX_LOOKS ? imagenes.findIndex(u => !u) + 1 : 0;
+  if (!existe) return null;
 
-  if (looks.length === 0 && !editMode) return null;
-
-  const indice = Math.min(elegido, Math.max(0, looks.length - 1));
-  const look = looks[indice] ?? null;
-  const campoPuntos = look ? `lookbookPuntos${look.n}` : "";
-  const puntos = look ? leerPuntos(overrides[campoPuntos]?.text) : [];
-  // En la tienda sólo cuentan los puntos con un producto que existe todavía.
-  const puntosVisibles = editMode ? puntos : puntos.filter(p => porId.has(p.id));
-  const enEsteLook = [...new Set(puntosVisibles.map(p => p.id))].map(id => porId.get(id)).filter((p): p is StorefrontProduct => !!p);
-
-  const guardar = (lista: Punto[]) => setOverride(campoPuntos, { text: JSON.stringify(lista.map(p => ({ id: p.id, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }))) });
-  const marcar = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!marcando || puntos.length >= MAX_PUNTOS) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    guardar([...puntos, { id: "", x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 }]);
-  };
-  const precio = (p: StorefrontProduct) => {
-    if (ocultarPrecios) return "Consultá precio";
-    const pr = resolveProductPromo(p, promotions);
-    return fmt(pr.hasPriceDrop ? pr.effectivePrice : p.price);
-  };
-  const cambiarLook = (i: number) => { setElegido(i); setPuntoAbierto(null); };
   /** La tarjeta del producto de un punto: abre la ficha, que vuela desde su foto. */
   const tarjetaDe = (prod: StorefrontProduct, lugar: React.CSSProperties) => (
     <div role="button" tabIndex={0} onClick={e => { e.stopPropagation(); onAbrir(prod, e); }}
@@ -108,7 +68,6 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
       </div>
     </div>
   );
-  const prodAbierto = puntoAbierto !== null && !marcando ? porId.get(puntosVisibles[puntoAbierto]?.id ?? "") : undefined;
 
   const chip: React.CSSProperties = {
     display:"inline-flex", alignItems:"center", gap:6, background:"rgba(14,15,26,0.9)", backdropFilter:"blur(14px)", border:`1px solid ${LINEA_FUERTE}`,
@@ -144,7 +103,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                  entraba en la pantalla (Flavio, 04/10/26). Se achica el ANCHO de la
                  columna (ANCHO_FOTO) y no el alto: sigue en 4/5 y los puntos
                  (en %) no se corren. */
-              <div key={look.n} className="au-look" onClick={marcar}
+              <div key={look.n} className="au-look" onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
                 style={{ position:"relative", aspectRatio:"4/5", width:"100%",
                   borderRadius: isMobile ? 22 : 28, overflow:"hidden", background:"#0e0f1a",
                   border:`1px solid ${marcando ? luz(0.8) : LINEA_FUERTE}`, cursor: marcando ? "crosshair" : "default",
@@ -156,7 +115,8 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                   const prod = porId.get(pt.id);
                   const abierto = puntoAbierto === i && !!prod && !marcando;
                   // La tarjeta se abre hacia el lado donde hay lugar, y para arriba si el punto está abajo.
-                  const haciaIzq = pt.x > 55;
+                  // A la mitad justa y de 210: con 55 y 230, un punto en el medio la cortaba contra el borde.
+                  const haciaIzq = pt.x > 50;
                   const haciaArriba = pt.y > 72;
                   return (
                     <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 4 : 3 }}>
@@ -172,18 +132,18 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
 
                       {/* En la compu la tarjeta sale al lado del punto; en el celular va abajo
                           de la foto, a lo ancho (ver más abajo): al lado del punto no entraba. */}
-                      {abierto && prod && !isMobile && tarjetaDe(prod, { position:"absolute", ...(haciaArriba ? { bottom:26 } : { top:26 }), ...(haciaIzq ? { right:-14 } : { left:-14 }), width:230 })}
+                      {abierto && prod && !isMobile && tarjetaDe(prod, { position:"absolute", ...(haciaArriba ? { bottom:26 } : { top:26 }), ...(haciaIzq ? { right:-14 } : { left:-14 }), width:210 })}
 
                       {/* En el editor, con "Marcar productos": a qué producto apunta y borrarlo. */}
                       {editMode && marcando && (
                         <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:24, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4, zIndex:5 }}>
                           <select value={pt.id} aria-label={`Producto del punto ${i + 1}`}
-                            onChange={e => guardar(puntos.map((q, j) => j === i ? { ...q, id: e.target.value } : q))}
+                            onChange={e => elegirProducto(i, e.target.value)}
                             style={{ background:"rgba(14,15,26,0.95)", color:T, border:`1px solid ${LINEA_FUERTE}`, borderRadius:999, padding:"4px 8px", fontSize:10.5, maxWidth:150, cursor:"pointer" }}>
                             <option value="" style={{ color:"#f2f2f7", background:"#14151f" }}>Elegí el producto…</option>
-                            {products.filter(p => p.images[0]).map(p => <option key={p.id} value={p.id} style={{ color:"#f2f2f7", background:"#14151f" }}>{p.name}</option>)}
+                            {elegibles.map(p => <option key={p.id} value={p.id} style={{ color:"#f2f2f7", background:"#14151f" }}>{p.name}</option>)}
                           </select>
-                          <button type="button" onClick={() => guardar(puntos.filter((_, j) => j !== i))} aria-label="Borrar el punto"
+                          <button type="button" onClick={() => borrarPunto(i)} aria-label="Borrar el punto"
                             style={{ width:24, height:24, borderRadius:999, border:"none", background:"#ef4444", color:"#fff", cursor:"pointer", fontSize:12, lineHeight:1 }}>×</button>
                         </div>
                       )}
@@ -195,16 +155,16 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                 <EditableImageButton field={`lookbook${look.n}`} label={`Foto del look ${look.n}`} />
                 {editMode && (
                   <div style={{ position:"absolute", left:12, bottom:12, zIndex:6, display:"flex", gap:8, flexWrap:"wrap" }} onClick={e => e.stopPropagation()}>
-                    <button type="button" onClick={() => { setMarcando(m => !m); setPuntoAbierto(null); }}
+                    <button type="button" onClick={alternarMarcar}
                       style={{ ...chip, ...(marcando ? { background:G, color:textoSobreAcento, border:"none" } : null) }}>
                       📍 {marcando ? "Listo" : "Marcar productos"}
                     </button>
                     {marcando && <span style={{ ...chip, cursor:"default", fontWeight:500 }}>Tocá la foto donde está cada prenda ({puntos.length}/{MAX_PUNTOS})</span>}
                     {/* Un punto sin producto no se muestra en la tienda: se avisa
                         en el momento, también con "Marcar" cerrado. */}
-                    {puntos.some(pt => !porId.has(pt.id)) && (
+                    {sinProducto > 0 && (
                       <span style={{ ...chip, cursor:"default", fontWeight:600, color:"#fbbf24", borderColor:"rgba(251,191,36,0.5)" }}>
-                        {puntos.filter(pt => !porId.has(pt.id)).length === 1 ? "1 punto" : `${puntos.filter(pt => !porId.has(pt.id)).length} puntos`} sin producto: no se ven en la tienda
+                        {sinProducto === 1 ? "1 punto" : `${sinProducto} puntos`} sin producto: no se ven en la tienda
                       </span>
                     )}
                   </div>

@@ -27,6 +27,8 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PreguntasAire } from "@/components/store/templates/aire/PreguntasAire";
+import { LookbookAire } from "@/components/store/templates/aire/LookbookAire";
+import { MAX_LOOKS } from "@/lib/lookbook";
 import { discountPercent } from "@/lib/discount";
 /* La ficha de producto, para dibujarla adentro de la portada sin cambiar de
    página. `ProductDetailBody` es el CUERPO compartido —galería, opciones,
@@ -160,7 +162,7 @@ const GARANTIAS = [
    se agregan a medida que se construyen: un id listado aca sin bloque que lo
    dibuje le aparece al dueño en el editor como una seccion que puede prender y
    apagar, y no hace nada. */
-const AIRE_SECTION_IDS = ["ai-tira", "ai-productos", "ai-garantias", "ai-destacados", "ai-resenas", "ai-preguntas", "ai-newsletter"];
+const AIRE_SECTION_IDS = ["ai-tira", "ai-productos", "ai-garantias", "ai-destacados", "ai-lookbook", "ai-resenas", "ai-preguntas", "ai-newsletter"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aire() {
@@ -1052,6 +1054,8 @@ export default function Aire() {
   const newsletterMarcoBg  = scn["bgNewsletterMarco"] ?? BG;
   /* Preguntas frecuentes: el papel de alrededor de su tarjeta blanca. */
   const preguntasBg   = scn["bgPreguntas"] ?? BG;
+  /* Comprá el look: también tarjeta blanca sobre papel. */
+  const lookbookBg    = scn["bgLookbook"] ?? BG;
   const garantiasBg   = scn["bgGarantias"] ?? S;
   const garantiasText = tintaSobre(garantiasBg);
   /* ─ La pantalla de contacto ────────────────────────────────────────────────
@@ -2427,6 +2431,16 @@ export default function Aire() {
         </div>
       </section>
       )}
+      </SectionBlock>
+
+      {/* ── COMPRÁ EL LOOK (ver `aire/LookbookAire`): sin fotos no existe ── */}
+      <SectionBlock id="ai-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={AIRE_SECTION_IDS}>
+        <LookbookAire products={products} promotions={promotions}
+          imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirProducto}
+          fondo={lookbookBg} G={G} accentText={accentText} T={T} T2={T2} S={S} LN={LN} RAD={RAD} ANCHO={ANCHO} MARGEN={MARGEN} isMobile={isMobile}>
+          <EditableSectionBg field="bgLookbook" label="Fondo del look" />
+        </LookbookAire>
       </SectionBlock>
 
       <SectionBlock id="ai-resenas" label="Reseñas" isPreview={isPreview} defaultOrder={AIRE_SECTION_IDS}
