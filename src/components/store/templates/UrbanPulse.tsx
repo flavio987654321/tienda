@@ -44,6 +44,9 @@ import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PreguntasUrban } from "@/components/store/templates/urban/PreguntasUrban";
 import { LookbookUrban } from "@/components/store/templates/urban/LookbookUrban";
 import { MAX_LOOKS } from "@/lib/lookbook";
+import { useEfectosScroll } from "@/components/store/templates/shared/useEfectosScroll";
+import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
+import { SegundaFoto } from "@/components/store/templates/shared/SegundaFoto";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
@@ -640,9 +643,18 @@ export default function UrbanPulse() {
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", fn);
+    window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  /* Al bajar y subir (ver `shared/useEfectosScroll`, lo mismo que Aire y
+     Boho): la barra se esconde bajando y vuelve subiendo, la foto grande de
+     la portada baja más lento que la página, y pasada una pantalla y media
+     aparece "volver arriba". Nada de esto en la previa del editor. */
+  const fotoPortadaRef = useRef<HTMLDivElement>(null);
+  const { barraOculta, lejosArriba, sinMovimiento } = useEfectosScroll({
+    activo: !isPreview, capas: [{ ref: fotoPortadaRef, velocidad: 0.06, escala: 1.12 }],
+  });
 
   useEffect(() => {
     const check = () => {
@@ -708,6 +720,8 @@ export default function UrbanPulse() {
     fmt, showToast, openModal, addToCart, modalScrollRef,
     toggleFavorite,
   } = cart;
+  // La barra no se esconde con algo de ella abierto (ver useEfectosScroll, arriba): se iría con lo abierto.
+  const barraEscondida = !isPreview && barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
   // `accentText` se declaraba acá una segunda vez, solo para el carrito, y estaba
   // INVERTIDO: `getContrastColor(ACC) === "light"` significa "sobre ACC va texto
   // claro", y la rama devolvía DARK. Con el acento de fábrica —el neón #d4ff00—
@@ -1065,7 +1079,7 @@ export default function UrbanPulse() {
       )}
 
       {/* NAVBAR */}
-      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"background 0.3s, border-color 0.3s, transform .35s cubic-bezier(.2,.8,.2,1)", transform: barraEscondida ? "translateY(-100%)" : "none", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         {/* La marca es lo ÚNICO que cede ancho. Antes tenía `flexShrink:0`, así que
             se plantaba: cuando no entraba todo, el que se salía de la pantalla era
             el grupo de íconos, y con él la página entera (74px de más a 360px,
@@ -1378,7 +1392,9 @@ export default function UrbanPulse() {
             botón ya quedaba recortado y no se podía tocar. */}
         {!isMobile && (
         <div style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}>
-          <FadeImage src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" fill sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%` }} />
+          <div ref={fotoPortadaRef} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
+            <FadeImage src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" fill sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%` }} />
+          </div>
           <BgDragHandle imgKey="heroImage" />
           <EditableImageButton field="heroImage" label="Imagen hero" />
           {(() => { const ov = storeConfig?.imageOverrides?.["heroImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
@@ -1987,6 +2003,7 @@ export default function UrbanPulse() {
                 })()}
                 <div style={{ position:"relative", width:"100%", overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
                   {product.images[0] && <FadeImage className="up-prod-img" src={product.images[0]} alt={product.name} fill sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} style={{ objectFit:"cover" }} />}
+                  <SegundaFoto images={product.images} sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} zoom />
                   {(() => {
                     const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
                     if (!isSoldOut) return null;
@@ -2331,6 +2348,7 @@ export default function UrbanPulse() {
                       <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:DARK, overflow:"hidden" }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
+                          <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
                           {!!pct && <span style={{ position:"absolute", top:0, left:0, background:ACC, color:accentText, fontSize:10, fontWeight:900, padding:"5px 10px", letterSpacing:1 }}>-{pct}%</span>}
                         </div>
                         <div style={{ padding:"10px 0 0" }}>
@@ -2391,6 +2409,7 @@ export default function UrbanPulse() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#1a1a1a", overflow:"hidden" }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
+                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
                         {avisoPromo(p)}
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
@@ -2788,6 +2807,15 @@ export default function UrbanPulse() {
 
       {showReport && (
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
+      )}
+
+      {/* ── VOLVER ARRIBA (ver `shared/BotonVolverArriba`) ──
+          Negro y cuadrado, con la flecha en el acento y la sombra sólida del
+          acento, como los stickers del template. Abajo a la derecha siempre hay
+          otro botón (WhatsApp, o el carrito si no hay WhatsApp): va encima. */}
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (
+        <BotonVolverArriba visible={lejosArriba} encimaDeOtro sinMovimiento={sinMovimiento}
+          estilo={{ background:DARK, color:accSobreDark, border:"2px solid #fff", boxShadow:`3px 3px 0 ${ACC}` }} />
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
