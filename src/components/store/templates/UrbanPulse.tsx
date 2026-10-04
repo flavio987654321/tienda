@@ -2094,7 +2094,7 @@ export default function UrbanPulse() {
           estrellas dibujadas, sin curvas. */}
       {/* ── COMPRÁ EL LOOK (ver `urban/LookbookUrban`): sin fotos no existe ── */}
       <SectionBlock id="up-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
-        <LookbookUrban products={products} promotions={promotions}
+        <LookbookUrban products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
           fondo={lookbookBgUp} tinta={lookbookTextUp} suave={lookbookMidUp} acentoTexto={accentSobre(lookbookBgUp, lookbookTextUp)}

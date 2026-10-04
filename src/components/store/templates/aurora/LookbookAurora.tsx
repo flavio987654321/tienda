@@ -33,7 +33,7 @@ export { MAX_LOOKS };
  *  tablet quede lugar para "En este look". */
 const ANCHO_FOTO = "min(calc(min(72vh, 640px) * 0.8), 55%)";
 
-export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPrecios, onAbrir, escena, isMobile }: {
+export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPrecios, onAbrir, escena, isMobile, ejemplo }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
   /** Las fotos de cada look (`lookbook1`…), en orden; `undefined` donde no hay. */
@@ -42,6 +42,8 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
   ocultarPrecios: boolean;
   onAbrir: (p: StorefrontProduct, e: React.MouseEvent) => void;
   escena: EscenaCatalogo;
+  /** Vista previa de un diseño: sin fotos, mostrar el look de ejemplo. */
+  ejemplo?: boolean;
   isMobile: boolean;
 }) {
   const { BG, T, G, GT, LINEA_FUERTE, luz, textoSobreAcento } = escena;
@@ -50,7 +52,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
     puntos, puntosVisibles, enEsteLook, sinProducto, porId, elegibles,
     marcando, alternarMarcar, marcar, elegirProducto, borrarPunto,
     puntoAbierto, setPuntoAbierto, prodAbierto, precio,
-  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios });
+  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios, ejemplo });
 
   if (!existe) return null;
 

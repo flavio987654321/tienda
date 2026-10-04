@@ -1517,7 +1517,7 @@ export default function BohoTerra() {
 
       {/* ── COMPRÁ EL LOOK (ver `boho/LookbookBoho`): sin fotos no existe ── */}
       <SectionBlock id="bt-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
-        <LookbookBoho products={products} promotions={promotions}
+        <LookbookBoho products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
           fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} A={getReadableAccentText(A, lookbookBg, lookbookText)} panel={BG} isMobile={isMobile}>

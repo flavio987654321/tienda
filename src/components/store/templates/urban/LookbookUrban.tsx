@@ -25,7 +25,7 @@ const ANCHO_FOTO = "min(calc(min(72vh, 620px) * 0.8), 48%)";
 
 export function LookbookUrban({
   products, promotions, imagenes, fmt, ocultarPrecios, onAbrir,
-  fondo, tinta, suave, acentoTexto, ACC, acentoSobreNegro, isMobile, children,
+  fondo, tinta, suave, acentoTexto, ACC, acentoSobreNegro, isMobile, ejemplo, children,
 }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
@@ -40,6 +40,8 @@ export function LookbookUrban({
   ACC: string;
   /** El acento como texto sobre negro (los números de las etiquetas). */
   acentoSobreNegro: string;
+  /** Vista previa de un diseño: sin fotos, mostrar el look de ejemplo. */
+  ejemplo?: boolean;
   isMobile: boolean;
   children?: React.ReactNode;
 }) {
@@ -48,7 +50,7 @@ export function LookbookUrban({
     puntos, puntosVisibles, enEsteLook, sinProducto, porId, elegibles,
     marcando, alternarMarcar, marcar, elegirProducto, borrarPunto,
     puntoAbierto, setPuntoAbierto, prodAbierto, precio,
-  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios });
+  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios, ejemplo });
 
   if (!existe) return null;
 

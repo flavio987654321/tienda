@@ -1246,7 +1246,7 @@ export default function Aurora() {
 
       {/* ── LOOKBOOK (ver `aurora/LookbookAurora`): sin fotos no existe ── */}
       <SectionBlock id="au-lookbook" label="Lookbook" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-        <LookbookAurora products={products} promotions={promotions}
+        <LookbookAurora products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirFicha} escena={escenaAurora} isMobile={isMobile} />
       </SectionBlock>

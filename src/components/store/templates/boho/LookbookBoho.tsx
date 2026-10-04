@@ -30,7 +30,7 @@ const ANCHO_FOTO = "min(calc(min(74vh, 640px) * 0.8), 48%)";
 
 export function LookbookBoho({
   products, promotions, imagenes, fmt, ocultarPrecios, onAbrir,
-  fondo, tinta, suave, A, panel, isMobile, children,
+  fondo, tinta, suave, A, panel, isMobile, ejemplo, children,
 }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
@@ -44,6 +44,8 @@ export function LookbookBoho({
   A: string;
   /** El crema de las tarjetas (BG del template). */
   panel: string;
+  /** Vista previa de un diseño: sin fotos, mostrar el look de ejemplo. */
+  ejemplo?: boolean;
   isMobile: boolean;
   children?: React.ReactNode;
 }) {
@@ -52,7 +54,7 @@ export function LookbookBoho({
     puntos, puntosVisibles, enEsteLook, sinProducto, porId, elegibles,
     marcando, alternarMarcar, marcar, elegirProducto, borrarPunto,
     puntoAbierto, setPuntoAbierto, prodAbierto, precio,
-  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios });
+  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios, ejemplo });
 
   if (!existe) return null;
 

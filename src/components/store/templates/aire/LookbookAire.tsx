@@ -27,7 +27,7 @@ const ANCHO_FOTO = "min(calc(min(72vh, 600px) * 0.8), 50%)";
 
 export function LookbookAire({
   products, promotions, imagenes, fmt, ocultarPrecios, onAbrir,
-  fondo, G, accentText, T, T2, S, LN, RAD, ANCHO, MARGEN, isMobile, children,
+  fondo, G, accentText, T, T2, S, LN, RAD, ANCHO, MARGEN, isMobile, ejemplo, children,
 }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
@@ -39,6 +39,8 @@ export function LookbookAire({
   fondo: string;
   G: string; accentText: string; T: string; T2: string; S: string; LN: string;
   RAD: number; ANCHO: number; MARGEN: number;
+  /** Vista previa de un diseño: sin fotos, mostrar el look de ejemplo. */
+  ejemplo?: boolean;
   isMobile: boolean;
   /** El botón "Fondo" del editor, que va adentro de la sección. */
   children?: React.ReactNode;
@@ -48,7 +50,7 @@ export function LookbookAire({
     puntos, puntosVisibles, enEsteLook, sinProducto, porId, elegibles,
     marcando, alternarMarcar, marcar, elegirProducto, borrarPunto,
     puntoAbierto, setPuntoAbierto, prodAbierto, precio,
-  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios });
+  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios, ejemplo });
 
   if (!existe) return null;
 

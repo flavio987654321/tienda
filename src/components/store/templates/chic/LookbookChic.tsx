@@ -25,7 +25,7 @@ const PALABRAS = ["", "una prenda", "dos prendas", "tres prendas", "cuatro prend
 
 export function LookbookChic({
   products, promotions, imagenes, fmt, ocultarPrecios, onAbrir,
-  fondo, tinta, suave, acento, ACC, isMobile, children,
+  fondo, tinta, suave, acento, ACC, isMobile, ejemplo, children,
 }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
@@ -38,6 +38,8 @@ export function LookbookChic({
   acento: string;
   /** El acento tal cual (los números de las marcas van sobre blanco). */
   ACC: string;
+  /** Vista previa de un diseño: sin fotos, mostrar el look de ejemplo. */
+  ejemplo?: boolean;
   isMobile: boolean;
   children?: React.ReactNode;
 }) {
@@ -46,7 +48,7 @@ export function LookbookChic({
     puntos, puntosVisibles, enEsteLook, sinProducto, porId, elegibles,
     marcando, alternarMarcar, marcar, elegirProducto, borrarPunto,
     puntoAbierto, setPuntoAbierto, prodAbierto, precio,
-  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios });
+  } = useLookbook({ products, promotions, imagenes, fmt, ocultarPrecios, ejemplo });
 
   if (!existe) return null;
 

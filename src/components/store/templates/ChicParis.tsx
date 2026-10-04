@@ -1525,7 +1525,7 @@ export default function ChicParis() {
       {/* ── OFERTAS ── */}
       {/* ── COMPRÁ EL LOOK (ver `chic/LookbookChic`): sin fotos no existe ── */}
       <SectionBlock id="cp-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
-        <LookbookChic products={products} promotions={promotions}
+        <LookbookChic products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
           fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} acento={accentSobre(lookbookBg, lookbookText)} ACC={ACC} isMobile={isMobile}>

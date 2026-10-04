@@ -2460,7 +2460,7 @@ export default function Aire() {
 
       {/* ── COMPRÁ EL LOOK (ver `aire/LookbookAire`): sin fotos no existe ── */}
       <SectionBlock id="ai-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={AIRE_SECTION_IDS}>
-        <LookbookAire products={products} promotions={promotions}
+        <LookbookAire products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirProducto}
           fondo={lookbookBg} G={G} accentText={accentText} T={T} T2={T2} S={S} LN={LN} RAD={RAD} ANCHO={ANCHO} MARGEN={MARGEN} isMobile={isMobile}>
