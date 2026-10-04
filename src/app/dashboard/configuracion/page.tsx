@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { ordenEfectivo } from "@/lib/ordenBloques";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -2596,7 +2597,8 @@ export default function ConfiguracionPage() {
   const moveSection = useCallback((id: string, defaultOrder: string[], direction: "up" | "down") => {
     setConfig(c => {
       const persisted = c.sectionOrder ?? [];
-      const effective = [...persisted.filter(i => defaultOrder.includes(i)), ...defaultOrder.filter(i => !persisted.includes(i))];
+      // El mismo orden que dibuja la tienda (ver lib/ordenBloques): si no, la flecha movería otro bloque.
+      const effective = ordenEfectivo(persisted, defaultOrder);
       const idx = effective.indexOf(id);
       const swapWith = direction === "up" ? idx - 1 : idx + 1;
       if (idx === -1 || swapWith < 0 || swapWith >= effective.length) return c;

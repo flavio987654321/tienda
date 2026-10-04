@@ -39,6 +39,7 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
 import { PreguntasChic } from "@/components/store/templates/chic/PreguntasChic";
 import { LookbookChic } from "@/components/store/templates/chic/LookbookChic";
 import { MAX_LOOKS } from "@/lib/lookbook";
@@ -550,7 +551,7 @@ export default function ChicParis() {
   const fotoBanner2Ref = useRef<HTMLDivElement>(null);
   const fotoBanner3Ref = useRef<HTMLDivElement>(null);
   const fotosBannerRefs = [fotoBanner1Ref, fotoBanner2Ref, fotoBanner3Ref];
-  const { barraOculta, lejosArriba, sinMovimiento } = useEfectosScroll({
+  const { barraOculta, lejosArriba, sinMovimiento, mostrarBarra } = useEfectosScroll({
     activo: !isPreview, capas: fotosBannerRefs.map(ref => ({ ref, velocidad: 0.2, escala: 1.12 })),
   });
   // No se esconde con algo de la barra abierto: se iría con lo abierto.
@@ -963,7 +964,7 @@ export default function ChicParis() {
       )}
 
       {/* ── NAVBAR ── */}
-      <header style={{
+      <header onFocusCapture={mostrarBarra} style={{
         position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 1000,
         background: (isPreview || scrolled) ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: (isPreview || scrolled) ? "1px solid #e8e8e8" : "none",
@@ -1220,7 +1221,7 @@ export default function ChicParis() {
           La pausa sigue existiendo, pero solo donde tiene sentido: sobre los
           controles —las flechas y los puntitos—, que es cuando la persona está
           eligiendo qué mirar y el avance automático le pelea el clic. */}
-      <section id="hero" style={{ position: "relative", height: isPreview ? `calc(100vh - ${68 + (showAnnouncement ? PROMO_BAR_H : 0)}px)` : "100vh", background: "#111" }}
+      <section id="hero" style={{ position: "relative", overflow: "hidden", height: isPreview ? `calc(100vh - ${68 + (showAnnouncement ? PROMO_BAR_H : 0)}px)` : "100vh", background: "#111" }}
         {...heroSwipe}>
 
         {Array.from({ length: BANNER_COUNT }, (_, i) => {
@@ -1251,7 +1252,7 @@ export default function ChicParis() {
                 const fy = isMobile ? (ov.posYMobile ?? ov.posY ?? 50) : (ov.posY ?? 50);
                 // La capa que baja más lenta al hacer scroll (ver useEfectosScroll).
                 return (
-                  <div ref={fotosBannerRefs[i]} aria-hidden style={{ position: "absolute", inset: 0, willChange: isPreview ? undefined : "transform" }}>
+                  <div ref={fotosBannerRefs[i]} aria-hidden style={{ position: "absolute", inset: 0, willChange: isPreview ? undefined : "transform", transform: isPreview ? undefined : "scale(1.12)" }}>
                     <FadeImage src={ov.url} alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: `${fx}% ${fy}%` }} />
                   </div>
                 );
@@ -1479,7 +1480,13 @@ export default function ChicParis() {
                         if (!isSoldOut) return null;
                         return <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,0.62)", display:"flex", alignItems:"center", justifyContent:"center", padding:"9px 0", zIndex:2 }}><span style={{ color:"#fff", fontSize:9, fontWeight:800, letterSpacing:4, textTransform:"uppercase" }}>Sin stock</span></div>;
                       })()}
-                      <div className="cp-overlay" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {/* Con segunda foto, el velo pasa a ser sólo un degradé abajo y el
+                          "Ver detalle" baja: el velo entero tapaba la segunda foto, que
+                          aparece justo con el mismo hover (auditoría del 04/10/26). */}
+                      <div className="cp-overlay" style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center",
+                        ...(product.images[1] && product.images[1] !== product.images[0]
+                          ? { background: "linear-gradient(to top, rgba(0,0,0,0.5), transparent 40%)", alignItems: "flex-end", paddingBottom: 16 }
+                          : { background: "rgba(0,0,0,0.35)", alignItems: "center" }) }}>
                         <span style={{ color: "#fff", fontSize: 11, letterSpacing: 3, fontWeight: 700, textTransform: "uppercase", border: "1px solid #fff", padding: "10px 20px" }}>Ver detalle</span>
                       </div>
                       <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
@@ -1525,7 +1532,7 @@ export default function ChicParis() {
       {/* ── OFERTAS ── */}
       {/* ── COMPRÁ EL LOOK (ver `chic/LookbookChic`): sin fotos no existe ── */}
       <SectionBlock id="cp-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
-        <LookbookChic products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
+        <LookbookChic products={products} promotions={promotions} ejemplo={!storeConfig || (isPreview && !!(storeConfig.previewDemoPuro || storeConfig.demoPublica))}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
           fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} acento={accentSobre(lookbookBg, lookbookText)} ACC={ACC} isMobile={isMobile}>
@@ -1694,7 +1701,7 @@ export default function ChicParis() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
-                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
+                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom={1.06} />
                         {avisoPromo(p)}
                       </div>
                       <div style={{ padding: "10px 0 0" }}>
@@ -2028,7 +2035,7 @@ export default function ChicParis() {
       <SectionBlock id="cp-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
         <PreguntasChic envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
           legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
-          onContacto={() => irASeccion("contacto")} conWhatsapp={hasWA}
+          onContacto={() => irAContactoOWhatsApp(irASeccion, storeConfig?.whatsapp)} conWhatsapp={hasWA}
           fondo={preguntasBg} tinta={preguntasText} suave={preguntasMid} acento={accentSobre(preguntasBg, preguntasText)} isMobile={isMobile}>
           <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
         </PreguntasChic>
@@ -3105,7 +3112,7 @@ export default function ChicParis() {
       {/* ── VOLVER ARRIBA (ver `shared/BotonVolverArriba`) ──
           Blanco, redondo y de línea fina, como los botones de Chic. Abajo a la
           derecha siempre hay otro (WhatsApp, o el carrito si no hay WhatsApp). */}
-      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && !favoritesOpen && !searchOpen && !mobileMenuOpen && (
         <BotonVolverArriba visible={lejosArriba} encimaDeOtro sinMovimiento={sinMovimiento}
           estilo={{ borderRadius: "50%", background: "#fff", color: "#111", border: "1px solid #ddd", boxShadow: "0 6px 18px rgba(0,0,0,0.12)" }} />
       )}

@@ -107,7 +107,7 @@ export function PreguntasAire({
             const id = `ai-faq-${i}`;
             return (
               <div key={it.tema} style={{ borderTop: i > 0 ? `1px solid ${LN}` : "none" }}>
-                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id}
+                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id} id={`${id}-p`}
                   style={{ width:"100%", display:"flex", alignItems:"center", gap:14, textAlign:"left", background:"none", border:"none",
                     cursor:"pointer", color:T, padding: isMobile ? "14px 0" : "16px 0", fontFamily:"inherit" }}>
                   {/* La baldosa del tema: la misma de las garantías. Se pinta con
@@ -125,7 +125,7 @@ export function PreguntasAire({
                 {/* Se despliega con `grid-template-rows` de 0fr a 1fr: anima la
                     altura real sin medirla. La respuesta arranca alineada con
                     el texto de la pregunta, no con la baldosa. */}
-                <div id={id} role="region" style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .35s cubic-bezier(.2,.8,.2,1)" }}>
+                <div id={id} role="region" aria-labelledby={`${id}-p`} inert={!abierto} style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .35s cubic-bezier(.2,.8,.2,1)" }}>
                   <div style={{ overflow:"hidden" }}>
                     <div style={{ padding: isMobile ? "0 0 16px 52px" : "0 32px 20px 56px", fontSize:14, lineHeight:1.65, color:T2 }}>
                       <p style={{ margin: it.politicas.length || it.contacto ? "0 0 10px" : 0 }}>

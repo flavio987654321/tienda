@@ -108,6 +108,15 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
               onCambio={v => setOverride("lanzamientoFecha", { text: v ? new Date(v).toISOString() : "" })}
               estilo={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 8px", fontSize:11, cursor:"pointer" }} />
           </div>
+          {/* Con los desplegables no hay cómo "borrar" la fecha (el campo del
+              navegador sí dejaba): sin fecha el bloque no se muestra, así que
+              ésta es la forma de sacarlo de la tienda sin ocultar la sección. */}
+          {hayFecha && (
+            <button type="button" onClick={() => setOverride("lanzamientoFecha", { text: "" })}
+              style={{ background:"none", border:"1px solid rgba(255,255,255,.2)", color:T, borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer" }}>
+              Quitar fecha
+            </button>
+          )}
           <select value={producto?.id ?? ""} aria-label="Producto del lanzamiento"
             onChange={e => setOverride("lanzamientoProducto", { text: e.target.value })}
             style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer", maxWidth:200 }}>

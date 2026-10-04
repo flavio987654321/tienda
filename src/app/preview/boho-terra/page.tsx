@@ -15,7 +15,9 @@ import { DEFAULT_CONFIG, type StoreConfig } from "@/types/store-config";
    se iba a otra página en vez de abrirlo acá mismo.
 
    Cuando el editor manda su config, la pisa entera. */
-const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, template: "boho-terra", previewFill: true };
+// `previewDemoPuro`: suelta, esta previa es sólo el diseño con sus ejemplos (también
+// el look de ejemplo de "Comprá el look"); el editor la pisa con la suya.
+const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, template: "boho-terra", previewFill: true, previewDemoPuro: true };
 
 export default function PreviewBohoTerra() {
   const [config, setConfig] = useState<StoreConfig>(CONFIG_INICIAL);

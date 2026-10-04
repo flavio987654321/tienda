@@ -82,7 +82,7 @@ export function PreguntasAurora({
                 {/* El filo de luz de la pregunta abierta. */}
                 <div aria-hidden style={{ position:"absolute", top:0, left:24, right:24, height:1, opacity: abierto ? 1 : 0, transition:"opacity .35s",
                   background:`linear-gradient(90deg, transparent, ${luz(1)}, transparent)` }} />
-                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id}
+                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id} id={`${id}-p`}
                   style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, textAlign:"left",
                     background:"none", border:"none", cursor:"pointer", color:T, padding: isMobile ? "18px 18px" : "22px 26px", fontFamily:"inherit" }}>
                   <span style={{ fontSize: isMobile ? 14.5 : 16, fontWeight:500, lineHeight:1.4 }}>
@@ -97,7 +97,7 @@ export function PreguntasAurora({
                 </button>
                 {/* Se despliega con `grid-template-rows` de 0fr a 1fr: anima la
                     altura real sin medirla. */}
-                <div id={id} role="region" style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .45s cubic-bezier(.2,.8,.2,1)" }}>
+                <div id={id} role="region" aria-labelledby={`${id}-p`} inert={!abierto} style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .45s cubic-bezier(.2,.8,.2,1)" }}>
                   <div style={{ overflow:"hidden" }}>
                     <div style={{ padding: isMobile ? "0 18px 20px" : "0 26px 24px", fontSize:14, lineHeight:1.75, color:"rgba(242,242,247,0.68)" }}>
                       <p style={{ margin: it.extra ? "0 0 12px" : 0 }}>

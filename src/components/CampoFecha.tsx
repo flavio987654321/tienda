@@ -21,7 +21,9 @@ import type { CSSProperties } from "react";
      cualquiera, lo que falta se completa con hoy (y la hora con la próxima en
      punto), para que nunca quede una fecha a medias.
    - Un día que el mes no tiene (31 de febrero) se baja al último del mes.
-   - `min` (mismo formato): las fechas anteriores no se ofrecen. */
+   - No hay "fecha mínima": tenía la lógica a medias (se podía guardar una
+     fecha anterior bajando el año) y nadie la usaba; se sacó en la auditoría
+     del 04/10/26. Quien la necesite, que la valide al guardar. */
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const dos = (n: number) => String(n).padStart(2, "0");
@@ -41,20 +43,19 @@ function escribir(p: Partes, conHora: boolean): string {
   return conHora ? `${fecha}T${dos(p.hora)}:${dos(p.min)}` : fecha;
 }
 
-/** Hoy, con la próxima hora en punto: lo que se completa cuando se arranca de vacío. */
-function ahora(): Partes {
+/** Lo que se completa cuando se arranca de vacío: hoy, y si lleva hora, la
+ *  próxima en punto. Sin hora, la fecha es la de HOY aunque sean las 23:30
+ *  (sumar la hora antes de leer el día daba mañana). */
+function ahora(conHora: boolean): Partes {
   const d = new Date();
-  d.setMinutes(0, 0, 0);
-  d.setHours(d.getHours() + 1);
-  return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate(), hora: d.getHours(), min: 0 };
+  if (conHora) { d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); }
+  return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate(), hora: conHora ? d.getHours() : 0, min: 0 };
 }
 
-export function CampoFecha({ valor, onCambio, conHora = false, min, clase, estilo, estiloOpciones, etiqueta, id }: {
+export function CampoFecha({ valor, onCambio, conHora = false, clase, estilo, estiloOpciones, etiqueta, id }: {
   valor: string;
   onCambio: (v: string) => void;
   conHora?: boolean;
-  /** La fecha más temprana que se puede elegir, en el mismo formato. */
-  min?: string;
   /** Clase de cada desplegable (para los paneles con Tailwind). */
   clase?: string;
   /** Estilo de cada desplegable (para los que van con estilos en línea). */
@@ -69,19 +70,15 @@ export function CampoFecha({ valor, onCambio, conHora = false, min, clase, estil
   id?: string;
 }) {
   const p = leer(valor);
-  const piso = min ? leer(min) : null;
-  const base = p ?? ahora();
+  const base = p ?? ahora(conHora);
 
   const cambiar = (cambio: Partial<Partes>) => onCambio(escribir({ ...base, ...cambio }, conHora));
 
   const hoy = new Date().getFullYear();
-  const desde = Math.min(piso?.anio ?? hoy - 1, p?.anio ?? hoy);
-  const anios = Array.from({ length: Math.max(hoy + 4, p?.anio ?? 0) - desde + 1 }, (_, i) => desde + i)
-    .filter(a => !piso || a >= piso.anio);
-  const meses = MESES.map((nombre, i) => ({ nombre, n: i + 1 }))
-    .filter(m => !piso || base.anio > piso.anio || m.n >= piso.mes);
-  const dias = Array.from({ length: diasDelMes(base.anio, base.mes) }, (_, i) => i + 1)
-    .filter(d => !piso || base.anio > piso.anio || base.mes > piso.mes || d >= piso.dia);
+  const desde = Math.min(hoy - 1, p?.anio ?? hoy);
+  const anios = Array.from({ length: Math.max(hoy + 4, p?.anio ?? 0) - desde + 1 }, (_, i) => desde + i);
+  const meses = MESES.map((nombre, i) => ({ nombre, n: i + 1 }));
+  const dias = Array.from({ length: diasDelMes(base.anio, base.mes) }, (_, i) => i + 1);
   // Minutos de a 5; si lo guardado no cae justo (ej. :07), se agrega para no perderlo.
   const minutos = Array.from({ length: 12 }, (_, i) => i * 5);
   if (p && !minutos.includes(p.min)) minutos.push(p.min);
@@ -97,7 +94,7 @@ export function CampoFecha({ valor, onCambio, conHora = false, min, clase, estil
   );
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", minWidth: 0 }}>
+    <div role="group" aria-label={etiqueta} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", minWidth: 0 }}>
       <div style={{ display: "flex", gap: 6, flex: "1 1 220px", minWidth: 0 }}>
         {sel({ id, valor: p ? String(p.dia) : "", opciones: dias.map(d => ({ v: d, t: String(d) })), al: dia => cambiar({ dia }), aria: `${etiqueta}: día`, vacio: "Día", ancho: 64 })}
         {sel({ valor: p ? String(p.mes) : "", opciones: meses.map(m => ({ v: m.n, t: m.nombre })), al: mes => cambiar({ mes }), aria: `${etiqueta}: mes`, vacio: "Mes" })}

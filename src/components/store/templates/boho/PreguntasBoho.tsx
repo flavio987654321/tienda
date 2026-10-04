@@ -81,7 +81,7 @@ export function PreguntasBoho({
             const id = `bt-faq-${i}`;
             return (
               <div key={it.tema} style={{ borderBottom:`1px solid ${linea}` }}>
-                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id}
+                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id} id={`${id}-p`}
                   style={{ width:"100%", display:"flex", alignItems:"baseline", gap: isMobile ? 14 : 22, textAlign:"left", background:"none", border:"none",
                     cursor:"pointer", color:tinta, padding: isMobile ? "20px 2px" : "24px 4px", fontFamily:SERIF }}>
                   <span aria-hidden style={{ flexShrink:0, width: isMobile ? 26 : 34, fontSize:13, fontStyle:"italic", color:A, letterSpacing:1 }}>{ROMANOS[i]}.</span>
@@ -94,7 +94,7 @@ export function PreguntasBoho({
                     <span style={{ position:"absolute", top:0, bottom:0, left:6.5, width:1, background:tinta, transform: abierto ? "scaleY(0)" : "none", transition:"transform .3s" }} />
                   </span>
                 </button>
-                <div id={id} role="region" style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .4s cubic-bezier(.2,.8,.2,1)" }}>
+                <div id={id} role="region" aria-labelledby={`${id}-p`} inert={!abierto} style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .4s cubic-bezier(.2,.8,.2,1)" }}>
                   <div style={{ overflow:"hidden" }}>
                     <div style={{ padding: isMobile ? "0 2px 22px 40px" : "0 40px 26px 60px", fontSize:14.5, lineHeight:1.75, color:suave }}>
                       <p style={{ margin: it.politicas.length || it.contacto ? "0 0 14px" : 0 }}>

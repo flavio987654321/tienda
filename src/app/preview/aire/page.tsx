@@ -12,7 +12,9 @@ import { DEFAULT_CONFIG, type StoreConfig } from "@/types/store-config";
    fotos de ejemplo del hero, porque todas dependen de `previewFill`. Abrir
    /preview/aire de forma suelta mostraba un template roto que no era el
    template. Cuando el editor manda su config, la pisa entera. */
-const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, previewFill: true };
+// `previewDemoPuro`: suelta, esta previa es sólo el diseño con sus ejemplos (también
+// el look de ejemplo de "Comprá el look"); el editor la pisa con la suya.
+const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, previewFill: true, previewDemoPuro: true };
 
 export default function PreviewAire() {
   const [config, setConfig] = useState<StoreConfig>(CONFIG_INICIAL);

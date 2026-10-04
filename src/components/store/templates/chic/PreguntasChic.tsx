@@ -49,7 +49,7 @@ export function PreguntasChic({
   };
 
   return (
-    <section data-reveal style={{ position:"relative", background:fondo, padding: isMobile ? "52px 20px" : "88px 40px", borderTop:"1px solid #f0f0f0" }}>
+    <section data-reveal style={{ position:"relative", background:fondo, padding: isMobile ? "52px 20px" : "88px 40px", borderTop:`1px solid color-mix(in srgb, ${tinta} 8%, transparent)` }}>
       {children}
       <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gap: isMobile ? 30 : 72,
         gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,0.75fr) minmax(0,1.25fr)", alignItems:"start" }}>
@@ -79,7 +79,7 @@ export function PreguntasChic({
                 {/* El filete del acento: crece a la izquierda de la abierta. */}
                 <span aria-hidden style={{ position:"absolute", left:0, top:0, bottom:0, width:2, background:acento,
                   transform: abierto ? "scaleY(1)" : "scaleY(0)", transformOrigin:"top", transition:"transform .4s cubic-bezier(.2,.8,.2,1)" }} />
-                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id}
+                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id} id={`${id}-p`}
                   style={{ width:"100%", display:"flex", alignItems:"baseline", gap: isMobile ? 14 : 20, textAlign:"left", background:"none", border:"none",
                     cursor:"pointer", color:tinta, padding: isMobile ? "20px 0 20px 16px" : "24px 0 24px 22px", fontFamily:"inherit" }}>
                   <span aria-hidden style={{ flexShrink:0, width: isMobile ? 34 : 40, fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:600,
@@ -90,7 +90,7 @@ export function PreguntasChic({
                   <span aria-hidden style={{ flexShrink:0, alignSelf:"center", fontFamily:PLAYFAIR, fontSize:22, fontWeight:300, lineHeight:1, color: abierto ? acento : tinta,
                     transform: abierto ? "rotate(45deg)" : "none", transition:"transform .35s, color .3s" }}>+</span>
                 </button>
-                <div id={id} role="region" style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .4s cubic-bezier(.2,.8,.2,1)" }}>
+                <div id={id} role="region" aria-labelledby={`${id}-p`} inert={!abierto} style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .4s cubic-bezier(.2,.8,.2,1)" }}>
                   <div style={{ overflow:"hidden" }}>
                     <div style={{ padding: isMobile ? "0 4px 22px 64px" : "0 40px 26px 82px", fontSize:14, lineHeight:1.75, color:suave }}>
                       <p style={{ margin: it.politicas.length || it.contacto ? "0 0 12px" : 0 }}>

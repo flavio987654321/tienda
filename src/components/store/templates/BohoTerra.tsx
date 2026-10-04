@@ -33,6 +33,7 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
 import { PreguntasBoho } from "@/components/store/templates/boho/PreguntasBoho";
 import { LookbookBoho } from "@/components/store/templates/boho/LookbookBoho";
 import { MAX_LOOKS } from "@/lib/lookbook";
@@ -548,7 +549,7 @@ export default function BohoTerra() {
   const fotoHero1Ref = useRef<HTMLDivElement>(null);
   const fotoHero2Ref = useRef<HTMLDivElement>(null);
   const fotoHero3Ref = useRef<HTMLDivElement>(null);
-  const { barraOculta, lejosArriba, sinMovimiento } = useEfectosScroll({
+  const { barraOculta, lejosArriba, sinMovimiento, mostrarBarra } = useEfectosScroll({
     activo: !isPreview,
     capas: [
       { ref: fotoHero1Ref, velocidad: 0.05, escala: 1.1 },
@@ -793,7 +794,7 @@ export default function BohoTerra() {
       )}
 
       {/* ── NAVBAR */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none",
+      <nav onFocusCapture={mostrarBarra} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none",
         transition:`background 0.3s, backdrop-filter 0.3s, ${transicionBarra}`,
         transform: !isPreview && barraEscondida ? `translateY(calc(-100% - ${announcementBarHeight}px))` : "none" }}>
         {/* Sin el `maxWidth:1280`: el nav va de borde a borde, como el hero que
@@ -1132,7 +1133,7 @@ export default function BohoTerra() {
         {/* fotos apiladas */}
         <div style={{ flex:1, display: isMobile ? "none" : "grid", gridTemplateRows:"1fr 1fr", gridTemplateColumns:"1fr 1fr", gap:4, padding:4 }}>
           <div style={{ overflow:"hidden", gridRow:"1/3", position:"relative" }}>
-            <div ref={fotoHero1Ref} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
+            <div ref={fotoHero1Ref} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform", transform: isPreview ? undefined : "scale(1.1)" }}>
               <FadeImage src={heroImage1Ov?.url ?? "https://picsum.photos/seed/terra-h1/600/900"} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${heroImage1Ov?.posX ?? 50}% ${heroImage1Ov?.posY ?? 50}%` }}/>
             </div>
             {heroImage1Ov?.overlayType && heroImage1Ov.overlayType !== "none" && (
@@ -1142,7 +1143,7 @@ export default function BohoTerra() {
             <EditableImageButton field="heroImage1" label="Imagen hero izquierda" />
           </div>
           <div style={{ overflow:"hidden", position:"relative" }}>
-            <div ref={fotoHero2Ref} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
+            <div ref={fotoHero2Ref} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform", transform: isPreview ? undefined : "scale(1.1)" }}>
               <FadeImage src={heroImage2Ov?.url ?? "https://picsum.photos/seed/terra-h2/600/500"} alt="" fill sizes="25vw" style={{ objectFit:"cover", objectPosition:`${heroImage2Ov?.posX ?? 50}% ${heroImage2Ov?.posY ?? 50}%` }}/>
             </div>
             {heroImage2Ov?.overlayType && heroImage2Ov.overlayType !== "none" && (
@@ -1152,7 +1153,7 @@ export default function BohoTerra() {
             <EditableImageButton field="heroImage2" label="Imagen hero superior" />
           </div>
           <div style={{ overflow:"hidden", position:"relative" }}>
-            <div ref={fotoHero3Ref} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
+            <div ref={fotoHero3Ref} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform", transform: isPreview ? undefined : "scale(1.1)" }}>
               <FadeImage src={heroImage3Ov?.url ?? "https://picsum.photos/seed/terra-h3/600/500"} alt="" fill sizes="25vw" style={{ objectFit:"cover", objectPosition:`${heroImage3Ov?.posX ?? 50}% ${heroImage3Ov?.posY ?? 50}%` }}/>
             </div>
             {heroImage3Ov?.overlayType && heroImage3Ov.overlayType !== "none" && (
@@ -1426,7 +1427,7 @@ export default function BohoTerra() {
                         style={{ flexShrink:0, width: isMobile ? "85%" : `calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}>
                         <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:BG, marginBottom:16 }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes={isMobile ? "85vw" : "30vw"} className="bt-zoom-img" style={{ objectFit:"cover" }} />}
-                          <SegundaFoto images={p.images} sizes={isMobile ? "85vw" : "30vw"} zoom />
+                          <SegundaFoto images={p.images} sizes={isMobile ? "85vw" : "30vw"} zoom={1.06} />
                           {pct && <div style={{ position:"absolute", top:14, left:14, background:A, color:"#fff", fontSize:9, fontWeight:600, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>Oferta -{pct}%</div>}
                         </div>
                         <p style={{ fontSize:10, color:A, letterSpacing:3, textTransform:"uppercase", margin:"0 0 5px" }}>{p.category}</p>
@@ -1492,7 +1493,7 @@ export default function BohoTerra() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#ede8e0", overflow:"hidden" }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="bt-zoom-img" style={{ objectFit:"cover" }} />}
-                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
+                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom={1.06} />
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:masVistoText }}>{p.name}</p>
@@ -1517,10 +1518,10 @@ export default function BohoTerra() {
 
       {/* ── COMPRÁ EL LOOK (ver `boho/LookbookBoho`): sin fotos no existe ── */}
       <SectionBlock id="bt-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
-        <LookbookBoho products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
+        <LookbookBoho products={products} promotions={promotions} ejemplo={!storeConfig || (isPreview && !!(storeConfig.previewDemoPuro || storeConfig.demoPublica))}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
-          fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} A={getReadableAccentText(A, lookbookBg, lookbookText)} panel={BG} isMobile={isMobile}>
+          fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} A={getReadableAccentText(A, lookbookBg, lookbookText)} acentoTarjeta={getReadableAccentText(A, BG, T)} panel={BG} isMobile={isMobile}>
           <EditableSectionBg field="bgLookbook" label="Fondo del look" />
         </LookbookBoho>
       </SectionBlock>
@@ -1633,7 +1634,7 @@ export default function BohoTerra() {
       <SectionBlock id="bt-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
         <PreguntasBoho envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
           legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
-          onContacto={() => irASeccion("contacto")} conWhatsapp={hasWA}
+          onContacto={() => irAContactoOWhatsApp(irASeccion, storeConfig?.whatsapp)} conWhatsapp={hasWA}
           fondo={preguntasBg} tinta={preguntasText} suave={preguntasMid} A={getReadableAccentText(A, preguntasBg, preguntasText)} isMobile={isMobile}>
           <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
         </PreguntasBoho>
@@ -2632,7 +2633,7 @@ export default function BohoTerra() {
           Cuadrado y crema, con borde fino: los botones de Boho no son
           redondos. Abajo a la derecha siempre hay otro (WhatsApp, o el
           carrito si no hay WhatsApp), así que va siempre encima. */}
-      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && !favoritesOpen && !searchOpen && !mobileMenuOpen && (
         <BotonVolverArriba visible={lejosArriba} encimaDeOtro sinMovimiento={sinMovimiento}
           estilo={{ background:BG, color:T, border:"1px solid rgba(44,34,24,0.25)", boxShadow:"0 6px 18px rgba(44,34,24,0.15)" }} />
       )}

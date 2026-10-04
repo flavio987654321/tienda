@@ -65,10 +65,10 @@ export function LookbookChic({
 
   const tarjetaDe = (prod: StorefrontProduct) => (
     <div role="button" tabIndex={0} onClick={e => { e.stopPropagation(); onAbrir(prod); }}
-      onKeyDown={e => { if (e.key === "Enter") onAbrir(prod); }}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod); } }}
       style={{ position:"relative", pointerEvents:"auto", width:"100%", maxWidth:330, boxSizing:"border-box", display:"flex", alignItems:"center", gap:12,
         padding:8, paddingRight:16, cursor:"pointer", background:"rgba(255,255,255,0.97)", borderRadius:4, boxShadow:"0 12px 30px rgba(0,0,0,0.18)", color:"#111" }}>
-      <div style={{ width:42, height:56, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${prod.images[0]}) center/cover` }} />
+      <div style={{ width:42, height:56, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${JSON.stringify(prod.images[0])}) center/cover` }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 3px", fontSize:13, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13 }}>{precio(prod)}</p>
@@ -78,7 +78,7 @@ export function LookbookChic({
   );
 
   return (
-    <section data-reveal style={{ position:"relative", background:fondo, padding: isMobile ? "52px 16px" : "88px 40px", borderTop:"1px solid #f0f0f0" }}>
+    <section data-reveal style={{ position:"relative", background:fondo, padding: isMobile ? "52px 16px" : "88px 40px", borderTop:`1px solid color-mix(in srgb, ${tinta} 8%, transparent)` }}>
       {children}
       <div style={{ maxWidth:1100, margin:"0 auto" }}>
         <div style={{ textAlign:"center", marginBottom: isMobile ? 30 : 48 }}>
@@ -101,7 +101,7 @@ export function LookbookChic({
                 <div key={look.n} onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
                   style={{ position:"relative", aspectRatio:"4/5", width:"100%", overflow:"hidden", background:"#f0ebe5",
                     outline: marcando ? `1px dashed ${ACC}` : "none", outlineOffset:-8, cursor: marcando ? "crosshair" : "default" }}>
-                  <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${look.url}) center/cover` }} />
+                  <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(look.url)}) center/cover` }} />
 
                   {puntosVisibles.map((pt, i) => {
                     const prod = porId.get(pt.id);
@@ -213,10 +213,10 @@ export function LookbookChic({
                   const resaltado = p.id === abiertoId;
                   return (
                     <div key={p.id} role="button" tabIndex={0} onClick={() => onAbrir(p)}
-                      onKeyDown={e => { if (e.key === "Enter") onAbrir(p); }}
+                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(p); } }}
                       style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", borderBottom:`1px solid ${linea}`, cursor:"pointer", color:tinta }}>
                       <span aria-hidden style={{ flexShrink:0, width:20, fontFamily:PLAYFAIR, fontStyle:"italic", fontSize:17, color: resaltado ? acento : suave, transition:"color .25s" }}>{i + 1}</span>
-                      <div style={{ width:54, height:72, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${p.images[0]}) center/cover` }} />
+                      <div style={{ width:54, height:72, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${JSON.stringify(p.images[0])}) center/cover` }} />
                       <div style={{ minWidth:0, flex:1 }}>
                         <p style={{ margin:"0 0 4px", fontSize:14, fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{p.name}</p>
                         <p style={{ margin:0, fontSize:14, color: ocultarPrecios ? suave : tinta }}>{precio(p)}</p>

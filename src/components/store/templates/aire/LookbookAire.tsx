@@ -67,10 +67,10 @@ export function LookbookAire({
   /** La tarjeta de un punto abierto: blanca, como las de Aire. */
   const tarjetaDe = (prod: StorefrontProduct, lugar: React.CSSProperties) => (
     <div role="button" tabIndex={0} onClick={e => { e.stopPropagation(); onAbrir(prod); }}
-      onKeyDown={e => { if (e.key === "Enter") onAbrir(prod); }}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod); } }}
       style={{ ...lugar, zIndex:5, display:"flex", alignItems:"center", gap:10, padding:8, paddingRight:14, borderRadius:14, cursor:"pointer",
         background:S, border:`1px solid ${LN}`, boxShadow:"0 18px 40px rgba(20,22,26,0.22)", color:T }}>
-      <div style={{ width:44, height:56, flexShrink:0, borderRadius:9, background:`${LN} url(${prod.images[0]}) center/cover` }} />
+      <div style={{ width:44, height:56, flexShrink:0, borderRadius:9, background:`${LN} url(${JSON.stringify(prod.images[0])}) center/cover` }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 4px", fontSize:13, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13, fontWeight:800, color:G }}>{precio(prod)} <span aria-hidden>→</span></p>
@@ -92,7 +92,7 @@ export function LookbookAire({
           <div key={look.n} onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
             style={{ position:"relative", aspectRatio:"4/5", width:"100%", borderRadius:RAD - 6, overflow:"hidden", background:LN,
               outline: marcando ? `3px solid ${G}` : "none", outlineOffset:-3, cursor: marcando ? "crosshair" : "default" }}>
-            <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${look.url}) center/cover` }} />
+            <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(look.url)}) center/cover` }} />
 
             {puntosVisibles.map((pt, i) => {
               const prod = porId.get(pt.id);
@@ -198,7 +198,7 @@ export function LookbookAire({
                     <button key={l.n} type="button" onClick={() => cambiarLook(i)} aria-pressed={activo}
                       style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"4px 14px 4px 4px", borderRadius:999, cursor:"pointer", fontFamily:"inherit",
                         fontSize:13, fontWeight:700, background: activo ? T : S, color: activo ? S : T, border:`1px solid ${activo ? T : LN}`, transition:"background .2s, color .2s" }}>
-                      <span aria-hidden style={{ width:30, height:30, borderRadius:999, background:`${LN} url(${l.url}) center/cover` }} />
+                      <span aria-hidden style={{ width:30, height:30, borderRadius:999, background:`${LN} url(${JSON.stringify(l.url)}) center/cover` }} />
                       Look {i + 1}
                     </button>
                   );
@@ -218,12 +218,12 @@ export function LookbookAire({
                 const resaltado = p.id === abiertoId;
                 return (
                   <div key={p.id} role="button" tabIndex={0} onClick={() => onAbrir(p)}
-                    onKeyDown={e => { if (e.key === "Enter") onAbrir(p); }}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(p); } }}
                     className="ai-look-fila"
                     style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 4px", borderBottom:`1px solid ${LN}`, cursor:"pointer", color:T }}>
                     <span aria-hidden style={{ flexShrink:0, width:26, height:26, borderRadius:999, display:"grid", placeItems:"center", fontSize:12.5, fontWeight:800,
                       background: resaltado ? G : "rgba(20,22,26,0.06)", color: resaltado ? accentText : T, transition:"background .2s, color .2s" }}>{i + 1}</span>
-                    <div style={{ width:52, height:64, flexShrink:0, borderRadius:10, background:`${LN} url(${p.images[0]}) center/cover` }} />
+                    <div style={{ width:52, height:64, flexShrink:0, borderRadius:10, background:`${LN} url(${JSON.stringify(p.images[0])}) center/cover` }} />
                     <div style={{ minWidth:0, flex:1 }}>
                       <p style={{ margin:"0 0 4px", fontSize:14.5, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</p>
                       <p style={{ margin:0, fontSize:14, fontWeight:800, color: ocultarPrecios ? T2 : T }}>{precio(p)}</p>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import { useLayoutEffect, useState, useSyncExternalStore, type RefObject } from "react";
 
 /* ══════════════════════════════════════════════════════════════════════════
    LO QUE PASA AL BAJAR Y SUBIR (Aire y Boho, 04/10/26)
@@ -21,7 +21,19 @@ import { useEffect, useState, useSyncExternalStore, type RefObject } from "react
    Con `activo` en false (la previa del editor) no corre nada: ahí la barra
    va pegada dentro del lienzo, y que se escape o que una foto se corra
    mientras se la acomoda sería un problema, no un efecto. Con "reducir
-   movimiento" en la compu del visitante, las fotos quedan quietas. */
+   movimiento" en la compu del visitante, las fotos quedan quietas.
+
+   Los SALTOS no cuentan como dirección (auditoría del 04/10/26):
+   - con el cuerpo bloqueado (`position: fixed`, lo que hacen el menú del
+     celular y la ficha del producto al abrirse) el scroll vale 0 y se ignora;
+   - al cerrarlos, la página vuelve de golpe adonde estaba: un salto de más de
+     una pantalla no es "bajar", es volver. Antes, cerrar el menú escondía la
+     barra que se acababa de usar.
+   - en iPhone, el rebote al llegar al final se recorta al máximo real: si no,
+     la vuelta del rebote contaba como "subir" y mostraba la barra.
+
+   Las capas y sus velocidades tienen que ser estables (refs de `useRef` y
+   números fijos): el efecto no se reengancha si cambian. */
 
 export type CapaParalaje = { ref: RefObject<HTMLElement | null>; velocidad: number; escala?: number };
 
@@ -40,13 +52,23 @@ export function useEfectosScroll({ activo, capas = [] }: { activo: boolean; capa
   const [lejosArriba, setLejosArriba] = useState(false);
   const sinMovimiento = usePrefiereSinMovimiento();
 
-  useEffect(() => {
+  // De layout y no común: la escala de las capas se pone antes de pintar, así
+  // la foto de la portada no da un saltito al cargar.
+  useLayoutEffect(() => {
     if (!activo) return;
     let ultimo = window.scrollY;
     let cuadro = 0;
     const mover = () => {
       cuadro = 0;
-      const y = window.scrollY;
+      if (document.body.style.position === "fixed") return;
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const y = Math.min(Math.max(window.scrollY, 0), max);
+      if (Math.abs(y - ultimo) > window.innerHeight) {
+        ultimo = y;
+        if (y < 140) setBarraOculta(false);
+        setLejosArriba(y > window.innerHeight * 1.5);
+        return;
+      }
       if (y < 140) setBarraOculta(false);
       else if (y - ultimo > 8) setBarraOculta(true);
       else if (ultimo - y > 8) setBarraOculta(false);
@@ -67,6 +89,11 @@ export function useEfectosScroll({ activo, capas = [] }: { activo: boolean; capa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activo, sinMovimiento]);
 
+  /** Para el `onFocusCapture` de la barra: si se llega a ella con el teclado
+   *  (Tab) estando escondida, vuelve; si no, el foco caía en links fuera de
+   *  la pantalla. */
+  const mostrarBarra = () => setBarraOculta(false);
+
   // Apagado, nunca esconde ni ofrece nada (aunque haya quedado algo de antes).
-  return { barraOculta: activo && barraOculta, lejosArriba: activo && lejosArriba, sinMovimiento };
+  return { barraOculta: activo && barraOculta, lejosArriba: activo && lejosArriba, sinMovimiento, mostrarBarra };
 }

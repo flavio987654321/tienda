@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { ordenEfectivo } from "@/lib/ordenBloques";
 import { useEditContext } from "@/contexts/EditContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -53,7 +54,8 @@ export function SectionBlock({
 
   const effectiveOrder = useMemo(() => {
     const persisted = config?.sectionOrder ?? sectionOrder;
-    return [...persisted.filter(i => defaultOrder.includes(i)), ...defaultOrder.filter(i => !persisted.includes(i))];
+    // Un bloque nuevo del template entra al lado de su vecino, no al final (ver lib/ordenBloques).
+    return ordenEfectivo(persisted, defaultOrder);
   }, [config?.sectionOrder, sectionOrder, defaultOrder]);
   const myIndex = effectiveOrder.indexOf(id);
   const cssOrder = myIndex === -1 ? defaultOrder.indexOf(id) : myIndex;

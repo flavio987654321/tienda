@@ -609,18 +609,12 @@ export default function Aurora() {
   const conFotoPropia = modoPortada === "foto" && !!heroUrl;
   const productosConFoto = useMemo(() => products.filter(p => p.images[0]), [products]);
   const heroElegidos = leerPiezasPortada(textOverrides["heroPiezas"]?.text);
-  const claveElegidos = heroElegidos.join();
-  const heroProductos = useMemo(() => {
-    if (conFotoPropia) return [];
-    const elegidos = claveElegidos
-      ? claveElegidos.split(",").map(id => productosConFoto.find(p => p.id === id)).filter((p): p is StorefrontProduct => !!p)
-      : [];
-    return elegidos.length ? elegidos : productosConFoto.slice(0, MAX_PORTADA);
-  }, [conFotoPropia, productosConFoto, claveElegidos]);
-  const heroFotos = useMemo(
-    () => conFotoPropia && heroUrl ? [heroUrl] : heroProductos.map(p => p.images[0]),
-    [conFotoPropia, heroUrl, heroProductos],
-  );
+  /* Sin useMemo a mano en estos dos: el compilador de React los memoiza solo,
+     y con el manual (dependiendo de una clave armada con la lista de
+     elegidos) se salteaba la optimización de todo el componente. */
+  const elegidosConFoto = heroElegidos.map(id => productosConFoto.find(p => p.id === id)).filter((p): p is StorefrontProduct => !!p);
+  const heroProductos = conFotoPropia ? [] : elegidosConFoto.length ? elegidosConFoto : productosConFoto.slice(0, MAX_PORTADA);
+  const heroFotos = conFotoPropia && heroUrl ? [heroUrl] : heroProductos.map(p => p.images[0]);
 
   /* Los dos mazos del coverflow. Antes esto eran TRES baldosas de categoría
      elegidas a mano en el editor; ahora entran todas las que la tienda tenga de
@@ -1099,7 +1093,7 @@ export default function Aurora() {
             productos y foto propia y abre el panel de la foto. */}
         {editMode && <ChapitaBloque nombre="Banner principal" />}
         {editMode && (
-          <ElegirPortada productos={productosConFoto} elegidos={heroElegidos} modo={modoPortada} foto={heroUrl}
+          <ElegirPortada productos={productosConFoto} elegidos={heroElegidos.filter(id => productosConFoto.some(p => p.id === id))} modo={modoPortada} foto={heroUrl}
             tinta={T} acento={G} textoAcento={textoSobreAcento} linea={LINEA_FUERTE} fondoPanel="rgba(14,15,26,0.94)" />
         )}
         <HeroFoto
@@ -1246,7 +1240,7 @@ export default function Aurora() {
 
       {/* ── LOOKBOOK (ver `aurora/LookbookAurora`): sin fotos no existe ── */}
       <SectionBlock id="au-lookbook" label="Lookbook" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-        <LookbookAurora products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
+        <LookbookAurora products={products} promotions={promotions} ejemplo={!storeConfig || (isPreview && !!(storeConfig.previewDemoPuro || storeConfig.demoPublica))}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirFicha} escena={escenaAurora} isMobile={isMobile} />
       </SectionBlock>
@@ -1639,7 +1633,7 @@ export default function Aurora() {
                     title="Editar en Dashboard → Pagos"
                     style={{ fontSize:11, color:"inherit", opacity:0.55, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
                     {label}
                     <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
@@ -1647,7 +1641,7 @@ export default function Aurora() {
                   <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
                     style={{ fontSize:11, color:"inherit", opacity:0.55, textDecoration:"none", letterSpacing:1 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
                     {label}
                   </a>
                 )
@@ -1656,7 +1650,7 @@ export default function Aurora() {
                 <button onClick={() => setShowReport(true)}
                   style={{ fontSize:11, opacity:0.5, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.25"; }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
                   Reportar tienda
                 </button>
               )}
@@ -1678,34 +1672,34 @@ export default function Aurora() {
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"
-                    style={{ fontSize:11, color:"inherit", opacity:0.3, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
+                    style={{ fontSize:11, color:"inherit", opacity:0.55, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
                     {label}
                     <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
                 ) : (
                   <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
-                    style={{ fontSize:11, color:"inherit", opacity:0.3, textDecoration:"none", letterSpacing:1 }}
+                    style={{ fontSize:11, color:"inherit", opacity:0.55, textDecoration:"none", letterSpacing:1 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
                     {label}
                   </a>
                 )
               ))}
             </div>
             <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
-              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+              <p style={{ fontSize:11, opacity:0.5, margin:0 }}>
                 <EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "AURORA"}. Todos los derechos reservados.</EditableZone>
               </p>
-              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+              <p style={{ fontSize:11, opacity:0.5, margin:0 }}>
                 <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
               </p>
               {!editMode && (
                 <button onClick={() => setShowReport(true)}
-                  style={{ fontSize:11, opacity:0.25, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
+                  style={{ fontSize:11, opacity:0.5, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.25"; }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
                   Reportar tienda
                 </button>
               )}

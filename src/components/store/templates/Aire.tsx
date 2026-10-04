@@ -640,7 +640,7 @@ export default function Aire() {
      bajando y vuelve subiendo, la foto de la portada baja más lento, y pasada
      una pantalla y media aparece "volver arriba". Nada de esto en la previa. */
   const fotoPortadaRef = useRef<HTMLDivElement>(null);
-  const { barraOculta, lejosArriba, sinMovimiento } = useEfectosScroll({
+  const { barraOculta, lejosArriba, sinMovimiento, mostrarBarra } = useEfectosScroll({
     activo: !isPreview, capas: [{ ref: fotoPortadaRef, velocidad: 0.18 }],
   });
   /* No se esconde con algo de la barra abierto: el menú del celular, el de la
@@ -1696,7 +1696,7 @@ export default function Aire() {
           Los links se escriben como se habla: "Catálogo", no "C A T Á L O G O".
           El interletrado grande era la firma del template de lujo que este
           reemplaza, y es lo que más lo delataba aunque el fondo fuera blanco. */}
-      <nav ref={barraRef} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, background:"rgba(255,255,255,0.94)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${scrolled ? LN : "transparent"}`, ...corrimientoBarra }}>
+      <nav ref={barraRef} onFocusCapture={mostrarBarra} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, background:"rgba(255,255,255,0.94)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${scrolled ? LN : "transparent"}`, ...corrimientoBarra }}>
         {/* DOS cajas y no una: la de afuera pone el margen lateral, la de adentro
             el ancho maximo. Con las dos cosas en la misma caja el maxWidth recorta
             primero y el padding come 24px mas para adentro, asi que en un monitor
@@ -2080,7 +2080,7 @@ export default function Aire() {
           {/* La capa de las fotos es la que baja más lento al hacer scroll (ver
               el oyente del scroll, arriba). Va agrandada un 12% para que al
               correrse no quede un hueco arriba mientras la tarjeta se ve. */}
-          <div ref={fotoPortadaRef} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
+          <div ref={fotoPortadaRef} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform", transform: isPreview ? undefined : "scale(1.12)" }}>
           {heroSlides.map((slide, i) => (
             <FadeImage key={slide.campo} src={slide.url} alt="" fill priority={i === 0} sizes="100vw"
               style={{ objectFit:"cover", objectPosition:`${slide.ov?.posX ?? 50}% ${slide.ov?.posY ?? 50}%`, opacity: i === heroIdxSeguro ? 1 : 0, transition:"opacity 0.7s ease" }}/>
@@ -2460,7 +2460,7 @@ export default function Aire() {
 
       {/* ── COMPRÁ EL LOOK (ver `aire/LookbookAire`): sin fotos no existe ── */}
       <SectionBlock id="ai-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={AIRE_SECTION_IDS}>
-        <LookbookAire products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
+        <LookbookAire products={products} promotions={promotions} ejemplo={!storeConfig || (isPreview && !!(storeConfig.previewDemoPuro || storeConfig.demoPublica))}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirProducto}
           fondo={lookbookBg} G={G} accentText={accentText} T={T} T2={T2} S={S} LN={LN} RAD={RAD} ANCHO={ANCHO} MARGEN={MARGEN} isMobile={isMobile}>
@@ -3629,7 +3629,7 @@ export default function Aire() {
          WhatsApp y se tapan entre sí, y el comprador toca el que no quería. */}
 
       {/* ── VOLVER ARRIBA (ver `shared/BotonVolverArriba`): redondo y blanco ── */}
-      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && !favoritesOpen && !searchOpen && !mobileMenuOpen && (
         <BotonVolverArriba visible={lejosArriba} encimaDeOtro={!storeConfig || storeConfig.whatsapp.enabled} sinMovimiento={sinMovimiento}
           estilo={{ borderRadius:"50%", background:S, color:T, border:`1px solid ${LN}`, boxShadow:"0 6px 18px rgba(20,22,26,0.14)" }} />
       )}

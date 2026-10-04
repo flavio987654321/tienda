@@ -30,7 +30,7 @@ const ANCHO_FOTO = "min(calc(min(74vh, 640px) * 0.8), 48%)";
 
 export function LookbookBoho({
   products, promotions, imagenes, fmt, ocultarPrecios, onAbrir,
-  fondo, tinta, suave, A, panel, isMobile, ejemplo, children,
+  fondo, tinta, suave, A, acentoTarjeta, panel, isMobile, ejemplo, children,
 }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
@@ -42,6 +42,10 @@ export function LookbookBoho({
   fondo: string; tinta: string; suave: string;
   /** El acento, ya legible sobre `fondo`. */
   A: string;
+  /** El acento legible sobre el crema de la tarjeta del punto tocado. No es `A`:
+   *  ése se mide contra el fondo del bloque, y con un fondo oscuro cae a la
+   *  tinta clara, que sobre la tarjeta crema no se ve. */
+  acentoTarjeta: string;
   /** El crema de las tarjetas (BG del template). */
   panel: string;
   /** Vista previa de un diseño: sin fotos, mostrar el look de ejemplo. */
@@ -70,15 +74,15 @@ export function LookbookBoho({
 
   const tarjetaDe = (prod: StorefrontProduct) => (
     <div role="button" tabIndex={0} onClick={e => { e.stopPropagation(); onAbrir(prod); }}
-      onKeyDown={e => { if (e.key === "Enter") onAbrir(prod); }}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod); } }}
       style={{ position:"relative", pointerEvents:"auto", width:"100%", maxWidth:340, boxSizing:"border-box", display:"flex", alignItems:"center", gap:12,
         padding:8, paddingRight:16, cursor:"pointer", background:panel, border:"1px solid rgba(44,34,24,0.12)", boxShadow:"0 16px 36px rgba(44,34,24,0.22)", color:"#2c2218" }}>
-      <div style={{ width:44, height:58, flexShrink:0, background:`#f0e9df url(${prod.images[0]}) center/cover` }} />
+      <div style={{ width:44, height:58, flexShrink:0, background:`#f0e9df url(${JSON.stringify(prod.images[0])}) center/cover` }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 4px", fontFamily:SERIF, fontStyle:"italic", fontSize:14.5, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13, fontWeight:700 }}>{precio(prod)}</p>
       </div>
-      <span style={{ flexShrink:0, fontSize:9.5, letterSpacing:2, textTransform:"uppercase", color:A }}>Ver pieza →</span>
+      <span style={{ flexShrink:0, fontSize:9.5, letterSpacing:2, textTransform:"uppercase", color:acentoTarjeta }}>Ver pieza →</span>
     </div>
   );
 
@@ -114,7 +118,7 @@ export function LookbookBoho({
             <div key={look.n} onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
               style={{ position:"relative", aspectRatio:"4/5", width:"100%", borderRadius:ARCO, overflow:"hidden", background:"#f0e9df",
                 outline: marcando ? `2px dashed ${A}` : "none", outlineOffset:-6, cursor: marcando ? "crosshair" : "default" }}>
-              <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${look.url}) center/cover` }} />
+              <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(look.url)}) center/cover` }} />
 
               {puntosVisibles.map((pt, i) => {
                 const prod = porId.get(pt.id);
@@ -223,9 +227,9 @@ export function LookbookBoho({
                   const resaltado = p.id === abiertoId;
                   return (
                     <div key={p.id} role="button" tabIndex={0} className="bt-look-fila" onClick={() => onAbrir(p)}
-                      onKeyDown={e => { if (e.key === "Enter") onAbrir(p); }}
+                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(p); } }}
                       style={{ display:"flex", alignItems:"center", gap:16, padding:"14px 0", borderBottom:`1px solid ${linea}`, cursor:"pointer", color:tinta }}>
-                      <div style={{ width:56, height:72, flexShrink:0, background:`#f0e9df url(${p.images[0]}) center/cover`,
+                      <div style={{ width:56, height:72, flexShrink:0, background:`#f0e9df url(${JSON.stringify(p.images[0])}) center/cover`,
                         outline: resaltado ? `2px solid ${A}` : "none", outlineOffset:2, transition:"outline-color .2s" }} />
                       <div style={{ minWidth:0, flex:1 }}>
                         <p style={{ margin:"0 0 4px", fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", color:A }}>{p.category}</p>

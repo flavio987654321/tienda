@@ -74,7 +74,7 @@ export function PreguntasUrban({
             const id = `up-faq-${i}`;
             return (
               <div key={it.tema} style={{ borderTop:`3px solid ${tinta}` }}>
-                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id}
+                <button type="button" onClick={() => setAbierta(abierto ? null : i)} aria-expanded={abierto} aria-controls={id} id={`${id}-p`}
                   style={{ width:"100%", display:"flex", alignItems:"center", gap: isMobile ? 14 : 20, textAlign:"left", background:"none", border:"none",
                     cursor:"pointer", color:tinta, padding: isMobile ? "16px 0" : "20px 0", fontFamily:"inherit" }}>
                   <span aria-hidden style={{ flexShrink:0, width: isMobile ? 34 : 48, fontSize: isMobile ? 20 : 28, fontWeight:900, letterSpacing:"-1px",
@@ -89,7 +89,7 @@ export function PreguntasUrban({
                       style={{ transform: abierto ? "rotate(45deg)" : "none", transition:"transform .25s" }}><path d="M12 4v16M4 12h16" /></svg>
                   </span>
                 </button>
-                <div id={id} role="region" style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .35s cubic-bezier(.2,.8,.2,1)" }}>
+                <div id={id} role="region" aria-labelledby={`${id}-p`} inert={!abierto} style={{ display:"grid", gridTemplateRows: abierto ? "1fr" : "0fr", transition:"grid-template-rows .35s cubic-bezier(.2,.8,.2,1)" }}>
                   <div style={{ overflow:"hidden" }}>
                     <div style={{ padding: isMobile ? "0 0 20px 48px" : "0 52px 24px 68px", fontSize:14, lineHeight:1.7, color:suave }}>
                       <p style={{ margin: it.politicas.length || it.contacto ? "0 0 14px" : 0 }}>

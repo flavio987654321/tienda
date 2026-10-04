@@ -4,7 +4,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import { resolveProductPromo } from "@/lib/promoDisplay";
 import { useEditContext } from "@/contexts/EditContext";
-import { getDemoPool } from "@/hooks/useStorefront";
+import { getDemoPool, isDemoProductId } from "@/hooks/useStorefront";
 import { leerPuntos, escribirPuntos, MAX_LOOKS, MAX_PUNTOS, LOOK_EJEMPLO, type PuntoLook } from "@/lib/lookbook";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -23,7 +23,9 @@ import { leerPuntos, escribirPuntos, MAX_LOOKS, MAX_PUNTOS, LOOK_EJEMPLO, type P
      existe todavía; en el editor todos, para poder arreglarlos;
    - "📍 Marcar productos": tocar la foto agrega un punto donde se tocó;
    - qué punto está abierto, y el precio a mostrar (con la promo si baja);
-   - con `ejemplo` (las vistas previas de los diseños), si no hay ninguna
+   - con `ejemplo` (mirando un diseño que todavía no es el de la tienda, o la
+     demo pública; NO la previa de la propia tienda, donde se mezclaría con
+     los productos de la dueña), si no hay ninguna
      foto, el look de ejemplo de `lib/lookbook` con sus productos de ejemplo:
      si no, el bloque no se veía en ninguna vista previa y nadie sabía que
      existía. En el editor no: ahí se explica cómo armar el propio. */
@@ -57,7 +59,10 @@ export function useLookbook({ products, promotions, imagenes, fmt, ocultarPrecio
   const puntos = conEjemplo ? LOOK_EJEMPLO.puntos : look ? leerPuntos(overrides[campoPuntos]?.text) : [];
   const puntosVisibles = editMode ? puntos : puntos.filter(p => porId.has(p.id));
   const enEsteLook = [...new Set(puntosVisibles.map(p => p.id))].map(id => porId.get(id)).filter((p): p is StorefrontProduct => !!p);
-  const sinProducto = puntos.filter(pt => !porId.has(pt.id)).length;
+  /* Un punto con un producto de EJEMPLO cuenta como sin producto: el editor
+     rellena el catálogo con ejemplos, pero en la tienda publicada no existen
+     y el punto desaparecía sin aviso (auditoría del 04/10/26). */
+  const sinProducto = puntos.filter(pt => !porId.has(pt.id) || (!conEjemplo && isDemoProductId(pt.id))).length;
 
   const guardar = (lista: PuntoLook[]) => setOverride(campoPuntos, { text: escribirPuntos(lista) });
   /** El clic sobre la foto: con "Marcar" prendido, agrega un punto ahí. */
@@ -77,8 +82,9 @@ export function useLookbook({ products, promotions, imagenes, fmt, ocultarPrecio
     return fmt(pr.hasPriceDrop ? pr.effectivePrice : p.price);
   };
   const prodAbierto = puntoAbierto !== null && !marcando ? porId.get(puntosVisibles[puntoAbierto]?.id ?? "") : undefined;
-  /** Los productos que se pueden elegir para un punto: los que tienen foto. */
-  const elegibles = products.filter(p => p.images[0]);
+  /** Los productos que se pueden elegir para un punto: los de verdad que tienen
+   *  foto. Los de ejemplo del editor no, porque en la tienda no existen. */
+  const elegibles = products.filter(p => p.images[0] && !isDemoProductId(p.id));
 
   return {
     editMode, existe: looks.length > 0 || editMode,

@@ -20,8 +20,10 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 export function SegundaFoto({ images, sizes, zoom = false }: {
   images: string[];
   sizes: string;
-  /** Si la primera foto se agranda al pasar el mouse, ésta también (si no, se notaría el salto). */
-  zoom?: boolean;
+  /** Si la primera foto se agranda al pasar el mouse, ésta también y CUÁNTO
+   *  (la misma escala que la primera: si no, se nota un saltito en el cruce).
+   *  `true` es 1.05. */
+  zoom?: boolean | number;
 }) {
   const segunda = images[1] && images[1] !== images[0] ? images[1] : null;
   const ref = useRef<HTMLSpanElement>(null);
@@ -44,7 +46,7 @@ export function SegundaFoto({ images, sizes, zoom = false }: {
       {montada && (
         <FadeImage src={segunda} alt="" fill sizes={sizes}
           style={{ objectFit:"cover", opacity: encima ? 1 : 0, transition:"opacity 0.45s ease, transform 0.55s ease",
-            transform: zoom && encima ? "scale(1.05)" : "scale(1)" }}
+            transform: zoom && encima ? `scale(${zoom === true ? 1.05 : zoom})` : "scale(1)" }}
           onError={e => { e.currentTarget.style.display = "none"; }} />
       )}
     </span>

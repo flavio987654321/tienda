@@ -41,6 +41,7 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
 import { PreguntasUrban } from "@/components/store/templates/urban/PreguntasUrban";
 import { LookbookUrban } from "@/components/store/templates/urban/LookbookUrban";
 import { MAX_LOOKS } from "@/lib/lookbook";
@@ -652,7 +653,7 @@ export default function UrbanPulse() {
      la portada baja más lento que la página, y pasada una pantalla y media
      aparece "volver arriba". Nada de esto en la previa del editor. */
   const fotoPortadaRef = useRef<HTMLDivElement>(null);
-  const { barraOculta, lejosArriba, sinMovimiento } = useEfectosScroll({
+  const { barraOculta, lejosArriba, sinMovimiento, mostrarBarra } = useEfectosScroll({
     activo: !isPreview, capas: [{ ref: fotoPortadaRef, velocidad: 0.06, escala: 1.12 }],
   });
 
@@ -1079,7 +1080,7 @@ export default function UrbanPulse() {
       )}
 
       {/* NAVBAR */}
-      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"background 0.3s, border-color 0.3s, transform .35s cubic-bezier(.2,.8,.2,1)", transform: barraEscondida ? "translateY(-100%)" : "none", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <nav onFocusCapture={mostrarBarra} style={{ position:"sticky", top:0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"background 0.3s, border-color 0.3s, transform .35s cubic-bezier(.2,.8,.2,1)", transform: barraEscondida ? "translateY(-100%)" : "none", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         {/* La marca es lo ÚNICO que cede ancho. Antes tenía `flexShrink:0`, así que
             se plantaba: cuando no entraba todo, el que se salía de la pantalla era
             el grupo de íconos, y con él la página entera (74px de más a 360px,
@@ -1392,7 +1393,7 @@ export default function UrbanPulse() {
             botón ya quedaba recortado y no se podía tocar. */}
         {!isMobile && (
         <div style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}>
-          <div ref={fotoPortadaRef} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
+          <div ref={fotoPortadaRef} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform", transform: isPreview ? undefined : "scale(1.12)" }}>
             <FadeImage src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" fill sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%` }} />
           </div>
           <BgDragHandle imgKey="heroImage" />
@@ -2003,7 +2004,7 @@ export default function UrbanPulse() {
                 })()}
                 <div style={{ position:"relative", width:"100%", overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
                   {product.images[0] && <FadeImage className="up-prod-img" src={product.images[0]} alt={product.name} fill sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} style={{ objectFit:"cover" }} />}
-                  <SegundaFoto images={product.images} sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} zoom />
+                  <SegundaFoto images={product.images} sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} zoom={1.06} />
                   {(() => {
                     const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
                     if (!isSoldOut) return null;
@@ -2094,7 +2095,7 @@ export default function UrbanPulse() {
           estrellas dibujadas, sin curvas. */}
       {/* ── COMPRÁ EL LOOK (ver `urban/LookbookUrban`): sin fotos no existe ── */}
       <SectionBlock id="up-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
-        <LookbookUrban products={products} promotions={promotions} ejemplo={!storeConfig || isPreview}
+        <LookbookUrban products={products} promotions={promotions} ejemplo={!storeConfig || (isPreview && !!(storeConfig.previewDemoPuro || storeConfig.demoPublica))}
           imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
           fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
           fondo={lookbookBgUp} tinta={lookbookTextUp} suave={lookbookMidUp} acentoTexto={accentSobre(lookbookBgUp, lookbookTextUp)}
@@ -2348,7 +2349,7 @@ export default function UrbanPulse() {
                       <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:DARK, overflow:"hidden" }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
-                          <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
+                          <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom={1.06} />
                           {!!pct && <span style={{ position:"absolute", top:0, left:0, background:ACC, color:accentText, fontSize:10, fontWeight:900, padding:"5px 10px", letterSpacing:1 }}>-{pct}%</span>}
                         </div>
                         <div style={{ padding:"10px 0 0" }}>
@@ -2409,7 +2410,7 @@ export default function UrbanPulse() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#1a1a1a", overflow:"hidden" }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
-                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
+                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom={1.06} />
                         {avisoPromo(p)}
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
@@ -2491,7 +2492,7 @@ export default function UrbanPulse() {
       <SectionBlock id="up-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
         <PreguntasUrban envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
           legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
-          onContacto={() => irASeccion("contacto")} conWhatsapp={hasWA}
+          onContacto={() => irAContactoOWhatsApp(irASeccion, storeConfig?.whatsapp)} conWhatsapp={hasWA}
           fondo={preguntasBgUp} tinta={preguntasTextUp} suave={preguntasMidUp} acentoTexto={accentSobre(preguntasBgUp, preguntasTextUp)}
           ACC={ACC} textoSobreACC={accentText} isMobile={isMobile}>
           <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
@@ -2813,7 +2814,7 @@ export default function UrbanPulse() {
           Negro y cuadrado, con la flecha en el acento y la sombra sólida del
           acento, como los stickers del template. Abajo a la derecha siempre hay
           otro botón (WhatsApp, o el carrito si no hay WhatsApp): va encima. */}
-      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && !favoritesOpen && !searchOpen && !mobileMenuOpen && (
         <BotonVolverArriba visible={lejosArriba} encimaDeOtro sinMovimiento={sinMovimiento}
           estilo={{ background:DARK, color:accSobreDark, border:"2px solid #fff", boxShadow:`3px 3px 0 ${ACC}` }} />
       )}

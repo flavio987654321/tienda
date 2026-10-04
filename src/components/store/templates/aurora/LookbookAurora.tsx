@@ -59,11 +59,11 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
   /** La tarjeta del producto de un punto: abre la ficha, que vuela desde su foto. */
   const tarjetaDe = (prod: StorefrontProduct, lugar: React.CSSProperties) => (
     <div role="button" tabIndex={0} onClick={e => { e.stopPropagation(); onAbrir(prod, e); }}
-      onKeyDown={e => { if (e.key === "Enter") onAbrir(prod, e as unknown as React.MouseEvent); }}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod, e as unknown as React.MouseEvent); } }}
       style={{ ...lugar, zIndex:5, display:"flex", alignItems:"center", gap:10, padding:8, paddingRight:12, borderRadius:16, cursor:"pointer",
         background:"rgba(10,11,20,0.8)", border:`1px solid ${luz(0.45)}`, backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
         boxShadow:`0 20px 40px rgba(0,0,0,0.5), 0 0 30px ${luz(0.25)}`, color:T }}>
-      <div data-foto style={{ width:46, height:58, flexShrink:0, borderRadius:10, backgroundImage:`url(${prod.images[0]})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+      <div data-foto style={{ width:46, height:58, flexShrink:0, borderRadius:10, backgroundImage:`url(${JSON.stringify(prod.images[0])})`, backgroundSize:"cover", backgroundPosition:"center" }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 4px", fontSize:12.5, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13, fontWeight:600, color:GT }}>{precio(prod)} →</p>
@@ -110,7 +110,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                   borderRadius: isMobile ? 22 : 28, overflow:"hidden", background:"#0e0f1a",
                   border:`1px solid ${marcando ? luz(0.8) : LINEA_FUERTE}`, cursor: marcando ? "crosshair" : "default",
                   boxShadow:`0 40px 90px rgba(0,0,0,0.55), 0 0 70px ${luz(0.18)}`, animation:"au-look-llega .7s cubic-bezier(.16,.84,.32,1) both" }}>
-                <div aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${look.url})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+                <div aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${JSON.stringify(look.url)})`, backgroundSize:"cover", backgroundPosition:"center" }} />
                 <div aria-hidden style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(6,7,13,0.45), transparent 40%)", pointerEvents:"none" }} />
 
                 {puntosVisibles.map((pt, i) => {
@@ -209,7 +209,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                     style={{ position:"relative", width: isMobile ? 64 : 78, aspectRatio:"4/5", padding:0, borderRadius:14, overflow:"hidden", cursor:"pointer",
                       border:`1.5px solid ${i === indice ? G : "rgba(255,255,255,.16)"}`, opacity: i === indice ? 1 : 0.55,
                       boxShadow: i === indice ? `0 0 24px ${luz(0.5)}` : "none", background:"#0e0f1a", transition:"opacity .3s, box-shadow .3s, border-color .3s" }}>
-                    <span aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${l.url})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+                    <span aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${JSON.stringify(l.url)})`, backgroundSize:"cover", backgroundPosition:"center" }} />
                     <span style={{ position:"absolute", left:0, right:0, bottom:0, padding:"10px 0 5px", fontSize:9, letterSpacing:1.5, fontWeight:700, color:"#fff",
                       background:"linear-gradient(to top, rgba(0,0,0,.7), transparent)" }}>{String(i + 1).padStart(2, "0")}</span>
                   </button>
@@ -231,10 +231,10 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {enEsteLook.map(p => (
                   <div key={p.id} role="button" tabIndex={0} onClick={e => onAbrir(p, e)}
-                    onKeyDown={e => { if (e.key === "Enter") onAbrir(p, e as unknown as React.MouseEvent); }}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(p, e as unknown as React.MouseEvent); } }}
                     style={{ display:"flex", alignItems:"center", gap:14, padding:10, paddingRight:16, borderRadius:18, cursor:"pointer", color:T,
                       background:"rgba(255,255,255,0.04)", border:`1px solid ${LINEA_FUERTE}` }}>
-                    <div data-foto style={{ width:54, height:68, flexShrink:0, borderRadius:12, backgroundImage:`url(${p.images[0]})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+                    <div data-foto style={{ width:54, height:68, flexShrink:0, borderRadius:12, backgroundImage:`url(${JSON.stringify(p.images[0])})`, backgroundSize:"cover", backgroundPosition:"center" }} />
                     <div style={{ minWidth:0, flex:1 }}>
                       <p style={{ margin:"0 0 5px", fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</p>
                       <p style={{ margin:0, fontSize:14, fontWeight:600, color: ocultarPrecios ? GT : T }}>{precio(p)}</p>
