@@ -24,6 +24,7 @@ import type { ActivePromotion } from "@/lib/pricing";
 import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 
 // `maximumFractionDigits: 0` y no el valor de fábrica, que son TRES decimales.
 // Casi todo lo que llega acá ya viene entero —`pricing.ts` redondea a peso en
@@ -867,7 +868,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
         {tab === "desc" ? (
           <div
             className="product-rte"
-            dangerouslySetInnerHTML={{ __html: product.description || "<p>Sin descripción disponible.</p>" }}
+            dangerouslySetInnerHTML={{ __html: descripcionLegible(product.description || "<p>Sin descripción disponible.</p>", theme.pageBg) }}
             style={{ margin: 0, fontSize: 13.5, color: theme.muted, lineHeight: 1.85 }}
           />
         ) : product.attributes.length > 0 ? (

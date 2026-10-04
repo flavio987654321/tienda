@@ -26,6 +26,7 @@ import AireDetail from "@/components/store/templates/productDetail/AireDetail";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
@@ -480,7 +481,7 @@ export default function ProductDetailClient({
                     catálogo, que ya la tratan como HTML. */}
                 <div
                   className="text-sm text-gray-600 leading-relaxed [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_a]:text-indigo-600 [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: product.description }}
+                  dangerouslySetInnerHTML={{ __html: descripcionLegible(product.description, "#ffffff") }}
                 />
               </div>
             )}

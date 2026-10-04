@@ -7,6 +7,7 @@ import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import { CAPAS } from "@/lib/capas-tienda";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 
 export function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
@@ -445,7 +446,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   textTransform:"uppercase", letterSpacing:1.2 }}>Descripción</span>
                 <div style={{ flex:1, height:1, background:"#f0f0f0" }}/>
               </div>
-              <div className="product-rte" dangerouslySetInnerHTML={{ __html: product.description || "" }}
+              <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(product.description || "", "#ffffff") }}
                 style={{ fontSize: 14, color: "#555", lineHeight: 1.85 }} />
             </div>
           )}

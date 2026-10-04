@@ -18,7 +18,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { MS_IDA } from "@/components/store/templates/shared/vueloDeFicha";
 import { TarjetaAurora, type TintaTarjeta } from "@/components/store/templates/aurora/TarjetaAurora";
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
-import { contrasteWCAG } from "@/contexts/EditContext";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 import type { EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -60,31 +60,9 @@ const PASO_RESENAS = 5;
 
 type Carrito = ReturnType<typeof useCartLogic>;
 
-/* ── Colores de la descripción que no se leen sobre oscuro ────────────────────
-   La descripción la escribe la dueña en el editor de texto, y ese editor guarda
-   el color con el que escribió adentro del HTML (`<span style="color:#111827">`).
-   En un template claro no se nota; sobre el vidrio oscuro de Aurora ese casi
-   negro desaparecía (pasó en tiendaapps, 04/10/26). Se saca el color SÓLO si no
-   llega a 3:1 contra el fondo: un rojo o un verde que la dueña eligió y se leen,
-   quedan. Lo que no se puede leer (un nombre de color, `var(...)`) se deja. */
+/* El fondo del panel de la descripción: contra él se miden los colores que trae
+   guardados (ver lib/descripcionLegible; un casi negro no se leía acá). */
 const FONDO_DESCRIPCION = "#13141f";
-
-function aHex(valor: string): string | null {
-  const v = valor.trim().toLowerCase();
-  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(v)) return v;
-  const m = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/.exec(v);
-  if (!m) return null;
-  return "#" + [m[1], m[2], m[3]].map(n => Math.min(255, Number(n)).toString(16).padStart(2, "0")).join("");
-}
-
-function sinColoresIlegibles(html: string, fondo: string): string {
-  // `(?<![-\w])`: que sea `color:` y no `background-color:`.
-  return html.replace(/(?<![-\w])color\s*:\s*([^;"']+);?/gi, (entera, valor: string) => {
-    const hex = aHex(valor);
-    if (!hex) return entera;
-    return contrasteWCAG(hex, fondo) < 3 ? "" : entera;
-  });
-}
 
 /* ¿Entra el total adentro del botón de comprar? Con la columna de datos de una
    tablet (768) "Agregar al carrito · $35.900" no entra; ahí el botón dice sólo
@@ -466,7 +444,7 @@ export function FichaAurora({
               {producto.description && (
                 <div style={{ ...vidrio, padding:"16px 18px" }}>
                   <p style={rotulo}>Descripción</p>
-                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: sinColoresIlegibles(producto.description, FONDO_DESCRIPCION) }} style={{ fontSize:13.5, lineHeight:1.75, color:"rgba(242,242,247,0.72)" }} />
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(producto.description, FONDO_DESCRIPCION) }} style={{ fontSize:13.5, lineHeight:1.75, color:"rgba(242,242,247,0.72)" }} />
                 </div>
               )}
               {(condicion || otros.length > 0 || servicios.length > 0) && (

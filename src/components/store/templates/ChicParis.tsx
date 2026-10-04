@@ -45,6 +45,7 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 
 type Product = StorefrontProduct;
 
@@ -2550,7 +2551,7 @@ export default function ChicParis() {
                 <CpBloque titulo="Descripción">
                   {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
                       texto largo ya no deforma nada — se lee bajando acá adentro. */}
-                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7 }} />
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(modalProduct.description, "#ffffff") }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7 }} />
                 </CpBloque>
               )}
 

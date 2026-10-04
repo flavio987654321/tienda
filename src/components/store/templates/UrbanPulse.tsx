@@ -48,6 +48,7 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 
 type Product = StorefrontProduct;
 
@@ -3184,7 +3185,7 @@ export default function UrbanPulse() {
                             blanco da 4,48 de contraste y el mínimo para texto
                             normal es 4,5. Para una etiqueta suelta da igual; para
                             un párrafo de veinte líneas, no. */}
-                        <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }}
+                        <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(modalProduct.description, WHITE) }}
                           style={{ fontSize:13.5, color:"#3d3d3d", lineHeight:1.8, maxWidth:680 }} />
                         {plegada && <div style={{ position:"absolute", left:0, right:0, bottom:0, height:80, background:`linear-gradient(rgba(255,255,255,0), ${WHITE})`, pointerEvents:"none" }} />}
                       </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { descripcionLegible } from "@/lib/descripcionLegible";
 
 /* ────────────────────────────────────────────────────────────────────────────
    La descripción del producto, plegada cuando es larga.
@@ -85,7 +86,7 @@ export function DescripcionPlegable({
   return (
     <>
       <div style={{ position:"relative" }}>
-        <div ref={ref} className="product-rte" dangerouslySetInnerHTML={{ __html: html }} style={{ ...style, ...clamp }} />
+        <div ref={ref} className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(html, fundido ?? "") }} style={{ ...style, ...clamp }} />
         {recortado && fundido && (
           <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, pointerEvents:"none",
                         background:`linear-gradient(to bottom, transparent, ${fundido})` }} />
