@@ -33,6 +33,9 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { PreguntasBoho } from "@/components/store/templates/boho/PreguntasBoho";
+import { LookbookBoho } from "@/components/store/templates/boho/LookbookBoho";
+import { MAX_LOOKS } from "@/lib/lookbook";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
@@ -128,7 +131,7 @@ const PASO_RESENAS = 5;
 
 const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
-const BT_SECTION_IDS = ["bt-mayorista", "bt-banner", "bt-coleccion", "bt-ofertas", "bt-masvisto", "bt-prueba-social", "bt-nosotros", "bt-contacto"];
+const BT_SECTION_IDS = ["bt-mayorista", "bt-banner", "bt-coleccion", "bt-ofertas", "bt-masvisto", "bt-lookbook", "bt-prueba-social", "bt-preguntas", "bt-nosotros", "bt-contacto"];
 
 export default function BohoTerra() {
   // El tipo local de las reseñas se fue con el fetch propio: ahora la forma la
@@ -157,7 +160,7 @@ export default function BohoTerra() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
+  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, shippingMethods, hasMercadoPago } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
 
   /* El año del copyright, calculado UNA vez y fuera del dibujado (igual que en
@@ -272,6 +275,15 @@ export default function BohoTerra() {
   const nosotrosBg = sc["bgNosotros"] ?? S;
   const nosotrosText = getContrastColor(nosotrosBg) === "light" ? "#faf7f2" : "#2c2218";
   const nosotrosMid = getContrastColor(nosotrosBg) === "light" ? "#d5c9be" : "#9a8070";
+  /* Comprá el look y Preguntas frecuentes (los dos bloques nuevos, 04/10/26):
+     arena, porque los dos vecinos de cada uno son crema: con el mismo color
+     se pegaban y no se veía dónde terminaba uno y empezaba el otro. */
+  const lookbookBg    = sc["bgLookbook"] ?? S;
+  const lookbookText  = getContrastColor(lookbookBg) === "light" ? "#faf7f2" : "#2c2218";
+  const lookbookMid   = getContrastColor(lookbookBg) === "light" ? "#d5c9be" : "#7a6455";
+  const preguntasBg   = sc["bgPreguntas"] ?? S;
+  const preguntasText = getContrastColor(preguntasBg) === "light" ? "#faf7f2" : "#2c2218";
+  const preguntasMid  = getContrastColor(preguntasBg) === "light" ? "#d5c9be" : "#7a6455";
   const footerBg   = sc["bgFooter"]      ?? S;
   const footerText = getContrastColor(footerBg) === "light" ? "#faf7f2" : T;
   const footerMid  = getContrastColor(footerBg) === "light" ? "#d5c9be" : MID;
@@ -1462,6 +1474,16 @@ export default function BohoTerra() {
         })()}
       </SectionBlock>
 
+      {/* ── COMPRÁ EL LOOK (ver `boho/LookbookBoho`): sin fotos no existe ── */}
+      <SectionBlock id="bt-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
+        <LookbookBoho products={products} promotions={promotions}
+          imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
+          fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} A={getReadableAccentText(A, lookbookBg, lookbookText)} panel={BG} isMobile={isMobile}>
+          <EditableSectionBg field="bgLookbook" label="Fondo del look" />
+        </LookbookBoho>
+      </SectionBlock>
+
       <SectionBlock id="bt-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}
         avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
         {(() => {
@@ -1564,6 +1586,16 @@ export default function BohoTerra() {
             </section>
           );
         })()}
+      </SectionBlock>
+
+      {/* ── PREGUNTAS FRECUENTES (ver `boho/PreguntasBoho`) ── */}
+      <SectionBlock id="bt-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
+        <PreguntasBoho envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
+          legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
+          onContacto={() => irASeccion("contacto")} conWhatsapp={hasWA}
+          fondo={preguntasBg} tinta={preguntasText} suave={preguntasMid} A={getReadableAccentText(A, preguntasBg, preguntasText)} isMobile={isMobile}>
+          <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
+        </PreguntasBoho>
       </SectionBlock>
 
       <SectionBlock id="bt-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>

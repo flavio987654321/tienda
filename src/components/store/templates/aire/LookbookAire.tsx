@@ -86,6 +86,7 @@ export function LookbookAire({
 
         {/* ── La foto, con sus números ── */}
         {look ? (
+          <div style={{ minWidth:0 }}>
           <div key={look.n} onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
             style={{ position:"relative", aspectRatio:"4/5", width:"100%", borderRadius:RAD - 6, overflow:"hidden", background:LN,
               outline: marcando ? `3px solid ${G}` : "none", outlineOffset:-3, cursor: marcando ? "crosshair" : "default" }}>
@@ -127,28 +128,29 @@ export function LookbookAire({
             })}
 
             <EditableImageButton field={`lookbook${look.n}`} label={`Foto del look ${look.n}`} />
-            {/* Abajo de la foto, apilados: la tarjeta del número tocado y, en el
-                editor, los botones. Al lado del punto la tarjeta se cortaba
-                contra el borde de la foto, y suelta abajo tapaba los botones
-                del editor (04/10/26). La pila deja pasar los clics a la foto
-                (para marcar, o para cerrar la tarjeta tocando afuera: en el celular
-                tapa el número que se tocó) salvo sobre la tarjeta y los botones. */}
+            {/* La tarjeta del número tocado va abajo de la foto, a lo ancho: al lado
+                del número se cortaba contra el borde (04/10/26). Deja pasar los
+                clics a la foto salvo sobre ella (para marcar, o para cerrarla
+                tocando afuera: en el celular tapa el número que se tocó). */}
             <div style={{ position:"absolute", left:10, right:10, bottom:10, zIndex:6, display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, pointerEvents:"none" }}>
               {prodAbierto && tarjetaDe(prodAbierto, { position:"relative", pointerEvents:"auto", width:"100%", maxWidth:340, boxSizing:"border-box" })}
-              {editMode && (
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap", pointerEvents:"auto" }} onClick={e => e.stopPropagation()}>
-                  <button type="button" onClick={alternarMarcar} style={{ ...chip, ...(marcando ? { background:G, color:accentText, borderColor:G } : null) }}>
-                    📍 {marcando ? "Listo" : "Marcar productos"}
-                  </button>
-                  {marcando && <span style={{ ...chip, cursor:"default", fontWeight:500 }}>Tocá la foto donde está cada prenda ({puntos.length}/{MAX_PUNTOS})</span>}
-                  {sinProducto > 0 && (
-                    <span style={{ ...chip, cursor:"default", color:"#b45309", borderColor:"#f59e0b" }}>
-                      {sinProducto === 1 ? "1 punto" : `${sinProducto} puntos`} sin producto: no se ven en la tienda
-                    </span>
-                  )}
-                </div>
+            </div>
+          </div>
+          {/* Los botones del editor van DEBAJO de la foto, no encima: encima tapaban
+              las marcas de abajo (unas sandalias, en el celular) y no se podían tocar. */}
+          {editMode && (
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:10 }}>
+              <button type="button" onClick={alternarMarcar} style={{ ...chip, ...(marcando ? { background:G, color:accentText, borderColor:G } : null) }}>
+                📍 {marcando ? "Listo" : "Marcar productos"}
+              </button>
+              {marcando && <span style={{ ...chip, cursor:"default", fontWeight:500 }}>Tocá la foto donde está cada prenda ({puntos.length}/{MAX_PUNTOS})</span>}
+              {sinProducto > 0 && (
+                <span style={{ ...chip, cursor:"default", color:"#b45309", borderColor:"#f59e0b" }}>
+                  {sinProducto === 1 ? "1 punto" : `${sinProducto} puntos`} sin producto: no se ven en la tienda
+                </span>
               )}
             </div>
+          )}
           </div>
         ) : (
           /* Sólo en el editor: todavía no hay ninguna foto. */
