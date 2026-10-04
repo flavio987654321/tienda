@@ -42,6 +42,11 @@ function leerPuntos(texto: string | undefined): Punto[] {
   } catch { return []; }
 }
 
+/** El ancho de la columna de la foto en compu: lo que le da 72% del alto de la
+ *  pantalla (tope 640px) en 4/5, y nunca más de 55% del ancho, para que en
+ *  tablet quede lugar para "En este look". */
+const ANCHO_FOTO = "min(calc(min(72vh, 640px) * 0.8), 55%)";
+
 export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPrecios, onAbrir, escena, isMobile }: {
   products: StorefrontProduct[];
   promotions: ActivePromotion[];
@@ -131,12 +136,17 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
         </div>
 
         <div style={{ display:"grid", gap: isMobile ? 22 : 48, alignItems:"start",
-          gridTemplateColumns: isMobile || !look ? "minmax(0,1fr)" : "minmax(0,1.1fr) minmax(0,0.9fr)", ...(look ? null : { maxWidth:640 }) }}>
+          gridTemplateColumns: isMobile || !look ? "minmax(0,1fr)" : `minmax(0,${ANCHO_FOTO}) minmax(0,1fr)`, ...(look ? null : { maxWidth:640 }) }}>
           {/* ── La foto del look, con sus puntos ── */}
           <div style={{ perspective:"1400px" }}>
             {look ? (
+              /* Alto tope: a lo ancho de la columna la foto medía ~800px y no
+                 entraba en la pantalla (Flavio, 04/10/26). Se achica el ANCHO de la
+                 columna (ANCHO_FOTO) y no el alto: sigue en 4/5 y los puntos
+                 (en %) no se corren. */
               <div key={look.n} className="au-look" onClick={marcar}
-                style={{ position:"relative", aspectRatio:"4/5", borderRadius: isMobile ? 22 : 28, overflow:"hidden", background:"#0e0f1a",
+                style={{ position:"relative", aspectRatio:"4/5", width:"100%",
+                  borderRadius: isMobile ? 22 : 28, overflow:"hidden", background:"#0e0f1a",
                   border:`1px solid ${marcando ? luz(0.8) : LINEA_FUERTE}`, cursor: marcando ? "crosshair" : "default",
                   boxShadow:`0 40px 90px rgba(0,0,0,0.55), 0 0 70px ${luz(0.18)}`, animation:"au-look-llega .7s cubic-bezier(.16,.84,.32,1) both" }}>
                 <div aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${look.url})`, backgroundSize:"cover", backgroundPosition:"center" }} />
@@ -204,7 +214,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
               /* Sólo en el editor: todavía no hay ninguna foto. Explica QUÉ es y
                  para qué sirve, porque "lookbook" no lo entiende cualquiera, y
                  los tres pasos para armarlo. */
-              <div style={{ position:"relative", aspectRatio:"4/5", borderRadius:28, border:`1px dashed ${luz(0.55)}`, display:"flex", flexDirection:"column", justifyContent:"center",
+              <div style={{ position:"relative", minHeight:360, borderRadius:28, border:`1px dashed ${luz(0.55)}`, display:"flex", flexDirection:"column", justifyContent:"center",
                 padding: isMobile ? "26px 20px" : "40px 36px", color:T, fontFamily:"system-ui, -apple-system, sans-serif", background:"rgba(255,255,255,0.025)" }}>
                 <p style={{ margin:"0 0 8px", fontSize:15, fontWeight:700 }}>¿Qué es un lookbook?</p>
                 <p style={{ margin:"0 0 22px", fontSize:13, lineHeight:1.6, color:"rgba(242,242,247,0.78)" }}>
