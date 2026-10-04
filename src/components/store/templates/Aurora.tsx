@@ -7,6 +7,8 @@ import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFo
 import { FichaAurora } from "@/components/store/templates/aurora/FichaAurora";
 import { ResenasAurora } from "@/components/store/templates/aurora/ResenasAurora";
 import { REDES_SOCIALES } from "@/components/store/templates/shared/redesSociales";
+import { LanzamientoAurora } from "@/components/store/templates/aurora/LanzamientoAurora";
+import { LookbookAurora, MAX_LOOKS } from "@/components/store/templates/aurora/LookbookAurora";
 import { RecienLlegado } from "@/components/store/templates/aurora/RecienLlegado";
 import { PreguntasAurora } from "@/components/store/templates/aurora/PreguntasAurora";
 import { GarantiasAurora } from "@/components/store/templates/aurora/GarantiasAurora";
@@ -127,7 +129,7 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
 /** Cuántas piezas muestra el bloque de productos de la portada. */
 const VISTOS_EN_PORTADA = 8;
 
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-recien", "au-statement", "au-producto-foco", "au-productos", "au-resenas", "au-preguntas"];
+const AU_SECTION_IDS = ["au-lanzamiento", "au-garantias", "au-mayorista", "au-coleccion", "au-recien", "au-statement", "au-producto-foco", "au-lookbook", "au-productos", "au-resenas", "au-preguntas"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -1156,6 +1158,13 @@ export default function Aurora() {
       </section>
 
       <div style={{ display:"flex", flexDirection:"column" }}>
+      {/* ── LANZAMIENTO (ver `aurora/LanzamientoAurora`): sin fecha no existe ── */}
+      <SectionBlock id="au-lanzamiento" label="Lanzamiento" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+        <LanzamientoAurora products={products} imagen={storeConfig?.imageOverrides?.["lanzamientoImagen"]?.url}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirFicha} onVerCatalogo={() => abrirCatalogo()}
+          escena={escenaAurora} isMobile={isMobile} />
+      </SectionBlock>
+
       <SectionBlock id="au-garantias" label="Garantías" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
       <GarantiasAurora fondo={garantiasBg} tinta={garantiasText} escena={escenaAurora} isMobile={isMobile}
@@ -1213,6 +1222,13 @@ export default function Aurora() {
         <ProductoEnFoco products={products} promotions={promotions} fmt={fmt} ocultarPrecios={ocultarPrecios}
           favorites={favorites} onFavorito={toggleFavorite} onAbrir={abrirFicha}
           escena={escenaAurora} isMobile={isMobile} rebaja={REBAJA} tachado={TACHADO} />
+      </SectionBlock>
+
+      {/* ── LOOKBOOK (ver `aurora/LookbookAurora`): sin fotos no existe ── */}
+      <SectionBlock id="au-lookbook" label="Lookbook" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+        <LookbookAurora products={products} promotions={promotions}
+          imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirFicha} escena={escenaAurora} isMobile={isMobile} />
       </SectionBlock>
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
