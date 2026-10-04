@@ -58,31 +58,50 @@ export function PreguntasAire({
   return (
     <section data-reveal style={{ background:fondo, position:"relative", padding:`${isMobile ? 4 : 6}px ${MARGEN}px ${isMobile ? 26 : 38}px` }}>
       {children}
-      <div className="ai-entrada" style={{ maxWidth:ANCHO, margin:"0 auto", background:S, border:`1px solid ${LN}`, borderRadius:RAD,
-        display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,0.75fr) minmax(0,1.25fr)",
-        gap: isMobile ? 18 : 48, padding: isMobile ? "26px 18px 14px" : "44px 44px 30px" }}>
-        {/* ── El título, y la salida a contacto ── */}
-        <div style={{ position: isMobile ? "static" : "sticky", top:110, alignSelf:"start" }}>
-          <h2 style={{ fontSize: isMobile ? 21 : 28, fontWeight:800, letterSpacing:"-0.8px", color:T, margin:0, lineHeight:1.12, textTransform:"uppercase" }}>
-            <EditableZone field="faqTitulo" label="Título de preguntas">Preguntas frecuentes</EditableZone>
-          </h2>
-          <p style={{ fontSize: isMobile ? 14 : 15, color:T2, margin:"12px 0 0", lineHeight:1.55, maxWidth:400 }}>
-            <EditableZone field="faqTexto" label="Texto de preguntas">Lo que más nos preguntan antes de comprar, contestado acá para que no tengas que esperar.</EditableZone>
-          </p>
-          {!isMobile && (
-            <div style={{ marginTop:26, paddingTop:20, borderTop:`1px solid ${LN}` }}>
-              <p style={{ margin:"0 0 10px", fontSize:13, fontWeight:700, color:T }}>¿Otra duda?</p>
-              <button type="button" onClick={onContacto}
-                style={{ display:"inline-flex", alignItems:"center", gap:8, background:G, color:accentText, border:"none", borderRadius:999,
-                  padding:"11px 20px", fontSize:13.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                Escribinos <span aria-hidden>→</span>
-              </button>
-            </div>
-          )}
+      {/* Dos columnas recién desde 1024: en tablet el panel quedaba de 230px y
+          "PREGUNTAS" se partía en dos renglones. Abajo de eso el panel va arriba,
+          a todo el ancho. Con `isMobile` (el celular del editor, que no es un
+          ancho de pantalla de verdad) también va apilado. */}
+      <style>{`
+        .ai-faq { grid-template-columns: minmax(0,1fr); gap: 6px }
+        .ai-faq-lista { padding: 4px 16px 6px }
+        @media (min-width: 1024px) {
+          .ai-faq:not(.ai-faq-cel) { grid-template-columns: minmax(0,0.7fr) minmax(0,1.3fr); gap: 40px }
+          .ai-faq:not(.ai-faq-cel) .ai-faq-lista { padding: 22px 30px 14px 0 }
+        }
+      `}</style>
+      <div className={`ai-entrada ai-faq${isMobile ? " ai-faq-cel" : ""}`} style={{ maxWidth:ANCHO, margin:"0 auto", background:S, border:`1px solid ${LN}`, borderRadius:RAD,
+        display:"grid", padding: isMobile ? 8 : 10 }}>
+        {/* ── El panel del acento: título arriba, salida a contacto abajo ──
+            Antes el título iba suelto sobre el blanco y abajo de "Escribinos"
+            quedaba un hueco del alto de la lista (Flavio, 04/10/26: "es feo").
+            Ahora es un panel que se estira hasta el alto de la lista, así que
+            no hay vacío, y el bloque tiene su golpe de color. */}
+        <div style={{ position:"relative", overflow:"hidden", borderRadius:RAD - 6, background:G, color:accentText,
+          display:"flex", flexDirection:"column", justifyContent:"space-between", gap: isMobile ? 18 : 28, padding: isMobile ? "24px 20px" : "38px 34px" }}>
+          {/* El signo grande de fondo, apenas marcado. */}
+          <span aria-hidden style={{ position:"absolute", right: isMobile ? -6 : -14, bottom: isMobile ? -40 : -70, fontSize: isMobile ? 150 : 260, fontWeight:900,
+            lineHeight:1, color:accentText, opacity:0.08, pointerEvents:"none", userSelect:"none" }}>?</span>
+          <div style={{ position:"relative" }}>
+            <h2 style={{ fontSize: isMobile ? 21 : 28, fontWeight:800, letterSpacing:"-0.8px", color:accentText, margin:0, lineHeight:1.12, textTransform:"uppercase" }}>
+              <EditableZone field="faqTitulo" label="Título de preguntas">Preguntas frecuentes</EditableZone>
+            </h2>
+            <p style={{ fontSize: isMobile ? 14 : 15, color:accentText, opacity:0.82, margin:"12px 0 0", lineHeight:1.55, maxWidth:400 }}>
+              <EditableZone field="faqTexto" label="Texto de preguntas">Lo que más nos preguntan antes de comprar, contestado acá para que no tengas que esperar.</EditableZone>
+            </p>
+          </div>
+          <div style={{ position:"relative" }}>
+            <p style={{ margin:"0 0 10px", fontSize:13, fontWeight:700, color:accentText }}>¿Otra duda?</p>
+            <button type="button" onClick={onContacto}
+              style={{ display:"inline-flex", alignItems:"center", gap:8, background:accentText, color:G, border:"none", borderRadius:999,
+                padding:"11px 20px", fontSize:13.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+              Escribinos <span aria-hidden>→</span>
+            </button>
+          </div>
         </div>
 
         {/* ── La lista ── */}
-        <div>
+        <div className="ai-faq-lista">
           {items.map((it, i) => {
             const abierto = abierta === i;
             const id = `ai-faq-${i}`;
