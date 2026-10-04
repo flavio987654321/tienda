@@ -37,7 +37,7 @@ import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irACon
 import { PreguntasBoho } from "@/components/store/templates/boho/PreguntasBoho";
 import { LookbookBoho } from "@/components/store/templates/boho/LookbookBoho";
 import { MAX_LOOKS } from "@/lib/lookbook";
-import { useEfectosScroll } from "@/components/store/templates/shared/useEfectosScroll";
+import { useEfectosScroll, useMostrarAlAbrir } from "@/components/store/templates/shared/useEfectosScroll";
 import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
 import { SegundaFoto } from "@/components/store/templates/shared/SegundaFoto";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
@@ -533,7 +533,8 @@ export default function BohoTerra() {
   useScrollReveal();
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40);
+    // Con la página bloqueada (menú del celular abierto) el scroll vale 0: no es "volver arriba".
+    const fn = () => { if (document.body.style.position !== "fixed") setScrolled(window.scrollY > 40); };
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
@@ -562,6 +563,7 @@ export default function BohoTerra() {
      La barra sube su propio alto más el de la franja de anuncios, que se va
      con ella. */
   const barraEscondida = barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
+  useMostrarAlAbrir(mobileMenuOpen || userDropdownOpen || !!hoveredNavCat || searchOpen || favoritesOpen, mostrarBarra);
   const transicionBarra = "transform .35s cubic-bezier(.2,.8,.2,1)";
 
   useEffect(() => {
@@ -964,7 +966,7 @@ export default function BohoTerra() {
               </div>
             )}
             {isMobile && (
-              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
+              <button aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={mobileMenuOpen} onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }}/>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }}/>

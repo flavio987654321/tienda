@@ -116,12 +116,8 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                 {puntosVisibles.map((pt, i) => {
                   const prod = porId.get(pt.id);
                   const abierto = puntoAbierto === i && !!prod && !marcando;
-                  // La tarjeta se abre hacia el lado donde hay lugar, y para arriba si el punto está abajo.
-                  // A la mitad justa y de 210: con 55 y 230, un punto en el medio la cortaba contra el borde.
-                  const haciaIzq = pt.x > 50;
-                  const haciaArriba = pt.y > 72;
                   return (
-                    <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 4 : 3 }}>
+                    <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 8 : 7 }}>
                       <button type="button" aria-label={prod ? `Ver ${prod.name}` : "Punto sin producto"}
                         onClick={e => { e.stopPropagation(); if (!marcando) setPuntoAbierto(abierto ? null : i); }}
                         style={{ position:"absolute", left:0, top:0, transform:"translate(-50%,-50%)", width:44, height:44, borderRadius:999,
@@ -132,9 +128,6 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                           background: prod ? G : "#fbbf24", border:"2px solid rgba(255,255,255,0.9)", boxShadow:`0 0 18px ${luz(0.9)}` }} />
                       </button>
 
-                      {/* En la compu la tarjeta sale al lado del punto; en el celular va abajo
-                          de la foto, a lo ancho (ver más abajo): al lado del punto no entraba. */}
-                      {abierto && prod && !isMobile && tarjetaDe(prod, { position:"absolute", ...(haciaArriba ? { bottom:26 } : { top:26 }), ...(haciaIzq ? { right:-14 } : { left:-14 }), width:210 })}
 
                       {/* En el editor, con "Marcar productos": a qué producto apunta y borrarlo. */}
                       {editMode && marcando && (
@@ -153,7 +146,12 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                   );
                 })}
 
-                {isMobile && prodAbierto && tarjetaDe(prodAbierto, { position:"absolute", left:12, right:12, bottom: editMode ? 58 : 12 })}
+                {/* La tarjeta va anclada arriba o abajo de la foto, en la mitad
+                    OPUESTA al punto tocado. Al lado del punto (como era en la
+                    compu) tapaba la marca de al lado; y las marcas van por encima
+                    de ella (zIndex 7/8), así siempre se pueden tocar. */}
+                {prodAbierto && tarjetaDe(prodAbierto, { position:"absolute", left:12, maxWidth:300, width:"calc(100% - 24px)", boxSizing:"border-box",
+                  ...((puntosVisibles[puntoAbierto ?? -1]?.y ?? 0) > 55 ? { top: editMode ? 56 : 12 } : { bottom: editMode ? 58 : 12 }) })}
                 <EditableImageButton field={`lookbook${look.n}`} label={`Foto del look ${look.n}`} />
                 {editMode && (
                   <div style={{ position:"absolute", left:12, bottom:12, zIndex:6, display:"flex", gap:8, flexWrap:"wrap" }} onClick={e => e.stopPropagation()}>

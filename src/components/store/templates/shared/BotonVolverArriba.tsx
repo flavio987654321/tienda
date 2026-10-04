@@ -23,7 +23,7 @@ export function BotonVolverArriba({ visible, encimaDeOtro, sinMovimiento, estilo
         window.scrollTo({ top: 0, behavior: sinMovimiento ? "auto" : "smooth" });
         /* El foco del teclado sube con la página: si no, quedaba en este botón,
            que se esconde, y el siguiente Tab seguía desde el final. */
-        const destino = document.querySelector<HTMLElement>("header a, header button, nav a, nav button");
+        const destino = document.querySelector<HTMLElement>("header a, header button, nav a, nav button, [data-template-raiz] a[href], [data-template-raiz] button");
         destino?.focus({ preventScroll: true });
       }}
       style={{

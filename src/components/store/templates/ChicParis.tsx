@@ -43,7 +43,7 @@ import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irACon
 import { PreguntasChic } from "@/components/store/templates/chic/PreguntasChic";
 import { LookbookChic } from "@/components/store/templates/chic/LookbookChic";
 import { MAX_LOOKS } from "@/lib/lookbook";
-import { useEfectosScroll } from "@/components/store/templates/shared/useEfectosScroll";
+import { useEfectosScroll, useMostrarAlAbrir } from "@/components/store/templates/shared/useEfectosScroll";
 import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
 import { SegundaFoto } from "@/components/store/templates/shared/SegundaFoto";
 import { colorToSwatch } from "@/lib/colorSwatch";
@@ -445,7 +445,8 @@ export default function ChicParis() {
 
   // scroll
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 50);
+    // Con la página bloqueada (menú del celular abierto) el scroll vale 0: no es "volver arriba".
+    const fn = () => { if (document.body.style.position !== "fixed") setScrolled(window.scrollY > 50); };
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
   }, []);
@@ -556,6 +557,7 @@ export default function ChicParis() {
   });
   // No se esconde con algo de la barra abierto: se iría con lo abierto.
   const barraEscondida = !isPreview && barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
+  useMostrarAlAbrir(mobileMenuOpen || userDropdownOpen || !!hoveredNavCat || searchOpen || favoritesOpen, mostrarBarra);
   const transicionBarra = "transform .35s cubic-bezier(.2,.8,.2,1)";
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
   // Acento usado como TEXTO/borde sobre el fondo claro de la sección de reseñas
@@ -1155,7 +1157,7 @@ export default function ChicParis() {
               )}
             </div>
             {isMobile && (
-              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
+              <button aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={mobileMenuOpen} onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-3px)" : "none" }}/>
@@ -2043,7 +2045,7 @@ export default function ChicParis() {
 
       <SectionBlock id="cp-contacto" label="Contacto" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       {/* ── CONTACT — split editorial ── */}
-      <section id="contacto" data-reveal style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", minHeight: isMobile ? "auto" : 540 }}>
+      <section id="contacto" data-reveal style={{ display: "grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)", minHeight: isMobile ? "auto" : 540 }}>
 
         {/* Panel izquierdo — info */}
         <div style={{ background: "#111", padding: isMobile ? "48px 20px" : "72px 56px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>

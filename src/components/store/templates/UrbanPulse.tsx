@@ -45,7 +45,7 @@ import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irACon
 import { PreguntasUrban } from "@/components/store/templates/urban/PreguntasUrban";
 import { LookbookUrban } from "@/components/store/templates/urban/LookbookUrban";
 import { MAX_LOOKS } from "@/lib/lookbook";
-import { useEfectosScroll } from "@/components/store/templates/shared/useEfectosScroll";
+import { useEfectosScroll, useMostrarAlAbrir } from "@/components/store/templates/shared/useEfectosScroll";
 import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
 import { SegundaFoto } from "@/components/store/templates/shared/SegundaFoto";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
@@ -643,7 +643,8 @@ export default function UrbanPulse() {
     : TICKER;
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 50);
+    // Con la página bloqueada (menú del celular abierto) el scroll vale 0: no es "volver arriba".
+    const fn = () => { if (document.body.style.position !== "fixed") setScrolled(window.scrollY > 50); };
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
@@ -723,6 +724,7 @@ export default function UrbanPulse() {
   } = cart;
   // La barra no se esconde con algo de ella abierto (ver useEfectosScroll, arriba): se iría con lo abierto.
   const barraEscondida = !isPreview && barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
+  useMostrarAlAbrir(mobileMenuOpen || userDropdownOpen || !!hoveredNavCat || searchOpen || favoritesOpen, mostrarBarra);
   // `accentText` se declaraba acá una segunda vez, solo para el carrito, y estaba
   // INVERTIDO: `getContrastColor(ACC) === "light"` significa "sobre ACC va texto
   // claro", y la rama devolvía DARK. Con el acento de fábrica —el neón #d4ff00—
@@ -1080,7 +1082,14 @@ export default function UrbanPulse() {
       )}
 
       {/* NAVBAR */}
-      <nav onFocusCapture={mostrarBarra} style={{ position:"sticky", top:0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"background 0.3s, border-color 0.3s, transform .35s cubic-bezier(.2,.8,.2,1)", transform: barraEscondida ? "translateY(-100%)" : "none", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      {/* Con el menú del celular abierto la barra pasa a FIJA, a la misma altura
+          que tenía: el menú bloquea la página (body fixed y corrido hacia arriba)
+          y una barra sticky se iba con ella fuera de la pantalla, con la X
+          adentro. Quedaba el menú sin forma de cerrarlo con el dedo
+          (auditoría del 04/10/26). */}
+      <nav onFocusCapture={mostrarBarra} style={{ ...(mobileMenuOpen && !isPreview
+          ? { position:"fixed", top: scrolled || !promoBannerEnabled ? 0 : 36, left:0, right:0 }
+          : { position:"sticky", top:0 }), zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"background 0.3s, border-color 0.3s, transform .35s cubic-bezier(.2,.8,.2,1)", transform: barraEscondida ? "translateY(-100%)" : "none", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         {/* La marca es lo ÚNICO que cede ancho. Antes tenía `flexShrink:0`, así que
             se plantaba: cuando no entraba todo, el que se salía de la pantalla era
             el grupo de íconos, y con él la página entera (74px de más a 360px,
@@ -1266,7 +1275,7 @@ export default function UrbanPulse() {
             )}
           </div>
           {navCompacto && (
-            <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
+            <button aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={mobileMenuOpen} onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,4px)" : "none" }}/>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-4px)" : "none" }}/>

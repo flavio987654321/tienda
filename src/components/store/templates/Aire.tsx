@@ -27,7 +27,7 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PreguntasAire } from "@/components/store/templates/aire/PreguntasAire";
-import { useEfectosScroll } from "@/components/store/templates/shared/useEfectosScroll";
+import { useEfectosScroll, useMostrarAlAbrir } from "@/components/store/templates/shared/useEfectosScroll";
 import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
 import { SegundaFoto } from "@/components/store/templates/shared/SegundaFoto";
 import { LookbookAire } from "@/components/store/templates/aire/LookbookAire";
@@ -632,7 +632,8 @@ export default function Aire() {
   useScrollReveal();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
+    // Con la página bloqueada (menú del celular abierto) el scroll vale 0: no es "volver arriba".
+    const onScroll = () => { if (document.body.style.position !== "fixed") setScrolled(window.scrollY > 60); };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -646,6 +647,7 @@ export default function Aire() {
   /* No se esconde con algo de la barra abierto: el menú del celular, el de la
      cuenta, las categorías, el buscador o favoritos. Se iría con lo abierto. */
   const barraEscondida = barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
+  useMostrarAlAbrir(mobileMenuOpen || userDropdownOpen || !!hoveredNavCat || searchOpen || favoritesOpen, mostrarBarra);
   const corrimientoBarra: React.CSSProperties = isPreview ? {} : {
     transform: barraEscondida ? `translateY(-${altoBarra + 2}px)` : "none",
     transition: "transform .35s cubic-bezier(.2,.8,.2,1)",
@@ -1602,16 +1604,17 @@ export default function Aire() {
           <span style={{ fontSize:12, fontWeight:600, color:accentText, letterSpacing:0.3 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
-          <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
-            {/* El BLANCO es de 26px aunque la rayita mida 3.
-                Medido en un celular de 360: el boton era de 6×3 px —tres pixeles
-                de alto—, o sea que cambiar de anuncio con el dedo era cuestion de
-                suerte. Lo que se VE no cambia: la rayita sigue igual, adentro de
-                un boton transparente que se puede tocar. Es lo mismo que ya hacia
-                el carrusel compartido con sus puntitos (`dotHit`). */}
+          {/* Pegados al borde de abajo. Con botones de 28 px en una barra de 36, la
+              rayita caía en el MEDIO y tachaba el texto, y el botón transparente
+              tapaba el texto (no se podía tocar para editarlo). Medido el 04/10/26. */}
+          <div style={{ position:"absolute", bottom:0, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
+            {/* El BLANCO es más grande que la rayita (28×12 contra 6×3): con el
+                botón del tamaño de la rayita, cambiar de anuncio con el dedo era
+                cuestión de suerte. No más alto que 12, eso sí: con 28 tapaba el
+                texto de la barra (ver arriba). Los anuncios igual pasan solos. */}
             {announcementMessages.map((_, i) => (
               <button key={i} onClick={() => setAnnouncementIdx(i)} aria-label={`Anuncio ${i + 1}`}
-                style={{ background:"none", border:"none", padding:0, width:28, height:28, display:"grid", placeItems:"center", cursor:"pointer" }}>
+                style={{ background:"none", border:"none", padding:"0 0 4px", width:28, height:12, display:"grid", placeItems:"end center", cursor:"pointer" }}>
                 <span aria-hidden style={{ display:"block", width: i === announcementIdx ? 16 : 6, height:3, borderRadius:999, background:accentText, opacity: i === announcementIdx ? 0.95 : 0.4, transition:"all 0.3s" }}/>
 
               </button>

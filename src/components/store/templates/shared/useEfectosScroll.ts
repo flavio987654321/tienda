@@ -97,3 +97,16 @@ export function useEfectosScroll({ activo, capas = [] }: { activo: boolean; capa
   // Apagado, nunca esconde ni ofrece nada (aunque haya quedado algo de antes).
   return { barraOculta: activo && barraOculta, lejosArriba: activo && lejosArriba, sinMovimiento, mostrarBarra };
 }
+
+/** Mientras hay algo de la barra abierto (menú, cuenta, categorías, buscador,
+ *  favoritos) la barra no se esconde, pero el scroll de abajo podía seguir
+ *  marcándola como oculta: al CERRARLO se iba de golpe (auditoría del 04/10/26).
+ *  Esto la deja mostrada apenas se abre algo. Ajusta el estado durante el render,
+ *  el patrón de React para reaccionar a un cambio de props sin un efecto. */
+export function useMostrarAlAbrir(abierto: boolean, mostrarBarra: () => void) {
+  const [antes, setAntes] = useState(abierto);
+  if (abierto !== antes) {
+    setAntes(abierto);
+    if (abierto) mostrarBarra();
+  }
+}

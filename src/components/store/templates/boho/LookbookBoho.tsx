@@ -125,7 +125,7 @@ export function LookbookBoho({
                 const abierto = puntoAbierto === i && !!prod && !marcando;
                 const resaltado = !!prod && prod.id === abiertoId;
                 return (
-                  <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 4 : 3 }}>
+                  <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 8 : 7 }}>
                     <button type="button" aria-label={prod ? `Ver ${prod.name}` : "Punto sin producto"}
                       onClick={e => { e.stopPropagation(); if (!marcando) setPuntoAbierto(abierto ? null : i); }}
                       style={{ position:"absolute", left:0, top:0, transform:"translate(-50%,-50%)", width:44, height:44, borderRadius:999,
@@ -153,7 +153,9 @@ export function LookbookBoho({
               })}
 
               {/* La tarjeta del punto tocado, abajo de la foto. Deja pasar los clics a la
-                  foto salvo sobre ella misma (para marcar, o cerrarla tocando afuera). */}
+                  foto salvo sobre ella misma (para marcar, o cerrarla tocando afuera).
+                  Siempre abajo: arriba la cortaría la curva del arco. Las marcas van
+                  por encima de ella (zIndex 7/8), así nunca quedan tapadas. */}
               <div style={{ position:"absolute", left:10, right:10, bottom:10, zIndex:6, display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, pointerEvents:"none" }}>
                 {prodAbierto && tarjetaDe(prodAbierto)}
               </div>

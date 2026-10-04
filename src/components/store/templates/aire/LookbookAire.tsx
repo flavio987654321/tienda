@@ -54,6 +54,12 @@ export function LookbookAire({
 
   if (!existe) return null;
 
+  /* La tarjeta del punto tocado va en la mitad OPUESTA de la foto: si el punto
+     está abajo, arriba. Pegada siempre abajo tapaba las marcas de abajo (el
+     pantalón, en el ejemplo). Las marcas además van por encima de la tarjeta
+     (zIndex 7/8 contra 6), así siempre se pueden tocar. */
+  const tarjetaArriba = puntoAbierto !== null && (puntosVisibles[puntoAbierto]?.y ?? 0) > 55;
+
   /* El número de cada producto: su lugar en la lista. Dos puntos sobre el
      mismo producto llevan el mismo número. */
   const numeroDe = (id: string) => enEsteLook.findIndex(p => p.id === id) + 1;
@@ -99,7 +105,7 @@ export function LookbookAire({
               const abierto = puntoAbierto === i && !!prod && !marcando;
               const resaltado = !!prod && prod.id === abiertoId;
               return (
-                <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 4 : 3 }}>
+                <div key={i} style={{ position:"absolute", left:`${pt.x}%`, top:`${pt.y}%`, zIndex: abierto ? 8 : 7 }}>
                   {/* 44px de botón para el dedo; el círculo que se ve es de 30. */}
                   <button type="button" aria-label={prod ? `Ver ${prod.name}` : "Punto sin producto"}
                     onClick={e => { e.stopPropagation(); if (!marcando) setPuntoAbierto(abierto ? null : i); }}
@@ -134,7 +140,7 @@ export function LookbookAire({
                 del número se cortaba contra el borde (04/10/26). Deja pasar los
                 clics a la foto salvo sobre ella (para marcar, o para cerrarla
                 tocando afuera: en el celular tapa el número que se tocó). */}
-            <div style={{ position:"absolute", left:10, right:10, bottom:10, zIndex:6, display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, pointerEvents:"none" }}>
+            <div style={{ position:"absolute", left:10, right:10, ...(tarjetaArriba ? { top:10 } : { bottom:10 }), zIndex:6, display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, pointerEvents:"none" }}>
               {prodAbierto && tarjetaDe(prodAbierto, { position:"relative", pointerEvents:"auto", width:"100%", maxWidth:340, boxSizing:"border-box" })}
             </div>
           </div>
