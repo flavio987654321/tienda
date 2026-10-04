@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { CampoFecha } from "@/components/CampoFecha";
 import { motion } from "framer-motion";
 import { Radio, Loader2, Pencil, Trash2, Power, Eye, X as Cerrar, MousePointerClick, Plus, Users, User, Search, ThumbsUp, ThumbsDown } from "lucide-react";
 import { CartelAviso } from "@/components/AvisoDelPanel";
@@ -475,7 +476,9 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
           )}
           </>)}
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* Las fechas van a lo ancho: con día, mes y año en desplegables (ver
+              components/CampoFecha) no entran en un tercio. */}
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_minmax(0,1fr)]">
             <div>
               <label htmlFor="av-tono" className={etiqueta}>Color</label>
               <select id="av-tono" className={campo} value={b.tono} onChange={(e) => set("tono", e.target.value as TonoAviso)}>
@@ -483,8 +486,15 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
               </select>
             </div>
             <div>
-              <label htmlFor="av-desde" className={etiqueta}>Desde <span className="font-normal text-gray-600">(vacío = ya)</span></label>
-              <input id="av-desde" type="datetime-local" className={`${campo} [color-scheme:dark]`} value={b.desde} onChange={(e) => set("desde", e.target.value)} />
+              <div className="flex items-baseline justify-between gap-2">
+                <label htmlFor="av-desde" className={etiqueta}>Desde <span className="font-normal text-gray-600">(vacío = ya)</span></label>
+                {b.desde && (
+                  <button type="button" onClick={() => set("desde", "")} className="text-[11.5px] font-semibold text-gray-400 hover:text-white">
+                    Quitar
+                  </button>
+                )}
+              </div>
+              <CampoFecha id="av-desde" conHora etiqueta="Desde" valor={b.desde} onCambio={(v) => set("desde", v)} clase={`${campo} [color-scheme:dark] !px-2`} estiloOpciones={{ color: "#e5e7eb", background: "#111827" }} />
             </div>
             <div>
               <div className="flex items-baseline justify-between gap-2">
@@ -498,7 +508,7 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
                   </button>
                 )}
               </div>
-              <input id="av-hasta" type="datetime-local" className={`${campo} [color-scheme:dark]`} value={b.hasta} onChange={(e) => set("hasta", e.target.value)} />
+              <CampoFecha id="av-hasta" conHora etiqueta="Hasta" valor={b.hasta} onCambio={(v) => set("hasta", v)} clase={`${campo} [color-scheme:dark] !px-2`} estiloOpciones={{ color: "#e5e7eb", background: "#111827" }} />
             </div>
           </div>
           {/* Las fechas, dichas en castellano. El campo de fecha lo dibuja el

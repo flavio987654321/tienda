@@ -3,6 +3,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { EditableZone, EditableImageButton, useEditContext } from "@/contexts/EditContext";
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
+import { CampoFecha } from "@/components/CampoFecha";
 import type { EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -100,9 +101,13 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
         <div style={{ position:"absolute", top:14, left:14, zIndex:7, display:"flex", flexWrap:"wrap", alignItems:"center", gap:8, maxWidth:"calc(100% - 28px)",
           background:"rgba(14,15,26,0.9)", backdropFilter:"blur(14px)", border:`1px solid ${LINEA_FUERTE}`, color:T, borderRadius:16, padding:"8px 12px", fontSize:11, fontWeight:600 }}>
           🚀 Lanzamiento
-          <input type="datetime-local" value={aLocal(fechaIso)} aria-label="Fecha y hora del lanzamiento"
-            onChange={e => setOverride("lanzamientoFecha", { text: e.target.value ? new Date(e.target.value).toISOString() : "" })}
-            style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, colorScheme:"dark" }} />
+          {/* Desplegables en castellano y no el campo del navegador, que en un
+              Chrome en inglés sale "mm/dd/yyyy" (ver components/CampoFecha). */}
+          <div style={{ flex:"1 1 330px", minWidth:0 }}>
+            <CampoFecha conHora etiqueta="Fecha del lanzamiento" valor={aLocal(fechaIso)} estiloOpciones={{ color:"#111" }}
+              onCambio={v => setOverride("lanzamientoFecha", { text: v ? new Date(v).toISOString() : "" })}
+              estilo={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 8px", fontSize:11, cursor:"pointer" }} />
+          </div>
           <select value={producto?.id ?? ""} aria-label="Producto del lanzamiento"
             onChange={e => setOverride("lanzamientoProducto", { text: e.target.value })}
             style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer", maxWidth:200 }}>
@@ -112,7 +117,12 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
           <label style={{ display:"flex", alignItems:"center", gap:5, fontWeight:500, cursor:"pointer" }}>
             <input type="checkbox" checked={verLanzado} onChange={e => setVerLanzado(e.target.checked)} /> Ver ya lanzado
           </label>
-          {!hayFecha && <span style={{ color:"#fbbf24", fontWeight:500 }}>Sin fecha no se muestra en la tienda</span>}
+          {/* Cada elección se valida en el momento, con palabras. */}
+          {!hayFecha
+            ? <span style={{ color:"#fbbf24", fontWeight:500 }}>Elegí la fecha: sin fecha no se muestra en la tienda.</span>
+            : ahora !== null && fecha / 1000 <= ahora
+              ? <span style={{ color:"#fbbf24", fontWeight:500 }}>Esa fecha ya pasó: en la tienda se ve como &quot;Ya disponible&quot;.</span>
+              : cuando && <span style={{ color:"#4ade80", fontWeight:500 }}>Sale el {cuando}.</span>}
         </div>
       )}
 

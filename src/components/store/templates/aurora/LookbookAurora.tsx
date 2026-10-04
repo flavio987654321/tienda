@@ -188,6 +188,13 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                       📍 {marcando ? "Listo" : "Marcar productos"}
                     </button>
                     {marcando && <span style={{ ...chip, cursor:"default", fontWeight:500 }}>Tocá la foto donde está cada prenda ({puntos.length}/{MAX_PUNTOS})</span>}
+                    {/* Un punto sin producto no se muestra en la tienda: se avisa
+                        en el momento, también con "Marcar" cerrado. */}
+                    {puntos.some(pt => !porId.has(pt.id)) && (
+                      <span style={{ ...chip, cursor:"default", fontWeight:600, color:"#fbbf24", borderColor:"rgba(251,191,36,0.5)" }}>
+                        {puntos.filter(pt => !porId.has(pt.id)).length === 1 ? "1 punto" : `${puntos.filter(pt => !porId.has(pt.id)).length} puntos`} sin producto: no se ven en la tienda
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
