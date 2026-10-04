@@ -156,7 +156,7 @@ export function HeroFoto({
           desmontarlas haria que cada cambio empiece con la imagen sin cargar. */}
       {imagenes.map((src, i) => (
         <div
-          key={src}
+          key={`${i}-${src}`}
           aria-hidden={i !== activa}
           className="hero-foto-capa"
           style={{
@@ -165,9 +165,11 @@ export function HeroFoto({
             // La foto y el encuadre van en variables: la regla de `globals.css`
             // elige entre las de PC y las de celular según el ancho.
             ["--hf-foto" as string]: `url(${src})`,
-            ["--hf-pos" as string]: posicion,
+            // El encuadre elegido es el de la foto propia, que siempre va primera.
+            // Las de productos van centradas.
+            ["--hf-pos" as string]: i === 0 ? posicion : "center",
             ...(i === 0 && imagenCelular ? { ["--hf-foto-cel" as string]: `url(${imagenCelular})` } : null),
-            ...(posicionCelular ? { ["--hf-pos-cel" as string]: posicionCelular } : null),
+            ...(i === 0 && posicionCelular ? { ["--hf-pos-cel" as string]: posicionCelular } : null),
             backgroundSize: "cover",
             opacity: i === activa ? 1 : 0,
             // El acercamiento corre sólo en la que se ve, así arranca de cero
@@ -300,7 +302,7 @@ export function HeroFoto({
             const es = i === activa;
             const lado = celular ? 52 : 70;
             return (
-              <button key={src} type="button" role="tab" aria-selected={es} aria-label={`Ver la foto ${i + 1} de ${total}`}
+              <button key={`${i}-${src}`} type="button" role="tab" aria-selected={es} aria-label={`Ver la foto ${i + 1} de ${total}`}
                 onClick={() => setActiva(i)}
                 style={{
                   position: "relative", width: lado, height: celular ? 64 : 88, padding: 0, borderRadius: 14, overflow: "hidden", cursor: "pointer",

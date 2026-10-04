@@ -6,6 +6,7 @@ import { ColeccionEnFoco } from "@/components/store/templates/aurora/ColeccionEn
 import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFoco";
 import { FichaAurora } from "@/components/store/templates/aurora/FichaAurora";
 import { ResenasAurora } from "@/components/store/templates/aurora/ResenasAurora";
+import { ElegirPortada, leerPiezasPortada, MAX_PORTADA } from "@/components/store/templates/aurora/ElegirPortada";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
@@ -600,12 +601,20 @@ export default function Aurora() {
   const heroUrl = heroBgImg?.url;
   /* Sin foto propia, las de hasta cuatro productos: cada una lleva su producto
      detrás, que el hero muestra en una tarjeta con nombre, precio y "Ver". */
-  const heroProductos = useMemo(
-    () => heroUrl ? [] : products.filter(p => p.images[0]).slice(0, 4),
-    [heroUrl, products],
-  );
+  /* La dueña puede elegirlos en el editor (`heroPiezas`). Con foto propia y
+     productos elegidos, se combinan: la foto primero y los productos después. */
+  const productosConFoto = useMemo(() => products.filter(p => p.images[0]), [products]);
+  const heroElegidos = leerPiezasPortada(textOverrides["heroPiezas"]?.text);
+  const claveElegidos = heroElegidos.join();
+  const heroProductos = useMemo(() => {
+    const elegidos = claveElegidos
+      ? claveElegidos.split(",").map(id => productosConFoto.find(p => p.id === id)).filter((p): p is StorefrontProduct => !!p)
+      : [];
+    if (elegidos.length) return elegidos;
+    return heroUrl ? [] : productosConFoto.slice(0, MAX_PORTADA);
+  }, [heroUrl, productosConFoto, claveElegidos]);
   const heroFotos = useMemo(
-    () => heroUrl ? [heroUrl] : heroProductos.map(p => p.images[0]),
+    () => [...(heroUrl ? [heroUrl] : []), ...heroProductos.map(p => p.images[0])],
     [heroUrl, heroProductos],
   );
 
@@ -1077,6 +1086,10 @@ export default function Aurora() {
       <section id="hero" style={{ position:"relative" }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
+        {editMode && (
+          <ElegirPortada productos={productosConFoto} elegidos={heroElegidos} conFotoPropia={!!heroUrl}
+            tinta={T} acento={G} textoAcento={textoSobreAcento} linea={LINEA_FUERTE} fondoPanel="rgba(14,15,26,0.94)" />
+        )}
         <HeroFoto
           imagenes={heroFotos}
           posicion={heroBgImg ? `${heroBgImg.posX ?? 50}% ${heroBgImg.posY ?? 50}%` : "center"}
@@ -1095,14 +1108,15 @@ export default function Aurora() {
           // su lugar en el flujo: reservarlo otra vez sería un hueco de 72px.
           margenNav={isPreview ? 0 : 72}
           celular={isMobile}
-          piezas={heroUrl ? undefined : heroProductos.map(p => {
+          // La foto propia, si la hay, va primera y no es de ningún producto.
+          piezas={[...(heroUrl ? [null] : []), ...heroProductos.map(p => {
             const promoHero = resolveProductPromo(p, promotions);
             return {
               titulo: p.name,
               precio: ocultarPrecios ? undefined : fmt(promoHero.hasPriceDrop ? promoHero.effectivePrice : p.price),
               onVer: (e: React.MouseEvent) => abrirFicha(p, e),
             };
-          })}
+          })]}
           kicker={<EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>}
           titulo={<EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>}
           texto={<EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad.</EditableZone>}
