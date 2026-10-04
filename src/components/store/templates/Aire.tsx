@@ -175,6 +175,11 @@ export default function Aire() {
    *  aplicado sobre otra. */
   /** Qué tarjeta tiene el mouse encima, para agrandarle la foto. */
   const [hoveredId,          setHoveredId]          = useState<string | null>(null);
+  /* Las tarjetas que ya se miraron con el mouse: recién ahí se monta su
+     segunda foto, para no bajar la segunda de TODOS los productos de entrada. */
+  const [conSegunda,         setConSegunda]         = useState<Set<string>>(() => new Set());
+  const [barraOculta,        setBarraOculta]        = useState(false);
+  const [lejosArriba,        setLejosArriba]        = useState(false);
   const [isMobile,           setIsMobile]           = useState(false);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
@@ -628,11 +633,58 @@ export default function Aire() {
 
   useScrollReveal();
 
+  /* ── Lo que pasa al bajar y subir (04/10/26) ───────────────────────────────
+     Un solo oyente del scroll para todo, y el trabajo pesado en un
+     requestAnimationFrame: se mueve a lo sumo una vez por cuadro.
+
+     - La barra de arriba (con la de anuncios) se ESCONDE al bajar y VUELVE
+       apenas se sube. Bajando se mira producto; en el celular la barra le
+       come un sexto de la pantalla. Subir es la señal de "quiero ir a otro
+       lado", y ahí está de vuelta. Arriba de todo, siempre visible.
+     - La foto de la portada baja más lento que la página (paralaje suave):
+       se escribe directo en el estilo, sin pasar por React, porque cambia en
+       cada cuadro.
+     - Pasada una pantalla y media aparece "volver arriba".
+
+     En la previa del editor no corre nada de esto: ahí la barra va pegada
+     dentro del lienzo, y que se escape o que la foto se corra mientras se la
+     acomoda con el arrastre sería un problema, no un efecto. */
+  const fotoPortadaRef = useRef<HTMLDivElement>(null);
+  const sinMovimiento = useSyncExternalStore(
+    cb => { const m = window.matchMedia("(prefers-reduced-motion: reduce)"); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    let ultimo = window.scrollY;
+    let cuadro = 0;
+    const mover = () => {
+      cuadro = 0;
+      const y = window.scrollY;
+      setScrolled(y > 60);
+      if (!isPreview) {
+        // 8px de margen para que un temblor del dedo no la haga parpadear.
+        if (y < 140) setBarraOculta(false);
+        else if (y - ultimo > 8) setBarraOculta(true);
+        else if (ultimo - y > 8) setBarraOculta(false);
+        setLejosArriba(y > window.innerHeight * 1.5);
+        const foto = fotoPortadaRef.current;
+        if (foto && !sinMovimiento && y < window.innerHeight * 1.2) foto.style.transform = `translate3d(0, ${Math.round(y * 0.18)}px, 0) scale(1.12)`;
+      }
+      if (Math.abs(y - ultimo) > 8 || y < 140) ultimo = y;
+    };
+    const onScroll = () => { if (!cuadro) cuadro = requestAnimationFrame(mover); };
+    mover();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (cuadro) cancelAnimationFrame(cuadro); };
+  }, [isPreview, sinMovimiento]);
+  /* No se esconde con algo de la barra abierto: el menú del celular, el de la
+     cuenta, las categorías, el buscador o favoritos. Se iría con lo abierto. */
+  const barraEscondida = barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
+  const corrimientoBarra: React.CSSProperties = isPreview ? {} : {
+    transform: barraEscondida ? `translateY(-${altoBarra + 2}px)` : "none",
+    transition: "transform .35s cubic-bezier(.2,.8,.2,1)",
+  };
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -1284,9 +1336,18 @@ export default function Aire() {
       const promo = resolveProductPromo(product, promotions);
       const esFav = favorites.includes(product.id);
       const agotado = product.variants.length > 0 && product.variants.reduce((n, v) => n + (v.stock || 0), 0) === 0;
+      /* La segunda foto, que aparece al pasar el mouse (la espalda, o la
+         prenda puesta). Sólo si es otra foto de verdad. En el celular no hay
+         mouse, así que nunca se monta. */
+      const segunda = product.images[1] && product.images[1] !== product.images[0] ? product.images[1] : null;
+      const mirando = hoveredId === product.id;
       return (
         <div key={product.id} className="ai-card" onClick={() => abrirProducto(product)}
-          onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
+          onMouseEnter={() => {
+            setHoveredId(product.id);
+            if (segunda && !conSegunda.has(product.id)) setConSegunda(prev => new Set(prev).add(product.id));
+          }}
+          onMouseLeave={() => setHoveredId(null)}
           style={{ position:"relative", background:S, border:`1px solid ${LN}`, borderRadius:16, overflow:"hidden", display:"flex", flexDirection:"column", cursor:"pointer" }}>
 
           {(() => {
@@ -1304,8 +1365,13 @@ export default function Aire() {
           <div style={{ position:"relative", aspectRatio:"4/5", overflow:"hidden", background:BG }}>
             {product.images[0] && (
               <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 200px"
-                style={{ objectFit:"cover", transition:"transform 0.5s ease", transform: hoveredId === product.id ? "scale(1.05)" : "scale(1)" }}
+                style={{ objectFit:"cover", transition:"transform 0.5s ease", transform: mirando ? "scale(1.05)" : "scale(1)" }}
                 onError={e => { e.currentTarget.style.opacity = "0"; }}/>
+            )}
+            {segunda && conSegunda.has(product.id) && (
+              <FadeImage src={segunda} alt="" fill sizes="(max-width: 768px) 50vw, 200px"
+                style={{ objectFit:"cover", opacity: mirando ? 1 : 0, transition:"opacity 0.45s ease, transform 0.5s ease", transform: mirando ? "scale(1.05)" : "scale(1)" }}
+                onError={e => { e.currentTarget.style.display = "none"; }}/>
             )}
             {agotado && (
               <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(12,14,16,0.78)", display:"grid", placeItems:"center", padding:"7px 0", zIndex:2 }}>
@@ -1578,7 +1644,7 @@ export default function Aire() {
 
       {/* ── BARRA DE ANUNCIOS ──────────────────────────────── */}
       {showAnnouncement && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center", ...corrimientoBarra }}>
           <span style={{ fontSize:12, fontWeight:600, color:accentText, letterSpacing:0.3 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
@@ -1676,7 +1742,7 @@ export default function Aire() {
           Los links se escriben como se habla: "Catálogo", no "C A T Á L O G O".
           El interletrado grande era la firma del template de lujo que este
           reemplaza, y es lo que más lo delataba aunque el fondo fuera blanco. */}
-      <nav ref={barraRef} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, transition:"border-color 0.3s", background:"rgba(255,255,255,0.94)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${scrolled ? LN : "transparent"}` }}>
+      <nav ref={barraRef} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, background:"rgba(255,255,255,0.94)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${scrolled ? LN : "transparent"}`, ...corrimientoBarra }}>
         {/* DOS cajas y no una: la de afuera pone el margen lateral, la de adentro
             el ancho maximo. Con las dos cosas en la misma caja el maxWidth recorta
             primero y el padding come 24px mas para adentro, asi que en un monitor
@@ -2057,10 +2123,15 @@ export default function Aire() {
               montar y desmontar la que toca. Cambiando el `src` de una sola, cada
               giro pide la imagen nueva y deja un parpadeo en blanco mientras
               carga — y en un celular con datos, ese parpadeo dura. */}
+          {/* La capa de las fotos es la que baja más lento al hacer scroll (ver
+              el oyente del scroll, arriba). Va agrandada un 12% para que al
+              correrse no quede un hueco arriba mientras la tarjeta se ve. */}
+          <div ref={fotoPortadaRef} aria-hidden style={{ position:"absolute", inset:0, willChange: isPreview ? undefined : "transform" }}>
           {heroSlides.map((slide, i) => (
             <FadeImage key={slide.campo} src={slide.url} alt="" fill priority={i === 0} sizes="100vw"
               style={{ objectFit:"cover", objectPosition:`${slide.ov?.posX ?? 50}% ${slide.ov?.posY ?? 50}%`, opacity: i === heroIdxSeguro ? 1 : 0, transition:"opacity 0.7s ease" }}/>
           ))}
+          </div>
           {heroImageUrl && heroOverlayType !== "none" && (
             <div style={{ position:"absolute", inset:0, background:heroGradient }}/>
           )}
@@ -3602,6 +3673,24 @@ export default function Aire() {
          arriba. Tenerlo en los dos lados no es redundancia inofensiva — en un
          celular la burbuja se apoya en la misma esquina que el botón de
          WhatsApp y se tapan entre sí, y el comprador toca el que no quería. */}
+
+      {/* ── VOLVER ARRIBA ──────────────────────────────────────
+          Aparece pasada una pantalla y media. Va arriba del de WhatsApp, en la
+          misma columna, y más chico y blanco: es secundario y no tiene que
+          competir con él. Sin WhatsApp, baja a su lugar. */}
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (() => {
+        const conWa = !storeConfig || storeConfig.whatsapp.enabled;
+        return (
+          <button type="button" aria-label="Volver arriba" tabIndex={lejosArriba ? 0 : -1}
+            onClick={() => window.scrollTo({ top: 0, behavior: sinMovimiento ? "auto" : "smooth" })}
+            style={{ position:"fixed", right: conWa ? 30 : 24, bottom: conWa ? 88 : 24, zIndex:CAPAS.panel, width:40, height:40, borderRadius:"50%",
+              background:S, color:T, border:`1px solid ${LN}`, boxShadow:"0 6px 18px rgba(20,22,26,0.14)", cursor:"pointer", display:"grid", placeItems:"center",
+              opacity: lejosArriba ? 1 : 0, pointerEvents: lejosArriba ? "auto" : "none",
+              transform: lejosArriba ? "none" : "translateY(10px)", transition:"opacity .3s, transform .3s" }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        );
+      })()}
 
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
