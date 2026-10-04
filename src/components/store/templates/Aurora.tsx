@@ -6,6 +6,10 @@ import { ColeccionEnFoco } from "@/components/store/templates/aurora/ColeccionEn
 import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFoco";
 import { FichaAurora } from "@/components/store/templates/aurora/FichaAurora";
 import { ResenasAurora } from "@/components/store/templates/aurora/ResenasAurora";
+import { REDES_SOCIALES } from "@/components/store/templates/shared/redesSociales";
+import { GarantiasAurora } from "@/components/store/templates/aurora/GarantiasAurora";
+import { FraseAurora } from "@/components/store/templates/aurora/FraseAurora";
+import { MayoristaAurora } from "@/components/store/templates/aurora/MayoristaAurora";
 import { ElegirPortada, leerPiezasPortada, MAX_PORTADA } from "@/components/store/templates/aurora/ElegirPortada";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
@@ -35,7 +39,7 @@ import { GrillaProfunda } from "@/components/store/templates/shared/GrillaProfun
 import { TarjetaAurora, type TintaTarjeta } from "@/components/store/templates/aurora/TarjetaAurora";
 import { CLASES_LETRA, TITULO, TEXTO } from "@/components/store/templates/aurora/fuentes";
 import { calcularVuelo, tarjetaVisible, MS_IDA, MS_VUELTA } from "@/components/store/templates/shared/vueloDeFicha";
-import { vidrio, sombra } from "@/components/store/templates/shared/Materia";
+import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/Materia";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -95,22 +99,10 @@ const AU_STRIP_ICONS: React.ReactNode[][] = [
 ];
 
 const GARANTIAS = [
-  {
-    title:"Envío gratis", desc:"En compras mayores a $30.000",
-    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
-  },
-  {
-    title:"Cambios sin cargo", desc:"Hasta 30 días después de la compra",
-    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>,
-  },
-  {
-    title:"Pago seguro", desc:"Todos los medios de pago protegidos",
-    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
-  },
-  {
-    title:"Atención personalizada", desc:"Respondemos en menos de 24 hs",
-    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-  },
+  { title:"Envío gratis",           desc:"En compras mayores a $30.000" },
+  { title:"Cambios sin cargo",      desc:"Hasta 30 días después de la compra" },
+  { title:"Pago seguro",            desc:"Todos los medios de pago protegidos" },
+  { title:"Atención personalizada", desc:"Respondemos en menos de 24 hs" },
 ];
 
 const MODOS_VIDRIERA = [
@@ -130,22 +122,22 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
    social: se sacaron de la portada por decision de disenio, para que la home sea
    mas corta. Los productos en oferta y los mas vistos siguen estando en el
    catalogo, que tiene sus filtros. */
+/** Cuántas piezas muestra el bloque de productos de la portada. */
+const VISTOS_EN_PORTADA = 8;
+
 const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-producto-foco", "au-productos", "au-resenas"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
   const [scrolled,           setScrolled]           = useState(false);
-  const [activeCategory,     setActiveCategory]     = useState("Todos");
   const [activeGender,       setActiveGender]       = useState<string | null>(null);
   const [hoveredNavCat,      setHoveredNavCat]      = useState<string | null>(null);
-  const [visibleCount,       setVisibleCount]       = useState(8);
   const [isMobile,           setIsMobile]           = useState(false);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
   const [mobileOpenCat,      setMobileOpenCat]      = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
-  const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
@@ -486,9 +478,6 @@ export default function Aurora() {
 
   const changeGender = (g: string | null) => {
     setActiveGender(g);
-    setActiveCategory("Todos");
-    setActiveSubcategory(null);
-    setVisibleCount(8);
   };
 
   /** Ver `catalogoTieneGeneros`: el filtro Mujer/Hombre solo aparece si el
@@ -519,11 +508,12 @@ export default function Aurora() {
     // `hayGeneros` también acá: si el catálogo cambia y el filtro desaparece,
     // un `activeGender` viejo dejaría la tienda filtrada sin nada que lo apague.
     if (hayGeneros && activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
-    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
-    if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
     return true;
-  }), [products, hayGeneros, activeGender, activeCategory, activeSubcategory]);
-  const filtered    = allFiltered.slice(0, visibleCount);
+  }), [products, hayGeneros, activeGender]);
+  /* La portada muestra las primeras VISTOS_EN_PORTADA; el resto está en el
+     catálogo. Antes había acá un estado de categoría, subcategoría y "ver más"
+     que nunca cambiaba (AU-10): filtrar por categoría es del catálogo. */
+  const filtered    = allFiltered.slice(0, VISTOS_EN_PORTADA);
 
   /* ─ Colores base ─ */
   const G  = storeConfig?.colors.accent ?? "#8b5cf6";  // violeta de la escena
@@ -1035,13 +1025,13 @@ export default function Aurora() {
                         abrirCatalogo({ categoria: cat });
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
-                    }} style={{ display:"flex", width:"100%", background:luz(0.03), border:"none", borderBottom:`1px solid ${LINEA}`, color: activeCategory===cat ? GT : T, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                    }} style={{ display:"flex", width:"100%", background:luz(0.03), border:"none", borderBottom:`1px solid ${LINEA}`, color:T, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
                       {cat}
                       {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
                       <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
-                        style={{ display:"block", width:"100%", background:luz(0.05), border:"none", borderBottom:`1px solid ${LINEA}`, color: activeSubcategory===sub ? GT : "rgba(242,242,247,0.7)", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                        style={{ display:"block", width:"100%", background:luz(0.05), border:"none", borderBottom:`1px solid ${LINEA}`, color:"rgba(242,242,247,0.7)", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {sub}
                       </button>
                     ))}
@@ -1166,51 +1156,25 @@ export default function Aurora() {
       <div style={{ display:"flex", flexDirection:"column" }}>
       <SectionBlock id="au-garantias" label="Garantías" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
-      <section data-reveal style={{ borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, background:garantiasBg, position:"relative" }}>
+      <GarantiasAurora fondo={garantiasBg} tinta={garantiasText} escena={escenaAurora} isMobile={isMobile}
+        items={GARANTIAS.map((g, i) => {
+          const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % AU_STRIP_ICONS[i].length;
+          const nextIdx = (iconIdx + 1) % AU_STRIP_ICONS[i].length;
+          return {
+            icono: AU_STRIP_ICONS[i][iconIdx],
+            onCambiarIcono: editMode ? () => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) }) : undefined,
+            titulo: <EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone>,
+            desc: <EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone>,
+          };
+        })}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
-          {GARANTIAS.map((g, i) => {
-            const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % AU_STRIP_ICONS[i].length;
-            const nextIdx = (iconIdx + 1) % AU_STRIP_ICONS[i].length;
-            return (
-              <div key={i} style={{ padding: isMobile ? "16px 14px" : "28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid ${LINEA}` : "none" }}>
-                <span style={{ color:GT, flexShrink:0, position:"relative" }}>
-                  {AU_STRIP_ICONS[i][iconIdx]}
-                  {editMode && (
-                    <button onClick={() => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) })} title="Cambiar ícono"
-                      style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
-                  )}
-                </span>
-                <div>
-                  <p style={{ fontSize:13, fontWeight:700, color:garantiasText, margin:"0 0 4px" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
-                  <p style={{ fontSize:11, opacity:0.45, margin:0, lineHeight:1.5, color:garantiasText }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      </GarantiasAurora>
       </SectionBlock>
 
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
       <SectionBlock id="au-mayorista" label="Mayorista" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {isWholesale && (
-        <section data-reveal style={{ background:S, borderTop:`1px solid ${LINEA_FUERTE}`, borderBottom:`1px solid ${LINEA_FUERTE}` }}>
-          <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 32px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:24 }}>
-            <span style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", fontWeight:700, border:`1px solid ${G}`, padding:"4px 12px", borderRadius:2 }}>Tienda mayorista</span>
-            <h2 style={{ fontSize:"clamp(24px,3.4vw,40px)", fontWeight:300, color:T, margin:0, letterSpacing:"-0.02em", fontFamily:TITULO, lineHeight:1.2 }}>
-              Solicitá tu lista<br/><em style={{ color:GT }}>de precios</em>
-            </h2>
-            <p style={{ fontSize:14, color:"rgba(242,242,247,0.55)", maxWidth:480, margin:0, lineHeight:1.7 }}>
-              Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
-            </p>
-            <button onClick={vista.irAContacto}
-              style={{ background:G, color:textoSobreAcento, border:"none", padding:"14px 40px", fontSize:11, fontWeight:700, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
-              Consultar ahora →
-            </button>
-          </div>
-        </section>
+        <MayoristaAurora onConsultar={vista.irAContacto} fondoPanel={S} escena={escenaAurora} isMobile={isMobile} />
       )}
       </SectionBlock>
 
@@ -1224,19 +1188,16 @@ export default function Aurora() {
 
       <SectionBlock id="au-statement" label="Frase de marca" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── STATEMENT ──────────────────────────────────────── */}
-      <section data-reveal style={{ borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
-        <BgDragHandle imgKey="sectionbg_bgStatement" />
-        <EditableSectionBg field="bgStatement" label="Fondo frase" />
-        {statementBgImg?.url && statementBgImg.overlayType !== "none" && (
+      <FraseAurora fondo={statementBg} tinta={statementText} escena={escenaAurora} isMobile={isMobile}
+        conLuz={!textOverrides["quoteText"]?.color}
+        foto={statementBgImg?.url ? { url: statementBgImg.url, posicion: `${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : null}
+        velo={statementBgImg?.url && statementBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: statementBgImg.overlayType === "light" ? `rgba(255,255,255,${statementBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${statementBgImg.overlayOpacity ?? 0.45})` }} />
         )}
-        <div style={{ position:"relative", zIndex:1, padding:"72px 32px" }}>
-          <p style={{ fontFamily:TITULO, fontSize:"clamp(18px,2.8vw,32px)", fontWeight:300, letterSpacing:"-0.01em", color:statementText, opacity:0.9, maxWidth:820, margin:"0 auto", lineHeight:1.45 }}>
-            <EditableZone field="quoteText" label="Frase destacada">&quot;No compramos ropa. Compramos la versión de nosotros mismos que queremos ser.&quot;</EditableZone>
-          </p>
-          <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
-        </div>
-      </section>
+        texto={<EditableZone field="quoteText" label="Frase destacada">&quot;No compramos ropa. Compramos la versión de nosotros mismos que queremos ser.&quot;</EditableZone>}>
+        <BgDragHandle imgKey="sectionbg_bgStatement" />
+        <EditableSectionBg field="bgStatement" label="Fondo frase" />
+      </FraseAurora>
       </SectionBlock>
 
       {/* ── PRODUCTO EN FOCO (ver `aurora/ProductoEnFoco`) ── */}
@@ -1258,8 +1219,7 @@ export default function Aurora() {
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
           <p style={{ fontFamily:TITULO, fontSize:24, fontWeight:300, letterSpacing:"-0.01em", color:productosText, margin:0 }}>
-            {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory === "Todos" ? "Toda la colección" : activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)}
-            {activeSubcategory && <span style={{ opacity:0.6 }}> › {activeSubcategory}</span>}
+            {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : "Toda la colección"}
             <span style={{ fontSize:13, color:productosMid, fontFamily:TEXTO, fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
           </p>
         </div>
@@ -1292,13 +1252,13 @@ export default function Aurora() {
         {/* Ver más / Ver toda la colección */}
         <div style={{ textAlign:"center" }}>
           <p style={{ fontSize:11, opacity:0.35, letterSpacing:2, marginBottom:24 }}>
-            Mostrando {Math.min(visibleCount, allFiltered.length)} de {allFiltered.length} piezas
+            Mostrando {Math.min(VISTOS_EN_PORTADA, allFiltered.length)} de {allFiltered.length} piezas
           </p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
             {/* Botón y no `<a href>`: el link iba a otra página y recargaba todo.
                 Queda al lado del "Ver más", que ya era un botón. */}
             <button onClick={() => abrirCatalogo()}
-              style={{ background:G, color:textoSobreAcento, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"inline-block", transition:"opacity 0.2s" }}
+              style={{ background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"inline-block", transition:"opacity 0.2s", boxShadow:`0 0 34px ${luz(0.45)}` }}
               onMouseEnter={e => { e.currentTarget.style.opacity="0.85"; }}
               onMouseLeave={e => { e.currentTarget.style.opacity="1"; }}>
               Ver toda la colección →
@@ -1355,38 +1315,55 @@ export default function Aurora() {
             <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
               S={S} LN={LINEA_FUERTE} T={T} G={G} />
           </div>
-      {/* ── NOSOTROS ───────────────────────────────────────── */}
-      <section id="nosotros" data-reveal style={{ borderTop:`1px solid ${LINEA}` }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
-          <div style={{ position:"relative", minHeight: isMobile ? 280 : 560, overflow:"hidden" }}>
-            {nosotrosImageUrl
-              ? <FadeImage src={nosotrosImageUrl} alt="Nuestra historia" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%` }}/>
-              : <div aria-hidden style={{ position:"absolute", inset:0, background:`radial-gradient(60% 70% at 30% 35%, ${luz(0.38)}, transparent 70%), radial-gradient(50% 60% at 75% 75%, ${luz(0.18)}, transparent 70%), ${S}` }} />}
-            <BgDragHandle imgKey="nosotrosImage" />
-            <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
-            {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (ov?.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov?.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.25})` : `rgba(10,10,10,${ov?.overlayOpacity ?? 0.25})` }} />; })()}
+      {/* ── NOSOTROS ───────────────────────────────────────────────────────
+          Rehecho con el lenguaje de Aurora (ver AURORA.md, bloques heredados):
+          la foto va en un marco de vidrio que se inclina con el mouse, con un
+          halo del acento detrás; el texto en un panel de vidrio, y los cuatro
+          números son paneles chicos con su cifra en luz. Lo que se edita es lo
+          mismo de antes: la foto (con encuadre y velo), los textos y el fondo
+          del panel. */}
+      <section id="nosotros" data-reveal style={{ position:"relative", overflow:"hidden", background:BG }}>
+        <div aria-hidden style={{ position:"absolute", inset:0, pointerEvents:"none",
+          background:`radial-gradient(40% 50% at 22% 40%, ${luz(0.2)}, transparent 70%), radial-gradient(35% 45% at 85% 80%, ${luz(0.1)}, transparent 70%)` }} />
+        <div style={{ position:"relative", maxWidth:1240, margin:"0 auto", padding: isMobile ? "28px 16px 56px" : "70px 40px 100px",
+          display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1.05fr)", gap: isMobile ? 22 : 48, alignItems:"center" }}>
+          <div style={{ perspective:"1400px" }}>
+            <Inclinable grados={6} style={{ borderRadius: isMobile ? 22 : 28 }}>
+              <div style={{ position:"relative", minHeight: isMobile ? 300 : 560, overflow:"hidden", borderRadius: isMobile ? 22 : 28,
+                border:`1px solid ${LINEA_FUERTE}`, boxShadow:`0 40px 90px rgba(0,0,0,0.55), 0 0 80px ${luz(0.2)}` }}>
+                {nosotrosImageUrl
+                  ? <FadeImage src={nosotrosImageUrl} alt="Nuestra historia" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%` }}/>
+                  : <div aria-hidden style={{ position:"absolute", inset:0, background:`radial-gradient(60% 70% at 30% 35%, ${luz(0.38)}, transparent 70%), radial-gradient(50% 60% at 75% 75%, ${luz(0.18)}, transparent 70%), ${S}` }} />}
+                <BgDragHandle imgKey="nosotrosImage" />
+                <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
+                {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (ov?.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov?.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.25})` : `rgba(10,10,10,${ov?.overlayOpacity ?? 0.25})` }} />; })()}
+              </div>
+            </Inclinable>
           </div>
-          <div style={{ padding: isMobile ? "40px 20px" : "80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24, background:nosotrosPanelBg, position:"relative" }}>
+          <div style={{ position:"relative", borderRadius: isMobile ? 22 : 28, padding: isMobile ? "30px 20px" : "54px 50px", background:nosotrosPanelBg,
+            border:`1px solid ${LINEA_FUERTE}`, boxShadow:"0 30px 70px rgba(0,0,0,0.35)", display:"flex", flexDirection:"column", gap:20 }}>
             <EditableSectionBg field="bgNosotrosPanel" label="Fondo nosotros" />
+            <div aria-hidden style={{ position:"absolute", top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${luz(0.9)}, transparent)` }} />
             <div>
-              <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", marginBottom:16 }}>
+              <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", margin:"0 0 16px", fontWeight:700 }}>
                 <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">Nuestra historia</EditableZone>
               </p>
-              <h2 style={{ fontFamily:TITULO, fontSize:"clamp(24px,2.6vw,36px)", fontWeight:300, letterSpacing:"-0.02em", lineHeight:1.2, margin:"0 0 24px", color:nosotrosPanelText }}>
+              <h2 style={{ fontFamily:TITULO, fontSize: isMobile ? "clamp(24px,7vw,30px)" : "clamp(26px,2.8vw,40px)", fontWeight:300, letterSpacing:"-0.02em", lineHeight:1.15, margin:0, color:nosotrosPanelText }}>
                 <EditableZone field="aboutHeading" label="Título 'Nosotros'">Creados para quienes eligen con intención.</EditableZone>
               </h2>
             </div>
-            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText }}>
+            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText, margin:0 }}>
               <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">Nacimos con una premisa simple: crear piezas que duren más que una temporada. En un mundo saturado de fast fashion, apostamos por la confección artesanal, las telas de origen responsable y los diseños que no envejecen.</EditableZone>
             </p>
-            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText }}>
+            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText, margin:0 }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Cada prenda pasa por un proceso riguroso de selección de materiales y control de calidad. Trabajamos con talleres locales y artesanos que comparten nuestra filosofía: menos piezas, más valor.</EditableZone>
             </p>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:8 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(2, minmax(0,1fr))", gap: isMobile ? 10 : 12, paddingTop:6 }}>
               {([["aboutStat1","aboutStatLabel1","2018","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Producción local"],["aboutStat3","aboutStatLabel3","30+","Artesanos"],["aboutStat4","aboutStatLabel4","8 años","De trayectoria"]] as const).map(([fv,fl,n,label]) => (
-                <div key={label}>
-                  <p style={{ fontFamily:TITULO, fontSize:26, color:GT, margin:"0 0 4px", fontWeight:500 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
-                  <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
+                <div key={label} style={{ borderRadius:16, padding: isMobile ? "14px 14px" : "18px 18px", border:`1px solid ${nosotrosPanelText === T ? LINEA_FUERTE : "rgba(6,7,13,0.12)"}`,
+                  background: nosotrosPanelText === T ? "rgba(255,255,255,0.04)" : "rgba(6,7,13,0.04)" }}>
+                  <p style={{ fontFamily:TITULO, fontSize: isMobile ? 22 : 28, color:GT, margin:"0 0 6px", fontWeight:400, textShadow:`0 0 22px ${luz(0.45)}` }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                  <p style={{ fontSize:11, opacity:0.55, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
                 </div>
               ))}
             </div>
@@ -1413,7 +1390,9 @@ export default function Aurora() {
         {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactoBgImg.overlayType === "light" ? `rgba(255,255,255,${contactoBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactoBgImg.overlayOpacity ?? 0.45})` }} />
         )}
-        <div style={{ padding:"80px 32px", maxWidth:640, margin:"0 auto", position:"relative", zIndex:1 }}>
+        {/* Luz de escena detrás del panel, como en el resto de Aurora. */}
+        {!contactoBgImg?.url && <div aria-hidden style={{ position:"absolute", inset:0, pointerEvents:"none", background:`radial-gradient(45% 55% at 50% 30%, ${luz(0.16)}, transparent 70%)` }} />}
+        <div style={{ padding: isMobile ? "40px 16px 64px" : "80px 32px 110px", maxWidth:680, margin:"0 auto", position:"relative", zIndex:1 }}>
           <p style={{ fontSize:10, letterSpacing:5, color:GT, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
           <h2 style={{ fontFamily:TITULO, fontSize:"clamp(22px,2.6vw,32px)", fontWeight:300, letterSpacing:"-0.02em", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
@@ -1422,10 +1401,16 @@ export default function Aurora() {
             <EditableZone field="contactSubtext" label="Subtítulo contacto">Respondemos todos los mensajes en menos de 24 horas hábiles.</EditableZone>
           </p>
 
+          {/* El formulario en un panel de vidrio, con los campos redondeados y
+              el botón en píldora (AU-6: eran rectángulos de Fashion Noir). */}
+          <div style={{ position:"relative", borderRadius: isMobile ? 22 : 28, padding: isMobile ? "24px 18px" : "36px 36px",
+            background: contactoText === T ? "rgba(255,255,255,0.035)" : "rgba(6,7,13,0.035)", border:`1px solid ${contactoInputBorder}`,
+            backdropFilter:"blur(16px) saturate(140%)", WebkitBackdropFilter:"blur(16px) saturate(140%)", boxShadow:"0 30px 70px rgba(0,0,0,0.3)" }}>
+          <div aria-hidden style={{ position:"absolute", top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${luz(0.9)}, transparent)` }} />
           <ContactForm
             storeId={storeConfig?.storeId} isPreview={isPreview} prefillMessage={inquiryMessage}
             accent={G} textColor={contactoText} mutedColor={contactoInputBorder}
-            radius={0} buttonRadius={0}
+            radius={14} buttonRadius={999}
             theme={{
               showLabels: true,
               labelStyle: { display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 },
@@ -1438,17 +1423,18 @@ export default function Aurora() {
               gap: 16,
               placeholders: { nombre: "Tu nombre", email: "tu@email.com", mensaje: "¿En qué podemos ayudarte?" },
               buttonLabel: "Enviar Mensaje",
-              buttonStyle: { background:G, color:textoSobreAcento, padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase" },
+              buttonStyle: { background:G, color:textoSobreAcento, padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", boxShadow:`0 0 34px ${luz(0.45)}` },
             }}
             renderSent={reset => (
               <div style={{ textAlign:"center", padding:"60px 0" }}>
                 <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
                 <p style={{ fontFamily:TITULO, fontSize:20, fontWeight:400, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
                 <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
-                <button onClick={reset} style={{ marginTop:24, background:"transparent", color:GT, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
+                <button onClick={reset} style={{ marginTop:24, background:"transparent", color: contactoText === T ? GT : G, border:`1px solid ${luz(0.6)}`, borderRadius:999, padding:"11px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
               </div>
             )}
           />
+          </div>
         </div>
       </section>
         </div>
@@ -1492,19 +1478,23 @@ export default function Aurora() {
                 cargada, no aparecía). En el celular la fila sigue la alineación de
                 la descripción de arriba (`data-cel-fila`, en globals.css). */}
             <div data-cel-fila={textOverrides.footerDescription?.celular?.align} style={{ display:"flex", flexWrap:"wrap", gap:12, marginTop:24 }}>
-              {([["IG","instagram","Instagram"],["FB","facebook","Facebook"],["TK","tiktok","TikTok"],["YT","youtube","YouTube"],["PT","pinterest","Pinterest"]] as const).map(([label, key, nombre]) => {
-                const url = storeConfig?.socialLinks?.[key];
+              {/* Logos de verdad y no "IG", "FB" en cuadraditos (AU-7): esferas de
+                  vidrio que se encienden con el acento al pasar el mouse. */}
+              {REDES_SOCIALES.map(({ clave, nombre, trazo }) => {
+                const url = storeConfig?.socialLinks?.[clave];
                 if (!isPreview && !url) return null;
                 return (
-                  <button key={label} aria-label={nombre}
+                  <button key={clave} aria-label={nombre}
                     title={url ? nombre : `${nombre} — sin cargar. Se carga en Configuración → Redes sociales`}
                     /* `noopener`: sin eso la pestaña nueva queda con acceso a la
                        tienda que la abrió y puede mandarla a otra dirección. */
                     onClick={() => url && window.open(url, "_blank", "noopener,noreferrer")}
-                    style={{ background:"none", border:`1px solid ${footerSubtleBorder}`, color:footerText, width:34, height:34, fontSize:10, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
-                    onMouseEnter={e => { if(url){ e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor=footerSubtleBorder; e.currentTarget.style.color=footerText; }}>
-                    {label}
+                    style={{ display:"grid", placeItems:"center", width:40, height:40, borderRadius:999, padding:0,
+                      background: footerText === T ? "rgba(255,255,255,0.05)" : "rgba(6,7,13,0.05)", border:`1px solid ${footerSubtleBorder}`, color:footerText,
+                      cursor: url ? "pointer" : "default", transition:"color .25s, border-color .25s, box-shadow .25s, background .25s", opacity: url ? 1 : 0.35 }}
+                    onMouseEnter={e => { if (url) { e.currentTarget.style.borderColor=luz(0.6); e.currentTarget.style.color= footerText === T ? GT : G; e.currentTarget.style.boxShadow=`0 0 22px ${luz(0.45)}`; e.currentTarget.style.background=luz(0.1); } }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor=footerSubtleBorder; e.currentTarget.style.color=footerText; e.currentTarget.style.boxShadow="none"; e.currentTarget.style.background= footerText === T ? "rgba(255,255,255,0.05)" : "rgba(6,7,13,0.05)"; }}>
+                    <svg width={17} height={17} viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d={trazo} /></svg>
                   </button>
                 );
               })}
@@ -1578,9 +1568,11 @@ export default function Aurora() {
                 slug={storeConfig?.slug} isPreview={isPreview}
                 boton="OK" botonEnviando="…"
                 theme={{
-                  form:  { display:"flex" },
-                  input: { flex:1, minWidth:0, background:footerInputBg, border:`1px solid ${footerSubtleBorder}`, borderRight:"none", color:footerText, padding:"11px 14px", fontSize:12, outline:"none" },
-                  boton: { flexShrink:0, background:G, color:textoSobreAcento, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 },
+                  // Una cápsula de vidrio con el botón adentro (AU-6: eran un
+                  // campo y un botón rectangulares pegados).
+                  form:  { display:"flex", alignItems:"center", gap:6, padding:4, borderRadius:999, background:footerInputBg, border:`1px solid ${footerSubtleBorder}` },
+                  input: { flex:1, minWidth:0, background:"transparent", border:"none", color:footerText, padding:"9px 14px", fontSize:12, outline:"none" },
+                  boton: { flexShrink:0, background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"10px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1, boxShadow:`0 0 20px ${luz(0.4)}` },
                   colorMensaje: footerText,
                   colorError: G,
                 }}

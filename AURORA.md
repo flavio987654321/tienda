@@ -20,11 +20,11 @@ Se tacha cada ítem al terminarlo, no al final.
 | ~~AU-3~~ | ~~Si la dueña elige un acento oscuro, la mitad de los botones quedan ilegibles~~ | Alta | **hecho** |
 | ~~AU-4~~ | ~~Foto de stock en Nosotros~~ | Media | **hecho** |
 | ~~AU-5~~ | ~~Tipografía Georgia (serif clásica) en un template futurista~~ | Media (diseño) | **hecho** |
-| AU-6 | Mezcla de botones redondos y cuadrados | Media (diseño) | pendiente |
-| AU-7 | Redes sociales como letras ("IG", "FB") en vez de íconos | Baja | pendiente |
+| ~~AU-6~~ | ~~Mezcla de botones redondos y cuadrados~~ | Media (diseño) | **hecho** |
+| ~~AU-7~~ | ~~Redes sociales como letras ("IG", "FB") en vez de íconos~~ | Baja | **hecho** |
 | ~~AU-8~~ | ~~En el celular, el precio de abajo de la ficha confunde con cantidad > 1~~ | Baja | **hecho** (ficha nueva) |
-| AU-9 | Arrastre lateral de 39px en Contacto entre 1099 y 1101 de ancho | Baja (heredado) | pendiente |
-| AU-10 | Código muerto y restos | Fantasma | pendiente |
+| ~~AU-9~~ | ~~Arrastre lateral de 39px en Contacto entre 1099 y 1101 de ancho~~ | Baja (heredado) | **ya no pasa** |
+| ~~AU-10~~ | ~~Código muerto y restos~~ | Fantasma | **hecho** |
 
 ### ~~AU-1~~ — Restos del dorado de Fashion Noir ✅
 **Hecho el 03/10/26.** Los bordes de estructura son un filo de vidrio neutro (`LINEA`, `LINEA_FUERTE`) y los estados salen del acento de la dueña (`luz(a)`). También se fue el blanco crema `240,235,227` (39 lugares), los menús pasaron a vidrio oscuro y el tema de Aurora en `CatalogoGenerico` perdió el dorado.
@@ -65,28 +65,34 @@ Los títulos de la frase de marca, Nosotros, Mayorista, Contacto, el título de 
 Favoritos van en Georgia (serif de diario). Es lo más "clásico" que tiene la tienda y es lo que
 más la aleja de futurista. Una sola familia moderna (geométrica o grotesca, de Google Fonts).
 
-### AU-6 — Botones redondos y cuadrados mezclados
+### ~~AU-6~~ — Botones redondos y cuadrados mezclados ✅
+Hecho el 03/10/26: "Ver toda la colección", Mayorista, el formulario de Contacto (campos de 14px y botón píldora, adentro de un panel de vidrio) y el newsletter del pie (una cápsula con el botón adentro). La cantidad, los talles y las flechas ya eran redondos en la ficha nueva.
+
 El hero y las tarjetas son de vidrio redondeado (pill de 999px, tarjetas de 18px), pero "Ver
 toda la colección", Mayorista, Contacto, la cantidad, los talles, las flechas de la galería y
 "Agregar al carrito" son rectángulos con esquina viva, del lenguaje de Fashion Noir.
 
-### AU-7 — Redes como letras
+### ~~AU-7~~ — Redes como letras ✅
+Hecho el 03/10/26: logos de verdad (`shared/redesSociales.ts`, los mismos trazos que Aire) en esferas de vidrio que se encienden con el acento.
+
 El pie muestra "IG", "FB", "TK", "YT", "PT" en cuadraditos. Íconos de verdad.
 
 ### AU-8 — Precio de abajo en celular
 Muestra el TOTAL (precio × cantidad) y al lado "× 2", que se lee como "este precio, dos veces".
 Y el tachado es el `comparePrice` aunque haya una promo.
 
-### AU-9 — Arrastre lateral en Contacto
+### ~~AU-9~~ — Arrastre lateral en Contacto ✅
+Medido el 03/10/26 después del rediseño de Contacto: a 1099, 1100 y 1101 la página mide exactamente el ancho de la pantalla. Ya no pasa.
+
 Anotado en el código (pie, ~línea 1517): entre 1099 y 1101 de ancho, solo en Contacto, la
 página se arrastra 39px de costado. No se encontró la causa.
 
 ### AU-10 — Código muerto
 - ~~`import {  } from "@/hooks/useStorefront"` vacío~~ (sacado).
-- `activeCategory` nunca se cambia (solo se resetea): el filtro por categoría de la portada no
-  hace nada. Lo mismo `visibleCount`: es siempre 8.
+- ~~`activeCategory` nunca se cambia (solo se resetea): el filtro por categoría de la portada no
+  hace nada. Lo mismo `visibleCount`: es siempre 8.~~ (sacados: queda `VISTOS_EN_PORTADA = 8`).
 - ~~Comentario de "Nosotros y Contacto NO están" repetido dos veces~~ (sacado).
-- `GARANTIAS[i].svg` no se usa: los íconos salen de `AU_STRIP_ICONS`.
+- ~~`GARANTIAS[i].svg` no se usa: los íconos salen de `AU_STRIP_ICONS`.~~ (sacado).
 
 ## ~~AU-11~~ — El catálogo es el de todos, con otros colores ✅
 
@@ -120,10 +126,10 @@ portada promete una tienda futurista y el catálogo la deja de cumplir. Flavio: 
 
 Funcionan, pero son los mismos bloques que tienen los templates clásicos, con otro color:
 
-- **Garantías**: tira de 4 íconos con borde. Es la de Fashion Noir.
-- **Frase de marca**: cita en serif cursiva centrada.
-- **Mayorista**: cartel centrado con botón.
-- **Nosotros**: foto a la izquierda y texto con 4 números a la derecha.
+- ~~**Garantías**: tira de 4 íconos con borde. Es la de Fashion Noir.~~ ✅ `aurora/GarantiasAurora.tsx`: paneles de vidrio sobre un haz de luz, íconos en esferas.
+- ~~**Frase de marca**: cita en serif cursiva centrada.~~ ✅ `aurora/FraseAurora.tsx`: la frase escrita en luz (un destello la recorre) sobre un horizonte iluminado.
+- ~~**Mayorista**: cartel centrado con botón.~~ ✅ `aurora/MayoristaAurora.tsx`: panel de vidrio con un filo de luz que gira.
+- ~~**Nosotros**: foto a la izquierda y texto con 4 números a la derecha.~~ ✅ foto en marco de vidrio que se inclina, texto en panel, números en paneles con su cifra en luz.
 
 Son los candidatos a rehacerse con el lenguaje de Aurora (luz, vidrio, profundidad,
 movimiento). No hace falta cambiar qué dicen, sino cómo se ven.
