@@ -42,6 +42,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
+import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
 import { PreguntasUrban } from "@/components/store/templates/urban/PreguntasUrban";
 import { LookbookUrban } from "@/components/store/templates/urban/LookbookUrban";
 import { MAX_LOOKS } from "@/lib/lookbook";
@@ -2115,6 +2116,12 @@ export default function UrbanPulse() {
 
       <SectionBlock id="up-testimonios" label="Reseñas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}
         avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
+      {/* Tienda publicada sin reseñas: la franja en lugar del bloque, y nada mientras se averigua (ver useHomeReviews). */}
+      {resenas.esperandoResenas ? null : resenas.vacioEnTienda ? (
+        <FranjaPrimeraResena onOpinar={resenas.abrirModal} fondo={testimonialsBgUp} tinta={testimonialsText} suave={testimonialsMid} linea={testimonialsCardBorder} isMobile={isMobile}
+            estiloTitulo={{ fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px" }}
+            estiloBoton={{ background:ACC, color:accentText, border:"none", padding:"14px 22px", fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }} />
+      ) : (<>
       <section data-reveal style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
         <EditableSectionBg field="bgTestimonios" label="Fondo reseñas" />
         <div style={{ padding: isMobile ? "0 20px" : "0 40px", marginBottom:28, position:"relative", zIndex:1 }}>
@@ -2158,8 +2165,8 @@ export default function UrbanPulse() {
                 <strong>Estas reseñas son de ejemplo.</strong> No se pueden editar y no se publican —
                 están para que veas cómo queda el bloque. En tu tienda se reemplazan solas por las
                 reseñas reales de tus clientes.{" "}
-                {resenas.totalReal === 0
-                  ? "Todavía no tenés ninguna: hasta que llegue la primera, el bloque se muestra vacío invitando a dejarla."
+                {resenas.enPortadaReal === 0
+                  ? avisoResenasVacias(resenas.totalReal)
                   : `Hoy tenés ${resenas.totalReal} ${resenas.totalReal === 1 ? "reseña" : "reseñas"}, y ${resenas.enPortadaReal} ${resenas.enPortadaReal === 1 ? "aparece" : "aparecen"} acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado.`}
                 {" "}El título y el fondo sí son tuyos: esos se editan y se guardan.
               </p>
@@ -2321,6 +2328,7 @@ export default function UrbanPulse() {
           </div>
         )}
       </section>
+      </>)}
       </SectionBlock>
 
       {/* OFERTAS */}

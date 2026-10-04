@@ -34,6 +34,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
+import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
 import { PreguntasBoho } from "@/components/store/templates/boho/PreguntasBoho";
 import { LookbookBoho } from "@/components/store/templates/boho/LookbookBoho";
 import { MAX_LOOKS } from "@/lib/lookbook";
@@ -1530,12 +1531,16 @@ export default function BohoTerra() {
 
       <SectionBlock id="bt-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}
         avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
+        {/* Tienda publicada sin reseñas: la franja en lugar del bloque, y nada mientras se averigua (ver useHomeReviews). */}
+        {resenas.esperandoResenas ? null : resenas.vacioEnTienda ? (
+          <FranjaPrimeraResena onOpinar={resenas.abrirModal} fondo={sc["bgPruebaSocial"] ?? BG} tinta={getContrastColor(sc["bgPruebaSocial"] ?? BG) === "light" ? "#faf7f2" : T} suave={getContrastColor(sc["bgPruebaSocial"] ?? BG) === "light" ? "#d5c9be" : "#7a6455"} linea="rgba(44,34,24,0.1)" isMobile={isMobile}
+            estiloTitulo={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontWeight:400, fontSize:20 }}
+            estiloBoton={{ background:"transparent", color:getContrastColor(sc["bgPruebaSocial"] ?? BG) === "light" ? "#faf7f2" : T, border:`1px solid ${getContrastColor(sc["bgPruebaSocial"] ?? BG) === "light" ? "#faf7f2" : T}`, padding:"12px 30px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic" }} />
+        ) : (<>
         {(() => {
           const allReviews = resenas.lista;
-          // El bloque se dibuja SIEMPRE, aun sin una sola reseña: adentro está el
-          // botón para dejar la primera. Escondiéndolo con cero, una tienda nueva
-          // no tenía nunca cómo arrancar — el único lugar desde donde se deja una
-          // aparecía recién cuando ya había una.
+          // En la tienda publicada sin reseñas este bloque no se dibuja: va la
+          // franja de arriba, que conserva el botón para dejar la primera.
           const idx = allReviews.length ? Math.min(reviewCarouselPage, allReviews.length - 1) : 0;
           const r = allReviews[idx];
           const cambiarTab = (t: "tienda" | "producto") => { resenas.setTab(t); setReviewCarouselPage(0); };
@@ -1543,6 +1548,15 @@ export default function BohoTerra() {
             <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? BG, padding: isMobile ? "64px 24px" : "96px 40px", borderTop:`1px solid rgba(44,34,24,0.08)`, textAlign:"center" }}>
               <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
               <div style={{ maxWidth:720, margin:"0 auto" }}>
+                {/* El aviso del editor: lo que va a ver la gente en la tienda publicada. */}
+                {enEditor && resenas.enPortadaReal === 0 && (
+                  <div style={{ display:"flex", gap:9, margin:"0 auto 28px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a", textAlign:"left", maxWidth:620 }}>
+                    <span aria-hidden style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+                    <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
+                      <strong>Estas reseñas son de ejemplo.</strong> {avisoResenasVacias(resenas.totalReal)}
+                    </p>
+                  </div>
+                )}
                 {/* Las dos pestañas. Las reseñas de TIENDA hablan de la atención y
                     del envío, y no colgaban de ningún producto: antes se pedían al
                     servidor y se descartaban, así que no había dónde verlas. */}
@@ -1630,6 +1644,7 @@ export default function BohoTerra() {
             </section>
           );
         })()}
+        </>)}
       </SectionBlock>
 
       {/* ── PREGUNTAS FRECUENTES (ver `boho/PreguntasBoho`) ── */}

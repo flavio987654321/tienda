@@ -63,6 +63,9 @@ export function useHomeReviews({
   const [deProductoReal, setDeProductoReal] = useState<HomeReview[]>([]);
   const [deTiendaReal,   setDeTiendaReal]   = useState<HomeReview[]>([]);
   const [stats,          setStats]          = useState<{ promedio: number; total: number } | null>(null);
+  /** Para qué slug ya se sabe la respuesta (haya o no reseñas). Mientras no
+   *  coincida con el actual, todavía no se sabe si la tienda tiene. */
+  const [cargadoPara,    setCargadoPara]    = useState<string | null>(null);
   const [tabPedida,      setTabPedida]      = useState<"tienda" | "producto">("producto");
   // ¿La tocó el visitante, o es todavía la que abrió sola? El respaldo de más
   // abajo solo puede corregir la SEGUNDA.
@@ -82,8 +85,9 @@ export function useHomeReviews({
         setDeProductoReal(d.reviews ?? []);
         setDeTiendaReal(d.storeReviews ?? []);
         if (d.stats) setStats(d.stats);
+        setCargadoPara(slug);
       })
-      .catch(() => {});
+      .catch(() => { if (vigente) setCargadoPara(slug); });
     // Si el slug cambia mientras la anterior está en vuelo, la vieja no puede
     // pisar a la nueva.
     return () => { vigente = false; };
@@ -258,9 +262,23 @@ export function useHomeReviews({
     setModalAbierto(false); setError(null); setConfirmando(false); setListo(false);
   }
 
+  /* ── El bloque vacío en la tienda publicada (04/10/26) ─────────────────────
+     Antes el bloque se dibujaba siempre y, sin reseñas, decía "Todavía nadie
+     dejó su opinión": un cliente nuevo leía "acá no compra nadie". Ahora, en
+     la tienda publicada:
+     - `esperandoResenas`: todavía no se sabe si hay: el bloque no se dibuja
+       (si no, aparecería la franja y un instante después el bloque lleno);
+     - `vacioEnTienda`: no hay ninguna en la portada: en vez del bloque va una
+       franja finita para dejar la primera (sin el botón, una tienda nueva no
+       tendría nunca de dónde arrancar).
+     En el editor y la galería nunca: ahí se ven las de ejemplo, con un aviso. */
+  const esperandoResenas = !isPreview && !!slug && cargadoPara !== slug;
+  const vacioEnTienda = !isPreview && !esperandoResenas && deProductoReal.length === 0 && deTiendaReal.length === 0;
+
   return {
     // Datos ya resueltos
     deProducto, deTienda, lista, tab: tabEfectiva, setTab, sinNada,
+    esperandoResenas, vacioEnTienda,
     /** Promedio y total REALES, aun en preview: el cartel del editor los usa para
      *  decirle al dueño qué va a pasar en su tienda de verdad. */
     stats,

@@ -26,6 +26,7 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
 import { PreguntasAire } from "@/components/store/templates/aire/PreguntasAire";
 import { useEfectosScroll, useMostrarAlAbrir } from "@/components/store/templates/shared/useEfectosScroll";
 import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
@@ -2490,6 +2491,12 @@ export default function Aire() {
           el botón para dejar la primera. Escondido cuando está vacío, una tienda
           nueva no tendría nunca de dónde arrancar. Lo que cambia con cero es el
           texto — deja de afirmar que los clientes dicen algo y pasa a invitar. */}
+      {/* Tienda publicada sin reseñas: la franja en lugar del bloque, y nada mientras se averigua (ver useHomeReviews). */}
+      {resenas.esperandoResenas ? null : resenas.vacioEnTienda ? (
+        <FranjaPrimeraResena onOpinar={resenas.abrirModal} fondo={resenasBg} tinta={resenasText} suave={resenasMid} linea={resenaBorde} isMobile={isMobile}
+            estiloTitulo={{ fontWeight:800, textTransform:"uppercase", letterSpacing:"-0.3px" }}
+            estiloBoton={{ background:G, color:accentText, border:"none", borderRadius:999, padding:"12px 22px", fontSize:13.5, fontWeight:700 }} />
+      ) : (<>
       <section data-reveal style={{ background:resenasBg, position:"relative" }}>
         <EditableSectionBg field="bgResenas" label="Fondo reseñas" />
         {/* Dos cajas, igual que el resto: la de afuera pone el margen lateral, la
@@ -2646,8 +2653,8 @@ export default function Aire() {
             <div style={{ marginTop:14, display:"flex", gap:9, padding:"11px 14px", background:"rgba(245,158,11,0.10)", border:"1px solid rgba(245,158,11,0.30)", borderRadius:12 }}>
               <span aria-hidden style={{ flexShrink:0, fontSize:13, lineHeight:1.5 }}>⚠️</span>
               <p style={{ margin:0, fontSize:12, color:resenasText, opacity:0.85, lineHeight:1.6 }}>
-                {resenas.totalReal === 0
-                  ? <><strong>Estas reseñas son de ejemplo.</strong> Tu tienda todavía no tiene ninguna: están para que veas cómo queda el bloque lleno. No se publican, y desaparecen solas en cuanto llegue la primera de verdad.</>
+                {resenas.enPortadaReal === 0
+                  ? <><strong>Estas reseñas son de ejemplo.</strong> {avisoResenasVacias(resenas.totalReal)}</>
                   : <>Hoy tenés <strong>{resenas.totalReal} {resenas.totalReal === 1 ? "reseña" : "reseñas"}</strong> y {resenas.enPortadaReal === 1 ? "aparece" : "aparecen"} <strong>{resenas.enPortadaReal}</strong> acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado. Las que ves ahora son de ejemplo.</>}
               </p>
             </div>
@@ -2656,6 +2663,7 @@ export default function Aire() {
         </div>
         </div>
       </section>
+      </>)}
       </SectionBlock>
 
       {/* ── PREGUNTAS FRECUENTES (ver `aire/PreguntasAire`) ── */}

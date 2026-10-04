@@ -40,6 +40,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { irAContactoOWhatsApp } from "@/components/store/templates/shared/irAContacto";
+import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
 import { PreguntasChic } from "@/components/store/templates/chic/PreguntasChic";
 import { LookbookChic } from "@/components/store/templates/chic/LookbookChic";
 import { MAX_LOOKS } from "@/lib/lookbook";
@@ -1462,9 +1463,11 @@ export default function ChicParis() {
               <p style={{ fontSize: 15 }}>Cargando productos...</p>
             </div>
           ) : products.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: prodText, opacity: 0.35 }}>
+            <div style={{ textAlign: "center", padding: "60px 0", color: prodText, opacity: 0.6 }}>
               <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} style={{ marginBottom: 12, opacity: 0.5 }}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-              <p style={{ fontSize: 14, margin: 0 }}>Todavía no hay productos. Agregá productos desde el dashboard.</p>
+              {/* El cliente no puede "agregar productos": esa instrucción es para la
+                  dueña y la veía cualquiera que entrara a una tienda vacía. */}
+              <p style={{ fontSize: 14, margin: 0 }}>{enEditor ? "Todavía no hay productos. Agregalos desde Productos, en tu panel." : "Muy pronto, productos nuevos."}</p>
             </div>
           ) : (
             <>
@@ -1728,6 +1731,12 @@ export default function ChicParis() {
 
       <SectionBlock id="cp-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}
         avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
+        {/* Tienda publicada sin reseñas: la franja en lugar del bloque, y nada mientras se averigua (ver useHomeReviews). */}
+        {resenasHome.esperandoResenas ? null : resenasHome.vacioEnTienda ? (
+          <FranjaPrimeraResena onOpinar={resenasHome.abrirModal} fondo={sc["bgPruebaSocial"] ?? "#fff"} tinta={getContrastColor(sc["bgPruebaSocial"] ?? "#fff") === "light" ? "#fff" : "#111"} suave={getContrastColor(sc["bgPruebaSocial"] ?? "#fff") === "light" ? "rgba(255,255,255,0.72)" : "#5a5a5a"} linea="#f0f0f0" isMobile={isMobile}
+            estiloTitulo={{ fontFamily:"'Playfair Display', Georgia, serif", fontStyle:"italic", fontWeight:400, fontSize:21 }}
+            estiloBoton={{ background:"#111", color:"#fff", border:"none", borderRadius:4, padding:"13px 26px", fontSize:11, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase" }} />
+        ) : (<>
         {(() => {
           // Los datos y las reglas vienen de useHomeReviews (ver arriba). Solo
           // se listan los ejemplos del editor, que son propios de este template:
@@ -1797,18 +1806,12 @@ export default function ChicParis() {
                 {enEditor && (() => {
                   const total = resenasHome.totalReal;
                   const enPortada = resenasHome.enPortadaReal;
-                  // Este cartel MENTÍA en sus dos primeros casos: decía que el
-                  // bloque "no se muestra en la tienda publicada", y el bloque
-                  // siempre se muestra —no hay un solo `return null`—. Con cero
-                  // reseñas queda vacío, invitando a dejar la primera, y eso es a
-                  // propósito: escondido, una tienda nueva no tendría nunca cómo
-                  // recibirla, porque el botón para dejarla vive acá adentro.
-                  const detalle =
-                    total === 0
-                      ? "Tu tienda todavía no tiene ninguna. Hasta que llegue la primera, el bloque se muestra vacío, invitando a tus clientas a dejarla."
-                      : enPortada === 0
-                        ? `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"}, pero ninguna sube a la portada todavía: de los productos suben las de 4★ y 5★ con comentario, y las de tu tienda, las que hayas aprobado. Por eso hoy el bloque se ve vacío.`
-                        : `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"} y ${enPortada} ${enPortada === 1 ? "va" : "van"} a aparecer acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado.`;
+                  // Sin reseñas en la portada, en la tienda publicada este bloque
+                  // NO se muestra: va la franja con el botón para dejar la primera
+                  // (04/10/26). El cartel se lo dice a la dueña.
+                  const detalle = enPortada === 0
+                    ? avisoResenasVacias(total)
+                    : `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"} y ${enPortada} ${enPortada === 1 ? "va" : "van"} a aparecer acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado.`;
                   return (
                     <div style={{ display: "flex", gap: 9, marginTop: 14, padding: "10px 13px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, maxWidth: 620 }}>
                       <span style={{ flexShrink: 0, fontSize: 13, lineHeight: 1.4 }}>⚠️</span>
@@ -1954,6 +1957,7 @@ export default function ChicParis() {
             </section>
           );
         })()}
+        </>)}
       </SectionBlock>
 
       <SectionBlock id="cp-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>

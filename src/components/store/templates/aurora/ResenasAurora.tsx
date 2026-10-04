@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FranjaPrimeraResena, avisoResenasVacias } from "@/components/store/templates/shared/FranjaPrimeraResena";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { useHomeReviews, type EjemplosDeResenas, type HomeReview } from "@/hooks/useHomeReviews";
 import { EditableZone } from "@/contexts/EditContext";
@@ -122,6 +123,94 @@ export function ResenasAurora({
     boxShadow: llena ? `0 0 30px ${luz(0.45)}` : "none",
   });
 
+  /* ── El formulario de reseña de TIENDA ───────────────────────────────
+      Un paso de confirmación antes de mandar: una reseña no se edita
+      después, así que se le repite con qué nombre y cuántas estrellas sale. */
+  const formulario = r.modalAbierto && (
+    <div onClick={r.cerrarModal} role="dialog" aria-modal="true" aria-label="Dejá tu opinión"
+      style={{ position:"fixed", inset:0, zIndex:capa, display:"flex", alignItems:"center", justifyContent:"center", padding:16,
+        background:"rgba(4,5,10,0.72)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)" }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ width:"100%", maxWidth:460, maxHeight:"90vh", overflowY:"auto", position:"relative", color:T,
+          background:`radial-gradient(80% 50% at 0% 0%, ${luz(0.18)}, transparent 70%), linear-gradient(160deg, rgba(22,23,38,0.95), rgba(10,11,20,0.96))`,
+          border:`1px solid ${LINEA_FUERTE}`, borderRadius:26, padding: isMobile ? "26px 20px" : "32px 30px", boxShadow:"0 40px 100px rgba(0,0,0,0.6)" }}>
+        <button onClick={r.cerrarModal} aria-label="Cerrar"
+          style={{ position:"absolute", top:14, right:14, width:38, height:38, borderRadius:999, background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, color:T, cursor:"pointer", fontSize:16 }}>×</button>
+
+        {r.listo ? (
+          /* No se agrega a la lista: nace pendiente hasta que la tienda la apruebe. */
+          <div style={{ textAlign:"center", padding:"10px 0 4px" }}>
+            <div aria-hidden style={{ width:60, height:60, borderRadius:"50%", margin:"0 auto 18px", display:"grid", placeItems:"center", background:G, color:textoSobreAcento, fontSize:26, boxShadow:`0 0 40px ${luz(0.6)}` }}>✓</div>
+            <h3 style={{ margin:"0 0 8px", fontFamily:TITULO, fontWeight:400, fontSize:22 }}>¡Gracias!</h3>
+            <p style={{ margin:"0 0 22px", fontSize:13.5, lineHeight:1.6, opacity:0.65 }}>Tu reseña le llegó a la tienda. Se publica en cuanto la revisen.</p>
+            <button type="button" onClick={r.cerrarModal} style={pastilla(true)}>Cerrar</button>
+          </div>
+        ) : (
+          <form onSubmit={r.enviar} style={{ display:"flex", flexDirection:"column", gap:13 }}>
+            <div>
+              <h3 style={{ margin:"0 0 6px", fontFamily:TITULO, fontWeight:300, fontSize:24, letterSpacing:"-0.02em", paddingRight:40 }}>Contanos cómo te fue</h3>
+              <p style={{ margin:0, fontSize:12.5, lineHeight:1.55, opacity:0.6 }}>De la tienda en general: la atención, el envío, cómo llegó.</p>
+            </div>
+            {r.error && <p style={{ margin:0, fontSize:12, color:"#fca5a5", background:"rgba(220,38,38,0.12)", border:"1px solid rgba(220,38,38,0.35)", borderRadius:12, padding:"10px 13px" }}>⚠ {r.error}</p>}
+            <input value={r.honeypot} onChange={e => r.setHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true"
+              style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
+            <div style={{ display:"flex", gap:6 }}>
+              {[1,2,3,4,5].map(s => (
+                <button key={s} type="button" onClick={() => r.setForm(p => ({ ...p, rating: s }))} aria-label={`${s} de 5`}
+                  style={{ background:"none", border:"none", padding:2, cursor:"pointer", fontSize:28, lineHeight:1, color: s <= r.form.rating ? G : "rgba(242,242,247,0.18)", textShadow: s <= r.form.rating ? `0 0 14px ${luz(0.7)}` : "none" }}>★</button>
+              ))}
+            </div>
+            <input value={r.form.reviewer} maxLength={RESENADOR_MAX} required placeholder="Tu nombre"
+              onChange={e => r.setForm(p => ({ ...p, reviewer: e.target.value }))} style={campo} />
+            <div>
+              <input value={r.form.email} type="email" maxLength={120} autoComplete="email" placeholder="Tu email (opcional)"
+                onChange={e => r.setForm(p => ({ ...p, email: e.target.value }))} style={campo} />
+              <p style={{ margin:"6px 4px 0", fontSize:11, lineHeight:1.5, opacity:0.62 }}>Si compraste acá, sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
+            </div>
+            <textarea value={r.form.comment} rows={3} maxLength={COMENTARIO_MAX} placeholder="Contá tu experiencia (opcional)"
+              onChange={e => r.setForm(p => ({ ...p, comment: e.target.value }))} style={{ ...campo, resize:"none" }} />
+            {r.form.comment.length > COMENTARIO_MAX - 80 && (
+              <p style={{ margin:"-8px 4px 0", fontSize:11, textAlign:"right", color: r.form.comment.length >= COMENTARIO_MAX ? "#fca5a5" : "rgba(242,242,247,0.45)" }}>{r.form.comment.length} / {COMENTARIO_MAX}</p>
+            )}
+            {!isPreview && r.captcha.widget}
+            {r.confirmando ? (
+              <div style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:16, padding:"14px 16px" }}>
+                <p style={{ margin:"0 0 12px", fontSize:12.5, lineHeight:1.6 }}>Se publica con tu nombre, <strong>{r.form.reviewer.trim()}</strong>, y {r.form.rating} de 5 estrellas. ¿La mandamos?</p>
+                <div style={{ display:"flex", gap:9 }}>
+                  <button type="submit" disabled={r.enviando || !r.captcha.ready} style={{ ...pastilla(true), flex:1, opacity: r.enviando ? 0.6 : 1 }}>{r.enviando ? "Enviando…" : "Sí, enviar"}</button>
+                  <button type="button" onClick={() => r.setConfirmando(false)} disabled={r.enviando} style={{ ...pastilla(false), flex:1 }}>Volver</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" disabled={!r.puedeEnviar} onClick={() => r.setConfirmando(true)}
+                title={r.bloqueo ? undefined : r.valida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
+                style={{ ...pastilla(r.puedeEnviar), cursor: r.puedeEnviar ? "pointer" : "default", opacity: r.puedeEnviar ? 1 : 0.55 }}>
+                Enviar mi reseña
+              </button>
+            )}
+            {r.bloqueo && (
+              <p style={{ margin:0, fontSize:11.5, lineHeight:1.55, textAlign:"center", opacity:0.68 }}>
+                {r.bloqueo === "preview" ? "Vista previa: el formulario funciona en tu tienda publicada." : "Es tu tienda: desde tu propia cuenta no podés dejarle una reseña."}
+              </p>
+            )}
+          </form>
+        )}
+      </div>
+    </div>
+  );
+
+  /* Tienda publicada sin reseñas en la portada: en vez del bloque, la franja
+     para dejar la primera; y nada mientras se averigua (ver useHomeReviews). */
+  if (r.esperandoResenas) return null;
+  if (r.vacioEnTienda) return (
+    <>
+      <FranjaPrimeraResena onOpinar={r.abrirModal} fondo={BG} tinta={T} suave="rgba(242,242,247,0.7)" linea={LINEA_FUERTE} isMobile={isMobile}
+        estiloTitulo={{ fontFamily:TITULO, fontWeight:300, fontSize: isMobile ? 20 : 24, letterSpacing:"-0.01em" }}
+        estiloBoton={pastilla(true)} />
+      {formulario}
+    </>
+  );
+
   return (
     <section data-reveal style={{ position:"relative", overflow:"hidden", background:BG, borderTop:`1px solid ${LINEA_FUERTE}` }}>
       <div aria-hidden style={{ position:"absolute", inset:0, pointerEvents:"none",
@@ -163,8 +252,8 @@ export function ResenasAurora({
             <div style={{ marginTop:18, display:"flex", gap:9, padding:"11px 13px", borderRadius:14, background:"rgba(253,230,138,0.08)", border:"1px solid rgba(253,230,138,0.28)", textAlign:"left" }}>
               <span aria-hidden style={{ flexShrink:0 }}>⚠️</span>
               <p style={{ margin:0, fontSize:11.5, color:"#fde68a", lineHeight:1.55 }}>
-                {r.totalReal === 0
-                  ? <><strong>Son de ejemplo.</strong> Tu tienda todavía no tiene reseñas: están para que veas cómo queda. No se publican y desaparecen solas con la primera de verdad.</>
+                {r.enPortadaReal === 0
+                  ? <><strong>Son de ejemplo.</strong> {avisoResenasVacias(r.totalReal)}</>
                   : <>Hoy tenés <strong>{r.totalReal} {r.totalReal === 1 ? "reseña" : "reseñas"}</strong> y {r.enPortadaReal === 1 ? "aparece" : "aparecen"} <strong>{r.enPortadaReal}</strong> acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado. Las que ves ahora son de ejemplo.</>}
               </p>
             </div>
@@ -248,81 +337,7 @@ export function ResenasAurora({
       </div>
       <style>{`.au-resenas-pista::-webkit-scrollbar{display:none}`}</style>
 
-      {/* ── El formulario de reseña de TIENDA ───────────────────────────────
-          Un paso de confirmación antes de mandar: una reseña no se edita
-          después, así que se le repite con qué nombre y cuántas estrellas sale. */}
-      {r.modalAbierto && (
-        <div onClick={r.cerrarModal} role="dialog" aria-modal="true" aria-label="Dejá tu opinión"
-          style={{ position:"fixed", inset:0, zIndex:capa, display:"flex", alignItems:"center", justifyContent:"center", padding:16,
-            background:"rgba(4,5,10,0.72)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)" }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ width:"100%", maxWidth:460, maxHeight:"90vh", overflowY:"auto", position:"relative", color:T,
-              background:`radial-gradient(80% 50% at 0% 0%, ${luz(0.18)}, transparent 70%), linear-gradient(160deg, rgba(22,23,38,0.95), rgba(10,11,20,0.96))`,
-              border:`1px solid ${LINEA_FUERTE}`, borderRadius:26, padding: isMobile ? "26px 20px" : "32px 30px", boxShadow:"0 40px 100px rgba(0,0,0,0.6)" }}>
-            <button onClick={r.cerrarModal} aria-label="Cerrar"
-              style={{ position:"absolute", top:14, right:14, width:38, height:38, borderRadius:999, background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, color:T, cursor:"pointer", fontSize:16 }}>×</button>
-
-            {r.listo ? (
-              /* No se agrega a la lista: nace pendiente hasta que la tienda la apruebe. */
-              <div style={{ textAlign:"center", padding:"10px 0 4px" }}>
-                <div aria-hidden style={{ width:60, height:60, borderRadius:"50%", margin:"0 auto 18px", display:"grid", placeItems:"center", background:G, color:textoSobreAcento, fontSize:26, boxShadow:`0 0 40px ${luz(0.6)}` }}>✓</div>
-                <h3 style={{ margin:"0 0 8px", fontFamily:TITULO, fontWeight:400, fontSize:22 }}>¡Gracias!</h3>
-                <p style={{ margin:"0 0 22px", fontSize:13.5, lineHeight:1.6, opacity:0.65 }}>Tu reseña le llegó a la tienda. Se publica en cuanto la revisen.</p>
-                <button type="button" onClick={r.cerrarModal} style={pastilla(true)}>Cerrar</button>
-              </div>
-            ) : (
-              <form onSubmit={r.enviar} style={{ display:"flex", flexDirection:"column", gap:13 }}>
-                <div>
-                  <h3 style={{ margin:"0 0 6px", fontFamily:TITULO, fontWeight:300, fontSize:24, letterSpacing:"-0.02em", paddingRight:40 }}>Contanos cómo te fue</h3>
-                  <p style={{ margin:0, fontSize:12.5, lineHeight:1.55, opacity:0.6 }}>De la tienda en general: la atención, el envío, cómo llegó.</p>
-                </div>
-                {r.error && <p style={{ margin:0, fontSize:12, color:"#fca5a5", background:"rgba(220,38,38,0.12)", border:"1px solid rgba(220,38,38,0.35)", borderRadius:12, padding:"10px 13px" }}>⚠ {r.error}</p>}
-                <input value={r.honeypot} onChange={e => r.setHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true"
-                  style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
-                <div style={{ display:"flex", gap:6 }}>
-                  {[1,2,3,4,5].map(s => (
-                    <button key={s} type="button" onClick={() => r.setForm(p => ({ ...p, rating: s }))} aria-label={`${s} de 5`}
-                      style={{ background:"none", border:"none", padding:2, cursor:"pointer", fontSize:28, lineHeight:1, color: s <= r.form.rating ? G : "rgba(242,242,247,0.18)", textShadow: s <= r.form.rating ? `0 0 14px ${luz(0.7)}` : "none" }}>★</button>
-                  ))}
-                </div>
-                <input value={r.form.reviewer} maxLength={RESENADOR_MAX} required placeholder="Tu nombre"
-                  onChange={e => r.setForm(p => ({ ...p, reviewer: e.target.value }))} style={campo} />
-                <div>
-                  <input value={r.form.email} type="email" maxLength={120} autoComplete="email" placeholder="Tu email (opcional)"
-                    onChange={e => r.setForm(p => ({ ...p, email: e.target.value }))} style={campo} />
-                  <p style={{ margin:"6px 4px 0", fontSize:11, lineHeight:1.5, opacity:0.62 }}>Si compraste acá, sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
-                </div>
-                <textarea value={r.form.comment} rows={3} maxLength={COMENTARIO_MAX} placeholder="Contá tu experiencia (opcional)"
-                  onChange={e => r.setForm(p => ({ ...p, comment: e.target.value }))} style={{ ...campo, resize:"none" }} />
-                {r.form.comment.length > COMENTARIO_MAX - 80 && (
-                  <p style={{ margin:"-8px 4px 0", fontSize:11, textAlign:"right", color: r.form.comment.length >= COMENTARIO_MAX ? "#fca5a5" : "rgba(242,242,247,0.45)" }}>{r.form.comment.length} / {COMENTARIO_MAX}</p>
-                )}
-                {!isPreview && r.captcha.widget}
-                {r.confirmando ? (
-                  <div style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:16, padding:"14px 16px" }}>
-                    <p style={{ margin:"0 0 12px", fontSize:12.5, lineHeight:1.6 }}>Se publica con tu nombre, <strong>{r.form.reviewer.trim()}</strong>, y {r.form.rating} de 5 estrellas. ¿La mandamos?</p>
-                    <div style={{ display:"flex", gap:9 }}>
-                      <button type="submit" disabled={r.enviando || !r.captcha.ready} style={{ ...pastilla(true), flex:1, opacity: r.enviando ? 0.6 : 1 }}>{r.enviando ? "Enviando…" : "Sí, enviar"}</button>
-                      <button type="button" onClick={() => r.setConfirmando(false)} disabled={r.enviando} style={{ ...pastilla(false), flex:1 }}>Volver</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" disabled={!r.puedeEnviar} onClick={() => r.setConfirmando(true)}
-                    title={r.bloqueo ? undefined : r.valida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
-                    style={{ ...pastilla(r.puedeEnviar), cursor: r.puedeEnviar ? "pointer" : "default", opacity: r.puedeEnviar ? 1 : 0.55 }}>
-                    Enviar mi reseña
-                  </button>
-                )}
-                {r.bloqueo && (
-                  <p style={{ margin:0, fontSize:11.5, lineHeight:1.55, textAlign:"center", opacity:0.68 }}>
-                    {r.bloqueo === "preview" ? "Vista previa: el formulario funciona en tu tienda publicada." : "Es tu tienda: desde tu propia cuenta no podés dejarle una reseña."}
-                  </p>
-                )}
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      {formulario}
     </section>
   );
 }
