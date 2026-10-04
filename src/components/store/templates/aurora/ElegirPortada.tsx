@@ -23,6 +23,13 @@ import { useEditContext } from "@/contexts/EditContext";
    nada: la foto y los productos elegidos quedan guardados para volver. */
 
 export const MAX_PORTADA = 4;
+/** Cuántas fotos se muestran a la vez para elegir. Con 100 productos la
+ *  grilla abría 100 fotos de golpe y había que bajar y bajar para encontrar
+ *  uno (Flavio, 04/10/26): se muestran éstas, y el resto se encuentra buscando. */
+const A_LA_VEZ = 24;
+/** Desde cuántos productos aparece el buscador. Con pocos, alcanza con mirar. */
+const CON_BUSCADOR = 8;
+const simple = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 export type ModoPortada = "productos" | "foto";
 
 /** Los ids guardados, sin repetidos ni vacíos. */
@@ -51,6 +58,15 @@ export function ElegirPortada({ productos, elegidos, modo, foto, tinta, acento, 
 }) {
   const { setOverride, setActiveField, vistaCelular } = useEditContext();
   const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+
+  /* Los elegidos primero, en su orden: así se ven sin buscarlos. Después el
+     resto, filtrado por el nombre (sin importar tildes ni mayúsculas). */
+  const elegidosProd = elegidos.map(id => productos.find(p => p.id === id)).filter((p): p is StorefrontProduct => !!p);
+  const q = simple(busqueda.trim());
+  const coinciden = productos.filter(p => !elegidos.includes(p.id) && (!q || simple(p.name).includes(q)));
+  const resto = coinciden.slice(0, Math.max(0, A_LA_VEZ - elegidosProd.length));
+  const ocultos = coinciden.length - resto.length;
 
   const guardar = (ids: string[]) => setOverride("heroPiezas", { text: ids.join(",") });
   const alternar = (id: string) => {
@@ -109,8 +125,18 @@ export function ElegirPortada({ productos, elegidos, modo, foto, tinta, acento, 
             {modo === "productos" && (
               <div style={{ padding:"2px 4px 4px" }}>
                 <p style={{ margin:"0 0 8px", fontSize:11.5, opacity:0.7 }}>Tocá hasta {MAX_PORTADA}, en el orden en que querés que salgan:</p>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, maxHeight:230, overflowY:"auto", padding:2 }}>
-                  {productos.map(p => {
+                {productos.length > CON_BUSCADOR && (
+                  <input type="search" value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder={`Buscar entre tus ${productos.length} productos…`}
+                    aria-label="Buscar producto para la portada"
+                    style={{ width:"100%", boxSizing:"border-box", marginBottom:8, background:"rgba(255,255,255,0.06)", border:`1px solid ${linea}`, borderRadius:10,
+                      color:tinta, padding:"8px 11px", fontSize:12.5, outline:"none", fontFamily:"inherit" }} />
+                )}
+                {/* La caja con scroll y la grilla van separadas: con el alto tope en la
+                    grilla misma, las filas se apretaban para entrar en 230px y las
+                    fotos quedaban encimadas (con 100 productos, 04/10/26). */}
+                <div style={{ maxHeight:230, overflowY:"auto", padding:2 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
+                  {[...elegidosProd, ...resto].map(p => {
                     const n = elegidos.indexOf(p.id);
                     const lleno = n < 0 && elegidos.length >= MAX_PORTADA;
                     return (
@@ -118,7 +144,12 @@ export function ElegirPortada({ productos, elegidos, modo, foto, tinta, acento, 
                         style={{ position:"relative", aspectRatio:"3/4", padding:0, borderRadius:10, overflow:"hidden", cursor: lleno ? "not-allowed" : "pointer",
                           border:`2px solid ${n >= 0 ? acento : "transparent"}`, opacity: lleno ? 0.35 : 1, background:"#0e0f1a",
                           boxShadow: n >= 0 ? `0 0 16px ${acento}88` : "none" }}>
-                        <span aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${p.images[0]})`, backgroundSize:"cover", backgroundPosition:"center" }} />
+                        {/* <img> con lazy, y no fondo: carga sólo las que se ven en la caja. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.images[0]} alt="" loading="lazy" decoding="async" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+                        {/* El nombre: con muchos productos parecidos, la foto sola no alcanza. */}
+                        <span style={{ position:"absolute", left:0, right:0, bottom:0, padding:"14px 5px 4px", fontSize:9.5, lineHeight:1.2, color:"#fff", textAlign:"left",
+                          background:"linear-gradient(to top, rgba(0,0,0,.8), transparent)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
                         {n >= 0 && (
                           <span style={{ position:"absolute", top:4, right:4, width:20, height:20, borderRadius:999, background:acento, color:textoAcento,
                             fontSize:11, fontWeight:700, display:"grid", placeItems:"center" }}>{n + 1}</span>
@@ -127,6 +158,18 @@ export function ElegirPortada({ productos, elegidos, modo, foto, tinta, acento, 
                     );
                   })}
                 </div>
+                </div>
+                {q && elegidosProd.length + resto.length === 0 && (
+                  <p style={{ margin:"8px 0 0", fontSize:11.5, color:"#fbbf24" }}>Ningún producto con foto se llama así.</p>
+                )}
+                {q && elegidosProd.length > 0 && resto.length === 0 && coinciden.length === 0 && (
+                  <p style={{ margin:"8px 0 0", fontSize:11.5, opacity:0.7 }}>Ningún otro producto se llama así.</p>
+                )}
+                {ocultos > 0 && (
+                  <p style={{ margin:"8px 0 0", fontSize:11.5, opacity:0.7 }}>
+                    {q ? `Hay ${ocultos} más con ese nombre: escribí un poco más para encontrarlo.` : `Hay ${ocultos} más: buscalos por nombre.`}
+                  </p>
+                )}
                 {elegidos.length > 0 && (
                   <button type="button" onClick={() => guardar([])}
                     style={{ ...chip, marginTop:10, background:"transparent" }}>Volver a los automáticos</button>
