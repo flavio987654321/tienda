@@ -7,7 +7,7 @@ import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/cont
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { valoresElegidos } from "@/lib/opciones";
-import { textoSeleccion } from "@/components/store/shared/cartTypes";
+import { textoSeleccion, MP_PAGO_OPTION } from "@/components/store/shared/cartTypes";
 import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
@@ -321,10 +321,15 @@ export function CheckoutModal({
             </div>
 
             <div style={{ padding:"16px 28px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, padding:"10px 14px", border:`1px solid ${border}`, borderRadius:6 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, padding:"10px 14px", border:`1px solid ${border}`, borderRadius:forma?.campo ?? 6 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:"#4ade80", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 <span style={{ fontSize:11, color:T, opacity:0.65, lineHeight:1.5 }}>
-                  Pago seguro procesado por <strong>MercadoPago</strong> · SSL cifrado
+                  {/* Mercado Pago se nombra sólo si es con lo que se va a pagar.
+                      Antes salía siempre: en una tienda sin Mercado Pago, o pagando
+                      por transferencia, le prometía al comprador algo que no pasaba. */}
+                  {pagoId === MP_PAGO_OPTION.id
+                    ? <>Pago seguro procesado por <strong>MercadoPago</strong> · SSL cifrado</>
+                    : <>Tus datos viajan cifrados · SSL</>}
                 </span>
               </div>
               <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:14, cursor:"pointer" }}>
