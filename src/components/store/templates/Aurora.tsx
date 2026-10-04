@@ -7,6 +7,8 @@ import { ProductoEnFoco } from "@/components/store/templates/aurora/ProductoEnFo
 import { FichaAurora } from "@/components/store/templates/aurora/FichaAurora";
 import { ResenasAurora } from "@/components/store/templates/aurora/ResenasAurora";
 import { REDES_SOCIALES } from "@/components/store/templates/shared/redesSociales";
+import { RecienLlegado } from "@/components/store/templates/aurora/RecienLlegado";
+import { PreguntasAurora } from "@/components/store/templates/aurora/PreguntasAurora";
 import { GarantiasAurora } from "@/components/store/templates/aurora/GarantiasAurora";
 import { FraseAurora } from "@/components/store/templates/aurora/FraseAurora";
 import { MayoristaAurora } from "@/components/store/templates/aurora/MayoristaAurora";
@@ -125,7 +127,7 @@ type ModoVidriera = typeof MODOS_VIDRIERA[number]["valor"];
 /** Cuántas piezas muestra el bloque de productos de la portada. */
 const VISTOS_EN_PORTADA = 8;
 
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-statement", "au-producto-foco", "au-productos", "au-resenas"];
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-coleccion", "au-recien", "au-statement", "au-producto-foco", "au-productos", "au-resenas", "au-preguntas"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -167,7 +169,7 @@ export default function Aurora() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, shippingMethods, hasMercadoPago } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   /* ── Las pantallas dejan de ser otras páginas ────────────────────────────────
@@ -1186,6 +1188,12 @@ export default function Aurora() {
           tinta={tintaTarjeta} escena={escenaAurora} isMobile={isMobile} />
       </SectionBlock>
 
+      {/* ── RECIÉN LLEGADO (ver `aurora/RecienLlegado`) ── */}
+      <SectionBlock id="au-recien" label="Recién llegado" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+        <RecienLlegado products={products} fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={abrirFicha}
+          escena={escenaAurora} isMobile={isMobile} />
+      </SectionBlock>
+
       <SectionBlock id="au-statement" label="Frase de marca" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       {/* ── STATEMENT ──────────────────────────────────────── */}
       <FraseAurora fondo={statementBg} tinta={statementText} escena={escenaAurora} isMobile={isMobile}
@@ -1274,6 +1282,13 @@ export default function Aurora() {
         <ResenasAurora slug={storeConfig?.slug} isPreview={isPreview} enEditor={enEditor} isOwner={isOwner}
           products={products} onAbrirProducto={openModal} escena={escenaAurora} isMobile={isMobile}
           capa={isPreview ? CAPAS.previaModal : CAPAS.modalTemplate} />
+      </SectionBlock>
+      {/* ── PREGUNTAS FRECUENTES (ver `aurora/PreguntasAurora`) ── */}
+      <SectionBlock id="au-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+        <PreguntasAurora envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
+          legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
+          onContacto={vista.irAContacto} conWhatsapp={!storeConfig || !!storeConfig.whatsapp?.enabled}
+          escena={escenaAurora} isMobile={isMobile} />
       </SectionBlock>
       {/* Cierra el `flex column` que abre despues del hero y que le da el orden a
           los bloques. Antes cerraba despues de Contacto; ahora Contacto y Nosotros
