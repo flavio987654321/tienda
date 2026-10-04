@@ -15,7 +15,7 @@ import { GarantiasAurora } from "@/components/store/templates/aurora/GarantiasAu
 import { FraseAurora } from "@/components/store/templates/aurora/FraseAurora";
 import { MayoristaAurora } from "@/components/store/templates/aurora/MayoristaAurora";
 import { ElegirPortada, leerPiezasPortada, MAX_PORTADA } from "@/components/store/templates/aurora/ElegirPortada";
-import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
+import { VolverAurora } from "@/components/store/templates/aurora/VolverAurora";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
@@ -570,7 +570,10 @@ export default function Aurora() {
     borderRadius:14, overflow:"hidden", boxShadow:"0 18px 50px rgba(0,0,0,0.55)",
   };
 
-  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(242,242,247,0.1)", accent:G, accentText, serif:TITULO };
+  // `forma`: las píldoras y el brillo de Aurora también en el carrito y el
+  // checkout, que son los compartidos (la cuenta es una sola; la forma, de cada uno).
+  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(242,242,247,0.1)", accent:G, accentText, serif:TITULO,
+    forma: { boton:999, campo:14, foto:12, brillo:`0 0 30px ${luz(0.45)}` } };
   const nosotrosImageOv  = storeConfig?.imageOverrides?.["nosotrosImage"];
   /* La misma regla que la foto del hero: si la dueña no subió una, va una de
      SUS productos (la segunda con foto, para no repetir la del hero). Antes caía
@@ -761,8 +764,14 @@ export default function Aurora() {
 
       {/* ── TOAST ──────────────────────────────────────────── */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:G, color:textoSobreAcento, padding:"12px 28px", fontSize:13, fontWeight:700, zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
-          ✓ {toastMsg}
+        // Una cápsula de vidrio con un punto de luz, como el resto de Aurora (era
+        // un rectángulo del acento lleno).
+        <div role="status" style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", display:"flex", alignItems:"center", gap:10,
+          background:"rgba(14,15,26,0.82)", backdropFilter:"blur(18px) saturate(150%)", WebkitBackdropFilter:"blur(18px) saturate(150%)",
+          border:`1px solid ${luz(0.45)}`, color:T, borderRadius:999, padding:"11px 22px 11px 14px", fontSize:13, fontWeight:600,
+          zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", boxShadow:`0 14px 40px rgba(0,0,0,0.5), 0 0 30px ${luz(0.3)}` }}>
+          <span aria-hidden style={{ width:22, height:22, flexShrink:0, borderRadius:999, display:"grid", placeItems:"center", background:G, color:textoSobreAcento, fontSize:12, boxShadow:`0 0 14px ${luz(0.8)}` }}>✓</span>
+          <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{toastMsg}</span>
         </div>
       )}
 
@@ -1343,8 +1352,7 @@ export default function Aurora() {
       {vista.enNosotros && (
         <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
-            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
-              S={S} LN={LINEA_FUERTE} T={T} G={G} />
+            <VolverAurora onClick={vista.irALaPortada} tinta={T} linea={LINEA_FUERTE} />
           </div>
       {/* ── NOSOTROS ───────────────────────────────────────────────────────
           Rehecho con el lenguaje de Aurora (ver AURORA.md, bloques heredados):
@@ -1411,8 +1419,7 @@ export default function Aurora() {
       {vista.enContacto && (
         <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
-            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
-              S={S} LN={LINEA_FUERTE} T={T} G={G} />
+            <VolverAurora onClick={vista.irALaPortada} tinta={T} linea={LINEA_FUERTE} />
           </div>
       {/* ── CONTACTO ───────────────────────────────────────── */}
       <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid ${LINEA}`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>

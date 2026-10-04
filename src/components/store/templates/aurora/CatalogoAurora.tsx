@@ -1,4 +1,5 @@
 "use client";
+import { VolverAurora } from "@/components/store/templates/aurora/VolverAurora";
 import { useEffect, useMemo, useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
@@ -145,11 +146,7 @@ export function CatalogoAurora({
 
       <header style={{ position:"relative", maxWidth:1400, margin:"0 auto", padding: isMobile ? "20px 16px 18px" : "34px 32px 30px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom: isMobile ? 22 : 34 }}>
-          <button onClick={onVolver}
-            style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.05)", backdropFilter:"blur(14px)", WebkitBackdropFilter:"blur(14px)", border:`1px solid ${LINEA_FUERTE}`, color:T, borderRadius:999, padding:"9px 16px 9px 12px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", fontWeight:600 }}>
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Volver a la tienda
-          </button>
+          <VolverAurora onClick={onVolver} tinta={T} linea={LINEA_FUERTE} />
           <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:"rgba(242,242,247,0.5)", fontVariantNumeric:"tabular-nums" }}>
             {cargando ? "…" : `${total} ${total === 1 ? "pieza" : "piezas"}`}
           </span>

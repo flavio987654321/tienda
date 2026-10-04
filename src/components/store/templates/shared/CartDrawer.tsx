@@ -20,6 +20,22 @@ export type CartTheme = {
   // con getContrastColor del lado del template, que sabe qué color elegiste).
   accentText: string;
   serif?: string;
+  /** Las formas del template (opcional). Sin esto, todo queda como siempre:
+   *  botones rectos y campos de 6px. Aurora lo usa para sus píldoras de vidrio. */
+  forma?: FormaCarrito;
+};
+
+/** Cuánto se redondea cada cosa del carrito y del checkout, y el brillo del
+ *  botón principal. Es FORMA y no lógica: la cuenta sigue siendo la misma. */
+export type FormaCarrito = {
+  /** Botones grandes (comprar, seguir comprando) y el selector de cantidad. */
+  boton?: number;
+  /** Campos, opciones de envío y pago, y avisos. */
+  campo?: number;
+  /** Las fotos de los productos. */
+  foto?: number;
+  /** Sombra del botón principal cuando se puede tocar (ej. un brillo del acento). */
+  brillo?: string;
 };
 
 // ── Cómo LLAMA cada template a las cosas ─────────────────────────────────────
@@ -86,7 +102,7 @@ export function CartDrawer({
    */
   zIndex?: number;
 }) {
-  const { BG, T, MID, border, accent, accentText, serif } = theme;
+  const { BG, T, MID, border, accent, accentText, serif, forma } = theme;
   const voz = vocabulario ? { ...VOCABULARIO_BASE, ...vocabulario } : VOCABULARIO_BASE;
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, removeFromCart, updateQty,
@@ -158,8 +174,8 @@ export function CartDrawer({
                   : null;
                 const src = propia ?? item.product.images[0];
                 return src
-                  ? <FadeImage src={src} alt="" width={70} height={70} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
-                  : <div style={{ width:70, height:70, flexShrink:0, borderRadius:6, background:"#f0f0f0" }} />;
+                  ? <FadeImage src={src} alt="" width={70} height={70} style={{ objectFit:"cover", flexShrink:0, borderRadius:forma?.foto ?? 6 }} />
+                  : <div style={{ width:70, height:70, flexShrink:0, borderRadius:forma?.foto ?? 6, background:"#f0f0f0" }} />;
               })()}
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
@@ -190,7 +206,7 @@ export function CartDrawer({
                   </p>
                 ) : null}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
+                  <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, borderRadius:forma?.boton }}>
                     <button onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
                     <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
                     <button onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
@@ -270,16 +286,16 @@ export function CartDrawer({
             )}
             <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy}
               title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined}
-              style={{ width:"100%", background: blockBuy ? `${accentFill}40` : accentFill, color: blockBuy ? `${accentSobreFill}80` : accentSobreFill, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
+              style={{ width:"100%", background: blockBuy ? `${accentFill}40` : accentFill, color: blockBuy ? `${accentSobreFill}80` : accentSobreFill, border:"none", borderRadius:forma?.boton, boxShadow: blockBuy ? undefined : forma?.brillo, padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
               {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : voz.finalizar}
             </button>
-            <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid ${border}`, padding:"12px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+            <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid ${border}`, borderRadius:forma?.boton, padding:"12px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
               {voz.seguir}
             </button>
             {whatsapp?.enabled && whatsapp.number && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
                 target="_blank" rel="noopener noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, padding:"11px 14px", background:"rgba(37,211,102,0.08)", borderRadius:6, textDecoration:"none" }}>
+                style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, padding:"11px 14px", background:"rgba(37,211,102,0.08)", borderRadius:forma?.campo ?? 6, textDecoration:"none" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="#25D366" style={{ flexShrink:0 }}><path d="M17.6 6.32A8.86 8.86 0 0 0 12.07 3a8.86 8.86 0 0 0-7.65 13.43L3 21l4.74-1.24a8.86 8.86 0 0 0 4.33 1.1h.01c4.9 0 8.87-3.97 8.87-8.86 0-2.37-.92-4.6-2.35-6.68zm-5.53 13.63a7.37 7.37 0 0 1-3.76-1.03l-.27-.16-2.8.73.75-2.73-.18-.28a7.36 7.36 0 0 1-1.13-3.93c0-4.07 3.31-7.38 7.39-7.38a7.34 7.34 0 0 1 5.22 2.17 7.34 7.34 0 0 1 2.16 5.22c0 4.07-3.31 7.39-7.38 7.39zm4.04-5.53c-.22-.11-1.3-.64-1.5-.71-.2-.08-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.16-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.11.22-.28.33-.42.11-.14.15-.24.22-.4.08-.16.04-.3-.04-.42-.08-.11-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38-.13-.01-.28-.01-.43-.01-.15 0-.39.06-.6.28-.21.22-.8.78-.8 1.9 0 1.12.81 2.2.93 2.35.11.15 1.55 2.37 3.76 3.23 1.87.73 2.25.59 2.66.55.41-.04 1.3-.53 1.49-1.04.18-.51.18-.94.13-1.04-.06-.1-.22-.16-.44-.27z"/></svg>
                 <div>
                   <p style={{ fontSize:10, margin:0, color:T, opacity:0.6 }}>¿TENÉS DUDAS?</p>

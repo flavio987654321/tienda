@@ -99,9 +99,9 @@ página se arrastra 39px de costado. No se encontró la causa.
 **Hecho el 03/10/26.** El cerebro salió a `useFiltrosCatalogo` (verificado: el catálogo compartido quedó idéntico píxel por píxel en 9 templates, a 1280 y 360). Aurora dibuja el suyo en `aurora/CatalogoAurora.tsx`: escena de luz con el título de lo que se mira, barra de vidrio pegada debajo del menú (buscar, ordenar, filtros), categorías y subcategorías como cápsulas que se encienden, las mismas piezas de la portada (`aurora/TarjetaAurora.tsx`), una línea de luz con "Mostrar más" en vez de páginas, y los filtros finos en un panel de vidrio (al costado en la compu, desde abajo en el celular). Tocar una pieza abre la ficha de Aurora con su vuelo y el carrito es el mismo de la portada.
 
 Queda para después:
-- En `CatalogoGenerico` quedó sin uso el acomodo "muro" y el tema `aurora`: Aurora ya no pasa por ahí. Sacarlos.
-- El carrito y el checkout (`CartDrawer`, `CheckoutModal`) siguen siendo los compartidos con la paleta de Aurora.
-- `BotonVolver` en Nosotros y Contacto es el compartido; el catálogo ya tiene el suyo.
+- En `CatalogoGenerico` quedó sin uso el acomodo "muro" y el tema `aurora`: Aurora ya no pasa por ahí. **A propósito para más adelante (04/10/26):** no se ve ni cambia nada, y son muchos cambios chicos en el archivo que usan todas las tiendas. Se saca cuando Boho, Urban y Chic tengan su catálogo propio, que es cuando ese archivo cambia de verdad.
+- ~~El carrito y el checkout (`CartDrawer`, `CheckoutModal`) siguen siendo los compartidos con la paleta de Aurora.~~ ✅ 04/10/26: siguen siendo los compartidos (la cuenta es una sola), pero su `CartTheme` acepta una `forma` opcional —redondeo de botones, campos y fotos, y brillo del botón principal— y Aurora pasa sus píldoras. Sin `forma`, los otros templates quedan exactamente igual. El aviso de "agregado al carrito" pasa a ser una cápsula de vidrio.
+- ~~`BotonVolver` en Nosotros y Contacto es el compartido; el catálogo ya tiene el suyo.~~ ✅ 04/10/26: los tres usan `aurora/VolverAurora.tsx`.
 
 Al tocar "Ver colección", Aurora muestra `CatalogoGenerico` (el catálogo compartido, 3.262
 líneas). Tiene un acomodo propio, el "muro" (sin título, más ancho y con la barra de filtros

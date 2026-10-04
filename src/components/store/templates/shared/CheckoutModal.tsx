@@ -24,7 +24,7 @@ export function CheckoutModal({
   /** Igual que en CartDrawer, y siempre por encima de él: el checkout se abre desde el carrito. */
   zIndex?: number;
 }) {
-  const { BG, S, T, MID, border, accent, accentText, serif } = theme;
+  const { BG, S, T, MID, border, accent, accentText, serif, forma } = theme;
   // Mismo motivo que en el carrito: el acento crudo se usaba como color de TEXTO
   // (total, cupon, links, precios). Con un acento claro esta pantalla quedaba
   // ilegible entera. `accent` se sigue usando de relleno en los botones.
@@ -73,7 +73,7 @@ export function CheckoutModal({
 
   const inputStyle: React.CSSProperties = {
     display:"block", width:"100%", marginBottom:10, background:S, border:`1px solid ${border}`,
-    color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box", borderRadius:6,
+    color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box", borderRadius:forma?.campo ?? 6,
   };
 
   return (
@@ -97,7 +97,7 @@ export function CheckoutModal({
             <p style={{ fontSize:13, opacity:0.6, lineHeight:1.8, marginBottom:16, color:T }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
             <p style={{ fontSize:11, opacity:0.45, lineHeight:1.7, marginBottom:32, color:T }}>¿Algún inconveniente con tu pedido? Contactá directamente al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
             <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
-              style={{ background:accentFill, color:accentSobreFill, border:"none", padding:"14px 32px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+              style={{ background:accentFill, color:accentSobreFill, border:"none", borderRadius:forma?.boton, boxShadow:forma?.brillo, padding:"14px 32px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
               Seguir comprando
             </button>
           </div>
@@ -117,8 +117,8 @@ export function CheckoutModal({
                         : null;
                       const src = propia ?? item.product.images[0];
                       return src
-                        ? <FadeImage src={src} alt="" width={56} height={56} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
-                        : <div style={{ width:56, height:56, flexShrink:0, borderRadius:6, background:S }} />;
+                        ? <FadeImage src={src} alt="" width={56} height={56} style={{ objectFit:"cover", flexShrink:0, borderRadius:forma?.foto ?? 6 }} />
+                        : <div style={{ width:56, height:56, flexShrink:0, borderRadius:forma?.foto ?? 6, background:S }} />;
                     })()}
                     <div style={{ flex:1, minWidth:0 }}>
                       <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
@@ -129,7 +129,7 @@ export function CheckoutModal({
                         {fmt(itemEffectiveUnitPrice(item, item.qty))} × {item.qty}
                       </p>
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, height:28, flexShrink:0 }}>
+                    <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, borderRadius:forma?.boton, height:28, flexShrink:0 }}>
                       <button type="button" onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
                       <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
                       <button type="button" onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
@@ -165,7 +165,7 @@ export function CheckoutModal({
               <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14 }}>Envío</p>
               <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
                 {envioOptions.map(opt => (
-                  <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", border:`1px solid ${envioId===opt.id ? accent : border}`, cursor:"pointer", borderRadius:6 }}>
+                  <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", border:`1px solid ${envioId===opt.id ? accent : border}`, cursor:"pointer", borderRadius:forma?.campo ?? 6 }}>
                     <span style={{ display:"flex", alignItems:"center", gap:12 }}>
                       <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:accent }} />
                       <span style={{ fontSize:13, color:T }}>{opt.label}</span>
@@ -178,7 +178,7 @@ export function CheckoutModal({
               <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14 }}>Pago</p>
               <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
                 {pagoOptions.map(opt => (
-                  <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", border:`1px solid ${pagoId===opt.id ? accent : border}`, cursor:"pointer", borderRadius:6 }}>
+                  <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", border:`1px solid ${pagoId===opt.id ? accent : border}`, cursor:"pointer", borderRadius:forma?.campo ?? 6 }}>
                     <input type="radio" name="pago" value={opt.id} checked={pagoId===opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor:accent }} />
                     <span style={{ fontSize:13, color:T }}>{opt.label}</span>
                   </label>
@@ -236,8 +236,8 @@ export function CheckoutModal({
                 <div style={{ marginBottom:28 }}>
                   <div style={{ display:"flex", gap:0 }}>
                     <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
-                      style={{ flex:1, minWidth:0, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
-                    <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accentTexto, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0", flexShrink:0 }}>Aplicar</button>
+                      style={{ flex:1, minWidth:0, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:`${forma?.campo ?? 6}px 0 0 ${forma?.campo ?? 6}px` }} />
+                    <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accentTexto, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:`0 ${forma?.campo ?? 6}px ${forma?.campo ?? 6}px 0`, flexShrink:0 }}>Aplicar</button>
                   </div>
                   {!couponsAllowed && (
                     <p style={{ fontSize:11, opacity:0.75, margin:"8px 0 0", color:T }}>Tenés una promoción aplicada que no se combina con cupones.</p>
@@ -337,7 +337,7 @@ export function CheckoutModal({
                 </span>
               </label>
               <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}
-                style={{ width:"100%", background:accentFill, color:accentSobreFill, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus === "placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
+                style={{ width:"100%", background:accentFill, color:accentSobreFill, border:"none", borderRadius:forma?.boton, boxShadow: acceptedTerms && checkoutStatus !== "placing" ? forma?.brillo : undefined, padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus === "placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
                 {checkoutStatus === "placing" ? "Procesando..." : "Crear pedido"}
               </button>
             </div>
