@@ -33,7 +33,7 @@ export function ElegirPortada({ productos, elegidos, conFotoPropia, tinta, acent
   linea: string;
   fondoPanel: string;
 }) {
-  const { setOverride } = useEditContext();
+  const { setOverride, vistaCelular } = useEditContext();
   const [abierto, setAbierto] = useState(false);
 
   const guardar = (ids: string[]) => setOverride("heroPiezas", { text: ids.join(",") });
@@ -48,7 +48,9 @@ export function ElegirPortada({ productos, elegidos, conFotoPropia, tinta, acent
   };
 
   return (
-    <div style={{ position:"absolute", top:46, left:8, zIndex:7 }}>
+    // En el celular va a la derecha, abajo de "Fondo": a la izquierda tapaba la
+    // etiqueta de arriba del título, que ahí arranca más cerca del borde.
+    <div style={{ position:"absolute", top:46, ...(vistaCelular ? { right:8 } : { left:8 }), zIndex:7, display:"flex", flexDirection:"column", alignItems: vistaCelular ? "flex-end" : "flex-start" }}>
       <button type="button" onClick={() => setAbierto(a => !a)} style={chip} aria-expanded={abierto}>
         📌 Productos de portada
         <span style={{ opacity:0.6, fontWeight:500 }}>{elegidos.length ? `${elegidos.length}/${MAX_PORTADA}` : "auto"}</span>

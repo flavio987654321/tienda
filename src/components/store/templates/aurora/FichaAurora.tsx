@@ -286,11 +286,15 @@ export function FichaAurora({
                     style={{ objectFit:"cover", cursor:"zoom-in" }} onError={e => { e.currentTarget.style.opacity = "0"; }}
                     onClick={() => onAmpliar(producto.images[modalImg])} />
                 )}
-                {(() => {
-                  if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} />;
-                  const hayOferta = !variantPrice && !!producto.comparePrice && producto.comparePrice > producto.price;
-                  return hayOferta ? <OfferBadge badge={producto.offerBadge} pct={discountPercent(producto.price, producto.comparePrice)} size="md" /> : null;
-                })()}
+                {/* Marco que le deja libre la esquina del ×: el cartel compartido
+                    llega al 78% del ancho y una promo larga la pisaba. */}
+                <div style={{ position:"absolute", top:0, left:0, right:64, height:"100%", pointerEvents:"none", zIndex:5 }}>
+                  {(() => {
+                    if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} />;
+                    const hayOferta = !variantPrice && !!producto.comparePrice && producto.comparePrice > producto.price;
+                    return hayOferta ? <OfferBadge badge={producto.offerBadge} pct={discountPercent(producto.price, producto.comparePrice)} size="md" /> : null;
+                  })()}
+                </div>
                 {total > 1 && (
                   <>
                     <button onClick={() => setModalImg(i => (i - 1 + total) % total)} aria-label="Imagen anterior"

@@ -146,7 +146,10 @@ export function HeroFoto({
       onPointerEnter={e => { if (e.pointerType === "mouse") setPausado(true); }}
       onPointerLeave={() => setPausado(false)}
       {...(total > 1 ? swipe : {})}
-      style={{ position: "relative", height: alto, minHeight: 520, background: base, overflow: "hidden" }}
+      // En el celular el alto es un PISO y no un techo: con un título largo (o
+      // con letra grande elegida en el editor) el texto no entraba, y los
+      // botones terminaban debajo de los cuadraditos. Ahí crece con el texto.
+      style={{ position: "relative", height: celular ? undefined : alto, minHeight: celular ? `max(520px, ${alto})` : 520, background: base, overflow: "hidden" }}
     >
       <style>{`
         @keyframes hf-llenar { from { transform: scaleX(0) } to { transform: scaleX(1) } }
@@ -210,7 +213,7 @@ export function HeroFoto({
         }}
       />
 
-      <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", height: celular ? undefined : "100%", minHeight: celular ? "inherit" : undefined, display: "flex", flexDirection: "column" }}>
         {/* El nav va envuelto y no suelto. Como hijo directo de una columna
             flex, cualquier nav que traiga `margin: 0 auto` deja de estirarse y
             se encoge al ancho de su contenido: la barra entera queda apelotonada
@@ -225,7 +228,11 @@ export function HeroFoto({
             maxWidth: 1180,
             width: "100%",
             margin: "0 auto",
-            padding: `${margenNav}px 26px 0`,
+            // En el celular los cuadraditos van abajo, encima de la foto: el texto
+            // les deja su lugar (64 de alto + 18 del borde + aire) para no quedar tapado.
+            padding: celular
+              ? `${margenNav + 36}px 26px ${total > 1 ? 118 : 36}px`
+              : `${margenNav}px 26px 0`,
             gap: 24,
             // Sin `wrap`, en un celular las flechas se meten adentro del párrafo
             // y le comen dos palabras por renglón. Con la base de 340 en el

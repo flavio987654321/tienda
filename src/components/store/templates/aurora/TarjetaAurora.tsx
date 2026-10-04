@@ -55,12 +55,18 @@ export function TarjetaAurora({
       <Inclinable grados={5} style={{ borderRadius:18 }}>
         <div onClick={onAbrir} onMouseEnter={() => setEncima(true)} onMouseLeave={() => setEncima(false)}
           style={{ ...vidrio("oscuro"), borderRadius:18, overflow:"hidden", cursor:"pointer", position:"relative" }}>
-          {(() => {
-            if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />;
-            const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
-            if (!hasOffer) return null;
-            return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
-          })()}
+          {/* El cartel es el compartido y se estira hasta el 78% del ancho: con
+              un nombre de promo largo ("Liquidación invierno - 20% OFF") llegaba
+              al corazón y lo tapaba. Este marco le deja libre la esquina derecha:
+              el 78% pasa a ser de lo que queda. */}
+          <div style={{ position:"absolute", top:0, left:0, right:50, height:"100%", pointerEvents:"none", zIndex:5 }}>
+            {(() => {
+              if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />;
+              const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
+              if (!hasOffer) return null;
+              return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
+            })()}
+          </div>
           <div data-foto style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S }}>
             {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover", transition:"transform 0.6s cubic-bezier(.2,.8,.2,1)", transform: encima ? "scale(1.06)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>}
             {agotado && (
