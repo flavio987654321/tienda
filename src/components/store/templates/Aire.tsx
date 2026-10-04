@@ -26,6 +26,7 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { PreguntasAire } from "@/components/store/templates/aire/PreguntasAire";
 import { discountPercent } from "@/lib/discount";
 /* La ficha de producto, para dibujarla adentro de la portada sin cambiar de
    página. `ProductDetailBody` es el CUERPO compartido —galería, opciones,
@@ -159,7 +160,7 @@ const GARANTIAS = [
    se agregan a medida que se construyen: un id listado aca sin bloque que lo
    dibuje le aparece al dueño en el editor como una seccion que puede prender y
    apagar, y no hace nada. */
-const AIRE_SECTION_IDS = ["ai-tira", "ai-productos", "ai-garantias", "ai-destacados", "ai-resenas", "ai-newsletter"];
+const AIRE_SECTION_IDS = ["ai-tira", "ai-productos", "ai-garantias", "ai-destacados", "ai-resenas", "ai-preguntas", "ai-newsletter"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aire() {
@@ -216,7 +217,7 @@ export default function Aire() {
   const enEditor    = isPreview && !storeConfig?.demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const storefront  = useStorefront();
-  const { products, promotions, loadingProducts, checkoutMode, ocultarPrecios, defaultCategories, currency, hasMercadoPago } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, ocultarPrecios, defaultCategories, currency, hasMercadoPago, shippingMethods } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   /* ── Portada o pantalla de contacto ─────────────────────────────────────────
@@ -1049,6 +1050,8 @@ export default function Aire() {
      separado. */
   const coleccionesBg      = scn["bgColecciones"] ?? BG;
   const newsletterMarcoBg  = scn["bgNewsletterMarco"] ?? BG;
+  /* Preguntas frecuentes: el papel de alrededor de su tarjeta blanca. */
+  const preguntasBg   = scn["bgPreguntas"] ?? BG;
   const garantiasBg   = scn["bgGarantias"] ?? S;
   const garantiasText = tintaSobre(garantiasBg);
   /* ─ La pantalla de contacto ────────────────────────────────────────────────
@@ -2611,6 +2614,16 @@ export default function Aire() {
         </div>
         </div>
       </section>
+      </SectionBlock>
+
+      {/* ── PREGUNTAS FRECUENTES (ver `aire/PreguntasAire`) ── */}
+      <SectionBlock id="ai-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AIRE_SECTION_IDS}>
+        <PreguntasAire envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
+          legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
+          onContacto={irAContacto} conWhatsapp={!storeConfig || !!storeConfig.whatsapp?.enabled}
+          fondo={preguntasBg} G={G} accentText={accentText} T={T} T2={T2} S={S} LN={LN} RAD={RAD} ANCHO={ANCHO} MARGEN={MARGEN} isMobile={isMobile}>
+          <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
+        </PreguntasAire>
       </SectionBlock>
 
       <SectionBlock id="ai-newsletter" label="Suscripción" isPreview={isPreview} defaultOrder={AIRE_SECTION_IDS}>

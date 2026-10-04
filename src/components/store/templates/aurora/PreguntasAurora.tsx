@@ -4,7 +4,8 @@ import { EditableZone } from "@/contexts/EditContext";
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
 import type { EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
 import type { ShippingMethod, StorePaymentInfo } from "@/types/store-config";
-import { CLAVE_ARREPENTIMIENTO, type ClaveLegal } from "@/lib/politicas-tienda";
+import type { ClaveLegal } from "@/lib/politicas-tienda";
+import { armarPreguntas, rutaPolitica } from "@/lib/preguntasFrecuentes";
 
 /* ══════════════════════════════════════════════════════════════════════════
    PREGUNTAS FRECUENTES (B-5 de AURORA.md)
@@ -14,14 +15,8 @@ import { CLAVE_ARREPENTIMIENTO, type ClaveLegal } from "@/lib/politicas-tienda";
    talles y cómo hablar con la tienda. Un acordeón de vidrio: la pregunta
    abierta se enciende con un filo de luz y su respuesta se despliega.
 
-   Las respuestas NO se escriben dos veces: salen de lo que la tienda ya cargó
-   —sus métodos de envío con sus precios, Mercado Pago, transferencia, efectivo,
-   las políticas que publicó—. Así no se contradicen con el checkout. Y nunca
-   prometen algo que la tienda no cargó: sin política de cambios publicada, la
-   respuesta manda a consultar en vez de inventar un plazo.
-
-   La dueña igual puede reescribir cualquier pregunta o respuesta tocándola en
-   el editor (campos `faqP1`…`faqR5`); si no la toca, se arma sola. */
+   Las respuestas las arma `lib/preguntasFrecuentes` con los datos de la
+   tienda (lo comparten todos los templates de moda); acá sólo se dibujan. */
 
 export function PreguntasAurora({
   envios, mercadoPago, pagos, legales, slug, isPreview, fmt, onContacto, conWhatsapp, escena, isMobile,
@@ -42,48 +37,19 @@ export function PreguntasAurora({
   const { BG, T, GT, LINEA_FUERTE, luz } = escena;
   const [abierta, setAbierta] = useState<number | null>(0);
 
-  /* ── Las respuestas, armadas con los datos de la tienda ── */
-  const activos = (envios ?? []).filter(m => m.enabled);
-  const precioEnvio = (m: ShippingMethod) =>
-    m.liveQuote ? "se calcula con tu código postal" : m.coordinar ? "a coordinar" : m.price > 0 ? fmt(m.price) : "sin cargo";
-  const rEnvios = activos.length
-    ? `Podés elegir entre: ${activos.map(m => `${m.label} (${precioEnvio(m)})`).join(", ")}. Lo elegís al finalizar la compra.`
-    : "Coordinamos la entrega con vos después de la compra.";
-
-  const medios = [
-    mercadoPago && "Mercado Pago (tarjeta de crédito, débito o dinero en cuenta)",
-    pagos?.transferencia?.enabled && "transferencia bancaria",
-    pagos?.efectivo?.enabled && "efectivo",
-  ].filter((x): x is string => !!x);
-  const rPagos = medios.length
-    ? `Aceptamos ${medios.length > 1 ? medios.slice(0, -1).join(", ") + " y " + medios[medios.length - 1] : medios[0]}.`
-    : "Al confirmar tu pedido te pasamos los medios de pago disponibles.";
-
-  const hayCambios = !!legales?.includes("devoluciones");
-  const rCambios = (hayCambios
-    ? "Sí. Las condiciones están en nuestra política de cambios y devoluciones."
-    : "Escribinos y te contamos cómo hacerlo.")
-    + " Además, por ley tenés 10 días desde que lo recibís para arrepentirte de una compra online.";
-
-  const politica = (tipo: string) => `/tienda/${slug ?? ""}/politicas?tipo=${tipo}`;
+  /* ── Las respuestas, armadas con los datos de la tienda (lib/preguntasFrecuentes) ── */
   const link = (href: string, texto: string) => isPreview || !slug
-    ? <span style={{ color:GT, fontWeight:600 }}>{texto} →</span>
-    : <a href={href} style={{ color:GT, fontWeight:600, textDecoration:"none" }}>{texto} →</a>;
+    ? <span key={href} style={{ color:GT, fontWeight:600 }}>{texto} →</span>
+    : <a key={href} href={href} style={{ color:GT, fontWeight:600, textDecoration:"none" }}>{texto} →</a>;
 
-  const items: { p: string; r: string; extra?: React.ReactNode }[] = [
-    { p: "¿Cómo me llega el pedido?", r: rEnvios, extra: legales?.includes("envios") ? link(politica("envios"), "Política de envíos") : undefined },
-    { p: "¿Cómo puedo pagar?", r: rPagos },
-    { p: "¿Puedo cambiar o devolver?", r: rCambios, extra: (
-      <span style={{ display:"flex", gap:18, flexWrap:"wrap" }}>
-        {hayCambios && link(politica("devoluciones"), "Cambios y devoluciones")}
-        {link(politica(CLAVE_ARREPENTIMIENTO), "Botón de arrepentimiento")}
-      </span>
-    ) },
-    { p: "¿Cómo sé cuál es mi talle?", r: "En cada producto ves los talles que hay. Si tenés dudas entre dos, escribinos y te ayudamos a elegir." },
-    { p: "¿Cómo me comunico con ustedes?", r: conWhatsapp ? "Por WhatsApp, con el botón verde de abajo, o desde la página de contacto." : "Desde la página de contacto: dejanos tu mensaje y te escribimos.", extra: (
-      <button type="button" onClick={onContacto} style={{ background:"none", border:"none", padding:0, color:GT, fontWeight:600, cursor:"pointer", fontSize:"inherit", fontFamily:"inherit" }}>Ir a contacto →</button>
-    ) },
-  ];
+  const items = armarPreguntas({ envios, mercadoPago, pagos, legales, fmt, conWhatsapp }).map(it => ({
+    ...it,
+    extra: it.contacto
+      ? <button type="button" onClick={onContacto} style={{ background:"none", border:"none", padding:0, color:GT, fontWeight:600, cursor:"pointer", fontSize:"inherit", fontFamily:"inherit" }}>Ir a contacto →</button>
+      : it.politicas.length
+        ? <span style={{ display:"flex", gap:18, flexWrap:"wrap" }}>{it.politicas.map(pol => link(rutaPolitica(slug, pol.tipo), pol.texto))}</span>
+        : undefined,
+  }));
 
   return (
     <section data-reveal className="au-preguntas" style={{ position:"relative", overflow:"hidden", background:BG, padding: isMobile ? "60px 16px" : "110px 40px" }}>
