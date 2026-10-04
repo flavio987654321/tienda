@@ -193,7 +193,7 @@ export function FichaAurora({
   const vidrio: React.CSSProperties = {
     background:"rgba(255,255,255,0.04)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:18,
   };
-  const rotulo: React.CSSProperties = { margin:"0 0 12px", fontSize:9.5, letterSpacing:3, textTransform:"uppercase", color:"rgba(242,242,247,0.5)", fontWeight:600 };
+  const rotulo: React.CSSProperties = { margin:"0 0 12px", fontSize:9.5, letterSpacing:3, textTransform:"uppercase", color:"rgba(242,242,247,0.7)", fontWeight:600 };
   const botonRedondo: React.CSSProperties = {
     width:44, height:44, borderRadius:999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
     background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, color:T, flexShrink:0,
@@ -312,7 +312,7 @@ export function FichaAurora({
                     </button>
                     {/* El contador, en la letra de los títulos. */}
                     <span style={{ position:"absolute", left:14, bottom:14, padding:"6px 12px", borderRadius:999, background:"rgba(6,7,13,0.55)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", border:`1px solid ${LINEA_FUERTE}`, fontFamily:TITULO, fontSize:11, letterSpacing:1, fontVariantNumeric:"tabular-nums" }}>
-                      {String(modalImg + 1).padStart(2, "0")} <span style={{ opacity:0.45 }}>/ {String(total).padStart(2, "0")}</span>
+                      {String(modalImg + 1).padStart(2, "0")} <span style={{ opacity:0.6 }}>/ {String(total).padStart(2, "0")}</span>
                     </span>
                   </>
                 )}
@@ -350,7 +350,7 @@ export function FichaAurora({
                 <div style={{ display:"flex", alignItems:"baseline", gap:12, flexWrap:"wrap" }}>{precioGrande(isMobile ? 28 : 34)}</div>
               </div>
 
-              {promo.primaryPromo && <PromoBlock promo={promo.primaryPromo} freeShippingExtra={promo.freeShipping} />}
+              {promo.primaryPromo && <PromoBlock promo={promo.primaryPromo} freeShippingExtra={promo.freeShipping} oscuro />}
               {!ocultarPrecios && producto.offerNote && (
                 <p style={{ margin:0, fontSize:12.5, color:"#4ade80", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.22)", borderRadius:14, padding:"9px 14px" }}>✓ {producto.offerNote}</p>
               )}
@@ -399,7 +399,7 @@ export function FichaAurora({
                   Quedan {selectedVariantStock} {selectedVariantStock === 1 ? "unidad" : "unidades"}
                 </p>
               )}
-              {agotada && <p style={{ margin:0, fontSize:12.5, opacity:0.55 }}>Sin stock en esta combinación</p>}
+              {agotada && <p style={{ margin:0, fontSize:12.5, color:"#fbbf24", fontWeight:600 }}>Sin stock en esta combinación</p>}
               {promo.nxm && nxmPaid != null && (() => {
                 const { n, m } = promo.nxm;
                 const gratis = qty - nxmPaid;
@@ -444,7 +444,7 @@ export function FichaAurora({
               {producto.description && (
                 <div style={{ ...vidrio, padding:"16px 18px" }}>
                   <p style={rotulo}>Descripción</p>
-                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(producto.description, FONDO_DESCRIPCION) }} style={{ fontSize:13.5, lineHeight:1.75, color:"rgba(242,242,247,0.72)" }} />
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(producto.description, FONDO_DESCRIPCION) }} style={{ fontSize:13.5, lineHeight:1.75, color:"rgba(242,242,247,0.86)" }} />
                 </div>
               )}
               {(condicion || otros.length > 0 || servicios.length > 0) && (
@@ -455,7 +455,7 @@ export function FichaAurora({
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:8 }}>
                       {otros.map(a => (
                         <div key={a.key} style={{ ...vidrio, borderRadius:14, padding:"10px 12px" }}>
-                          <p style={{ margin:"0 0 4px", fontSize:9, letterSpacing:2, textTransform:"uppercase", opacity:0.5 }}>{a.key}</p>
+                          <p style={{ margin:"0 0 4px", fontSize:9, letterSpacing:2, textTransform:"uppercase", opacity:0.65 }}>{a.key}</p>
                           <p style={{ margin:0, fontSize:13, fontWeight:500, overflowWrap:"anywhere" }}>{a.value}</p>
                         </div>
                       ))}
@@ -481,7 +481,7 @@ export function FichaAurora({
                   </div>
                 )}
                 {resenas.cargando ? (
-                  <p style={{ fontSize:12, opacity:0.45 }}>Cargando…</p>
+                  <p style={{ fontSize:12, opacity:0.65 }}>Cargando…</p>
                 ) : resenas.lista.length > 0 ? (
                   <>
                     <div style={{ ...vidrio, display:"flex", gap:20, alignItems:"center", padding:"16px 18px", marginBottom:12 }}>
@@ -494,11 +494,11 @@ export function FichaAurora({
                           const n = resenas.distribucion[s] ?? 0;
                           return (
                             <div key={s} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                              <span style={{ fontSize:9.5, opacity:0.55, minWidth:12 }}>{s}</span>
+                              <span style={{ fontSize:9.5, opacity:0.65, minWidth:12 }}>{s}</span>
                               <div style={{ flex:1, height:3, background:LINEA_FUERTE, borderRadius:3, overflow:"hidden" }}>
                                 <div style={{ height:"100%", width:`${resenas.total ? (n / resenas.total) * 100 : 0}%`, background:G, boxShadow:`0 0 8px ${luz(0.8)}` }} />
                               </div>
-                              <span style={{ fontSize:9.5, opacity:0.4, minWidth:12, textAlign:"right" }}>{n}</span>
+                              <span style={{ fontSize:9.5, opacity:0.65, minWidth:12, textAlign:"right" }}>{n}</span>
                             </div>
                           );
                         })}
@@ -527,11 +527,11 @@ export function FichaAurora({
                     )}
                   </>
                 ) : (
-                  <p style={{ fontSize:12.5, opacity:0.5, margin:"0 0 4px" }}>Todavía no hay reseñas. Sé el primero.</p>
+                  <p style={{ fontSize:12.5, opacity:0.68, margin:"0 0 4px" }}>Todavía no hay reseñas. Sé el primero.</p>
                 )}
 
                 {isOwner ? (
-                  <p style={{ fontSize:11.5, opacity:0.45, marginTop:12 }}>El dueño no puede dejar reseñas en su propia tienda.</p>
+                  <p style={{ fontSize:11.5, opacity:0.65, marginTop:12 }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                 ) : listo ? (
                   <p style={{ fontSize:12.5, color:GT, fontWeight:600, marginTop:12 }}>¡Gracias por tu reseña!</p>
                 ) : !formAbierto ? (
@@ -561,7 +561,7 @@ export function FichaAurora({
                     <textarea value={form.comment} placeholder="Contá qué te pareció (opcional)" rows={3} readOnly={isPreview}
                       onChange={e => !isPreview && setForm(p => ({ ...p, comment: e.target.value }))}
                       style={{ background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:12, color:T, padding:"11px 14px", fontSize:13, resize:"none", outline:"none", fontFamily:"inherit" }} />
-                    <p style={{ margin:0, fontSize:10.5, opacity:0.4, lineHeight:1.5 }}>Si compraste en esta tienda, tu reseña sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
+                    <p style={{ margin:0, fontSize:10.5, opacity:0.62, lineHeight:1.5 }}>Si compraste en esta tienda, tu reseña sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
                     {!isPreview && captcha.widget}
                     <button type="submit" disabled={isPreview || enviando || !form.reviewer.trim() || !captcha.ready}
                       style={{ ...botonComprar, minHeight:46, flex:"none",
@@ -570,7 +570,7 @@ export function FichaAurora({
                         cursor: isPreview ? "default" : "pointer", boxShadow:"none" }}>
                       {enviando ? "Publicando…" : "Publicar reseña"}
                     </button>
-                    {isPreview && <p style={{ margin:0, fontSize:10.5, opacity:0.45 }}>Vista previa: sólo se puede opinar en la tienda real.</p>}
+                    {isPreview && <p style={{ margin:0, fontSize:10.5, opacity:0.65 }}>Vista previa: sólo se puede opinar en la tienda real.</p>}
                   </form>
                 )}
               </div>
@@ -599,7 +599,7 @@ export function FichaAurora({
               <span style={{ fontFamily:TITULO, fontSize:20, color: promo.hasPriceDrop ? rebaja : T }}>
                 {ocultarPrecios ? "Consultá precio" : fmt(totalAPagar)}
               </span>
-              {qty > 1 && !ocultarPrecios && <span style={{ fontSize:11, opacity:0.5 }}>{qty} unidades</span>}
+              {qty > 1 && !ocultarPrecios && <span style={{ fontSize:11, opacity:0.68 }}>{qty} unidades</span>}
             </div>
             <div style={{ display:"flex", gap:8 }}>
               {!modoConsulta && cantidad}

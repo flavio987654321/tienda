@@ -123,6 +123,15 @@ export function paraTexto(fondo: string): string {
   return c;
 }
 
+/** Lo mismo que `paraTexto` pero para escribir sobre un fondo OSCURO: aclara en
+ *  vez de oscurecer. El azul del 3×2 (#1d4ed8) sobre el vidrio de Aurora daba
+ *  menos de 3 y no se leía (Flavio, 04/10/26). */
+export function paraTextoSobreOscuro(fondo: string, base = "#13141f"): string {
+  let c = fondo;
+  for (let i = 0; i < 8 && contrasta(c, base) < 4.5; i++) c = extremo(c, "claro", 18);
+  return c;
+}
+
 /** Color de fondo del tipo de promo, y el de texto que se lee encima. */
 export function coloresPromo(tipo?: string, paleta: PaletaPromo = COLOR_PROMO) {
   const fondo = (tipo && paleta[tipo]) || paleta.PERCENT || COLOR_PROMO_FALLBACK;
@@ -176,7 +185,13 @@ export function PromoTag({ label, size = "md", tipo, paleta }: { label: string; 
   return <div style={style}>{label}</div>;
 }
 
-export function PromoBlock({ promo, freeShippingExtra = false, paleta }: { promo: ActivePromotion; freeShippingExtra?: boolean; paleta?: PaletaPromo }) {
+export function PromoBlock({ promo, freeShippingExtra = false, paleta, oscuro = false }: {
+  promo: ActivePromotion; freeShippingExtra?: boolean; paleta?: PaletaPromo;
+  /** Va sobre un fondo oscuro (Aurora, los temas oscuros del catálogo). El bloque
+   *  estaba pensado para fondo claro: su texto era gris oscuro y sobre negro no se
+   *  leía. Sin esto queda exactamente como siempre. */
+  oscuro?: boolean;
+}) {
   const d = describePromo(promo);
   // El bloque sigue el color de su tipo, igual que el tag: si el tag de la foto es
   // violeta y el cuadro de abajo naranja, parecen dos promos distintas.
@@ -188,21 +203,22 @@ export function PromoBlock({ promo, freeShippingExtra = false, paleta }: { promo
   // relleno. Los tonos profundos de la paleta clásica se leen bien; los neón de
   // Urban Pulse no: el amarillo #ffd91a sobre blanco da 1.4. `paraTexto` lo oscurece
   // lo justo, así el bloque sigue siendo del color de su promo sin volverse ilegible.
-  const tinta = paraTexto(fondo);
+  const tinta = oscuro ? paraTextoSobreOscuro(fondo) : paraTexto(fondo);
+  const cuerpo = oscuro ? "rgba(242,242,247,0.78)" : "#3f3f46";
   return (
-    <div style={{ background: `${fondo}14`, border: `1px solid ${fondo}40`, borderRadius: 6, padding: "11px 13px", display: "flex", flexDirection: "column", gap: 5 }}>
+    <div style={{ background: `${fondo}${oscuro ? "24" : "14"}`, border: `1px solid ${oscuro ? tinta : fondo}${oscuro ? "55" : "40"}`, borderRadius: 6, padding: "11px 13px", display: "flex", flexDirection: "column", gap: 5 }}>
       <div style={{ fontSize: 15, fontWeight: 800, color: tinta }}>¡{d.headline}!</div>
       {/* El cuerpo va en gris oscuro y no en el color de la promo: sobre un tinte
           tan claro, el color propio de cada tipo se lee flojo. */}
-      <div style={{ fontSize: 12.5, color: "#3f3f46", lineHeight: 1.5 }}>Válido {d.scope}.</div>
+      <div style={{ fontSize: 12.5, color: cuerpo, lineHeight: 1.5 }}>Válido {d.scope}.</div>
       {d.conditions.map((c, i) => (
-        <div key={i} style={{ fontSize: 11.5, color: "#3f3f46", opacity: 0.85, display: "flex", alignItems: "center", gap: 6 }}>
+        <div key={i} style={{ fontSize: 11.5, color: cuerpo, opacity: 0.85, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 4, height: 4, borderRadius: "50%", background: tinta, display: "inline-block", flexShrink: 0 }} />
           {c}
         </div>
       ))}
       {freeShippingExtra && promo.type !== "FREE_SHIPPING" && (
-        <div style={{ fontSize: 12, color: "#0d9488", fontWeight: 700, marginTop: 2 }}>🚚 Envío gratis incluido</div>
+        <div style={{ fontSize: 12, color: oscuro ? "#2dd4bf" : "#0d9488", fontWeight: 700, marginTop: 2 }}>🚚 Envío gratis incluido</div>
       )}
     </div>
   );

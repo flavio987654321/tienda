@@ -829,7 +829,7 @@ export default function Aurora() {
             </div>
           )}
           {searchQuery.trim().length > 0 && searchResults.length === 0 && (
-            <p style={{ color:"rgba(242,242,247,0.4)", marginTop:32, fontSize:14 }}>Sin resultados para &quot;{searchQuery}&quot;</p>
+            <p style={{ color:"rgba(242,242,247,0.65)", marginTop:32, fontSize:14 }}>Sin resultados para &quot;{searchQuery}&quot;</p>
           )}
         </div>
       )}
@@ -983,7 +983,7 @@ export default function Aurora() {
               </button>
               {userDropdownOpen && (
                 <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, ...vidrioMenu, minWidth:190, zIndex:CAPAS.nav }}>
-                  {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
+                  {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.65 }}>Cargando…</p>) : logueado ? (
                     <>
                       <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:luz(0.6), padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {nombreMostrado}
@@ -1169,7 +1169,7 @@ export default function Aurora() {
                   onChange={e => setOverride("vidrieraMazos", { text: e.target.value })}
                   style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer" }}
                 >
-                  {MODOS_VIDRIERA.map(m => <option key={m.valor} value={m.valor} style={{ color:"#111" }}>{m.label}</option>)}
+                  {MODOS_VIDRIERA.map(m => <option key={m.valor} value={m.valor} style={{ color:"#f2f2f7", background:"#14151f" }}>{m.label}</option>)}
                 </select>
               </label>
             )}
@@ -1269,7 +1269,7 @@ export default function Aurora() {
         </div>
 
         {loadingProducts && (
-          <div style={{ textAlign:"center", padding:"60px 0", color:productosText, opacity:0.4 }}>
+          <div style={{ textAlign:"center", padding:"60px 0", color:productosText, opacity:0.6 }}>
             <p style={{ fontSize:15 }}>Cargando productos...</p>
           </div>
         )}
@@ -1295,7 +1295,7 @@ export default function Aurora() {
 
         {/* Ver más / Ver toda la colección */}
         <div style={{ textAlign:"center" }}>
-          <p style={{ fontSize:11, opacity:0.35, letterSpacing:2, marginBottom:24 }}>
+          <p style={{ fontSize:11, opacity:0.6, letterSpacing:2, marginBottom:24 }}>
             Mostrando {Math.min(VISTOS_EN_PORTADA, allFiltered.length)} de {allFiltered.length} piezas
           </p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
@@ -1413,7 +1413,7 @@ export default function Aurora() {
                 <div key={label} style={{ borderRadius:16, padding: isMobile ? "14px 14px" : "18px 18px", border:`1px solid ${nosotrosPanelText === T ? LINEA_FUERTE : "rgba(6,7,13,0.12)"}`,
                   background: nosotrosPanelText === T ? "rgba(255,255,255,0.04)" : "rgba(6,7,13,0.04)" }}>
                   <p style={{ fontFamily:TITULO, fontSize: isMobile ? 22 : 28, color:GT, margin:"0 0 6px", fontWeight:400, textShadow:`0 0 22px ${luz(0.45)}` }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
-                  <p style={{ fontSize:11, opacity:0.55, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
+                  <p style={{ fontSize:11, opacity:0.68, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
                 </div>
               ))}
             </div>
@@ -1446,7 +1446,7 @@ export default function Aurora() {
           <h2 style={{ fontFamily:TITULO, fontSize:"clamp(22px,2.6vw,32px)", fontWeight:300, letterSpacing:"-0.02em", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
           </h2>
-          <p style={{ fontSize:14, opacity:0.5, textAlign:"center", marginBottom:48, lineHeight:1.7 }}>
+          <p style={{ fontSize:14, opacity:0.68, textAlign:"center", marginBottom:48, lineHeight:1.7 }}>
             <EditableZone field="contactSubtext" label="Subtítulo contacto">Respondemos todos los mensajes en menos de 24 horas hábiles.</EditableZone>
           </p>
 
@@ -1478,7 +1478,7 @@ export default function Aurora() {
               <div style={{ textAlign:"center", padding:"60px 0" }}>
                 <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
                 <p style={{ fontFamily:TITULO, fontSize:20, fontWeight:400, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
-                <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
+                <p style={{ fontSize:13, opacity:0.68 }}>Te respondemos a la brevedad.</p>
                 <button onClick={reset} style={{ marginTop:24, background:"transparent", color: contactoText === T ? GT : G, border:`1px solid ${luz(0.6)}`, borderRadius:999, padding:"11px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
               </div>
             )}
@@ -1520,7 +1520,7 @@ export default function Aurora() {
                 pagina. Un nombre largo va a quedar en dos renglones, que es feo pero se lee;
                 arrastrar la pagina para el costado no se lee. */}
             <span style={{ fontFamily:TITULO, fontSize:22, fontWeight:500, letterSpacing:4, color:GT, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">{storeConfig?.storeName ?? "AURORA"}</EditableZone></span>
-            <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
+            <p style={{ fontSize:13, opacity:0.65, lineHeight:1.8, maxWidth:260 }}>
               <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
             </p>
             {/* Las cinco redes que se cargan en Configuración (faltaba Pinterest:
@@ -1609,7 +1609,7 @@ export default function Aurora() {
           ))}
           <div>
             <p style={{ fontSize:10, letterSpacing:4, color:GT, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>Newsletter</p>
-            <p style={{ fontSize:12, opacity:0.45, marginBottom:16, lineHeight:1.6 }}>
+            <p style={{ fontSize:12, opacity:0.65, marginBottom:16, lineHeight:1.6 }}>
               <EditableZone field="newsletterText" label="Texto newsletter">Suscribite y recibí novedades antes que nadie. Sin spam.</EditableZone>
             </p>
             <div style={{ maxWidth: isMobile ? "100%" : 340 }}>
@@ -1637,7 +1637,7 @@ export default function Aurora() {
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"
-                    style={{ fontSize:11, color:"inherit", opacity:0.3, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
+                    style={{ fontSize:11, color:"inherit", opacity:0.55, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
                     {label}
@@ -1645,7 +1645,7 @@ export default function Aurora() {
                   </button>
                 ) : (
                   <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
-                    style={{ fontSize:11, color:"inherit", opacity:0.3, textDecoration:"none", letterSpacing:1 }}
+                    style={{ fontSize:11, color:"inherit", opacity:0.55, textDecoration:"none", letterSpacing:1 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
                     {label}
@@ -1654,7 +1654,7 @@ export default function Aurora() {
               ))}
               {!editMode && (
                 <button onClick={() => setShowReport(true)}
-                  style={{ fontSize:11, opacity:0.25, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
+                  style={{ fontSize:11, opacity:0.5, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.25"; }}>
                   Reportar tienda
@@ -1662,10 +1662,10 @@ export default function Aurora() {
               )}
             </div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 12px", justifyContent:"center", textAlign:"center" }}>
-              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+              <p style={{ fontSize:11, opacity:0.5, margin:0 }}>
                 <EditableZone field="footerCopyright" label="Copyright">© {ANIO} {storeConfig?.storeName ?? "AURORA"}. Todos los derechos reservados.</EditableZone>
               </p>
-              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+              <p style={{ fontSize:11, opacity:0.5, margin:0 }}>
                 <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
               </p>
             </div>

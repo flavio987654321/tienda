@@ -89,7 +89,7 @@ export function GarantiasAurora({ items, fondo, tinta, escena, isMobile, childre
               )}
             </span>
             <p style={{ margin:"0 0 6px", fontSize: isMobile ? 13 : 14, fontWeight:600, color:tinta, lineHeight:1.3 }}>{g.titulo}</p>
-            <p style={{ margin:0, fontSize: isMobile ? 11 : 12, lineHeight:1.55, color:tinta, opacity:0.55 }}>{g.desc}</p>
+            <p style={{ margin:0, fontSize: isMobile ? 11 : 12, lineHeight:1.55, color:tinta, opacity:0.68 }}>{g.desc}</p>
           </div>
         ))}
       </div>

@@ -63,7 +63,9 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
   /* Los looks que existen: los que tienen foto. En el editor se suma el
      siguiente hueco vacío, para poder subir uno más. */
   const looks = imagenes.map((url, i) => ({ n: i + 1, url })).filter(l => !!l.url);
-  const huecoLibre = editMode && looks.length < MAX_LOOKS ? imagenes.findIndex(u => !u) + 1 : 0;
+  /* El "+" para sumar otro look aparece recién cuando ya hay uno: sin ninguno,
+     repetía lo mismo que el botón grande de la foto y confundía (04/10/26). */
+  const huecoLibre = editMode && looks.length > 0 && looks.length < MAX_LOOKS ? imagenes.findIndex(u => !u) + 1 : 0;
 
   if (looks.length === 0 && !editMode) return null;
 
@@ -129,7 +131,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
         </div>
 
         <div style={{ display:"grid", gap: isMobile ? 22 : 48, alignItems:"start",
-          gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1.1fr) minmax(0,0.9fr)" }}>
+          gridTemplateColumns: isMobile || !look ? "minmax(0,1fr)" : "minmax(0,1.1fr) minmax(0,0.9fr)", ...(look ? null : { maxWidth:640 }) }}>
           {/* ── La foto del look, con sus puntos ── */}
           <div style={{ perspective:"1400px" }}>
             {look ? (
@@ -168,8 +170,8 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                           <select value={pt.id} aria-label={`Producto del punto ${i + 1}`}
                             onChange={e => guardar(puntos.map((q, j) => j === i ? { ...q, id: e.target.value } : q))}
                             style={{ background:"rgba(14,15,26,0.95)", color:T, border:`1px solid ${LINEA_FUERTE}`, borderRadius:999, padding:"4px 8px", fontSize:10.5, maxWidth:150, cursor:"pointer" }}>
-                            <option value="" style={{ color:"#111" }}>Elegí el producto…</option>
-                            {products.filter(p => p.images[0]).map(p => <option key={p.id} value={p.id} style={{ color:"#111" }}>{p.name}</option>)}
+                            <option value="" style={{ color:"#f2f2f7", background:"#14151f" }}>Elegí el producto…</option>
+                            {products.filter(p => p.images[0]).map(p => <option key={p.id} value={p.id} style={{ color:"#f2f2f7", background:"#14151f" }}>{p.name}</option>)}
                           </select>
                           <button type="button" onClick={() => guardar(puntos.filter((_, j) => j !== i))} aria-label="Borrar el punto"
                             style={{ width:24, height:24, borderRadius:999, border:"none", background:"#ef4444", color:"#fff", cursor:"pointer", fontSize:12, lineHeight:1 }}>×</button>
@@ -199,16 +201,35 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                 )}
               </div>
             ) : (
-              /* Sólo en el editor: todavía no hay ninguna foto. */
-              <div style={{ position:"relative", aspectRatio:"4/5", borderRadius:28, border:`1px dashed ${luz(0.5)}`, display:"grid", placeItems:"center", textAlign:"center", padding:30, color:"rgba(242,242,247,0.6)", fontSize:13, lineHeight:1.6 }}>
-                Subí la foto de un look con el botón de imagen.<br />Después marcá encima los productos que tiene puestos.
-                <EditableImageButton field="lookbook1" label="Foto del look 1" />
+              /* Sólo en el editor: todavía no hay ninguna foto. Explica QUÉ es y
+                 para qué sirve, porque "lookbook" no lo entiende cualquiera, y
+                 los tres pasos para armarlo. */
+              <div style={{ position:"relative", aspectRatio:"4/5", borderRadius:28, border:`1px dashed ${luz(0.55)}`, display:"flex", flexDirection:"column", justifyContent:"center",
+                padding: isMobile ? "26px 20px" : "40px 36px", color:T, fontFamily:"system-ui, -apple-system, sans-serif", background:"rgba(255,255,255,0.025)" }}>
+                <p style={{ margin:"0 0 8px", fontSize:15, fontWeight:700 }}>¿Qué es un lookbook?</p>
+                <p style={{ margin:"0 0 22px", fontSize:13, lineHeight:1.6, color:"rgba(242,242,247,0.78)" }}>
+                  Una foto de un look completo con ropa de tu tienda. Encima de cada prenda va un punto de luz: el cliente lo toca, ve qué es y lo compra. Sirve para vender el conjunto entero, no una sola prenda.
+                </p>
+                {[
+                  "Subí la foto de alguien vestido con tus productos (botón de arriba a la derecha).",
+                  "Tocá “📍 Marcar productos” y después tocá la foto encima de cada prenda.",
+                  "En cada punto elegí qué producto es.",
+                ].map((paso, i) => (
+                  <div key={i} style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:12 }}>
+                    <span style={{ flexShrink:0, width:24, height:24, borderRadius:999, display:"grid", placeItems:"center", background:G, color:textoSobreAcento, fontSize:12, fontWeight:800 }}>{i + 1}</span>
+                    <span style={{ fontSize:13, lineHeight:1.55, color:"rgba(242,242,247,0.85)", paddingTop:2 }}>{paso}</span>
+                  </div>
+                ))}
+                <p style={{ margin:"12px 0 0", fontSize:12, color:"#fbbf24", fontWeight:600 }}>No se muestra en la tienda hasta que subas una foto.</p>
+                <EditableImageButton field="lookbook1" label="Subir la foto del look" />
               </div>
             )}
           </div>
 
-          {/* ── Los looks y lo que tiene puesto el elegido ── */}
-          <div style={{ minWidth:0 }}>
+          {/* ── Los looks y lo que tiene puesto el elegido ──
+              Sin ninguna foto todavía no hay look del que hablar: la columna
+              decía "no marcaste productos en este look" y confundía. */}
+          {look && <div style={{ minWidth:0 }}>
             {(looks.length > 1 || huecoLibre > 0) && (
               <div style={{ display:"flex", gap:12, marginBottom: isMobile ? 22 : 34, flexWrap:"wrap" }}>
                 {looks.map((l, i) => (
@@ -223,7 +244,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                 ))}
                 {huecoLibre > 0 && (
                   <div style={{ position:"relative", width: isMobile ? 64 : 78, aspectRatio:"4/5", borderRadius:14, border:`1px dashed ${luz(0.5)}`,
-                    display:"grid", placeItems:"center", color:"rgba(242,242,247,0.55)", fontSize:22 }}>
+                    display:"grid", placeItems:"center", color:"rgba(242,242,247,0.68)", fontSize:22 }}>
                     +
                     <EditableImageButton field={`lookbook${huecoLibre}`} label={`Foto del look ${huecoLibre}`} compact />
                   </div>
@@ -231,7 +252,7 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
               </div>
             )}
 
-            <p style={{ margin:"0 0 14px", fontSize:10, letterSpacing:4, textTransform:"uppercase", color:"rgba(242,242,247,0.5)", fontWeight:700 }}>
+            <p style={{ margin:"0 0 14px", fontSize:10, letterSpacing:4, textTransform:"uppercase", color:"rgba(242,242,247,0.68)", fontWeight:700 }}>
               En este look
             </p>
             {enEsteLook.length > 0 ? (
@@ -253,11 +274,11 @@ export function LookbookAurora({ products, promotions, imagenes, fmt, ocultarPre
                 ))}
               </div>
             ) : (
-              <p style={{ margin:0, fontSize:13, lineHeight:1.6, color:"rgba(242,242,247,0.5)" }}>
+              <p style={{ margin:0, fontSize:13, lineHeight:1.6, color:"rgba(242,242,247,0.68)" }}>
                 {editMode ? "Todavía no marcaste productos en este look: tocá \"📍 Marcar productos\" sobre la foto." : "Consultanos por las prendas de este look."}
               </p>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </section>

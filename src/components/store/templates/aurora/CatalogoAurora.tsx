@@ -147,7 +147,7 @@ export function CatalogoAurora({
       <header style={{ position:"relative", maxWidth:1400, margin:"0 auto", padding: isMobile ? "20px 16px 18px" : "34px 32px 30px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom: isMobile ? 22 : 34 }}>
           <VolverAurora onClick={onVolver} tinta={T} linea={LINEA_FUERTE} />
-          <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:"rgba(242,242,247,0.5)", fontVariantNumeric:"tabular-nums" }}>
+          <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:"rgba(242,242,247,0.65)", fontVariantNumeric:"tabular-nums" }}>
             {cargando ? "…" : `${total} ${total === 1 ? "pieza" : "piezas"}`}
           </span>
         </div>
@@ -181,7 +181,7 @@ export function CatalogoAurora({
               style={{ ...campo, padding:"10px 14px", fontSize:12, letterSpacing:1, cursor:"pointer", appearance:"none", WebkitAppearance:"none", paddingRight:30,
                 backgroundImage:`linear-gradient(45deg, transparent 50%, ${T} 50%), linear-gradient(135deg, ${T} 50%, transparent 50%)`,
                 backgroundPosition:"calc(100% - 16px) 52%, calc(100% - 11px) 52%", backgroundSize:"5px 5px, 5px 5px", backgroundRepeat:"no-repeat" }}>
-              {ORDENES.map(o => <option key={o.valor} value={o.valor} style={{ color:"#111" }}>{o.label}</option>)}
+              {ORDENES.map(o => <option key={o.valor} value={o.valor} style={{ color:"#f2f2f7", background:"#14151f" }}>{o.label}</option>)}
             </select>
           )}
           <button onClick={() => setPanelAbierto(true)} aria-label="Filtros"
@@ -229,13 +229,13 @@ export function CatalogoAurora({
       {/* ── LAS PIEZAS ─────────────────────────────────────────────────── */}
       <div style={{ maxWidth:1400, margin:"0 auto", padding: isMobile ? "8px 16px 80px" : "12px 32px 110px", overflowX:"clip" }}>
         {cargando ? (
-          <p style={{ textAlign:"center", padding:"80px 0", fontSize:11, letterSpacing:4, textTransform:"uppercase", opacity:0.45 }}>Cargando…</p>
+          <p style={{ textAlign:"center", padding:"80px 0", fontSize:11, letterSpacing:4, textTransform:"uppercase", opacity:0.6 }}>Cargando…</p>
         ) : total === 0 ? (
           /* Nada que mostrar: una luz quieta y la salida a mano. */
           <div style={{ textAlign:"center", padding: isMobile ? "60px 0" : "90px 0" }}>
             <div aria-hidden style={{ width:120, height:120, margin:"0 auto 26px", borderRadius:"50%", background:`radial-gradient(circle at 40% 35%, ${luz(0.6)}, ${luz(0.08)} 60%, transparent 72%)`, filter:"blur(2px)" }} />
             <p style={{ fontFamily:"var(--au-titulo, inherit)", fontSize:22, margin:"0 0 8px" }}>Nada por acá</p>
-            <p style={{ fontSize:13, opacity:0.55, margin:"0 0 24px" }}>Ninguna pieza coincide con lo que elegiste.</p>
+            <p style={{ fontSize:13, opacity:0.68, margin:"0 0 24px" }}>Ninguna pieza coincide con lo que elegiste.</p>
             <button onClick={limpiarTodo} style={capsula(true)}>Ver toda la colección</button>
           </div>
         ) : (
@@ -255,7 +255,7 @@ export function CatalogoAurora({
             {/* ── CUÁNTO FALTA ──────────────────────────────────────────
                 Una línea de luz que se llena con lo que ya se vio. */}
             <div style={{ maxWidth:420, margin: isMobile ? "44px auto 0" : "64px auto 0", textAlign:"center" }}>
-              <p style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", opacity:0.55, margin:"0 0 14px", fontVariantNumeric:"tabular-nums" }}>
+              <p style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", opacity:0.65, margin:"0 0 14px", fontVariantNumeric:"tabular-nums" }}>
                 {visibles.length} de {total}
               </p>
               <div style={{ height:2, background:LINEA_FUERTE, borderRadius:2, overflow:"hidden", marginBottom:22 }}>
@@ -314,7 +314,7 @@ export function CatalogoAurora({
                     <CampoPrecio etiqueta="Hasta" valor={f.effectivePriceRange[1]} estilo={campo}
                       onCambio={v => { f.setPriceRange([f.effectivePriceRange[0], Math.max(v, f.effectivePriceRange[0])]); f.setPage(1); }} />
                   </div>
-                  <p style={{ margin:"8px 2px 0", fontSize:11, opacity:0.45 }}>De {fmt(f.priceBounds[0])} a {fmt(f.priceBounds[1])}</p>
+                  <p style={{ margin:"8px 2px 0", fontSize:11, opacity:0.65 }}>De {fmt(f.priceBounds[0])} a {fmt(f.priceBounds[1])}</p>
                 </section>
               )}
               {f.availableAttrFilters.map(({ key, values }) => (
@@ -373,7 +373,7 @@ function CampoPrecio({ etiqueta, valor, onCambio, estilo }: { etiqueta: string; 
   };
   return (
     <label style={{ flex:1, minWidth:0 }}>
-      <span style={{ display:"block", fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.5, margin:"0 0 6px 4px" }}>{etiqueta}</span>
+      <span style={{ display:"block", fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.65, margin:"0 0 6px 4px" }}>{etiqueta}</span>
       <input inputMode="numeric" value={texto ?? String(Math.round(valor))}
         onChange={e => setTexto(e.target.value)} onBlur={aplicar} onKeyDown={e => { if (e.key === "Enter") aplicar(); }}
         style={{ ...estilo, width:"100%", boxSizing:"border-box", fontVariantNumeric:"tabular-nums" }} />

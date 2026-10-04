@@ -2646,7 +2646,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                 )}
               </div>
               {/* Bloque explicativo de la promo (headline + alcance + condiciones), estilo Tiendanube. */}
-              {modalPromo.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={paletaPromo} />}
+              {modalPromo.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={paletaPromo} oscuro={dark} />}
               {modalProduct.offerNote && (
                 <div style={{ fontSize:12, color:"#059669", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

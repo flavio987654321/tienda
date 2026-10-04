@@ -104,7 +104,7 @@ export function ProductoEnFoco({
           🔦 Producto
           <select value={producto.id} onChange={e => setOverride("productoFoco", { text: e.target.value })}
             style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer", maxWidth:220 }}>
-            {conFoto.map(p => <option key={p.id} value={p.id} style={{ color:"#111" }}>{p.name}</option>)}
+            {conFoto.map(p => <option key={p.id} value={p.id} style={{ color:"#f2f2f7", background:"#14151f" }}>{p.name}</option>)}
           </select>
         </label>
       )}
@@ -161,7 +161,7 @@ export function ProductoEnFoco({
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(170px, 1fr))", gap:10, marginBottom:30, maxWidth:520 }}>
               {opciones.map(op => op.tipo === "elegir" && (
                 <div key={op.nombre} style={panel}>
-                  <p style={{ margin:"0 0 10px", fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", opacity:0.55 }}>{op.nombre}</p>
+                  <p style={{ margin:"0 0 10px", fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", opacity:0.68 }}>{op.nombre}</p>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                     {esOpcionDeColor(op.nombre)
                       ? op.valores.slice(0, 8).map(v => (
@@ -170,13 +170,13 @@ export function ProductoEnFoco({
                       : op.valores.slice(0, 8).map(v => (
                           <span key={v} style={{ fontSize:11, fontWeight:600, padding:"3px 8px", borderRadius:8, border:`1px solid ${LINEA_FUERTE}`, color:T }}>{v}</span>
                         ))}
-                    {op.valores.length > 8 && <span style={{ fontSize:11, opacity:0.5, alignSelf:"center" }}>+{op.valores.length - 8}</span>}
+                    {op.valores.length > 8 && <span style={{ fontSize:11, opacity:0.65, alignSelf:"center" }}>+{op.valores.length - 8}</span>}
                   </div>
                 </div>
               ))}
               {(producto.reviewCount ?? 0) > 0 && (
                 <div style={panel}>
-                  <p style={{ margin:"0 0 8px", fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", opacity:0.55 }}>Reseñas</p>
+                  <p style={{ margin:"0 0 8px", fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", opacity:0.68 }}>Reseñas</p>
                   <p style={{ margin:0, fontSize:13 }}>
                     <span style={{ color:GT, fontWeight:700 }}>★ {(producto.rating ?? 0).toFixed(1)}</span>
                     <span style={{ opacity:0.6 }}> · {producto.reviewCount} {producto.reviewCount === 1 ? "opinión" : "opiniones"}</span>

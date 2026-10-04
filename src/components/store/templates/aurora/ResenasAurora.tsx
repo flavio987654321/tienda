@@ -146,7 +146,7 @@ export function ResenasAurora({
               <span style={{ fontFamily:TITULO, fontSize:36, fontWeight:400, lineHeight:1, color:T }}>
                 {r.sinNada ? "—" : promedio.toFixed(1).replace(".", ",")}
               </span>
-              <span style={{ fontSize:10, letterSpacing:2, opacity:0.5, marginTop:6 }}>DE 5</span>
+              <span style={{ fontSize:10, letterSpacing:2, opacity:0.65, marginTop:6 }}>DE 5</span>
             </div>
           </div>
           <h2 style={{ margin:"0 0 10px", fontFamily:TITULO, fontWeight:300, letterSpacing:"-0.02em", lineHeight:1.15, fontSize: isMobile ? 26 : 30, color:T }}>
@@ -290,7 +290,7 @@ export function ResenasAurora({
                 <div>
                   <input value={r.form.email} type="email" maxLength={120} autoComplete="email" placeholder="Tu email (opcional)"
                     onChange={e => r.setForm(p => ({ ...p, email: e.target.value }))} style={campo} />
-                  <p style={{ margin:"6px 4px 0", fontSize:11, lineHeight:1.5, opacity:0.45 }}>Si compraste acá, sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
+                  <p style={{ margin:"6px 4px 0", fontSize:11, lineHeight:1.5, opacity:0.62 }}>Si compraste acá, sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
                 </div>
                 <textarea value={r.form.comment} rows={3} maxLength={COMENTARIO_MAX} placeholder="Contá tu experiencia (opcional)"
                   onChange={e => r.setForm(p => ({ ...p, comment: e.target.value }))} style={{ ...campo, resize:"none" }} />
@@ -314,7 +314,7 @@ export function ResenasAurora({
                   </button>
                 )}
                 {r.bloqueo && (
-                  <p style={{ margin:0, fontSize:11.5, lineHeight:1.55, textAlign:"center", opacity:0.55 }}>
+                  <p style={{ margin:0, fontSize:11.5, lineHeight:1.55, textAlign:"center", opacity:0.68 }}>
                     {r.bloqueo === "preview" ? "Vista previa: el formulario funciona en tu tienda publicada." : "Es tu tienda: desde tu propia cuenta no podés dejarle una reseña."}
                   </p>
                 )}

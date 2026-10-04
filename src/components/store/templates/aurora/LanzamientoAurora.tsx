@@ -104,15 +104,15 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
           {/* Desplegables en castellano y no el campo del navegador, que en un
               Chrome en inglés sale "mm/dd/yyyy" (ver components/CampoFecha). */}
           <div style={{ flex:"1 1 330px", minWidth:0 }}>
-            <CampoFecha conHora etiqueta="Fecha del lanzamiento" valor={aLocal(fechaIso)} estiloOpciones={{ color:"#111" }}
+            <CampoFecha conHora etiqueta="Fecha del lanzamiento" valor={aLocal(fechaIso)} estiloOpciones={{ color:"#f2f2f7", background:"#14151f" }}
               onCambio={v => setOverride("lanzamientoFecha", { text: v ? new Date(v).toISOString() : "" })}
               estilo={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 8px", fontSize:11, cursor:"pointer" }} />
           </div>
           <select value={producto?.id ?? ""} aria-label="Producto del lanzamiento"
             onChange={e => setOverride("lanzamientoProducto", { text: e.target.value })}
             style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer", maxWidth:200 }}>
-            <option value="" style={{ color:"#111" }}>Sin producto</option>
-            {conFoto.map(p => <option key={p.id} value={p.id} style={{ color:"#111" }}>{p.name}</option>)}
+            <option value="" style={{ color:"#f2f2f7", background:"#14151f" }}>Sin producto</option>
+            {conFoto.map(p => <option key={p.id} value={p.id} style={{ color:"#f2f2f7", background:"#14151f" }}>{p.name}</option>)}
           </select>
           <label style={{ display:"flex", alignItems:"center", gap:5, fontWeight:500, cursor:"pointer" }}>
             <input type="checkbox" checked={verLanzado} onChange={e => setVerLanzado(e.target.checked)} /> Ver ya lanzado
@@ -168,11 +168,11 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
                       fontSize: isMobile ? 26 : 38, lineHeight:1, textShadow:`0 0 24px ${luz(0.55)}` }}>
                       {valor === null ? "--" : String(valor).padStart(2, "0")}
                     </span>
-                    <span style={{ display:"block", marginTop:10, fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", color:"rgba(242,242,247,0.5)" }}>{nombre}</span>
+                    <span style={{ display:"block", marginTop:10, fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", color:"rgba(242,242,247,0.68)" }}>{nombre}</span>
                   </div>
                 ))}
               </div>
-              {cuando && <p style={{ margin:"18px 0 0", fontSize:12.5, color:"rgba(242,242,247,0.55)" }}>Sale el {cuando}.</p>}
+              {cuando && <p style={{ margin:"18px 0 0", fontSize:12.5, color:"rgba(242,242,247,0.68)" }}>Sale el {cuando}.</p>}
             </>
           )}
         </div>

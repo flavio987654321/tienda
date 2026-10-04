@@ -90,7 +90,7 @@ export function ColeccionEnFoco({
           🎯 Colección
           <select value={categoria} onChange={e => setOverride("coleccionFoco", { text: e.target.value })}
             style={{ background:"rgba(0,0,0,.35)", color:T, border:"1px solid rgba(255,255,255,.2)", borderRadius:999, padding:"5px 10px", fontSize:11, cursor:"pointer" }}>
-            {categorias.map(c => <option key={c} value={c} style={{ color:"#111" }}>{c}</option>)}
+            {categorias.map(c => <option key={c} value={c} style={{ color:"#f2f2f7", background:"#14151f" }}>{c}</option>)}
           </select>
         </label>
       )}
@@ -114,7 +114,7 @@ export function ColeccionEnFoco({
               style={{ background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"14px 30px", fontSize:11, letterSpacing:2.5, fontWeight:700, textTransform:"uppercase", cursor:"pointer", boxShadow:`0 0 32px ${luz(0.45)}` }}>
               <EditableZone field="coleccionCta" label="Botón de la colección">Ver la colección</EditableZone>
             </button>
-            <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:"rgba(242,242,247,0.55)", fontVariantNumeric:"tabular-nums" }}>
+            <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:"rgba(242,242,247,0.68)", fontVariantNumeric:"tabular-nums" }}>
               {total} {total === 1 ? "pieza" : "piezas"}
             </span>
           </div>
