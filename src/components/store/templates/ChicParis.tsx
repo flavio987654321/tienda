@@ -39,6 +39,12 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { PreguntasChic } from "@/components/store/templates/chic/PreguntasChic";
+import { LookbookChic } from "@/components/store/templates/chic/LookbookChic";
+import { MAX_LOOKS } from "@/lib/lookbook";
+import { useEfectosScroll } from "@/components/store/templates/shared/useEfectosScroll";
+import { BotonVolverArriba } from "@/components/store/templates/shared/BotonVolverArriba";
+import { SegundaFoto } from "@/components/store/templates/shared/SegundaFoto";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -98,7 +104,7 @@ const BANNER_COUNT = 3;
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
-const CP_SECTION_IDS = ["cp-strip", "cp-mayorista", "cp-productos", "cp-ofertas", "cp-masvisto", "cp-prueba-social", "cp-nosotros", "cp-contacto"];
+const CP_SECTION_IDS = ["cp-strip", "cp-mayorista", "cp-productos", "cp-lookbook", "cp-ofertas", "cp-masvisto", "cp-prueba-social", "cp-nosotros", "cp-preguntas", "cp-contacto"];
 
 /* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
 const CART_ICON_OPTIONS: React.ReactNode[] = [
@@ -252,7 +258,7 @@ export default function ChicParis() {
   const enEditor    = isPreview && !demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const storefront  = useStorefront();
-  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, shippingMethods, hasMercadoPago } = storefront;
 
   // ── El bloque de prueba social ──────────────────────────────────────────────
   // Todo esto —de dónde salen las reseñas, las dos pestañas, el promedio, borrar
@@ -424,6 +430,15 @@ export default function ChicParis() {
   const masVistoText = getContrastColor(masVistoBg) === "light" ? "#fff" : "#111";
   const aboutBg   = sc["bgAbout"]    ?? "#f5f0eb";
   const aboutText = getContrastColor(aboutBg) === "light" ? "#fff" : "#111";
+  /* Comprá el look y Preguntas frecuentes (04/10/26). El look en crema, entre
+     el catálogo (casi blanco) y Ofertas (blanco); las preguntas en blanco,
+     entre Nuestra historia (crema) y Contacto (negro). */
+  const lookbookBg    = sc["bgLookbook"]  ?? "#f5f0eb";
+  const lookbookText  = getContrastColor(lookbookBg) === "light" ? "#fff" : "#111";
+  const lookbookMid   = getContrastColor(lookbookBg) === "light" ? "rgba(255,255,255,0.72)" : "#5a5a5a";
+  const preguntasBg   = sc["bgPreguntas"] ?? "#ffffff";
+  const preguntasText = getContrastColor(preguntasBg) === "light" ? "#fff" : "#111";
+  const preguntasMid  = getContrastColor(preguntasBg) === "light" ? "rgba(255,255,255,0.72)" : "#5a5a5a";
   const footerBg  = sc["bgFooter"]   ?? "#0a0a0a";
   const footerText = getContrastColor(footerBg) === "light" ? "#fff" : "#111";
 
@@ -526,6 +541,21 @@ export default function ChicParis() {
     fmt, showToast, openModal, addToCart, modalScrollRef,
     toggleFavorite,
   } = cart;
+
+  /* Al bajar y subir (ver `shared/useEfectosScroll`, lo mismo que Aire, Boho
+     y Urban): la barra (con la franja de anuncios) se esconde bajando y vuelve
+     subiendo, las fotos de la portada bajan más lento que la página, y pasada
+     una pantalla y media aparece "volver arriba". Nada de esto en la previa. */
+  const fotoBanner1Ref = useRef<HTMLDivElement>(null);
+  const fotoBanner2Ref = useRef<HTMLDivElement>(null);
+  const fotoBanner3Ref = useRef<HTMLDivElement>(null);
+  const fotosBannerRefs = [fotoBanner1Ref, fotoBanner2Ref, fotoBanner3Ref];
+  const { barraOculta, lejosArriba, sinMovimiento } = useEfectosScroll({
+    activo: !isPreview, capas: fotosBannerRefs.map(ref => ({ ref, velocidad: 0.2, escala: 1.12 })),
+  });
+  // No se esconde con algo de la barra abierto: se iría con lo abierto.
+  const barraEscondida = !isPreview && barraOculta && !mobileMenuOpen && !userDropdownOpen && !hoveredNavCat && !searchOpen && !favoritesOpen;
+  const transicionBarra = "transform .35s cubic-bezier(.2,.8,.2,1)";
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
   // Acento usado como TEXTO/borde sobre el fondo claro de la sección de reseñas
   // (el botón "Dejá tu opinión" es contorneado, no relleno). Si el acento es muy
@@ -897,6 +927,7 @@ export default function ChicParis() {
           position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 1001,
           height: PROMO_BAR_H, background: "#111", overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center",
+          ...(isPreview ? null : { transform: barraEscondida ? "translateY(-100%)" : "none", transition: transicionBarra }),
         }}>
           {/* CP-3. El índice no se reiniciaba al cambiar la cantidad de mensajes:
               si estabas en el 3ro y el dueño dejaba 2, `messages[2]` quedaba en
@@ -937,7 +968,8 @@ export default function ChicParis() {
         background: (isPreview || scrolled) ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: (isPreview || scrolled) ? "1px solid #e8e8e8" : "none",
         backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none",
-        transition: "all 0.3s ease",
+        transition: `background 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease, ${transicionBarra}`,
+        transform: barraEscondida ? `translateY(calc(-100% - ${showAnnouncement ? PROMO_BAR_H : 0}px))` : "none",
       }}>
         {/* El nav va de borde a borde, sin el `maxWidth: 1280` que tenía.
             Estaba alineado con las SECCIONES (que también son 1280), pero lo que
@@ -1217,7 +1249,12 @@ export default function ChicParis() {
                 // siempre el de PC.
                 const fx = isMobile ? (ov.posXMobile ?? ov.posX ?? 50) : (ov.posX ?? 50);
                 const fy = isMobile ? (ov.posYMobile ?? ov.posY ?? 50) : (ov.posY ?? 50);
-                return <FadeImage src={ov.url} alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: `${fx}% ${fy}%` }} />;
+                // La capa que baja más lenta al hacer scroll (ver useEfectosScroll).
+                return (
+                  <div ref={fotosBannerRefs[i]} aria-hidden style={{ position: "absolute", inset: 0, willChange: isPreview ? undefined : "transform" }}>
+                    <FadeImage src={ov.url} alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: `${fx}% ${fy}%` }} />
+                  </div>
+                );
               })()}
               {overlayGradient && (
                 <div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
@@ -1436,6 +1473,7 @@ export default function ChicParis() {
                     <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }}>
                       <FadeImage className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw"
                         style={{ objectFit: "cover" }} />
+                      <SegundaFoto images={product.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
                       {(() => {
                         const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
                         if (!isSoldOut) return null;
@@ -1485,6 +1523,16 @@ export default function ChicParis() {
       </SectionBlock>
 
       {/* ── OFERTAS ── */}
+      {/* ── COMPRÁ EL LOOK (ver `chic/LookbookChic`): sin fotos no existe ── */}
+      <SectionBlock id="cp-lookbook" label="Comprá el look" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
+        <LookbookChic products={products} promotions={promotions}
+          imagenes={Array.from({ length: MAX_LOOKS }, (_, i) => storeConfig?.imageOverrides?.[`lookbook${i + 1}`]?.url)}
+          fmt={fmt} ocultarPrecios={ocultarPrecios} onAbrir={p => openModal(p)}
+          fondo={lookbookBg} tinta={lookbookText} suave={lookbookMid} acento={accentSobre(lookbookBg, lookbookText)} ACC={ACC} isMobile={isMobile}>
+          <EditableSectionBg field="bgLookbook" label="Fondo del look" />
+        </LookbookChic>
+      </SectionBlock>
+
       <SectionBlock id="cp-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
         {(() => {
           // "Oferta" para el comprador es cualquier cosa que le salga más barata,
@@ -1646,6 +1694,7 @@ export default function ChicParis() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
+                        <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom />
                         {avisoPromo(p)}
                       </div>
                       <div style={{ padding: "10px 0 0" }}>
@@ -1973,6 +2022,16 @@ export default function ChicParis() {
           );
         })()}
       </section>
+      </SectionBlock>
+
+      {/* ── PREGUNTAS FRECUENTES (ver `chic/PreguntasChic`) ── */}
+      <SectionBlock id="cp-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
+        <PreguntasChic envios={shippingMethods} mercadoPago={hasMercadoPago} pagos={storeConfig?.paymentInfo}
+          legales={storeConfig?.legales} slug={storeConfig?.slug} isPreview={isPreview} fmt={fmt}
+          onContacto={() => irASeccion("contacto")} conWhatsapp={hasWA}
+          fondo={preguntasBg} tinta={preguntasText} suave={preguntasMid} acento={accentSobre(preguntasBg, preguntasText)} isMobile={isMobile}>
+          <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
+        </PreguntasChic>
       </SectionBlock>
 
       <SectionBlock id="cp-contacto" label="Contacto" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
@@ -3041,6 +3100,14 @@ export default function ChicParis() {
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
+      )}
+
+      {/* ── VOLVER ARRIBA (ver `shared/BotonVolverArriba`) ──
+          Blanco, redondo y de línea fina, como los botones de Chic. Abajo a la
+          derecha siempre hay otro (WhatsApp, o el carrito si no hay WhatsApp). */}
+      {!isPreview && !cart.cartOpen && !cart.checkoutOpen && (
+        <BotonVolverArriba visible={lejosArriba} encimaDeOtro sinMovimiento={sinMovimiento}
+          estilo={{ borderRadius: "50%", background: "#fff", color: "#111", border: "1px solid #ddd", boxShadow: "0 6px 18px rgba(0,0,0,0.12)" }} />
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
