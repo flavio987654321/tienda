@@ -82,17 +82,22 @@ export function PiezaQueLlega({
        "lejos", sin que se vea (está afuera), y la próxima vez que entra vuelve
        a llegar. Se espera a que salga entera para no cortar la llegada de una
        pieza que apenas asoma por el borde. */
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting && e.intersectionRatio >= 0.08) setLlego(true);
-        else if (!e.isIntersecting) setLlego(false);
-      },
+    const entra = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setLlego(true); },
       // Un poco antes de entrar del todo, para que el movimiento termine cuando
       // la pieza ya está bien a la vista y no justo al aparecer.
-      { threshold: [0, 0.08], rootMargin: "0px 0px -40px 0px" },
+      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
     );
-    io.observe(el);
-    return () => io.disconnect();
+    /* La salida va con OTRO observador, sin el margen: con el mismo, una pieza
+       que todavía asoma en los últimos 40px de abajo contaba como "afuera" y se
+       iba a lo lejos a la vista de todos. */
+    const sale = new IntersectionObserver(
+      ([e]) => { if (!e.isIntersecting) setLlego(false); },
+      { threshold: 0 },
+    );
+    entra.observe(el);
+    sale.observe(el);
+    return () => { entra.disconnect(); sale.disconnect(); };
   }, []);
 
   // El escalonado va por posición en la fila, no por índice absoluto: con
