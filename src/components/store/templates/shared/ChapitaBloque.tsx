@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CAPAS } from "@/lib/capas-tienda";
 
 /* El violeta del editor, y el pelito blanco que lo salva de cualquier fondo.
@@ -43,8 +44,13 @@ export const HALO_EDITOR = "0 1px 0 rgba(255,255,255,0.9), 0 -1px 0 rgba(255,255
      Sólo con mouse: en el celular no hay "pasar por encima".
    - TOCANDO el ⓘ: queda fija hasta tocar afuera, Escape o la ✕. Es lo que
      funciona en el editor del celular.
-   Abierta va en la capa de los globitos del editor: en la capa del nav, el
-   botón "Fondo" (que va justo debajo de la chapita) le tapaba el título.
+   La tarjeta se dibuja AFUERA del bloque (un portal al body, en posición fija
+   medida desde la chapita), en la capa de los globitos del editor. Adentro
+   del bloque la tapaban dos cosas: el botón "Fondo", que va justo debajo de
+   la chapita, y el bloque de abajo cuando la tarjeta es más larga que el
+   suyo: las secciones con `data-reveal` quedan con un `transform` puesto, y
+   eso encierra cualquier zIndex de adentro, por alto que sea. Por estar fija,
+   se cierra al scrollear (si no, quedaría flotando mientras la página pasa).
 
    El ⓘ late (un aro que se expande) hasta que se abre por primera vez: es
    chiquito y sin eso nadie lo descubre. Con "reducir movimiento" no late.
@@ -55,19 +61,43 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
   const [abierta, setAbierta] = useState<false | "mouse" | "fija">(false);
   const [yaVista, setYaVista] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  const tarjeta = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const cierre = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idTarjeta = useId();
 
   useEffect(() => { if (abierta) setYaVista(true); }, [abierta]);
+  /* Antes de pintar: medida desde la chapita, y corrida a la izquierda si no
+     entra (el ancho máximo es el mismo de la tarjeta: 300px o el 80% de la
+     pantalla). */
+  useLayoutEffect(() => {
+    if (!abierta || !caja.current) { setPos(null); return; }
+    const r = caja.current.getBoundingClientRect();
+    const ancho = Math.min(300, window.innerWidth * 0.8);
+    setPos({ top: r.top + 19, left: Math.max(8, Math.min(r.left + 6, window.innerWidth - ancho - 8)) });
+  }, [abierta]);
   useEffect(() => () => { if (cierre.current) clearTimeout(cierre.current); }, []);
 
   useEffect(() => {
     if (!abierta) return;
-    const afuera = (e: PointerEvent) => { if (!caja.current?.contains(e.target as Node)) setAbierta(false); };
+    const afuera = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!caja.current?.contains(t) && !tarjeta.current?.contains(t)) setAbierta(false);
+    };
     const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") setAbierta(false); };
+    /* Al scrollear se cierra (está fija, ver arriba). En captura, porque lo que
+       scrollea puede ser el marco del editor y no la ventana. */
+    const scroll = () => setAbierta(false);
     document.addEventListener("pointerdown", afuera);
     document.addEventListener("keydown", tecla);
-    return () => { document.removeEventListener("pointerdown", afuera); document.removeEventListener("keydown", tecla); };
+    document.addEventListener("scroll", scroll, true);
+    window.addEventListener("resize", scroll);
+    return () => {
+      window.removeEventListener("resize", scroll);
+      document.removeEventListener("pointerdown", afuera);
+      document.removeEventListener("keydown", tecla);
+      document.removeEventListener("scroll", scroll, true);
+    };
   }, [abierta]);
 
   const entra = (e: React.PointerEvent) => {
@@ -81,7 +111,7 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
   };
 
   return (
-    <div ref={caja} style={{ position: "absolute", top: 0, left: 0, zIndex: abierta ? CAPAS.edicionGlobito : CAPAS.nav, pointerEvents: "none", maxWidth: "60%" }}>
+    <div ref={caja} style={{ position: "absolute", top: 0, left: 0, zIndex: CAPAS.nav, pointerEvents: "none", maxWidth: "60%" }}>
       {ayuda && !yaVista && (
         <style>{"@keyframes chapita-late { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.95) } 70% { box-shadow: 0 0 0 7px rgba(255,255,255,0) } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0) } } @media (prefers-reduced-motion: reduce) { .chapita-ayuda { animation: none !important } }"}</style>
       )}
@@ -117,11 +147,11 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
           </button>
         )}
       </div>
-      {ayuda && abierta && (
-        <div id={idTarjeta} role="dialog" aria-label={`Para qué sirve ${nombre}`} onPointerEnter={entra} onPointerLeave={sale}
-          /* top 19: pegada a la chapita (15px + el aro). Con más hueco, el mouse
-             que baja del ⓘ a la tarjeta la cerraba en el camino. */
-          style={{ pointerEvents: "auto", position: "absolute", top: 19, left: 6, width: "max-content", maxWidth: "min(300px, 80vw)",
+      {ayuda && abierta && pos && createPortal(
+        <div ref={tarjeta} id={idTarjeta} role="dialog" aria-label={`Para qué sirve ${nombre}`} onPointerEnter={entra} onPointerLeave={sale}
+          /* 19px abajo de la chapita: pegada (15px + el aro). Con más hueco, el
+             mouse que baja del ⓘ a la tarjeta la cerraba en el camino. */
+          style={{ pointerEvents: "auto", position: "fixed", top: pos.top, left: pos.left, zIndex: CAPAS.edicionGlobito, width: "max-content", maxWidth: "min(300px, 80vw)",
             background: "#fff", color: "#1e1b4b", border: `1.5px solid ${LINEA_EDITOR}`, borderRadius: 12, padding: "11px 30px 12px 13px",
             boxShadow: "0 12px 32px rgba(15,23,42,0.28)", fontFamily: "system-ui, -apple-system, sans-serif", textTransform: "none", letterSpacing: 0 }}>
           <p style={{ margin: "0 0 5px", fontSize: 11, fontWeight: 800, color: LINEA_EDITOR, textTransform: "uppercase", letterSpacing: 0.5 }}>{nombre}: ¿para qué sirve?</p>
@@ -129,7 +159,8 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
           <button type="button" onClick={() => setAbierta(false)} aria-label="Cerrar"
             style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 999, border: "none", background: "transparent",
               color: "#64748b", cursor: "pointer", fontSize: 15, lineHeight: 1 }}>×</button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
