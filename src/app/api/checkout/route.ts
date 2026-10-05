@@ -545,9 +545,24 @@ export async function POST(req: NextRequest) {
             select: { acceptsRewardCoupons: true },
           });
           if (storeAccepts?.acceptsRewardCoupons) {
-            const MAX_REWARD_DISCOUNT = 100_000;
-            discountAmount = Math.min(Math.round((subtotal * rewardCoupon.discountValue) / 100), MAX_REWARD_DISCOUNT);
-            usedRewardCouponId = rewardCoupon.id;
+            /* Se RESERVA acá, con candado (05/10/26). Antes se leía "AVAILABLE" y
+               recién al final se marcaba usado con un update sin condición: dos
+               compras a la vez lo usaban las dos. Este update sólo pasa si sigue
+               disponible; el pedido se le anota más abajo. */
+            const reservado = await tx.affiliateRewardCoupon.updateMany({
+              where: { id: rewardCoupon.id, status: "AVAILABLE" },
+              data: { status: "USED", usedAt: new Date() },
+            });
+            if (reservado.count > 0) {
+              const MAX_REWARD_DISCOUNT = 100_000;
+              // La misma cuenta que un cupón normal (con su tope sobre el
+              // subtotal): un premio del 100% dejaba el pedido en $0.
+              discountAmount = Math.min(
+                couponDiscountFor({ discountType: "percentage", discountValue: rewardCoupon.discountValue }, subtotal),
+                MAX_REWARD_DISCOUNT
+              );
+              usedRewardCouponId = rewardCoupon.id;
+            }
           }
         }
       }
@@ -619,14 +634,12 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Marcar cupón de premio como USADO dentro de la transacción
-      // para que si algo falla, el cupón no quede consumido sin venta real
+      // Anotarle el pedido al cupón de premio (ya quedó reservado arriba).
+      // Dentro de la transacción: si algo falla, la reserva se deshace con todo.
       if (usedRewardCouponId) {
         await tx.affiliateRewardCoupon.update({
           where: { id: usedRewardCouponId },
           data: {
-            status: "USED",
-            usedAt: new Date(),
             usedOrderId: createdOrder.id,
             usedStoreName: store.name,
           },

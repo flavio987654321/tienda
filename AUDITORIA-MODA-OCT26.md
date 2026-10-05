@@ -96,8 +96,11 @@ stock se descuenta de forma atómica.
   consulta → 409; producto sólo mayorista en tienda sin mayorista → rechazado.
 - [ ] **2.8 Carrito guardado con precios viejos**, y la misma clave de
   `localStorage` para todas las tiendas en `/tienda/<slug>`.
-- [ ] **2.9 Cupón de premio**: se puede usar dos veces en simultáneo y no tiene el
-  tope del 90 %.
+- [x] ~~**2.9 Cupón de premio**: se puede usar dos veces en simultáneo y no tiene el
+  tope del 90 %.~~ → Hecho (05/10): se reserva con `updateMany` condicionado a
+  AVAILABLE al aplicarlo, y el descuento usa `couponDiscountFor` (mismo tope). El
+  endpoint `validar-premio` hace la misma cuenta. Probado: 2 compras simultáneas
+  (descuenta una sola) y premio del 100% (ya no da $0).
 - [x] ~~**2.10 Dos `approved` simultáneos** confirman dos veces (log, mails) o
   confirman un pedido recién cancelado.~~ → Hecho (05/10): candado en
   `runOrderAction`, que también cubre el doble clic del panel.

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { couponDiscountFor } from "@/lib/coupons";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No podés usar un cupón de premio en la tienda donde sos afiliado" }, { status: 400 });
   }
 
-  const discount = Math.round((subtotal * coupon.discountValue) / 100);
+  // La misma cuenta que aplica el checkout (tope del cupón y techo de $100.000).
+  const discount = Math.min(couponDiscountFor({ discountType: "percentage", discountValue: coupon.discountValue }, subtotal), 100_000);
 
   return NextResponse.json({
     rewardCoupon: {
