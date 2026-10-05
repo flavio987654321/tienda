@@ -37,15 +37,29 @@ export const HALO_EDITOR = "0 1px 0 rgba(255,255,255,0.9), 0 -1px 0 rgba(255,255
    `lib/ayudaBloques`). Sólo existe editando: la chapita misma sólo se dibuja
    en modo edición.
 
-   Se abre TOCANDO, no al pasar el mouse: en el editor del celular no hay mouse,
-   y un globito que aparece solo al pasar tapa lo que se está por editar. Se
-   cierra tocando afuera, con Escape o con la ✕. La chapita sigue midiendo 15px
-   y sin robar clics (`pointerEvents:"none"`): sólo el ⓘ y la tarjeta los
-   reciben. */
+   Se abre de dos formas (Flavio, 05/10/26):
+   - PASANDO EL MOUSE por el ⓘ: se abre sola y se cierra al salir (con un
+     respiro, para poder llevar el mouse hasta la tarjeta sin que se cierre).
+     Sólo con mouse: en el celular no hay "pasar por encima".
+   - TOCANDO el ⓘ: queda fija hasta tocar afuera, Escape o la ✕. Es lo que
+     funciona en el editor del celular.
+   Abierta va en la capa de los globitos del editor: en la capa del nav, el
+   botón "Fondo" (que va justo debajo de la chapita) le tapaba el título.
+
+   El ⓘ late (un aro que se expande) hasta que se abre por primera vez: es
+   chiquito y sin eso nadie lo descubre. Con "reducir movimiento" no late.
+   La chapita sigue midiendo 15px y sin robar clics (`pointerEvents:"none"`):
+   sólo el ⓘ y la tarjeta los reciben. */
 export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: string; /** El id del bloque: la lista de textos del celular lo pasa al panel. */ id?: string }) {
-  const [abierta, setAbierta] = useState(false);
+  /** "mouse": abierta mientras el mouse está encima. "fija": abierta por un toque. */
+  const [abierta, setAbierta] = useState<false | "mouse" | "fija">(false);
+  const [yaVista, setYaVista] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  const cierre = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idTarjeta = useId();
+
+  useEffect(() => { if (abierta) setYaVista(true); }, [abierta]);
+  useEffect(() => () => { if (cierre.current) clearTimeout(cierre.current); }, []);
 
   useEffect(() => {
     if (!abierta) return;
@@ -56,8 +70,21 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
     return () => { document.removeEventListener("pointerdown", afuera); document.removeEventListener("keydown", tecla); };
   }, [abierta]);
 
+  const entra = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    if (cierre.current) { clearTimeout(cierre.current); cierre.current = null; }
+    setAbierta(a => a || "mouse");
+  };
+  const sale = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    cierre.current = setTimeout(() => setAbierta(a => (a === "mouse" ? false : a)), 220);
+  };
+
   return (
-    <div ref={caja} style={{ position: "absolute", top: 0, left: 0, zIndex: abierta ? CAPAS.panel : CAPAS.nav, pointerEvents: "none", maxWidth: "60%" }}>
+    <div ref={caja} style={{ position: "absolute", top: 0, left: 0, zIndex: abierta ? CAPAS.edicionGlobito : CAPAS.nav, pointerEvents: "none", maxWidth: "60%" }}>
+      {ayuda && !yaVista && (
+        <style>{"@keyframes chapita-late { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.95) } 70% { box-shadow: 0 0 0 7px rgba(255,255,255,0) } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0) } } @media (prefers-reduced-motion: reduce) { .chapita-ayuda { animation: none !important } }"}</style>
+      )}
       {/* `data-chapita`: la lista de textos del editor de celular agrupa por bloque
           leyendo estas marcas en el orden en que aparecen (ver /preview/celular). */}
       <div data-chapita={nombre} data-chapita-id={id} style={{
@@ -74,18 +101,27 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
       }}>
         <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nombre}</span>
         {ayuda && (
-          <button type="button" onClick={() => setAbierta(a => !a)} aria-expanded={abierta} aria-controls={idTarjeta}
-            aria-label={`¿Para qué sirve "${nombre}"?`} title="¿Para qué sirve?"
-            style={{ pointerEvents: "auto", flexShrink: 0, width: 13, height: 13, borderRadius: 999, border: "1px solid rgba(255,255,255,0.85)",
-              background: abierta ? "#fff" : "transparent", color: abierta ? LINEA_EDITOR : "#fff", padding: 0, cursor: "pointer",
-              display: "grid", placeItems: "center", fontSize: 8.5, fontWeight: 900, lineHeight: 1, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+          /* Un toque con la tarjeta abierta por el mouse la deja fija, no la cierra:
+             quien hace clic quiere leerla tranquilo. */
+          <button type="button" className="chapita-ayuda" onClick={() => setAbierta(a => (a === "fija" ? false : "fija"))}
+            onPointerEnter={entra} onPointerLeave={sale}
+            aria-expanded={!!abierta} aria-controls={idTarjeta}
+            aria-label={`¿Para qué sirve "${nombre}"?`}
+            /* Relleno blanco con la "i" violeta: sobre la chapita violeta se ve de
+               lejos. Abierta se invierte, para que se note que es ésa. */
+            style={{ pointerEvents: "auto", flexShrink: 0, width: 13, height: 13, borderRadius: 999, border: "1px solid #fff",
+              background: abierta ? LINEA_EDITOR : "#fff", color: abierta ? "#fff" : LINEA_EDITOR, padding: 0, cursor: "pointer",
+              animation: yaVista ? undefined : "chapita-late 1.8s ease-out infinite",
+              display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900, lineHeight: 1, fontFamily: "Georgia, serif", fontStyle: "italic" }}>
             i
           </button>
         )}
       </div>
       {ayuda && abierta && (
-        <div id={idTarjeta} role="dialog" aria-label={`Para qué sirve ${nombre}`}
-          style={{ pointerEvents: "auto", position: "absolute", top: 21, left: 6, width: "max-content", maxWidth: "min(300px, 80vw)",
+        <div id={idTarjeta} role="dialog" aria-label={`Para qué sirve ${nombre}`} onPointerEnter={entra} onPointerLeave={sale}
+          /* top 19: pegada a la chapita (15px + el aro). Con más hueco, el mouse
+             que baja del ⓘ a la tarjeta la cerraba en el camino. */
+          style={{ pointerEvents: "auto", position: "absolute", top: 19, left: 6, width: "max-content", maxWidth: "min(300px, 80vw)",
             background: "#fff", color: "#1e1b4b", border: `1.5px solid ${LINEA_EDITOR}`, borderRadius: 12, padding: "11px 30px 12px 13px",
             boxShadow: "0 12px 32px rgba(15,23,42,0.28)", fontFamily: "system-ui, -apple-system, sans-serif", textTransform: "none", letterSpacing: 0 }}>
           <p style={{ margin: "0 0 5px", fontSize: 11, fontWeight: 800, color: LINEA_EDITOR, textTransform: "uppercase", letterSpacing: 0.5 }}>{nombre}: ¿para qué sirve?</p>
