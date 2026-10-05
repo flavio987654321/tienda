@@ -636,11 +636,17 @@ function savingsBannerHtml(totalSaved: number, freeShippingPromo?: EmailPromo | 
 function buildPaymentBlock(paymentInfo?: {
   transferencia?: { enabled?: boolean; titular?: string; cbu?: string; cvu?: string; alias?: string; banco?: string; cuil?: string; instrucciones?: string };
   efectivo?: { enabled?: boolean; instrucciones?: string };
-} | null): string {
+} | null, medio?: string): string {
   const t = paymentInfo?.transferencia;
   const e = paymentInfo?.efectivo;
-  const hasTransfer = t?.enabled && (t.cbu || t.cvu || t.alias);
-  const hasEfectivo = e?.enabled && e.instrucciones;
+  /* Sólo el medio que eligió (05/10/26): antes salían los datos de
+     transferencia Y las instrucciones de efectivo a la vez, y quien iba a pagar
+     al retirar recibía un CBU como si tuviera que transferir. Sin medio (mails
+     viejos), se muestran los dos como antes. */
+  const soloEfectivo = medio === "efectivo";
+  const soloTransfer = medio === "transferencia" || medio === "transfer";
+  const hasTransfer = !soloEfectivo && t?.enabled && (t.cbu || t.cvu || t.alias);
+  const hasEfectivo = !soloTransfer && e?.enabled && e.instrucciones;
   if (!hasTransfer && !hasEfectivo) return "";
 
   const rows: string[] = [];
@@ -864,7 +870,7 @@ export async function sendOrderConfirmationEmail({
               <p style="font-size:13px;font-weight:700;color:#1d4ed8;margin:0 0 4px;">💳 Pago pendiente en MercadoPago</p>
               <p style="font-size:13px;color:#2563eb;margin:0;">Completá el pago en MercadoPago para que el vendedor pueda preparar tu pedido. Cuando se confirme, te enviamos otro email.</p>
              </div>`
-          : buildPaymentBlock(paymentInfo)
+          : buildPaymentBlock(paymentInfo, paymentProvider ?? undefined)
         }
 
         <!-- Consumer rights -->

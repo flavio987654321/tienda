@@ -131,7 +131,8 @@ chequear(
 console.log("\n3 bis) Los dos internos se leen pero no se devuelven");
 chequear("el select los pide", /\n\s+ownerId: true,/.test(ruta) && /\n\s+mpAccessToken: true,/.test(ruta));
 chequear("y el destructuring los saca de la respuesta",
-  /const \{ ownerId: _ownerId, mpAccessToken: _mpAccessToken, \.\.\.safeStore \} = store;/.test(ruta));
+  /const \{ ownerId: _ownerId, mpAccessToken: _mpAccessToken, \.\.\.sinInternos \} = store;/.test(ruta)
+  && /const safeStore = \{ \.\.\.sinInternos, storeConfig: configPublicaTexto\(/.test(ruta));
 
 /* ── Lo que la tienda necesita sigue saliendo ──────────────────────────────── */
 

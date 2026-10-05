@@ -1,5 +1,6 @@
 import type { StorefrontProduct, SeleccionOpciones } from "@/hooks/useStorefront";
-import type { ShippingMethod } from "@/types/store-config";
+import type { ShippingMethod, StorePaymentInfo } from "@/types/store-config";
+import { mediosHabilitados, ETIQUETA_MEDIO } from "@/lib/mediosDePago";
 import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 export type CartItem = {
@@ -52,19 +53,13 @@ export function fmtEnvioPrice(opt: ShippingMethod, fmt: (n: number) => string): 
 
 export const ENVIO_OPTIONS = DEFAULT_SHIPPING_METHODS;
 
-export const BASE_PAGO_OPTIONS = [
-  { id: "transferencia", label: "Transferencia bancaria" },
-  { id: "retirar",       label: "Pago al retirar / acordar" },
-];
-
-export const MP_PAGO_OPTION = { id: "mercadopago", label: "MercadoPago (tarjeta / débito)" };
-
-export function getPagoOptions(hasMercadoPago: boolean, hasAffiliate = false) {
-  if (hasAffiliate) return hasMercadoPago ? [MP_PAGO_OPTION] : [];
-  return hasMercadoPago ? [MP_PAGO_OPTION, ...BASE_PAGO_OPTIONS] : BASE_PAGO_OPTIONS;
+/** Los medios que ofrece la tienda, con su texto. La regla vive en
+ *  `lib/mediosDePago` y es la MISMA que aplica el checkout del servidor. */
+export function getPagoOptions(hasMercadoPago: boolean, hasAffiliate = false, paymentInfo?: StorePaymentInfo | null) {
+  return mediosHabilitados({ paymentInfo, hasMercadoPago, hasAffiliate })
+    .map((id) => ({ id, label: ETIQUETA_MEDIO[id] }));
 }
 
-export const PAGO_OPTIONS = BASE_PAGO_OPTIONS;
 
 /**
  * Formateador de precios de la tienda, armado con su moneda.

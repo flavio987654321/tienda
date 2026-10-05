@@ -3,6 +3,7 @@ import { runOrderAction, PedidoEnOtroEstado } from "@/lib/orderActions";
 import { createNotification } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { despues } from "@/lib/despues";
+import { PROVEEDORES_MP, PROVEEDORES_MANUALES } from "@/lib/proveedoresPago";
 
 /* ══════════════════════════════════════════════════════════════════════════
    PEDIDOS QUE NUNCA SE PAGARON (05/10/26)
@@ -46,7 +47,7 @@ export async function vencerPedidosImpagos(now = new Date()) {
     where: {
       status: "PENDING",
       store: tiendas,
-      payment: { is: { provider: "mercadopago" } },
+      payment: { is: { provider: { in: [...PROVEEDORES_MP] } } },
       OR: [
         { createdAt: { lt: new Date(now.getTime() - VENCE_MP_SIN_PAGO) }, payment: { is: { externalId: null } } },
         { createdAt: { lt: new Date(now.getTime() - VENCE_MP_PAGO_EN_CURSO) } },
@@ -72,7 +73,7 @@ export async function vencerPedidosImpagos(now = new Date()) {
     where: {
       status: "PENDING",
       store: tiendas,
-      payment: { is: { provider: { in: ["transferencia", "efectivo"] } } },
+      payment: { is: { provider: { in: [...PROVEEDORES_MANUALES] } } },
       createdAt: { lt: new Date(now.getTime() - RECORDAR_MANUAL) },
       statusLogs: { none: { changedBy: RECORDATORIO_MANUAL } },
     },

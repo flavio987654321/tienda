@@ -11,6 +11,7 @@ import { valoresElegidos } from "@/lib/opciones";
 import { buscarVariante } from "@/lib/variantMatch";
 import { opcionesVisibles, opcionesAElegir } from "@/lib/opciones";
 import type { ActivePromotion } from "@/lib/pricing";
+import type { ShippingMethod, StorePaymentInfo } from "@/types/store-config";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -121,6 +122,11 @@ export default function ProductDetailClient({
   const [template, setTemplate] = useState<string | null>(tParam ?? templateInicial);
   const [currency, setCurrency] = useState("ARS");
   const [hasMercadoPago, setHasMercadoPago] = useState(false);
+  /* Los envíos y los medios de pago DE LA TIENDA. Antes no se pasaban: esta
+     pantalla ofrecía los envíos de fábrica (con "Retiro gratis") y todos los
+     medios, aunque la tienda tuviera otros (05/10/26). */
+  const [envios, setEnvios] = useState<ShippingMethod[] | null>(null);
+  const [infoPago, setInfoPago] = useState<StorePaymentInfo | null>(null);
   /* Igual que en la pantalla de productos: se lee una sola vez al montar para
      que el pedido y las opciones de pago vean lo mismo. Ver la nota larga en
      `lib/atribucion-afiliado.ts` sobre por qué hacía falta guardarlo. */
@@ -171,6 +177,10 @@ export default function ProductDetailClient({
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
           if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
           setOcultarPrecios(!!cfg.ocultarPreciosPublico);
+          if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) setEnvios(cfg.shippingMethods);
+          if (cfg.paymentInfo) setInfoPago(cfg.paymentInfo);
+          if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) setEnvios(cfg.shippingMethods);
+          if (cfg.paymentInfo) setInfoPago(cfg.paymentInfo);
         } catch {}
         setPromotions(parsePromotions(data.store.promotions));
         const real = (data.store.products ?? []).map(mapProduct);
@@ -261,7 +271,7 @@ export default function ProductDetailClient({
      pantalla nunca ofrecía MercadoPago: sólo transferencia y pago al retirar.
      Sin él, sumar el afiliado dejaría la lista de pagos vacía, porque una venta
      con comisión sólo puede cobrarse por MercadoPago. */
-  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, affiliateId, hasMercadoPago, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
+  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, affiliateId, hasMercadoPago, shippingMethods: envios, paymentInfo: infoPago, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
   const {
     seleccion, setSeleccion, setOpcion, qty, setQty,
     addToCart, cartCount, toastMsg, openModal,

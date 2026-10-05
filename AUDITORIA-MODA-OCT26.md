@@ -79,15 +79,21 @@ stock se descuenta de forma atómica.
   Probado con el checkout real (0, negativo, propio) en base local.
 - [x] ~~**2.4 Cupón devuelto dos veces** al rechazarse un pago (`runOrderAction` y el
   webhook).~~ → Hecho (05/10): se fue con el 1.1, el webhook ya no cancela.
-- [ ] **2.5 Medios de pago no respetan la configuración** (transferencia/efectivo
+- [x] ~~**2.5 Medios de pago no respetan la configuración** (transferencia/efectivo
   siempre ofrecidos; "retirar" se guarda como `transfer`; MP sin conectar acepta el
-  pedido y lo deja huérfano).
+  pedido y lo deja huérfano).~~ → **Hecho (05/10).** `lib/mediosDePago`: una regla
+  para el carrito y el servidor (tienda sin configurar sigue ofreciendo los dos
+  manuales). "retirar" se guarda como `efectivo`; un medio desconocido o apagado
+  → 400. El mail muestra sólo las instrucciones del medio elegido. Probado con
+  el checkout real en base local y en el navegador (girly-store: ya no ofrece
+  efectivo; amaranta: los tres).
 - [x] ~~**2.6 Webhook contesta 200 antes de procesar y traga errores**: si falla, MP
   no reintenta y el pedido queda PENDING con la plata cobrada.~~ → Hecho (05/10):
   procesa antes de contestar; error inesperado → 500 y MP reintenta; un pago que
   MP no conoce (404/401/403) no pide reintento.
-- [ ] **2.7 "Ocultar precios", modo consulta y sólo-mayorista no se respetan** en
-  el checkout del servidor.
+- [x] ~~**2.7 "Ocultar precios", modo consulta y sólo-mayorista no se respetan** en
+  el checkout del servidor.~~ → Hecho (05/10): precios ocultos o rubro por
+  consulta → 409; producto sólo mayorista en tienda sin mayorista → rechazado.
 - [ ] **2.8 Carrito guardado con precios viejos**, y la misma clave de
   `localStorage` para todas las tiendas en `/tienda/<slug>`.
 - [ ] **2.9 Cupón de premio**: se puede usar dos veces en simultáneo y no tiene el
@@ -95,8 +101,10 @@ stock se descuenta de forma atómica.
 - [x] ~~**2.10 Dos `approved` simultáneos** confirman dos veces (log, mails) o
   confirman un pedido recién cancelado.~~ → Hecho (05/10): candado en
   `runOrderAction`, que también cubre el doble clic del panel.
-- [ ] **2.11 Chequeo de salud de MP** busca `provider: "mercadopago"` y las tiendas
-  guardan `"mp"`.
+- [x] ~~**2.11 Chequeo de salud de MP** busca `provider: "mercadopago"` y las tiendas
+  guardan `"mp"`.~~ → Hecho (05/10): `lib/proveedoresPago` con las listas de
+  nombres. Y la señal cambió: "5+ intentos de pago MP en 3 días y ninguno
+  aprobado" en vez de "sin pagos en 24 h" (que con pocas ventas avisaba falso).
 - [x] ~~**2.12 (probable) El webhook no compara `collector_id`** con la cuenta MP de
   la tienda del pedido.~~ → Hecho (05/10): se compara con `mpSellerId`; sin
   `mpSellerId` (conexiones viejas) se deja pasar y se anota.
@@ -165,6 +173,14 @@ stock se descuenta de forma atómica.
   `history.replaceState`.
 - [x] Sin conexión al confirmar, el botón del checkout quedaba en "procesando"
   para siempre; y un doble clic rápido creaba dos pedidos.
+- [x] **Error mío del 2.1, atrapado acá:** el vencimiento filtraba
+  `provider: "mercadopago"`, pero el checkout guarda `"mp"` — los pedidos MP
+  nuevos no habrían vencido nunca. Y el recordatorio se salteaba los guardados
+  como `"transfer"`. Arreglado con `lib/proveedoresPago` y probado con los tres
+  nombres (antes de subir nada).
+- [x] La ficha suelta y el catálogo NO le pasaban al carrito los envíos ni los
+  medios de la tienda: mostraban los de fábrica (con "Retiro gratis"). Con el
+  1.5 el servidor los habría rechazado; ahora reciben los de la tienda.
 - [x] Había TRES copias de "crear el pedido" (tienda, ficha suelta, catálogo) y
   las dos de afuera no mandaban la donación ni el cupón de premio: se perdían en
   silencio comprando desde esas pantallas. Ahora una sola, `crearPedido`.

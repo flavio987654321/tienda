@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment }
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams, OpcionProducto, SeleccionOpciones } from "@/hooks/useStorefront";
+import type { ShippingMethod, StorePaymentInfo } from "@/types/store-config";
 import { getDemoPool, fillTargetFor, parsePromotions, crearPedido } from "@/hooks/useStorefront";
 import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { opcionesVisibles } from "@/lib/opciones";
@@ -700,6 +701,11 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
      ya viaja con afiliado — que el servidor rechaza. */
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
   const [hasMercadoPago, setHasMercadoPago] = useState(false);
+  /* Los envíos y los medios de pago DE LA TIENDA. Antes no se pasaban: este
+     catálogo ofrecía los envíos de fábrica (con "Retiro gratis") y todos los
+     medios, aunque la tienda tuviera otros (05/10/26). */
+  const [envios, setEnvios] = useState<ShippingMethod[] | null>(null);
+  const [infoPago, setInfoPago] = useState<StorePaymentInfo | null>(null);
   // Va en un efecto y no en el valor inicial del useState a propósito: el
   // servidor no tiene navegador, así que ahí siempre daría null, y el cliente
   // daría el afiliado — dos HTML distintos para la misma pantalla. Leerlo
@@ -785,7 +791,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
      afiliado pero la tienda no tiene MercadoPago conectado. Mandar uno sin el
      otro dejaría a la persona sin ningún medio de pago para elegir: se cambiaría
      una comisión perdida por una venta perdida. */
-  const cart = useCartLogic({ products, promotions, slug, isOwner, isPreview: fromEditor, affiliateId, hasMercadoPago, resolveVariantId, validateCoupon, placeOrder });
+  const cart = useCartLogic({ products, promotions, slug, isOwner, isPreview: fromEditor, affiliateId, hasMercadoPago, shippingMethods: envios, paymentInfo: infoPago, resolveVariantId, validateCoupon, placeOrder });
   // Sólo lo que dibuja ESTA página. Todo lo del carrito y el checkout —líneas con
   // promo, cupón, envío, pago, datos del comprador, totales— se le pasa entero a
   // `CartDrawer` y `CheckoutModal` en el objeto `cart`, así que no hace falta
@@ -827,6 +833,8 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
           if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
           if (cfg.whatsapp) setWhatsapp(cfg.whatsapp);
+          if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) setEnvios(cfg.shippingMethods);
+          if (cfg.paymentInfo) setInfoPago(cfg.paymentInfo);
           const savedIcon = parseInt(cfg.textOverrides?.["cartIcon"]?.text ?? "0") || 0;
           setCartIconIdx(Math.abs(savedIcon) % CART_ICON_OPTIONS.length);
         } catch {}

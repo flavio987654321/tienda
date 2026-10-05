@@ -7,7 +7,7 @@ import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/cont
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { valoresElegidos } from "@/lib/opciones";
-import { textoSeleccion, MP_PAGO_OPTION } from "@/components/store/shared/cartTypes";
+import { textoSeleccion } from "@/components/store/shared/cartTypes";
 import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
@@ -327,7 +327,7 @@ export function CheckoutModal({
                   {/* Mercado Pago se nombra sólo si es con lo que se va a pagar.
                       Antes salía siempre: en una tienda sin Mercado Pago, o pagando
                       por transferencia, le prometía al comprador algo que no pasaba. */}
-                  {pagoId === MP_PAGO_OPTION.id
+                  {pagoId === "mercadopago"
                     ? <>Pago seguro procesado por <strong>MercadoPago</strong> · SSL cifrado</>
                     : <>Tus datos viajan cifrados · SSL</>}
                 </span>

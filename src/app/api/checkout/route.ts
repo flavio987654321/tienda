@@ -4,7 +4,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { createNotification } from "@/lib/notifications";
 import { sendOrderConfirmationEmail, sendNewOrderToOwnerEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
-import type { ShippingMethod } from "@/types/store-config";
+import type { ShippingMethod, StorePaymentInfo } from "@/types/store-config";
+import { normalizarMedio, mediosHabilitados } from "@/lib/mediosDePago";
+import { getStoreType } from "@/lib/storeTypes";
 import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
@@ -118,13 +120,18 @@ export async function POST(req: NextRequest) {
   }
 
   const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod } = body;
-  // Whitelist para evitar que el frontend inyecte un proveedor falso (ej: "mp" en pedido manual)
-  const VALID_PROVIDERS = ["mp", "mercadopago", "transferencia", "efectivo", "transfer"] as const;
-  const rawProvider = VALID_PROVIDERS.includes(body.paymentProvider as typeof VALID_PROVIDERS[number])
-    ? body.paymentProvider
-    : "transfer";
-  // Normalizar "mercadopago" → "mp" para que el template de email use la rama correcta
-  const paymentProvider = rawProvider === "mercadopago" ? "mp" : rawProvider;
+  /* El medio de pago (05/10/26). Antes uno desconocido se guardaba como
+     "transfer" —incluido "retirar", el pago en efectivo, que así recibía en el
+     mail instrucciones de transferencia—. Ahora `normalizarMedio` reconoce los
+     nombres (también los viejos) y uno desconocido se rechaza. Más abajo, con la
+     tienda ya leída, se valida que ESA tienda lo ofrezca (`mediosHabilitados`). */
+  const medio = normalizarMedio(body.paymentProvider);
+  if (!medio) {
+    return NextResponse.json({ error: "Elegí un medio de pago." }, { status: 400 });
+  }
+  // Se guarda "mp" para MercadoPago: es lo que usan el mail y el panel
+  // (ver `lib/proveedoresPago`).
+  const paymentProvider = medio === "mercadopago" ? "mp" : medio;
 
   if (!storeId || !items?.length) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
@@ -183,6 +190,9 @@ export async function POST(req: NextRequest) {
       storeConfig: true,
       isActive: true,
       closedAt: true,
+      tipoTienda: true,
+      tieneVentaMayorista: true,
+      mpAccessToken: true,
       owner: {
         select: {
           banned: true,
@@ -217,14 +227,36 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Copiado acá: adentro de la transacción hay otro `store` que tapa a éste.
+  const tiendaMayorista = store.tieneVentaMayorista;
+  let cfgTienda: { shippingMethods?: unknown; paymentInfo?: StorePaymentInfo; ocultarPreciosPublico?: boolean } = {};
+  try { cfgTienda = JSON.parse(store.storeConfig || "{}"); } catch { /* noop */ }
+
+  /* ── Lo que la tienda vende online (05/10/26) ───────────────────────────────
+     El carrito ya respetaba esto, pero el servidor no: un POST directo
+     compraba —con MercadoPago— en una tienda que sólo acepta consultas o que
+     oculta los precios. Con precios ocultos, los botones de la tienda dicen
+     "Consultar precio": nadie compra por acá de buena fe. */
+  if (cfgTienda.ocultarPreciosPublico || getStoreType(store.tipoTienda).checkoutMode === "inquiry") {
+    return NextResponse.json(
+      { error: "Esta tienda no vende online: escribile para consultar precio y disponibilidad." },
+      { status: 409 }
+    );
+  }
+  // El medio de pago tiene que ser uno que ESTA tienda ofrece (misma regla que el carrito).
+  const mediosDeLaTienda = mediosHabilitados({ paymentInfo: cfgTienda.paymentInfo, hasMercadoPago: !!store.mpAccessToken, hasAffiliate: !!affiliateId });
+  if (!mediosDeLaTienda.includes(medio)) {
+    return NextResponse.json(
+      { error: "Esta tienda no acepta ese medio de pago. Elegí otro." },
+      { status: 400 }
+    );
+  }
+
   // Resolve shipping from store's config (dynamic per-store pricing)
   let storeShippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
-  try {
-    const cfg = JSON.parse(store.storeConfig || "{}");
-    if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) {
-      storeShippingMethods = cfg.shippingMethods;
-    }
-  } catch { /* noop */ }
+  if (Array.isArray(cfgTienda.shippingMethods) && cfgTienda.shippingMethods.length > 0) {
+    storeShippingMethods = cfgTienda.shippingMethods as ShippingMethod[];
+  }
 
   const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
   /* Un método que no existe o que la tienda apagó se RECHAZA (05/10/26). Antes
@@ -315,6 +347,9 @@ export async function POST(req: NextRequest) {
            pedido armado a mano compraba un talle agotado, sin techo (05/10/26).
            El carrito siempre la manda (con una sola variante la elige solo);
            esto ataja lo que no viene del carrito. */
+        // Un producto "sólo mayorista" no se le muestra a nadie si la tienda no
+        // tiene venta mayorista (`api/public` lo filtra): tampoco se compra.
+        if (product.soloMayorista && !tiendaMayorista) throw new Error("Producto no disponible");
         if (!variant && product.variants.length > 0) {
           throw new Error(`Elegí ${product.variants.length > 1 ? "el talle o la opción" : "la opción"} de "${product.name}" antes de comprar.`);
         }

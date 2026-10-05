@@ -6,7 +6,7 @@ import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderP
 import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor, opcionesAElegir, combinaciones } from "@/lib/opciones";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, crearFmt, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
-import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
+import { LIVE_QUOTE_DOMICILIO_ID, type StorePaymentInfo } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { buscarVariante, varianteTiene } from "@/lib/variantMatch";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -230,6 +230,9 @@ type StorefrontDeps = {
   isWholesale?: boolean;
   hasMercadoPago?: boolean;
   shippingMethods?: ShippingMethod[] | null;
+  /** Qué medios activó la dueña en Pagos (sólo `enabled`, ver `lib/configPublica`).
+   *  Sin esto el carrito ofrecía transferencia y efectivo siempre. */
+  paymentInfo?: StorePaymentInfo | null;
   // Moneda mostrada en la tienda (ARS/USD) — solo se usa para reportar el valor
   // real de la compra al evento Purchase del Pixel de Meta, si está conectado.
   currency?: string;
@@ -240,7 +243,7 @@ type StorefrontDeps = {
   lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, isPreview = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
+export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, isPreview = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, paymentInfo = null, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
   /* Va arriba de todo porque abajo lo usan `fmtLiveQuote` y el resto del hook.
      Hasta acá `fmt` era la constante en pesos importada del módulo, así que la
      moneda que este hook ya recibía sólo llegaba al evento Purchase del Pixel y
@@ -672,6 +675,15 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   useEffect(() => {
     if (selectedEnvio && selectedEnvio.id !== envioId) setEnvioId(selectedEnvio.id);
   }, [selectedEnvio, envioId]);
+  /* Lo mismo con el pago: los medios salen de `lib/mediosDePago` (la regla del
+     servidor) y, si el que estaba marcado no se ofrece, se marca el primero. */
+  const pagoOptions = useMemo(
+    () => getPagoOptions(hasMercadoPago, !!affiliateId, paymentInfo),
+    [hasMercadoPago, affiliateId, paymentInfo]
+  );
+  useEffect(() => {
+    if (pagoOptions.length > 0 && !pagoOptions.some(o => o.id === pagoId)) setPagoId(pagoOptions[0].id);
+  }, [pagoOptions, pagoId]);
   const selectedLiveQuotePrice = selectedEnvio?.liveQuote ? getLiveQuotePrice(selectedEnvio.id) : null;
   const envioPriceRaw  = selectedEnvio?.liveQuote ? (selectedLiveQuotePrice ?? 0) : (selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0));
   // Una promo de envío gratis pone el costo en 0 y deja de ser "a coordinar".
@@ -1253,7 +1265,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     appliedPromos: cartPricing.appliedPromos,
     searchResults, favoriteProducts, selectedVariantStock, sinStock,
     checkoutMode, isWholesale, wholesaleWarnings,
-    pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),
+    pagoOptions,
     fmtEnvioPrice, fmtLiveQuote,
     modalScrollRef,
     // Functions

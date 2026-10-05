@@ -495,6 +495,8 @@ export function useStorefront() {
   const defaultCategories  = storeTypeConfig.categorias;
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
+  // Sólo los `enabled` (ver `lib/configPublica`): el carrito arma los medios con esto.
+  const paymentInfo        = config?.paymentInfo ?? null;
 
   // `isPreview` sale acá afuera porque el carrito lo necesita para NO contar vistas
   // de producto en el editor. Ojo: en el editor `isOwner` NO alcanza — el config del
@@ -508,5 +510,5 @@ export function useStorefront() {
   // configurada en dólares.
   const currency = config?.currency ?? "ARS";
 
-  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, hasMercadoPago, shippingMethods, currency };
+  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, hasMercadoPago, shippingMethods, paymentInfo, currency };
 }

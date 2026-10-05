@@ -182,8 +182,12 @@ const autos    = leer("src/components/store/auto/AutoVehicleShared.tsx", "affili
 
 chequear("la portada guarda el ref al entrar", /recordarAfiliado\(ref\)/.test(hook));
 chequear("y lo recupera cuando no viene en la URL", /const guardado = afiliadoDeEstaTienda\(\)/.test(hook));
-chequear("el listado lo manda al cobro", /affiliateId: affiliateId \?\? undefined/.test(listado));
-chequear("la ficha lo manda al cobro", /affiliateId: affiliateId \?\? undefined/.test(ficha));
+// Las tres pantallas crean el pedido con la MISMA función (`crearPedido`, en
+// useStorefront), que es la que pone el afiliado en el cobro.
+const crear = leer("src/hooks/useStorefront.ts", "export async function crearPedido");
+chequear("crearPedido manda el afiliado al cobro", /affiliateId: affiliateId \?\? undefined/.test(crear));
+chequear("el listado lo manda al cobro", /crearPedido\([^,]+, affiliateId, params\)/.test(listado));
+chequear("la ficha lo manda al cobro", /crearPedido\([^,]+, affiliateId, params\)/.test(ficha));
 chequear("la consulta de autos lo manda", /affiliateId: afiliadoDeEstaTienda\(\) \?\? undefined/.test(autos));
 
 console.log("\n9) El afiliado nunca viaja sin MercadoPago");
@@ -207,16 +211,17 @@ console.log("\n10) Y el pedido devuelve el orderId, o nunca se cobra");
    y muestra "listo" — sin cobrar. Las dos pantallas devolvían `{ ok: true }` a
    secas, y encima el tipo anotado a mano NO incluía `orderId`, así que
    TypeScript no tenía cómo avisar. Por eso se chequea el tipo también. */
-for (const [nombre, src] of [["listado", listado], ["ficha", ficha]] as const) {
-  chequear(
-    `${nombre}: devuelve el orderId`,
-    /return \{ ok: true, orderId: data\.order\?\.id, donationId: data\.donationId \?\? undefined \};/.test(src)
-  );
-  chequear(
-    `${nombre}: y el tipo lo declara, así el compilador puede avisar`,
-    /Promise<\{ ok: boolean; orderId\?: string; donationId\?: string; error\?: string \}>/.test(src)
-  );
-}
+// Desde el 05/10/26 las dos pantallas (y la portada) usan `crearPedido`: se
+// chequea ahí, una vez, y que las dos la usen (eso ya lo miran los de arriba).
+chequear(
+  "crearPedido devuelve el orderId",
+  /return \{ ok: true, orderId: data\.order\?\.id, donationId: data\.donationId \?\? undefined \};/.test(crear)
+);
+chequear(
+  "y su tipo lo declara, así el compilador puede avisar",
+  /export type ResultadoPedido = \{ ok: boolean; orderId\?: string; donationId\?: string; error\?: string \};/.test(crear)
+  && /Promise<ResultadoPedido>/.test(crear)
+);
 
 console.log(
   fallos === 0

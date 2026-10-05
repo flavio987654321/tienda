@@ -1,4 +1,5 @@
 import { vencerPedidosImpagos } from "@/lib/pedidosImpagos";
+import { PROVEEDORES_MP } from "@/lib/proveedoresPago";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -376,14 +377,25 @@ export async function GET(req: NextRequest) {
         mpApiOk = false;
         mpError = `No se pudo conectar a MP API: ${e instanceof Error ? e.message : String(e)}`;
       }
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const [lastMpPayment, mpStoreCount] = await Promise.all([
-        prisma.payment.findFirst({ where: { provider: "mercadopago", status: "APPROVED" }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
-        prisma.store.count({ where: { mpAccessToken: { not: null } } }),
+      /* ¿Llegan los avisos de pago? (05/10/26)
+         Antes: "no hubo pagos aprobados en 24 h" buscando sólo `provider:
+         "mercadopago"`, cuando las tiendas guardan "mp": no veía ningún pago de
+         tienda. Y aunque los viera, pocas ventas no es lo mismo que un webhook
+         roto: avisaría falso todos los días tranquilos.
+         Ahora: si en 3 días hubo 5 o más intentos de pago con MP (pedidos
+         creados, sin contar las últimas 6 h que pueden estar pagándose) y
+         NINGUNO se aprobó, lo más probable es que los avisos no estén llegando. */
+      const hace3d = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+      const hace6h = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      const [intentosMp, aprobadosMp, lastMpPayment] = await Promise.all([
+        prisma.payment.count({ where: { provider: { in: [...PROVEEDORES_MP] }, createdAt: { gte: hace3d, lt: hace6h } } }),
+        prisma.payment.count({ where: { provider: { in: [...PROVEEDORES_MP] }, status: "APPROVED", createdAt: { gte: hace3d } } }),
+        prisma.payment.findFirst({ where: { provider: { in: [...PROVEEDORES_MP] }, status: "APPROVED" }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
       ]);
-      const noRecentWebhook = mpStoreCount > 0 && lastMpPayment && lastMpPayment.createdAt < oneDayAgo;
+      // 5 y no 3: abandonar el pago es muy común, y con 3 avisaba de más.
+      const noRecentWebhook = intentosMp >= 5 && aprobadosMp === 0;
       if (!mpApiOk || noRecentWebhook) {
-        const reason = !mpApiOk ? mpError : `No se registraron pagos vía MP webhook en las últimas 24 horas (${mpStoreCount} tiendas con MP conectado)`;
+        const reason = !mpApiOk ? mpError : `Hubo ${intentosMp} intentos de pago con MercadoPago en 3 días y ninguno se confirmó. Puede ser abandono, pero también que no estén llegando los avisos (webhook) de MP: revisalo en el panel de MP.`;
         await sendMpHealthAlertEmail({ reason, lastEventAt: lastMpPayment?.createdAt.toLocaleString("es-AR") ?? "Sin registros" });
       }
       result.mpHealthOk = mpApiOk;
