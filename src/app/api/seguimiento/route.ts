@@ -50,6 +50,11 @@ export async function GET(req: NextRequest) {
         },
       },
       statusLogs: {
+        /* Sólo los cambios de estado de verdad. Los renglones que el sistema
+           deja sin cambiar el estado (un recordatorio a la dueña, una
+           devolución de MP) le pondrían una fecha falsa a la línea de tiempo
+           del comprador, que busca el primer renglón de cada estado. */
+        where: { NOT: [{ changedBy: { startsWith: "mp_webhook:" } }, { changedBy: "sistema:recordatorio" }] },
         orderBy: { changedAt: "asc" },
         select: { toStatus: true, changedAt: true },
       },

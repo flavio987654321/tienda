@@ -8,8 +8,8 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState<"next" | "prev">("next");
-  /* El flyer es la primera interrupción de la tienda y tiene la prioridad más
-     alta, así que en la práctica el turno se lo dan siempre en el acto. Pide
+  /* El flyer es la primera interrupción de la tienda y, salvo a la vuelta de
+     MercadoPago (que va antes, ver `PRIORIDAD`), el turno se lo dan en el acto. Pide
      igual, porque lo importante es que AVISE cuando se cierra: de eso depende que
      el cartel de instalar la app —que sale después y quedaba abajo del velo
      negro— sepa que ya puede aparecer. Ver `lib/interrupcion-tienda`. */

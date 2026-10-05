@@ -40,6 +40,9 @@ const EVENTOS_DEL_HISTORIAL: Record<string, string> = {
   "mp_webhook:charged_back": "Contracargo en MercadoPago",
   "mp_webhook:in_mediation": "Reclamo abierto en MercadoPago",
   "mp_webhook:pago_sin_stock": "Llegó el pago, pero ya no había stock",
+  "mp_webhook:pago_duplicado": "Llegó un segundo pago para este pedido",
+  "sistema:vencimiento": "Venció sin pago (el stock volvió)",
+  "sistema:recordatorio": "Recordatorio: pedido sin confirmar",
 };
 
 /** Un renglón del historial de un pedido, en castellano. */

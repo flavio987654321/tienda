@@ -1616,16 +1616,32 @@ export async function sendOrderCancelledEmail({
   orderId,
   storeName,
   ownerContact,
+  motivo,
+  storeUrl,
 }: {
   buyerEmail: string;
   buyerName: string;
   orderId: string;
   storeName: string;
   ownerContact?: { email?: string | null; phone?: string | null } | null;
+  /** "vencido": se canceló solo porque el pago nunca se acreditó (cron diario).
+   *  Sin esto el mail decía "fue cancelado" a secas, y quien no llegó a pagar
+   *  no entendía si lo había cancelado la tienda. */
+  motivo?: "vencido";
+  /** Para el botón "Volver a la tienda" del mail de vencido. */
+  storeUrl?: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
   const shortId = orderId.slice(-8).toUpperCase();
+  const vencido = motivo === "vencido";
+  const explicacion = vencido
+    ? `Tu pedido <strong>#${shortId}</strong> en <strong>${escapeHtml(storeName)}</strong> se canceló porque no se acreditó el pago a tiempo, y los productos volvieron a estar disponibles. Si todavía los querés, podés volver a comprarlos.`
+    : `Lamentamos informarte que tu pedido <strong>#${shortId}</strong> en <strong>${escapeHtml(storeName)}</strong> fue cancelado.
+          Si tenés preguntas, podés contactar a la tienda directamente.`;
+  const botonTienda = vencido && storeUrl && /^https?:\/\//.test(storeUrl)
+    ? `<p style="text-align:center;margin:0 0 24px;"><a href="${escapeHtml(storeUrl)}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;">Volver a la tienda</a></p>`
+    : "";
 
   const contactBlock = ownerContact?.email || ownerContact?.phone ? `
     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
@@ -1637,23 +1653,25 @@ export async function sendOrderCancelledEmail({
   await transporter.sendMail({
     from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: buyerEmail,
-    subject: `Tu pedido #${shortId} fue cancelado — ${storeName}`,
+    subject: vencido
+      ? `Tu pedido #${shortId} venció sin pago — ${storeName}`
+      : `Tu pedido #${shortId} fue cancelado — ${storeName}`,
     html: `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
 
         <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:16px;padding:32px 28px;margin-bottom:28px;text-align:center;">
           <p style="color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;font-weight:600;">${escapeHtml(storeName)}</p>
           <div style="font-size:48px;margin-bottom:8px;">❌</div>
-          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">Pedido cancelado</h1>
+          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">${vencido ? "Pedido vencido" : "Pedido cancelado"}</h1>
           <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0;">Pedido <strong>#${shortId}</strong></p>
         </div>
 
         <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
         <p style="font-size:15px;color:#6b7280;margin:0 0 24px;line-height:1.6;">
-          Lamentamos informarte que tu pedido <strong>#${shortId}</strong> en <strong>${escapeHtml(storeName)}</strong> fue cancelado.
-          Si tenés preguntas, podés contactar a la tienda directamente.
+          ${explicacion}
         </p>
 
+        ${botonTienda}
         ${contactBlock}
 
         <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">

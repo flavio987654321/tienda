@@ -38,8 +38,14 @@
 
 /** Quiénes pueden interrumpir. El orden es el de prioridad: primero el de arriba. */
 const PRIORIDAD = [
-  /* La oferta va antes que todo: es lo que el comerciante puso para vender, y es
-     lo que el visitante vino a ver. */
+  /* La vuelta de MercadoPago ("¡compra realizada!", "no se completó el pago",
+     "tu pago está en proceso") va antes que todo, incluso que la oferta: es la
+     respuesta a algo que el comprador acaba de hacer con su plata. Sin turno, el
+     flyer salía encima del "no se completó el pago" y tapaba el botón de
+     reintentar (05/10/26). */
+  "vuelta-de-pago",
+  /* La oferta va antes que lo demás: es lo que el comerciante puso para vender,
+     y es lo que el visitante vino a ver. */
   "flyer",
   /* Instalar la app: importa, pero después de la oferta. */
   "instalar-app",

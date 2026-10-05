@@ -268,6 +268,10 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const [checkoutOpen,   setCheckoutOpen]   = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState<CheckoutStatus>("idle");
   const [checkoutError,  setCheckoutError]  = useState("");
+  /** Freno del doble clic en "Confirmar pedido" (ver `handlePlaceOrder`). */
+  const enviandoPedido = useRef(false);
+  /** El pedido de MercadoPago que se creó pero no llegó a abrir el pago. */
+  const pedidoSinPagar = useRef<{ orderId: string; donationId?: string; firma: string } | null>(null);
   const [envioId,        setEnvioId]        = useState("retiro");
   const [pagoId,         setPagoId]         = useState("transferencia");
   const [coupon,         setCoupon]         = useState("");
@@ -1071,48 +1075,87 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Corta al entrar: el `disabled` del botón llega un render tarde, y un doble
+    // clic rápido creaba dos pedidos con el stock descontado dos veces.
+    if (enviandoPedido.current) return;
     if (!acceptedTerms) { setCheckoutError("Debés aceptar los términos y condiciones para continuar."); return; }
+    enviandoPedido.current = true;
+    try {
+      await enviarPedido();
+    } finally {
+      enviandoPedido.current = false;
+    }
+  };
+
+  const enviarPedido = async () => {
     setCheckoutStatus("placing");
     setCheckoutError("");
-    const res = await placeOrder({
-      cartItems: cartItems.map(item => ({
-        productId: item.product.id,
-        variantId: item.variantId,
-        quantity:  item.qty,
-      })),
-      customer: {
-        name:       buyerForm.nombre,
-        email:      buyerForm.email,
-        phone:      buyerForm.telefono,
-        street:     buyerForm.direccion,
-        city:       buyerForm.ciudad,
-        province:   buyerForm.provincia,
-        postalCode: buyerForm.cp,
-        notes:      notas,
-      },
-      shippingMethod:  envioId,
-      paymentProvider: pagoId,
-      // El bloqueado no se manda: el servidor lo ignoraría igual (chequea
-      // `pricing.couponsAllowed`), pero así el pedido no queda con un cupón atado
-      // que no descontó nada.
-      couponId:        cuponActivo?.id ?? null,
-      donationAmount:  donationEnabled ? donationAmount : undefined,
-    });
+    const itemsDelPedido = cartItems.map(item => ({
+      productId: item.product.id,
+      variantId: item.variantId,
+      quantity:  item.qty,
+    }));
+    const customer = {
+      name:       buyerForm.nombre,
+      email:      buyerForm.email,
+      phone:      buyerForm.telefono,
+      street:     buyerForm.direccion,
+      city:       buyerForm.ciudad,
+      province:   buyerForm.provincia,
+      postalCode: buyerForm.cp,
+      notes:      notas,
+    };
+    const donacion = donationEnabled ? donationAmount : undefined;
+    /* Lo que define el pedido. Si MercadoPago falló al abrirse y la persona
+       vuelve a tocar "Pagar" SIN cambiar nada, se reintenta el pago del pedido
+       que ya existe en vez de crear otro: antes cada reintento era un pedido
+       nuevo que volvía a descontar stock y a gastar un uso del cupón. */
+    const firma = JSON.stringify({ itemsDelPedido, customer, envioId, pagoId, cupon: cuponActivo?.id ?? null, donacion });
+    const previo = pagoId === "mercadopago" && pedidoSinPagar.current?.firma === firma ? pedidoSinPagar.current : null;
+
+    let res: { ok: boolean; orderId?: string; donationId?: string; error?: string };
+    if (previo) {
+      res = { ok: true, orderId: previo.orderId, donationId: previo.donationId };
+    } else {
+      res = await placeOrder({
+        cartItems: itemsDelPedido,
+        customer,
+        shippingMethod:  envioId,
+        paymentProvider: pagoId,
+        // El bloqueado no se manda: el servidor lo ignoraría igual (chequea
+        // `pricing.couponsAllowed`), pero así el pedido no queda con un cupón atado
+        // que no descontó nada.
+        couponId:        cuponActivo?.id ?? null,
+        donationAmount:  donacion,
+      });
+    }
     if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
 
     // Si eligió MercadoPago, crear preferencia y redirigir
     if (pagoId === "mercadopago" && res.orderId) {
-      const mpRes = await fetch("/api/mp/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: res.orderId, donationId: res.donationId }),
-      });
-      const mpData = await mpRes.json().catch(() => ({}));
-      if (!mpRes.ok || !mpData.initPoint) {
+      pedidoSinPagar.current = { orderId: res.orderId, donationId: res.donationId, firma };
+      let mpData: { initPoint?: string; error?: string } = {};
+      let mpOk = false;
+      try {
+        const mpRes = await fetch("/api/mp/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: res.orderId, donationId: res.donationId }),
+        });
+        mpData = await mpRes.json().catch(() => ({}));
+        mpOk = mpRes.ok;
+        // 404: ese pedido ya no está pendiente (venció o se pagó). El próximo
+        // intento tiene que armar uno nuevo, no volver a éste.
+        if (mpRes.status === 404) pedidoSinPagar.current = null;
+      } catch {
+        // Sin conexión: antes esto quedaba en "procesando" para siempre.
+      }
+      if (!mpOk || !mpData.initPoint) {
         setCheckoutStatus("idle");
-        setCheckoutError(mpData.error ?? "No se pudo iniciar el pago. Intentá de nuevo.");
+        setCheckoutError(mpData.error ?? "No se pudo abrir MercadoPago. Revisá tu conexión e intentá de nuevo: tu pedido quedó guardado.");
         return;
       }
+      pedidoSinPagar.current = null;
       setCartItems([]);
       setAppliedCoupon(null);
       setCuponAbierto(false);

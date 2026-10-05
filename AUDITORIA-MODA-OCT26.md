@@ -40,9 +40,16 @@ stock se descuenta de forma atómica.
 
 ## 2. Importante — stock, cobros, pagos
 
-- [ ] **2.1 Pedidos PENDING de tiendas no vencen nunca** y retienen stock y usos de
+- [x] ~~**2.1 Pedidos PENDING de tiendas no vencen nunca** y retienen stock y usos de
   cupón. Además "Intentá de nuevo" crea otro pedido, el carrito se vacía antes de
-  ir a MP, y al volver con `?pago=error|pendiente` no hay mensaje.
+  ir a MP, y al volver con `?pago=error|pendiente` no hay mensaje.~~
+  → **Hecho (05/10).** `lib/pedidosImpagos` (cron diario): MP sin pago se cancela a
+  las 48 h (7 días si hay un pago en efectivo en curso) con mail de "venció sin
+  pago" y botón para volver; transferencia/efectivo NO se cancelan solos, se le
+  recuerda a la dueña a los 3 días, una vez. "Intentá de nuevo" reusa el pedido
+  si no cambió nada. La vuelta de MP con error ofrece "Reintentar el pago" del
+  mismo pedido; con pendiente explica el efectivo. Probado: 19 casos en base
+  local + navegador a 360/768/1280.
 - [ ] **2.2 Compra sin variante saltea el stock.** Sin `variantId` no se valida ni
   descuenta nada aunque el producto tenga variantes.
 - [ ] **2.3 Variante con precio 0 (o negativo) se cobra así.** El servidor usa
@@ -70,8 +77,9 @@ stock se descuenta de forma atómica.
 - [x] ~~**2.12 (probable) El webhook no compara `collector_id`** con la cuenta MP de
   la tienda del pedido.~~ → Hecho (05/10): se compara con `mpSellerId`; sin
   `mpSellerId` (conexiones viejas) se deja pasar y se anota.
-- [ ] **2.13 (probable) Dos preferencias para el mismo pedido** → se puede pagar
-  dos veces.
+- [x] ~~**2.13 (probable) Dos preferencias para el mismo pedido** → se puede pagar
+  dos veces.~~ → Hecho (05/10): un segundo pago aprobado distinto sobre un pedido
+  ya cobrado avisa a la dueña (una vez) para que lo devuelva.
 - [ ] **2.14 (probable) El servidor no exige dirección/ciudad/CP** para envíos.
 
 ## 3. Seguridad menor
@@ -126,3 +134,11 @@ stock se descuenta de forma atómica.
   CONFIRMED"); las dos pantallas usan `describirCambio`.
 - [x] Los errores de `runOrderAction` llegaban al panel en jerga ("No se puede
   ejecutar 'cancel'…"): ahora en castellano.
+- [x] El flyer de ofertas salía ENCIMA del aviso de vuelta de MP y tapaba sus
+  botones: la vuelta de pago ahora pide turno con la prioridad más alta en
+  `lib/interrupcion-tienda`; el flyer aparece después.
+- [x] La dirección no se limpiaba al volver de MP (`router.replace` no la
+  cambiaba): al recargar volvía a salir "¡Compra realizada!". Ahora
+  `history.replaceState`.
+- [x] Sin conexión al confirmar, el botón del checkout quedaba en "procesando"
+  para siempre; y un doble clic rápido creaba dos pedidos.

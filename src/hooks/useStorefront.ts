@@ -450,6 +450,8 @@ export function useStorefront() {
 
   async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> {
     if (!storeId) return { ok: false, error: "Tienda no disponible" };
+    // Sin el `catch`, un corte de conexión tiraba acá y el botón del checkout
+    // quedaba en "procesando" para siempre, sin ningún mensaje.
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -464,7 +466,8 @@ export function useStorefront() {
         paymentProvider: params.paymentProvider,
         donationAmount:  params.donationAmount ?? undefined,
       }),
-    });
+    }).catch(() => null);
+    if (!res) return { ok: false, error: "No hay conexión. Revisá tu internet e intentá de nuevo." };
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
     return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };

@@ -26,8 +26,12 @@ type RunOrderActionInput = {
    * "mercadopago" es cuando lo dispara el aviso de pago de MercadoPago: confirma
    * solo un pago acreditado, sin que el dueño esté mirando. (Un pago RECHAZADO ya
    * no cancela nada: ver el webhook.)
+   *
+   * "vencimiento" es el cron diario cancelando un pedido que nunca se pagó
+   * (ver `vencerPedidosImpagos` en el cron). Avisa sin sonar el teléfono: no es
+   * plata que se perdió, es una reserva de stock que se liberó.
    */
-  origen?: "dueño" | "mercadopago";
+  origen?: "dueño" | "mercadopago" | "vencimiento";
   /** Quién figura en el historial del pedido. Por defecto, el dueño. */
   changedBy?: string;
   /** El id del pago en MercadoPago, para dejarlo anotado al confirmar. */
@@ -419,6 +423,9 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
           orderId: order.id,
           storeName: order.store.name,
           ownerContact: { email: ownerForCancel?.email, phone: ownerForCancel?.phone },
+          ...(origen === "vencimiento"
+            ? { motivo: "vencido" as const, storeUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${order.store.slug}` }
+            : {}),
         }),
       });
 
@@ -513,10 +520,15 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
           title: "Se cayó una venta",
           body: "El pago fue rechazado, el pedido se canceló y el stock volvió a tu inventario.",
         }
-      : {
-          title: "Pedido cancelado",
-          body: "El pedido fue cancelado y el stock fue restaurado.",
-        };
+      : origen === "vencimiento"
+        ? {
+            title: "Venció un pedido sin pagar",
+            body: "No se acreditó el pago a tiempo: el pedido se canceló solo y el stock volvió a tu inventario.",
+          }
+        : {
+            title: "Pedido cancelado",
+            body: "El pedido fue cancelado y el stock fue restaurado.",
+          };
     const link = `/dashboard/pedidos/${result.id}`;
 
     despues(() => createNotification({

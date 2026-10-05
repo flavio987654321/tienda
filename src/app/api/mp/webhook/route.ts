@@ -215,7 +215,30 @@ async function processPaymentWebhook(paymentId: string) {
       if (ahora?.status !== "CANCELLED") return;
     }
   } else if (order.status !== "CANCELLED") {
-    // Ya confirmado, enviado o entregado: un aviso repetido. Nada que hacer.
+    /* Ya confirmado, enviado o entregado. Si es el MISMO pago, es un aviso
+       repetido y no hay nada que hacer. Si es OTRO pago aprobado, el comprador
+       pagó dos veces (dos pestañas, o reintentó con un link viejo): antes se
+       ignoraba en silencio y el cliente quedaba cobrado dos veces. Ahora se le
+       avisa a la dueña, una vez, para que devuelva el segundo. */
+    const pagoRegistrado = await prisma.payment.findUnique({ where: { orderId }, select: { externalId: true } });
+    if (pagoRegistrado?.externalId && pagoRegistrado.externalId !== String(paymentId)) {
+      const yaAvisado = await prisma.orderStatusLog.findFirst({
+        where: { orderId, changedBy: "mp_webhook:pago_duplicado" }, select: { id: true },
+      });
+      if (!yaAvisado) {
+        await prisma.orderStatusLog.create({
+          data: { orderId, fromStatus: order.status, toStatus: order.status, changedBy: "mp_webhook:pago_duplicado" },
+        });
+        const aviso = {
+          title: "⚠️ Un comprador pagó dos veces",
+          body: `Llegó un segundo pago aprobado de $${(pagado ?? order.total).toLocaleString("es-AR")} para un pedido que ya estaba pago (pago N° ${paymentId}). Devolvelo desde MercadoPago.`,
+        };
+        const link = `/dashboard/pedidos/${orderId}`;
+        await createNotification({ userId: order.store.ownerId, type: "PAYMENT_DUPLICATED", ...aviso, link });
+        despues(() => sendPushToUser(order.store.ownerId, { ...aviso, url: link }), "MP: push de pago duplicado");
+        console.error("[mp/webhook] pago duplicado", { paymentId, orderId, registrado: pagoRegistrado.externalId });
+      }
+    }
     return;
   }
 

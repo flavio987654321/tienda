@@ -1,3 +1,4 @@
+import { vencerPedidosImpagos } from "@/lib/pedidosImpagos";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -89,6 +90,15 @@ export async function GET(req: NextRequest) {
   // Es barato igual: sólo toca las que vencen dentro de 10 días, con techo de 25
   // por corrida. Hoy son cero o una.
   result.metaTokens = await renovarTokensPorVencer(now);
+
+  // ── 1 ter. PEDIDOS QUE NUNCA SE PAGARON ────────────────────────────────────
+  // Arriba también: un pedido impago retiene stock, y mientras no vence la
+  // tienda ve "agotado" un talle que tiene. Ver `lib/pedidosImpagos`.
+  try {
+    result.pedidosImpagos = await vencerPedidosImpagos(now);
+  } catch (e) {
+    console.error("[cron] pedidos impagos:", e);
+  }
 
   // ── 2. CARRITOS ABANDONADOS ────────────────────────────────────────────────
   const minAge = new Date(now.getTime() - 1 * 60 * 60 * 1000);
