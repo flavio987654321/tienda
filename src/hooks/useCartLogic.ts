@@ -339,14 +339,41 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   // Restaurar carrito y datos del comprador desde localStorage. Es una lectura
   // de un sistema externo al montar (no hay forma de leer localStorage durante
   // el render en el servidor), así que corresponde hacerlo en un efecto.
+  /* El carrito guardado es POR TIENDA (05/10/26). Antes la clave era una sola,
+     "storefront_cart", para todas: en www…/tienda/<slug> (mismo origen) el
+     carrito de una tienda aparecía en otra. El carrito viejo, sin tienda, se
+     migra una vez: lo que no sea de esta tienda lo saca el cruce con el
+     catálogo de más abajo. */
+  const claveCarrito = slug ? `storefront_cart:${slug}` : null;
+  const [carritoListo, setCarritoListo] = useState(false);
   useEffect(() => {
+    if (!claveCarrito) return;
     try {
       // Sólo la primera copia que monta. Ver `marcarCarritoRestaurado`.
-      const savedCart = marcarCarritoRestaurado() ? localStorage.getItem("storefront_cart") : null;
-      /* Sin `eslint-disable` acá: desde que el carrito vive en el módulo, esto ya
-         no es un `setState` de React y la regla no aplica. El de abajo sí lo es y
-         lo lleva. */
-      if (savedCart) setCartItems(migrarCarritoGuardado(JSON.parse(savedCart)));
+      if (marcarCarritoRestaurado()) {
+        let savedCart = localStorage.getItem(claveCarrito);
+        if (!savedCart) {
+          savedCart = localStorage.getItem("storefront_cart");
+          /* La clave nueva se escribe EN EL ACTO, antes de borrar la vieja: la
+             página puede cargar este módulo más de una vez (dos copias, cada una
+             con su candado), y la segunda, sin esto, no encontraba ninguna de
+             las dos claves y guardaba el carrito vacío. */
+          if (savedCart) {
+            localStorage.setItem(claveCarrito, savedCart);
+            localStorage.removeItem("storefront_cart");
+          }
+        }
+        /* Sin `eslint-disable` acá: desde que el carrito vive en el módulo, esto
+           ya no es un `setState` de React y la regla no aplica. */
+        if (savedCart) setCartItems(migrarCarritoGuardado(JSON.parse(savedCart)));
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marca que ya se leyó lo guardado
+    setCarritoListo(true);
+  }, [claveCarrito]);
+
+  useEffect(() => {
+    try {
       const savedBuyer = localStorage.getItem("storefront_buyer");
       if (savedBuyer) {
         const parsed = JSON.parse(savedBuyer);
@@ -382,8 +409,47 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   }, [status]);
 
   useEffect(() => {
-    try { localStorage.setItem("storefront_cart", JSON.stringify(cartItems)); } catch {}
-  }, [cartItems]);
+    // Recién después de leer lo guardado: antes pisaría el carrito de ayer con [].
+    if (!claveCarrito || !carritoListo) return;
+    try { localStorage.setItem(claveCarrito, JSON.stringify(cartItems)); } catch {}
+  }, [cartItems, claveCarrito, carritoListo]);
+
+  /* ── El carrito contra el catálogo de HOY (05/10/26) ───────────────────────
+     Se guardaba el producto entero —con su precio— y no se volvía a mirar:
+     si la dueña cambiaba el precio, el carrito mostraba el viejo y el checkout
+     cobraba el nuevo sin avisar; si borraba el producto o el talle, el
+     checkout decía "Producto no disponible" sin decir cuál y el carrito quedaba
+     trabado. Ahora, apenas carga el catálogo, cada línea toma el producto
+     actual, y lo que ya no existe se saca avisando qué. No corre en el editor
+     (productos de ejemplo) ni con el catálogo vacío (todavía cargando). */
+  useEffect(() => {
+    if (!carritoListo || isPreview || products.length === 0) return;
+    const porId = new Map(products.map((p) => [p.id, p]));
+    const sacados: string[] = [];
+    let cambioPrecio = false;
+    setCartItems((prev) => {
+      let cambio = false;
+      const siguiente = prev.flatMap((it) => {
+        const actual = porId.get(it.product.id);
+        const sigueLaVariante = !it.variantId || actual?.variants.some((v) => v.id === it.variantId);
+        if (!actual || !sigueLaVariante) {
+          sacados.push(it.product.name);
+          cambio = true;
+          return [];
+        }
+        if (actual === it.product) return [it];
+        const precioAntes = resolveVariantPrice(it.product.variants, valoresElegidos(it.seleccion), it.variantId) ?? it.product.price;
+        const precioAhora = resolveVariantPrice(actual.variants, valoresElegidos(it.seleccion), it.variantId) ?? actual.price;
+        if (precioAntes !== precioAhora) cambioPrecio = true;
+        cambio = true;
+        return [{ ...it, product: actual }];
+      });
+      return cambio ? siguiente : prev;
+    });
+    if (sacados.length > 0) showToast(`Sacamos del carrito lo que ya no está disponible: ${sacados.join(", ")}`);
+    else if (cambioPrecio) showToast("Actualizamos los precios de tu carrito");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, isPreview, carritoListo]);
 
   // Solo persistir en localStorage cuando no está logueado
   useEffect(() => {
@@ -1179,7 +1245,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       setCartItems([]);
       setAppliedCoupon(null);
       setCuponAbierto(false);
-      try { localStorage.removeItem("storefront_cart"); } catch {}
+      try { if (claveCarrito) localStorage.removeItem(claveCarrito); } catch {}
       window.location.href = mpData.initPoint;
       return;
     }
@@ -1187,7 +1253,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setCartItems([]);
     setAppliedCoupon(null);
     setCuponAbierto(false);
-    try { localStorage.removeItem("storefront_cart"); } catch {}
+    try { if (claveCarrito) localStorage.removeItem(claveCarrito); } catch {}
 
     // Pago por transferencia: no hay redirección a MP para la compra. Si
     // pidió donar, ese segundo pago (siempre vía MercadoPago) se ofrece en

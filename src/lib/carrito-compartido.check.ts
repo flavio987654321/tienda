@@ -94,12 +94,17 @@ chequear("hay un candado de restauración",
   /let carritoYaRestaurado = false;/.test(hook) && /function marcarCarritoRestaurado\(\)/.test(hook));
 
 chequear("y la lectura de `localStorage` pasa por él",
-  /marcarCarritoRestaurado\(\) \? localStorage\.getItem\("storefront_cart"\) : null/.test(hook),
+  /if \(marcarCarritoRestaurado\(\)\) \{\s*let savedCart = localStorage\.getItem\(claveCarrito\);/.test(hook),
   "la restauración volvió a correr por cada copia: la que monta tarde pisa el carrito vivo");
 
 chequear("`localStorage` sigue guardando en cada cambio",
-  /localStorage\.setItem\("storefront_cart", JSON\.stringify\(cartItems\)\)/.test(hook),
+  /localStorage\.setItem\(claveCarrito, JSON\.stringify\(cartItems\)\)/.test(hook),
   "sin esto el carrito no sobrevive a cerrar la pestaña");
+
+// 05/10/26: un carrito por TIENDA. Con una sola clave, en www…/tienda/<slug>
+// el carrito de una tienda aparecía en otra.
+chequear("la clave del carrito es por tienda",
+  /const claveCarrito = slug \? `storefront_cart:\$\{slug\}` : null;/.test(hook));
 
 console.log("\n4) El catálogo embebido no repite lo que el template ya puso");
 

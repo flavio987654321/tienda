@@ -94,8 +94,14 @@ stock se descuenta de forma atómica.
 - [x] ~~**2.7 "Ocultar precios", modo consulta y sólo-mayorista no se respetan** en
   el checkout del servidor.~~ → Hecho (05/10): precios ocultos o rubro por
   consulta → 409; producto sólo mayorista en tienda sin mayorista → rechazado.
-- [ ] **2.8 Carrito guardado con precios viejos**, y la misma clave de
-  `localStorage` para todas las tiendas en `/tienda/<slug>`.
+- [x] ~~**2.8 Carrito guardado con precios viejos**, y la misma clave de
+  `localStorage` para todas las tiendas en `/tienda/<slug>`.~~ → Hecho (05/10):
+  clave por tienda (`storefront_cart:<slug>`, migra la vieja una vez) y, al cargar
+  el catálogo, cada línea toma el producto actual y lo que ya no existe se saca
+  avisando cuál. Probado en el navegador con un carrito viejo (precio $1 →
+  $37.000; "Producto Borrado" sacado con aviso; otra tienda arranca vacía). En la
+  prueba apareció que la página carga DOS copias del módulo del carrito: la
+  migración escribe la clave nueva en el acto para que la segunda la encuentre.
 - [x] ~~**2.9 Cupón de premio**: se puede usar dos veces en simultáneo y no tiene el
   tope del 90 %.~~ → Hecho (05/10): se reserva con `updateMany` condicionado a
   AVAILABLE al aplicarlo, y el descuento usa `couponDiscountFor` (mismo tope). El
