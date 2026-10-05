@@ -310,6 +310,14 @@ export async function POST(req: NextRequest) {
 
         const variant = item.variantId ? product.variants.find((v) => v.id === item.variantId) : null;
         if (item.variantId && !variant) throw new Error("Variante no disponible");
+        /* Todo producto tiene al menos una variante (`lib/products`), y el stock
+           vive en ella. Sin `variantId` no se validaba ni descontaba nada: un
+           pedido armado a mano compraba un talle agotado, sin techo (05/10/26).
+           El carrito siempre la manda (con una sola variante la elige solo);
+           esto ataja lo que no viene del carrito. */
+        if (!variant && product.variants.length > 0) {
+          throw new Error(`Elegí ${product.variants.length > 1 ? "el talle o la opción" : "la opción"} de "${product.name}" antes de comprar.`);
+        }
 
         if (variant) {
           // Decrementa stock atómicamente — si no hay suficiente, count=0 y lanzamos error
@@ -363,7 +371,11 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        const retailPrice = variant?.price ?? product.price;
+        /* La misma regla que el carrito (`resolveVariantPrice`): el precio de
+           la variante cuenta sólo si es mayor a 0. Con `??`, una variante
+           guardada en 0 —o negativa— se cobraba así mientras el carrito
+           mostraba el precio base: la línea salía gratis (05/10/26). */
+        const retailPrice = variant?.price != null && variant.price > 0 ? variant.price : product.price;
         // B-04 resuelto: el mínimo mayorista es un umbral de descuento, NO un
         // candado. Bajo el mínimo se vende al precio retail (antes el checkout
         // rechazaba la compra aunque el carrito ya había mostrado ese precio).

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateProductBody, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, getOwnerStore } from "@/lib/products";
+import { validateProductBody, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, getOwnerStore, precioDeVariante } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 import {
   recordStockMovement,
@@ -143,7 +143,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         name: v.name,
         value: v.value,
         stock: newStock,
-        price: v.price ? parseFloat(v.price) : null,
+        price: precioDeVariante(v.price),
         sku: v.sku || null,
         lowStockThreshold: newThreshold,
       };

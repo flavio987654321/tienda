@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { validateProductBody, checkCupoDeProductos, checkRitmoDeCreacion, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES } from "@/lib/products";
+import { validateProductBody, checkCupoDeProductos, checkRitmoDeCreacion, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, precioDeVariante } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           name: v.name,
           value: v.value,
           stock: parseInt(v.stock) || 0,
-          price: v.price ? parseFloat(v.price) : null,
+          price: precioDeVariante(v.price),
           sku: v.sku || null,
           lowStockThreshold: v.lowStockThreshold ? parseInt(v.lowStockThreshold) : null,
         })),

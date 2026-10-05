@@ -68,10 +68,15 @@ stock se descuenta de forma atómica.
   si no cambió nada. La vuelta de MP con error ofrece "Reintentar el pago" del
   mismo pedido; con pendiente explica el efectivo. Probado: 19 casos en base
   local + navegador a 360/768/1280.
-- [ ] **2.2 Compra sin variante saltea el stock.** Sin `variantId` no se valida ni
-  descuenta nada aunque el producto tenga variantes.
-- [ ] **2.3 Variante con precio 0 (o negativo) se cobra así.** El servidor usa
-  `variant.price ?? product.price`; el carrito ignora ≤ 0. Al guardar no se valida.
+- [x] ~~**2.2 Compra sin variante saltea el stock.** Sin `variantId` no se valida ni
+  descuenta nada aunque el producto tenga variantes.~~ → Hecho (05/10): el
+  checkout exige la variante si el producto tiene ("Elegí el talle…"). El carrito
+  ya la mandaba siempre, así que no cambia nada para quien compra normal.
+- [x] ~~**2.3 Variante con precio 0 (o negativo) se cobra así.** El servidor usa
+  `variant.price ?? product.price`; el carrito ignora ≤ 0. Al guardar no se valida.~~
+  → Hecho (05/10): el checkout usa la regla del carrito (> 0); al guardar, 0 o
+  vacío = "usa el del producto" (`precioDeVariante`) y un negativo se rechaza.
+  Probado con el checkout real (0, negativo, propio) en base local.
 - [x] ~~**2.4 Cupón devuelto dos veces** al rechazarse un pago (`runOrderAction` y el
   webhook).~~ → Hecho (05/10): se fue con el 1.1, el webhook ya no cancela.
 - [ ] **2.5 Medios de pago no respetan la configuración** (transferencia/efectivo

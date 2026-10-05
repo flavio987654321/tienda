@@ -124,6 +124,16 @@ export function normalizeVariants(input: unknown): NormalizedVariant[] {
   return variants;
 }
 
+/** El precio PROPIO de una variante, como se guarda: `null` = usa el del
+ *  producto. Un 0 (o vacío) significa lo mismo: antes `"0"` se guardaba como 0
+ *  y el checkout cobraba la línea gratis (05/10/26). Los negativos ya los
+ *  rechaza `validateProductBody`. */
+export function precioDeVariante(crudo: string | null | undefined): number | null {
+  if (!crudo || !crudo.trim()) return null;
+  const n = Number(crudo.replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 // Estructura de un escalón de precio mayorista.
 // "desde" = cantidad mínima para aplicar este precio; "precio" = precio por unidad.
 export type PrecioEscalon = { desde: number; precio: number };
@@ -399,6 +409,12 @@ export function validateProductBody(
     const stock = parseInt(v.stock);
     if (isNaN(stock) || stock < 0) {
       return { error: NextResponse.json({ error: "El stock de variantes debe ser un número >= 0" }, { status: 400 }) };
+    }
+    if (v.price && v.price.trim() !== "") {
+      const precio = Number(v.price.replace(",", "."));
+      if (!Number.isFinite(precio) || precio < 0) {
+        return { error: NextResponse.json({ error: "El precio de cada variante tiene que ser un número positivo (dejalo vacío o en 0 para usar el precio del producto)" }, { status: 400 }) };
+      }
     }
     if (v.lowStockThreshold) {
       const threshold = parseInt(v.lowStockThreshold);
