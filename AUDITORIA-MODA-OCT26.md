@@ -114,7 +114,11 @@ stock se descuenta de forma atómica.
 - [x] ~~**2.13 (probable) Dos preferencias para el mismo pedido** → se puede pagar
   dos veces.~~ → Hecho (05/10): un segundo pago aprobado distinto sobre un pedido
   ya cobrado avisa a la dueña (una vez) para que lo devuelva.
-- [ ] **2.14 (probable) El servidor no exige dirección/ciudad/CP** para envíos.
+- [x] ~~**2.14 (probable) El servidor no exige dirección/ciudad/CP** para envíos.~~
+  → Hecho (05/10): se exigen para todo envío que no sea retiro. De paso, los
+  datos del comprador entran limpios (`limpiarComprador`: sólo texto, sin
+  caracteres de control, con tope de largo; las notas conservan sus saltos):
+  antes unas notas de megas viajaban a los mails y al panel.
 
 ## 3. Seguridad menor
 

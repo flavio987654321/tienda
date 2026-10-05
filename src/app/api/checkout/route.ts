@@ -81,6 +81,29 @@ async function resolveShipping(
   return { label: found.label, cost: found.coordinar ? 0 : found.price };
 }
 
+/** Un dato del comprador: texto, recortado, sin caracteres de control. */
+function campo(v: unknown, max: number, multilinea = false): string {
+  if (typeof v !== "string") return "";
+  let s = v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+  // Un salto en el nombre o la calle rompe el mail y el aviso de una línea.
+  if (!multilinea) s = s.replace(/[\r\n\t]+/g, " ");
+  return s.trim().slice(0, max);
+}
+function limpiarComprador(c: unknown) {
+  const o = (c && typeof c === "object" ? c : {}) as Record<string, unknown>;
+  return {
+    name: campo(o.name, 80),
+    email: campo(o.email, 120),
+    phone: campo(o.phone, 30),
+    street: campo(o.street, 150),
+    city: campo(o.city, 80),
+    province: campo(o.province, 60),
+    postalCode: campo(o.postalCode, 12),
+    // Las notas pueden tener saltos de línea: se conservan.
+    notes: campo(o.notes, 1000, true),
+  };
+}
+
 // Los ids de este proyecto son cuid de Prisma (`c` + ~24 alfanuméricos), no UUID.
 //
 // Acá había un `UUID_RE` que ningún id de la base podía pasar, así que desde el
@@ -119,7 +142,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Formato de solicitud inválido" }, { status: 400 });
   }
 
-  const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod } = body;
+  const { storeId, affiliateId, couponId, rewardCouponCode, items, shippingMethod } = body;
+  /* Los datos del comprador, limpios desde la entrada (05/10/26): sólo texto,
+     sin caracteres de control y con tope de largo. Antes entraban tal cual:
+     unas "notas" de megas se guardaban y viajaban a los mails y al panel. */
+  const customer = limpiarComprador(body.customer);
   /* El medio de pago (05/10/26). Antes uno desconocido se guardaba como
      "transfer" —incluido "retirar", el pago en efectivo, que así recibía en el
      mail instrucciones de transferencia—. Ahora `normalizarMedio` reconoce los
@@ -266,6 +293,15 @@ export async function POST(req: NextRequest) {
   if (!foundShippingMethod) {
     return NextResponse.json(
       { error: "Elegí cómo querés recibir tu pedido: esa opción de envío ya no está disponible." },
+      { status: 400 }
+    );
+  }
+  /* Un envío a domicilio sin dirección no se puede despachar (05/10/26). Sólo
+     la pedía el formulario (HTML): un pedido armado a mano, o un formulario de
+     template que se olvidara del `required`, entraba sin dónde mandarlo. */
+  if (!foundShippingMethod.isPickup && (!customer.street || !customer.city || !customer.postalCode)) {
+    return NextResponse.json(
+      { error: "Completá tu dirección, ciudad y código postal para el envío." },
       { status: 400 }
     );
   }
