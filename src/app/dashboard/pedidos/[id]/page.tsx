@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { ArrowLeft, Clock, MessageSquare, Package, Star, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
-import { statusLabel, statusClass, parseAddress } from "@/lib/orders";
+import { statusLabel, statusClass, parseAddress, describirCambio } from "@/lib/orders";
 import { parseOrderPromoSummary } from "@/lib/email";
 
 type Props = { params: Promise<{ id: string }> };
@@ -237,7 +237,7 @@ export default async function PedidoDetailPage({ params }: Props) {
               <li key={log.id} className="mb-2 ml-4">
                 <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white panel-oscuro:border-gray-900 bg-indigo-300" />
                 <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-                  <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{log.fromStatus} → {log.toStatus}</span>
+                  <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{describirCambio(log)}</span>
                   {" · "}
                   {new Date(log.changedAt).toLocaleString("es-AR")}
                 </p>

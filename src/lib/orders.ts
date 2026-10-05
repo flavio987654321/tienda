@@ -32,6 +32,24 @@ export function statusLabel(status: string) {
   return map[status] ?? status;
 }
 
+/* Los eventos que el webhook de MercadoPago deja en el historial SIN cambiar el
+   estado (una devolución sobre un pedido ya enviado, un pago que llegó sin
+   stock). Mostrados como "Enviado → Enviado" no decían nada. */
+const EVENTOS_DEL_HISTORIAL: Record<string, string> = {
+  "mp_webhook:refunded": "MercadoPago devolvió el pago",
+  "mp_webhook:charged_back": "Contracargo en MercadoPago",
+  "mp_webhook:in_mediation": "Reclamo abierto en MercadoPago",
+  "mp_webhook:pago_sin_stock": "Llegó el pago, pero ya no había stock",
+};
+
+/** Un renglón del historial de un pedido, en castellano. */
+export function describirCambio(log: { fromStatus: string; toStatus: string; changedBy: string }) {
+  const evento = EVENTOS_DEL_HISTORIAL[log.changedBy];
+  if (evento) return evento;
+  if (log.fromStatus === log.toStatus) return statusLabel(log.toStatus);
+  return `${statusLabel(log.fromStatus)} → ${statusLabel(log.toStatus)}`;
+}
+
 export function statusClass(status: string) {
   if (status === "CONFIRMED") return "bg-green-100 text-green-700";
   if (status === "SHIPPED")   return "bg-blue-100 text-blue-700";

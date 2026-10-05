@@ -1,320 +1,255 @@
 import { NextRequest, NextResponse } from "next/server";
-import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
-import { runOrderAction } from "@/lib/orderActions";
-import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary } from "@/lib/email";
+import { runOrderAction, reactivarPorPagoTardio, PedidoEnOtroEstado } from "@/lib/orderActions";
 import { despues } from "@/lib/despues";
+import { sendPushToUser } from "@/lib/push";
 /* La verificación de firma vive en su propia pieza: la comparten los dos
    webhooks de pago. Ver el comentario largo en `lib/mp-firma`. */
 import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 
-type CommissionResult = { commissionId: string; amount: number; rate: number; newBalance: number };
+/* ══════════════════════════════════════════════════════════════════════════
+   EL AVISO DE PAGO DE LAS TIENDAS (reescrito el 05/10/26)
+   ══════════════════════════════════════════════════════════════════════════
+
+   Lo que cambió, y por qué (ver AUDITORIA-MODA-OCT26.md, 1.1 y 2.x):
+
+   - Un pago RECHAZADO ya no cancela el pedido. En Checkout Pro, si la tarjeta
+     rebota, el comprador prueba con otra en la misma pantalla. Antes el rechazo
+     cancelaba el pedido (stock devuelto, mail de "cancelado") y el pago bueno
+     que llegaba después encontraba el pedido cancelado y se ignoraba: el
+     cliente pagaba y la tienda no se enteraba. Ahora el pedido sigue pendiente
+     hasta que se pague o venza (el vencimiento lo hace el cron diario).
+   - Un pago aprobado sobre un pedido ya cancelado intenta reactivarlo
+     (`reactivarPorPagoTardio`): si el stock alcanza, se confirma; si no, se le
+     avisa fuerte al dueño.
+   - Confirmar pasa por `runOrderAction`, el mismo camino que el panel. Antes
+     había una copia acá con diferencias (no miraba si el comprador era el mismo
+     afiliado) y sin candado: dos avisos juntos confirmaban dos veces.
+   - Se verifica que la plata haya ido a la cuenta de ESA tienda (`collector_id`
+     contra `mpSellerId`).
+   - Se procesa ANTES de contestar, y un error inesperado devuelve 500 para que
+     MercadoPago reintente. Antes se contestaba 200 de entrada y el error se
+     tragaba: un corte de la base durante un `approved` dejaba el pedido
+     pendiente con la plata cobrada, para siempre. Todo lo de acá es idempotente,
+     así que el reintento no duplica nada.
+   - Una devolución (`refunded`) sobre un pedido ya cobrado revierte la comisión
+     del afiliado, igual que un contracargo, y le avisa al dueño. Antes no hacía
+     nada. */
+
+/** Errores que se esperan y no tiene sentido reintentar. */
+class AvisoIgnorado extends Error {}
+
+/** El SDK de MercadoPago tira el cuerpo de la respuesta: `{ status, message }`. */
+const statusDeMp = (err: unknown) => (err as { status?: number })?.status;
 
 async function processPaymentWebhook(paymentId: string) {
+  /* Con el token de LA PLATAFORMA: la preferencia se crea como pago de
+     marketplace (`marketplace: MP_APP_ID`, ver lib/mp), así que la aplicación
+     puede leerlo. Igual que en digitales (api/digitales/cobro). */
+  const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN ?? "" });
+  let payment;
   try {
+    payment = await new Payment(client).get({ id: paymentId });
+  } catch (err) {
+    /* 404/401/403: ese pago no existe o no es de esta aplicación. No se va a
+       arreglar reintentando, así que no se pide reintento. Cualquier otro error
+       (MP caído, timeout) sí sube y termina en 500. */
+    const st = statusDeMp(err);
+    if (st === 404 || st === 401 || st === 403) {
+      console.warn("[mp/webhook] MercadoPago no devolvió el pago — se ignora", { paymentId, status: st });
+      throw new AvisoIgnorado();
+    }
+    throw err;
+  }
 
-    // Obtener detalles del pago desde MP
-    const client = new MercadoPagoConfig({
-      accessToken: process.env.MP_ACCESS_TOKEN ?? "",
+  const orderId = payment.external_reference;
+  if (!orderId) return;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true, status: true, total: true,
+      store: { select: { ownerId: true, mpSellerId: true } },
+      commission: { select: { amount: true, status: true, affiliateId: true } },
+    },
+  });
+  // Puede ser un pago de digitales, de la canasta o de suscripción que llegó acá
+  // por error: no es un pedido de tienda, no hay nada que hacer.
+  if (!order) return;
+
+  /* ── ¿La plata fue a esta tienda? ─────────────────────────────────────────
+     Sin esto, un comerciante de la plataforma podía cobrarse a sí mismo con el
+     id de un pedido de OTRA tienda en `external_reference`, y ese pedido
+     quedaba "pagado" sin que la otra tienda cobrara un peso. Si la tienda no
+     tiene `mpSellerId` (conexiones viejas), no hay contra qué comparar: se deja
+     pasar y se anota, para no frenar ventas legítimas. */
+  const collector = (payment as { collector_id?: number | string }).collector_id;
+  if (order.store.mpSellerId && collector != null && String(collector) !== order.store.mpSellerId) {
+    console.error("[mp/webhook] el pago no es de la cuenta de esta tienda — se ignora", {
+      paymentId, orderId, collector, esperado: order.store.mpSellerId,
     });
+    return;
+  }
+  if (!order.store.mpSellerId) {
+    console.warn("[mp/webhook] tienda sin mpSellerId: no se pudo verificar el destino del pago", { paymentId, orderId });
+  }
 
-    const mpPayment = new Payment(client);
-    const payment = await mpPayment.get({ id: paymentId });
+  const estado = payment.status;
 
-    if (payment.status === "cancelled" || payment.status === "rejected" || payment.status === "refunded") {
-      // Cancelar la orden si todavía está pendiente
-      /* Acá había una cancelación propia, escrita a mano, y le faltaba lo más
-         importante: NO DEVOLVÍA EL STOCK.
-         El checkout descuenta el stock al crear el pedido, con el pago todavía
-         pendiente. Cancelar desde el panel lo devuelve —`runOrderAction` lo hace
-         unidad por unidad y deja su movimiento de CANCELLATION—. Este camino no.
-         O sea que al primer pago rechazado el comerciante quedaba con menos
-         inventario en el sistema del que tenía en la mano, para siempre y sin
-         ninguna señal: acá tampoco se avisaba a nadie.
-         Tampoco reponía el `lowStockAlertSentAt`, así que la variante quedaba
-         además muda para el próximo aviso de stock bajo.
-         Ahora se cancela por el MISMO camino que el panel. No es solo por el
-         stock: ahí adentro está también la reversión de comisión al afiliado, el
-         mail al comprador y los avisos, todo lo que una cancelación tiene que
-         hacer. Tener dos formas de cancelar donde una está incompleta es la
-         manera segura de que se sigan separando con cada cambio. */
-      const orderId = payment.external_reference;
-      if (orderId) {
-        const order = await prisma.order.findUnique({
-          where: { id: orderId },
-          select: { id: true, status: true, couponId: true, store: { select: { ownerId: true } } },
-        });
-        if (order?.status === "PENDING" && order.store?.ownerId) {
-          try {
-            await runOrderAction({
-              orderId,
-              ownerId: order.store.ownerId,
-              action: "cancel",
-              // Cambia el texto del aviso y hace que suene el teléfono: esto no
-              // lo decidió el dueño, se le cayó una venta mientras hacía otra cosa.
-              origen: "mercadopago",
-            });
+  /* ── Rechazado o cancelado: NO se cancela el pedido ────────────────────────
+     El comprador puede reintentar con otro medio en la misma preferencia. Si
+     no vuelve, el pedido vence solo (cron diario) y ahí se devuelve el stock. */
+  if (estado === "rejected" || estado === "cancelled") {
+    console.log(`[mp/webhook] pago ${estado} — el pedido sigue pendiente para reintentar`, { paymentId, orderId });
+    return;
+  }
 
-            /* El cupón se devuelve acá y no adentro de `runOrderAction`: es propio
-               de este camino. El pago se rechazó pero la persona sigue queriendo
-               comprar, así que su cupón tiene que servirle para reintentar. Cuando
-               cancela el dueño, en cambio, la venta se termina ahí.
-
-               Va DESPUÉS del await y adentro del try, no al lado. Si la
-               cancelación falla, el pedido queda en PENDING y MercadoPago va a
-               reintentar este mismo aviso: con el cupón devuelto afuera, cada
-               reintento le restaba un uso más al cupón hasta dejarlo en cero
-               —regalando descuentos que nadie usó—. Devolviéndolo solo cuando la
-               cancelación salió bien, el reintento encuentra el pedido ya
-               cancelado y no vuelve a entrar. */
-            if (order.couponId) {
-              await prisma.coupon.updateMany({
-                where: { id: order.couponId, usedCount: { gt: 0 } },
-                data: { usedCount: { decrement: 1 } },
-              }).catch((err) => console.error("[mp/webhook] no se pudo devolver el cupón", err));
-            }
-          } catch (err) {
-            /* Que MercadoPago reciba un 200 igual. Si esto devuelve un error, MP
-               reintenta el mismo aviso una y otra vez, y un fallo que no se va a
-               arreglar solo se convierte en una repetición infinita. El pedido
-               queda en PENDING y se puede cancelar a mano desde el panel. */
-            console.error("[mp/webhook] no se pudo cancelar el pedido", orderId, err);
-          }
-        }
-      }
-      return NextResponse.json({ ok: true });
-    }
-
-    // Chargeback: descontar comisión ya acreditada al afiliado
-    if (payment.status === "charged_back" || payment.status === "in_mediation") {
-      const orderId = payment.external_reference;
-      if (orderId) {
-        const commission = await prisma.commission.findUnique({
-          where: { orderId },
-          include: { affiliate: { select: { userId: true } } },
-        });
-        if (commission && commission.status === "PAID") {
-          const updatedWallet = await prisma.$transaction(async (tx) => {
-            await tx.commission.update({
-              where: { orderId },
-              data: { status: "REVERSED" },
-            });
-            return tx.wallet.update({
-              where: { affiliateId: commission.affiliateId },
-              data: { balance: { decrement: commission.amount } },
-            });
-          });
-
-          const newBalance = updatedWallet.balance;
-          await createNotification({
-            userId: commission.affiliate.userId,
-            type: "COMMISSION_REVERSED",
-            title: "Comisión revertida por chargeback",
-            body: newBalance < 0
-              ? `Se descontó $${commission.amount.toLocaleString("es-AR")} de tu panel por una devolución de cargo. Tu saldo quedó en -$${Math.abs(newBalance).toLocaleString("es-AR")} — regularizá dentro de los 30 días.`
-              : `Se descontó $${commission.amount.toLocaleString("es-AR")} de tu panel por una devolución de cargo aprobada por MercadoPago. Saldo actual: $${newBalance.toLocaleString("es-AR")}.`,
-            link: "/afiliados/billetera",
-          });
-        }
-      }
-      return NextResponse.json({ ok: true });
-    }
-
-    if (payment.status !== "approved") {
-      return NextResponse.json({ ok: true });
-    }
-
-    const orderId = payment.external_reference;
-    if (!orderId) return NextResponse.json({ ok: true });
-
-    // Buscar la orden y confirmar si está PENDING
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        store: true,
-        buyer: { select: { email: true, name: true } },
-        // Para que el mail de "pago acreditado" sea un comprobante de verdad
-        // (qué compró y el desglose), no solo el total.
-        items: {
-          include: {
-            product: { select: { name: true } },
-            variant: { select: { name: true, value: true } },
-          },
-        },
-        coupon: { select: { code: true } },
-        affiliate: {
-          select: {
-            id: true,
-            userId: true,
-            wallet: true,
-            user: { select: { email: true, name: true } },
-          },
-        },
-        commission: true,
-      },
+  /* ── En curso (efectivo en Rapipago/Pago Fácil, acreditación demorada) ─────
+     Se anota el id del pago: el vencimiento de pedidos impagos respeta los que
+     tienen un pago en curso, que pueden tardar días en acreditarse. */
+  if (estado === "pending" || estado === "in_process" || estado === "authorized") {
+    await prisma.payment.updateMany({
+      where: { orderId, status: "PENDING" },
+      data: { externalId: String(paymentId) },
+    }).catch((err) => {
+      // P2002: ese id ya estaba anotado (aviso repetido). No pasa nada.
+      if ((err as { code?: string })?.code !== "P2002") throw err;
     });
+    return;
+  }
 
-    if (!order || order.status !== "PENDING") return NextResponse.json({ ok: true });
+  /* ── La plata se devolvió o está en disputa ────────────────────────────────
+     Sobre un pedido ya cobrado: se revierte la comisión del afiliado (si la
+     hay) y se le avisa al dueño. El pedido NO se cancela solo: puede estar ya
+     enviado, y qué hacer con eso lo decide el dueño. */
+  if (estado === "refunded" || estado === "charged_back" || estado === "in_mediation") {
+    if (order.status === "PENDING" || order.status === "CANCELLED") return;
 
-    // ── Validar que lo pagado sea lo que el pedido dice (A-03) ────────────────
-    // Antes se confirmaba solo con `status === "approved"`, sin mirar el monto: un
-    // pago por menos de lo debido confirmaba el pedido igual y nadie se enteraba.
-    // Mismo criterio que el webhook de suscripciones, que ya validaba así.
-    //
-    // Tolerancia del 5% hacia abajo, por redondeos y por cuotas con recargo que MP
-    // liquida distinto. Un pago de MÁS no frena nada (puede ser un ajuste de MP),
-    // pero se registra: si aparece seguido, hay algo que revisar.
-    const pagado = payment.transaction_amount;
-    if (typeof pagado === "number" && order.total > 0) {
-      if (pagado < order.total * 0.95) {
-        console.error("[mp/webhook] monto pagado MENOR al del pedido — no se confirma", {
-          paymentId, orderId: order.id, recibido: pagado, esperado: order.total,
+    if (order.commission?.status === "PAID") {
+      const commission = order.commission;
+      const revertida = await prisma.$transaction(async (tx) => {
+        // Condicionado al estado: un aviso repetido no descuenta dos veces.
+        const r = await tx.commission.updateMany({ where: { orderId, status: "PAID" }, data: { status: "REVERSED" } });
+        if (r.count === 0) return null;
+        const wallet = await tx.wallet.update({
+          where: { affiliateId: commission.affiliateId },
+          data: { balance: { decrement: commission.amount } },
+          select: { balance: true, affiliate: { select: { userId: true } } },
         });
-        return NextResponse.json({ ok: true });
-      }
-      if (pagado > order.total * 1.05) {
-        console.warn("[mp/webhook] monto pagado MAYOR al del pedido — se confirma igual", {
-          paymentId, orderId: order.id, recibido: pagado, esperado: order.total,
-        });
-      }
-    }
-
-    // La transacción retorna el resultado de la comisión directamente
-    // para que TypeScript pueda narrowar el tipo correctamente post-await
-    const commissionResult: CommissionResult | null = await prisma.$transaction(async (tx) => {
-      await tx.payment.updateMany({
-        where: { orderId: order.id },
-        data: {
-          status: "APPROVED",
-          externalId: String(paymentId),
-        },
+        return wallet;
       });
-
-      await tx.order.update({
-        where: { id: order.id },
-        data: { status: "CONFIRMED" },
-      });
-
-      await tx.orderStatusLog.create({
-        data: {
-          orderId: order.id,
-          fromStatus: "PENDING",
-          toStatus: "CONFIRMED",
-          changedBy: "mp_webhook",
-        },
-      });
-
-      let result: CommissionResult | null = null;
-
-      // Acreditar comisión en billetera si hay afiliado y rate bloqueado
-      if (order.affiliateId && order.lockedCommissionRate !== null && !order.commission) {
-        const rate = order.lockedCommissionRate ?? order.store.commissionRate;
-        const commissionBase = Math.max(0, (order.subtotal ?? order.total) - (order.discountAmount ?? 0));
-        const amount = Math.round((commissionBase * rate) / 100);
-
-        if (amount > 0) {
-          const newCommission = await tx.commission.create({
-            data: {
-              orderId: order.id,
-              affiliateId: order.affiliateId,
-              amount,
-              rate,
-              status: "PAID",
-              paidAt: new Date(),
-            },
-          });
-
-          const updatedWallet = await tx.wallet.upsert({
-            where: { affiliateId: order.affiliateId },
-            update: { balance: { increment: amount }, totalEarned: { increment: amount } },
-            create: { affiliateId: order.affiliateId, balance: amount, totalEarned: amount, totalWithdrawn: 0 },
-          });
-
-          result = { commissionId: newCommission.id, amount, rate, newBalance: updatedWallet.balance };
-        }
-      }
-
-      await createNotification({
-        userId: order.store.ownerId,
-        type: "ORDER_CONFIRMED",
-        title: "Pago confirmado por MercadoPago",
-        body: `Pedido $${order.total.toLocaleString("es-AR")} — pago procesado automáticamente.`,
-        link: `/dashboard/pedidos/${order.id}`,
-      });
-
-      return result;
-    });
-
-    // Post-transacción: notificar al afiliado que ganó comisión
-    if (commissionResult !== null) {
-      const affUserId = order.affiliate?.userId;
-      const affEmail = order.affiliate?.user?.email;
-      const affName = order.affiliate?.user?.name || "afiliado";
-
-      if (affUserId) {
+      if (revertida) {
+        const saldo = revertida.balance;
+        const motivo = estado === "refunded" ? "una devolución del pago" : "una devolución de cargo";
         await createNotification({
-          userId: affUserId,
-          type: "COMMISSION_EARNED",
-          title: "¡Ganaste una comisión!",
-          body: `Tu comisión de $${commissionResult.amount.toLocaleString("es-AR")} fue acreditada en tu panel de comisiones.`,
+          userId: revertida.affiliate.userId,
+          type: "COMMISSION_REVERSED",
+          title: "Comisión revertida",
+          body: saldo < 0
+            ? `Se descontó $${commission.amount.toLocaleString("es-AR")} de tu panel por ${motivo}. Tu saldo quedó en -$${Math.abs(saldo).toLocaleString("es-AR")} — regularizá dentro de los 30 días.`
+            : `Se descontó $${commission.amount.toLocaleString("es-AR")} de tu panel por ${motivo}. Saldo actual: $${saldo.toLocaleString("es-AR")}.`,
           link: "/afiliados/billetera",
         });
       }
-
-      if (affEmail) {
-        despues(() => sendCommissionEarnedEmail({
-          affiliateEmail: affEmail,
-          affiliateName: affName,
-          storeName: order.store.name,
-          commissionAmount: commissionResult.amount,
-          orderTotal: order.total,
-          commissionRate: commissionResult.rate,
-          newBalance: commissionResult.newBalance,
-        }), "MP: mail de comisión ganada");
-      }
     }
 
-    // Notificar al comprador que el pago fue procesado por MP
-    if (order.buyer?.email) {
-      despues(() => sendOrderPaymentConfirmedEmail({
-        buyerEmail: order.buyer.email,
-        buyerName: order.buyer.name || "",
-        orderId: order.id,
-        storeName: order.store.name,
-        storeSlug: order.store.slug,
-        total: order.total,
-        items: order.items.map((it) => ({
-          name: it.product.name,
-          variant: it.variant ? `${it.variant.name}: ${it.variant.value}` : null,
-          quantity: it.quantity,
-          // Las órdenes viejas no tienen lineTotal → se reconstruye con precio × cantidad.
-          lineTotal: it.lineTotal ?? it.price * it.quantity,
-        })),
-        subtotal: order.subtotal,
-        discountAmount: order.discountAmount,
-        couponCode: order.coupon?.code ?? null,
-        shippingCost: order.shippingCost,
-        shippingMethod: order.shippingMethod,
-        // Promos congeladas al momento de la venta (no se recalculan: la promo pudo
-        // haber cambiado desde entonces y el comprobante tiene que ser fiel).
-        ...parseOrderPromoSummary(order.promoSummary),
-        promoSavings: order.promoSavings,
-      }), "MP: comprobante de pago al comprador");
+    // Aviso al dueño, una sola vez por pago y estado.
+    const yaAvisado = await prisma.orderStatusLog.findFirst({
+      where: { orderId, changedBy: `mp_webhook:${estado}` },
+      select: { id: true },
+    });
+    if (!yaAvisado) {
+      await prisma.orderStatusLog.create({
+        data: { orderId, fromStatus: order.status, toStatus: order.status, changedBy: `mp_webhook:${estado}` },
+      });
+      const aviso = {
+        title: estado === "in_mediation" ? "Un comprador abrió un reclamo en MercadoPago" : "MercadoPago devolvió un pago",
+        body: estado === "in_mediation"
+          ? `El pago de $${order.total.toLocaleString("es-AR")} está en disputa. Revisalo en MercadoPago antes de enviar.`
+          : `Se devolvió el pago de $${order.total.toLocaleString("es-AR")}. Si el pedido no se envió, cancelalo desde el panel.`,
+      };
+      const link = `/dashboard/pedidos/${orderId}`;
+      await createNotification({ userId: order.store.ownerId, type: "PAYMENT_REFUNDED", ...aviso, link });
+      despues(() => sendPushToUser(order.store.ownerId, { ...aviso, url: link }), "MP: push de devolución");
     }
+    return;
+  }
 
-    console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);
-  } catch (err) {
-    if ((err as { code?: string })?.code === "P2002") {
-      console.warn("[mp/webhook] duplicate webhook ignored (P2002)");
+  if (estado !== "approved") return;
+
+  /* ── Validar que lo pagado sea lo que el pedido dice (A-03) ────────────────
+     Tolerancia del 5% hacia abajo, por redondeos y por cuotas con recargo que
+     MP liquida distinto. Un pago de MÁS no frena nada (puede ser un ajuste de
+     MP), pero se registra: si aparece seguido, hay algo que revisar. */
+  const pagado = payment.transaction_amount;
+  if (typeof pagado === "number" && order.total > 0) {
+    if (pagado < order.total * 0.95) {
+      console.error("[mp/webhook] monto pagado MENOR al del pedido — no se confirma", {
+        paymentId, orderId, recibido: pagado, esperado: order.total,
+      });
       return;
     }
-    console.error("[mp/webhook] error procesando pago:", err);
+    if (pagado > order.total * 1.05) {
+      console.warn("[mp/webhook] monto pagado MAYOR al del pedido — se confirma igual", {
+        paymentId, orderId, recibido: pagado, esperado: order.total,
+      });
+    }
   }
+
+  if (order.status === "PENDING") {
+    try {
+      await runOrderAction({
+        orderId, ownerId: order.store.ownerId, action: "confirmPayment",
+        origen: "mercadopago", changedBy: "mp_webhook", externalPaymentId: String(paymentId),
+      });
+      console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);
+      return;
+    } catch (err) {
+      /* Otro aviso (o el dueño) lo cambió en el medio: el candado de
+         `runOrderAction` lo frenó. Se vuelve a leer y se sigue con el estado
+         nuevo: si quedó CANCELLED, es un pago tardío. */
+      if (!(err instanceof PedidoEnOtroEstado)) throw err;
+      const ahora = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true } });
+      if (ahora?.status !== "CANCELLED") return;
+    }
+  } else if (order.status !== "CANCELLED") {
+    // Ya confirmado, enviado o entregado: un aviso repetido. Nada que hacer.
+    return;
+  }
+
+  /* ── Pago aprobado de un pedido cancelado ─────────────────────────────── */
+  const r = await reactivarPorPagoTardio({ orderId, externalPaymentId: String(paymentId) });
+  const link = `/dashboard/pedidos/${orderId}`;
+  if (r.reactivado) {
+    const aviso = {
+      title: "Llegó el pago de un pedido cancelado",
+      body: `MercadoPago acreditó $${order.total.toLocaleString("es-AR")}. Había stock, así que el pedido se reactivó y quedó confirmado.`,
+    };
+    await createNotification({ userId: order.store.ownerId, type: "ORDER_CONFIRMED", ...aviso, link });
+    despues(() => sendPushToUser(order.store.ownerId, { ...aviso, url: link }), "MP: push de pago tardío");
+    return;
+  }
+  if (r.motivo === "stock") {
+    /* La plata entró y no hay con qué cumplir. Se deja anotado en el pago
+       (pedido CANCELLED + pago APPROVED: el panel lo muestra) y se avisa fuerte. */
+    await prisma.payment.updateMany({ where: { orderId }, data: { status: "APPROVED", externalId: String(paymentId) } })
+      .catch((err) => console.error("[mp/webhook] no se pudo anotar el pago tardío", orderId, err));
+    await prisma.orderStatusLog.create({
+      data: { orderId, fromStatus: "CANCELLED", toStatus: "CANCELLED", changedBy: "mp_webhook:pago_sin_stock" },
+    });
+    const aviso = {
+      title: "⚠️ Te pagaron un pedido cancelado",
+      body: `MercadoPago acreditó $${order.total.toLocaleString("es-AR")}, pero ya no hay stock de: ${r.faltantes.join(", ")}. Devolvé el pago desde MercadoPago o contactá al comprador.`,
+    };
+    await createNotification({ userId: order.store.ownerId, type: "PAYMENT_WITHOUT_STOCK", ...aviso, link });
+    despues(() => sendPushToUser(order.store.ownerId, { ...aviso, url: link }), "MP: push de pago sin stock");
+    console.error("[mp/webhook] pago aprobado sobre pedido cancelado sin stock", { paymentId, orderId, faltantes: r.faltantes });
+  }
+  // motivo "estado": otro aviso ya lo reactivó en paralelo. Nada que hacer.
 }
 
-// Webhook de MercadoPago — acepta inmediatamente y procesa en background
 export async function POST(req: NextRequest) {
   let paymentId: string | undefined;
   try {
@@ -332,8 +267,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Responder a MP inmediatamente (evita retries por timeout)
-  // y procesar en background con waitUntil
-  waitUntil(processPaymentWebhook(paymentId));
+  /* Se procesa ANTES de contestar (ver arriba). Un error inesperado devuelve
+     500: MercadoPago reintenta durante días con espera creciente, que es
+     justo lo que hace falta ante un corte momentáneo. */
+  try {
+    await processPaymentWebhook(paymentId);
+  } catch (err) {
+    if (err instanceof AvisoIgnorado) return NextResponse.json({ ok: true });
+    console.error("[mp/webhook] error procesando pago — se pide reintento:", paymentId, err);
+    return NextResponse.json({ error: "Error procesando el pago" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

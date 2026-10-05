@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Clock, Download, MessageSquare, Package, Search, ShoppingBag, Star, Truck, UserRound, X } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
-import { statusLabel, statusClass, statusBorderClass, parseAddress } from "@/lib/orders";
+import { statusLabel, statusClass, statusBorderClass, parseAddress, describirCambio } from "@/lib/orders";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 const PAGE_SIZE = 15;
@@ -451,7 +451,7 @@ export default async function PedidosPage({ searchParams }: Props) {
                               ("PENDING → CONFIRMED"), en la única parte del
                               archivo que no pasaba por `statusLabel`. */}
                           <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-                            <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{statusLabel(log.fromStatus)} → {statusLabel(log.toStatus)}</span>
+                            <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{describirCambio(log)}</span>
                             {" · "}
                             {new Date(log.changedAt).toLocaleString("es-AR", {
                               day: "2-digit", month: "2-digit", year: "2-digit",

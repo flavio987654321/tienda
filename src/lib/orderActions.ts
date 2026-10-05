@@ -2,9 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail, parseOrderPromoSummary } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { recordStockMovement, wentBackAboveThreshold, dispatchLowStockAlerts, DEFAULT_LOW_STOCK_THRESHOLD, type LowStockItem } from "@/lib/stockMovements";
-import { ORDER_ACTION_TRANSITIONS } from "@/lib/orders";
+import { ORDER_ACTION_TRANSITIONS, statusLabel } from "@/lib/orders";
 import { despues } from "@/lib/despues";
 import { sendPushToUser } from "@/lib/push";
+
+/** El pedido no está (o ya no está) en un estado que permita la acción. El
+ *  mensaje va directo al panel, así que está escrito para la dueña. El webhook
+ *  lo reconoce por el tipo, no por el texto. */
+export class PedidoEnOtroEstado extends Error {}
 
 type RunOrderActionInput = {
   orderId: string;
@@ -18,11 +23,15 @@ type RunOrderActionInput = {
    * Ahí la campanita alcanza — hacerle sonar el celular por su propio clic es
    * ruido, y el ruido termina en que silencia la app y se pierde los pedidos.
    *
-   * "mercadopago" es cuando el pago se rechaza y la venta se cae sola. Eso pasa
-   * sin que el dueño esté mirando y le cambia el día: tenía una venta y ya no.
-   * Ese sí va al teléfono.
+   * "mercadopago" es cuando lo dispara el aviso de pago de MercadoPago: confirma
+   * solo un pago acreditado, sin que el dueño esté mirando. (Un pago RECHAZADO ya
+   * no cancela nada: ver el webhook.)
    */
   origen?: "dueño" | "mercadopago";
+  /** Quién figura en el historial del pedido. Por defecto, el dueño. */
+  changedBy?: string;
+  /** El id del pago en MercadoPago, para dejarlo anotado al confirmar. */
+  externalPaymentId?: string;
 };
 
 // Aplica una acción de cambio de estado a un pedido: valida la transición, corre la
@@ -53,8 +62,9 @@ function limpiarTracking(crudo: string | undefined): string | undefined {
   return limpio.length > 0 ? limpio : undefined;
 }
 
-export async function runOrderAction({ orderId: id, ownerId, action, trackingCode: trackingCrudo, origen = "dueño" }: RunOrderActionInput) {
+export async function runOrderAction({ orderId: id, ownerId, action, trackingCode: trackingCrudo, origen = "dueño", changedBy: quien, externalPaymentId }: RunOrderActionInput) {
   const trackingCode = limpiarTracking(trackingCrudo);
+  const changedBy = quien ?? ownerId;
   // Se llenan dentro de la transacción y se despachan después de que comprometa —
   // así un rollback posterior (ej. error en comisión) no deja un aviso ya enviado
   // para un estado que en los hechos nunca se confirmó.
@@ -93,9 +103,26 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
     // Máquina de estados: validar que la transición sea legal
     if (!ORDER_ACTION_TRANSITIONS[action]) throw new Error("Accion no valida");
     if (!ORDER_ACTION_TRANSITIONS[action].includes(order.status)) {
-      throw new Error(
-        `No se puede ejecutar '${action}' sobre un pedido en estado ${order.status}`
+      throw new PedidoEnOtroEstado(
+        `Este pedido está "${statusLabel(order.status)}" y eso ya no se puede hacer. Recargá la página para ver cómo quedó.`
       );
+    }
+
+    /* ── El candado (05/10/26) ──────────────────────────────────────────────
+       El estado de arriba se leyó sin trabar nada. Dos acciones a la vez sobre
+       el mismo pedido —el aviso de MercadoPago repetido, dos pestañas del
+       panel, un doble clic— leían las dos "PENDING" y confirmaban las dos:
+       dos mails, dos avisos, y una confirmación encima de un pedido que se
+       acababa de cancelar, con el stock ya devuelto.
+       Este update no cambia nada, pero traba la fila: el segundo espera a que
+       el primero termine y, cuando entra, Postgres vuelve a mirar el `where`.
+       Si el estado ya no es el que leímos, no actualiza ninguna fila y se corta. */
+    const tomado = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: { status: order.status },
+    });
+    if (tomado.count === 0) {
+      throw new PedidoEnOtroEstado("Este pedido cambió mientras lo estabas mirando. Recargá la página para ver cómo quedó.");
     }
 
     if (action === "confirmPayment") {
@@ -183,7 +210,7 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
 
       await tx.payment.updateMany({
         where: { orderId: order.id },
-        data: { status: "APPROVED" },
+        data: { status: "APPROVED", ...(externalPaymentId ? { externalId: externalPaymentId } : {}) },
       });
 
       const confirmed = await tx.order.update({
@@ -192,7 +219,7 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         include: { payment: true, shipping: true, items: true, commission: true },
       });
       await tx.orderStatusLog.create({
-        data: { orderId: order.id, fromStatus: order.status, toStatus: "CONFIRMED", changedBy: ownerId },
+        data: { orderId: order.id, fromStatus: order.status, toStatus: "CONFIRMED", changedBy },
       });
 
       // A-02 — el MISMO comprobante que manda el webhook de MercadoPago.
@@ -377,7 +404,7 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         include: { payment: true, shipping: true, items: true, commission: true },
       });
       await tx.orderStatusLog.create({
-        data: { orderId: order.id, fromStatus: order.status, toStatus: "CANCELLED", changedBy: ownerId },
+        data: { orderId: order.id, fromStatus: order.status, toStatus: "CANCELLED", changedBy },
       });
 
       const ownerForCancel = await tx.user.findUnique({
@@ -447,8 +474,9 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
     despues(() => createNotification({
       userId: ownerId,
       type: "ORDER_CONFIRMED",
-      title: "Pago confirmado",
-      body: `El pedido fue confirmado por $${result.total.toLocaleString("es-AR")}.`,
+      ...(origen === "mercadopago"
+        ? { title: "Pago confirmado por MercadoPago", body: `Pedido $${result.total.toLocaleString("es-AR")} — pago procesado automáticamente.` }
+        : { title: "Pago confirmado", body: `El pedido fue confirmado por $${result.total.toLocaleString("es-AR")}.` }),
       link: `/dashboard/pedidos/${result.id}`,
     }), "pedido: campanita pago confirmado");
   }
@@ -545,3 +573,86 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
 
   return result;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   UN PAGO QUE LLEGA SOBRE UN PEDIDO YA CANCELADO (05/10/26)
+   ══════════════════════════════════════════════════════════════════════════
+
+   Pasa más de lo que parece: el comprador paga con un link viejo, paga en
+   efectivo un cupón de Rapipago días después, o el pedido venció por falta de
+   pago y el aviso de MercadoPago llega tarde. Antes el webhook lo ignoraba: la
+   plata entraba, el pedido seguía cancelado, el stock ya se había devuelto y
+   se le podía vender a otro. Nadie se enteraba.
+
+   Ahora se intenta reactivar: se vuelve a reservar el stock con la misma regla
+   del checkout (atómica, `stock >= cantidad`) y, si alcanza para TODO, el
+   pedido pasa a PENDING y se confirma por el camino normal. Si falta aunque
+   sea una unidad, no se toca nada —una venta a medias es peor— y se le avisa
+   fuerte al dueño: le pagaron algo que ya no tiene, y decide él (devolver el
+   pago o conseguir el producto). */
+export type ResultadoPagoTardio =
+  | { reactivado: true }
+  | { reactivado: false; motivo: "estado" | "stock"; faltantes: string[] };
+
+export async function reactivarPorPagoTardio({ orderId, externalPaymentId }: { orderId: string; externalPaymentId: string }): Promise<ResultadoPagoTardio> {
+  const faltantes: string[] = [];
+  let ownerId: string | null = null;
+  try {
+    await prisma.$transaction(async (tx) => {
+      /* Mismo candado que `runOrderAction`: si dos avisos llegan juntos, sólo
+         uno pasa de CANCELLED a PENDING. */
+      const tomado = await tx.order.updateMany({ where: { id: orderId, status: "CANCELLED" }, data: { status: "PENDING" } });
+      if (tomado.count === 0) throw new SinCambio();
+
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id: orderId },
+        include: { store: { select: { ownerId: true } }, items: { include: { product: { select: { name: true } }, variant: true } } },
+      });
+      ownerId = order.store.ownerId;
+
+      for (const item of order.items) {
+        if (!item.variantId) continue;
+        const reservado = await tx.productVariant.updateMany({
+          where: { id: item.variantId, stock: { gte: item.quantity } },
+          data: { stock: { decrement: item.quantity } },
+        });
+        if (reservado.count === 0) {
+          faltantes.push(item.variant ? `${item.product.name} (${item.variant.value})` : item.product.name);
+          continue;
+        }
+        const despuesStock = (item.variant?.stock ?? 0) - item.quantity;
+        await recordStockMovement(tx, {
+          variantId: item.variantId,
+          productId: item.productId,
+          delta: -item.quantity,
+          stockBefore: despuesStock + item.quantity,
+          stockAfter: despuesStock,
+          type: "SALE",
+          changedBy: "system",
+          reason: "Pago acreditado de un pedido que estaba cancelado",
+        });
+      }
+      // Todo o nada: con un solo faltante se deshace la transacción entera.
+      if (faltantes.length > 0) throw new SinStock();
+
+      // La cancelación había devuelto el uso del cupón: se vuelve a consumir.
+      if (order.couponId) {
+        await tx.coupon.update({ where: { id: order.couponId }, data: { usedCount: { increment: 1 } } });
+      }
+      await tx.orderStatusLog.create({
+        data: { orderId, fromStatus: "CANCELLED", toStatus: "PENDING", changedBy: "mp_webhook" },
+      });
+    }, { timeout: 15000 });
+  } catch (err) {
+    if (err instanceof SinCambio) return { reactivado: false, motivo: "estado", faltantes: [] };
+    if (err instanceof SinStock) return { reactivado: false, motivo: "stock", faltantes };
+    throw err;
+  }
+
+  // Ya está PENDING y con el stock reservado: se confirma por el camino de siempre.
+  await runOrderAction({ orderId, ownerId: ownerId!, action: "confirmPayment", origen: "mercadopago", changedBy: "mp_webhook", externalPaymentId });
+  return { reactivado: true };
+}
+
+class SinCambio extends Error {}
+class SinStock extends Error {}
