@@ -25,9 +25,13 @@ stock se descuenta de forma atómica.
   en una base local descartable con 9 casos (rechazo + reintento, 3 avisos
   simultáneos, pago tardío con y sin stock, otra cuenta, monto menor, efectivo en
   curso, devolución, base caída a mitad).
-- [ ] **1.2 Datos bancarios públicos (CBU, alias, CUIL).** `paymentInfo` vive en
+- [x] ~~**1.2 Datos bancarios públicos (CBU, alias, CUIL).** `paymentInfo` vive en
   `storeConfig`, que sale entero por `/api/public/<slug>` y en la página de la
-  tienda, aun con la transferencia apagada o la tienda en "Próximamente".
+  tienda, aun con la transferencia apagada o la tienda en "Próximamente".~~
+  → **Hecho (05/10).** `lib/configPublica` deja sólo `enabled` de cada medio; lo
+  usan la API pública y la página. El mail del pedido sigue leyendo la base.
+  Verificado en vivo (girly-store, amaranta, tiendaapps) y con
+  `configPublica.check.ts`.
 - [ ] **1.3 Teléfono, nombre y ciudad de la dueña en el HTML aunque estén ocultos.**
   `verifiedInfo` se arma siempre con los datos; las banderas sólo deciden si se
   dibuja. `tienda/[slug]/page.tsx`, `tienda/[slug]/producto/[id]/page.tsx`.

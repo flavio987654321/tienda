@@ -1,3 +1,4 @@
+import { configPublicaTexto } from "@/lib/configPublica";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -172,8 +173,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   // Los dos internos se sacan de la respuesta. El resto ya está filtrado por
   // `CAMPOS_PUBLICOS`: lo que no está ahí arriba nunca se leyó de la base.
-  const { ownerId: _ownerId, mpAccessToken: _mpAccessToken, ...safeStore } = store;
+  const { ownerId: _ownerId, mpAccessToken: _mpAccessToken, ...sinInternos } = store;
   void _ownerId; void _mpAccessToken;
+  // `storeConfig` trae adentro los datos bancarios de la dueña: se recortan
+  // acá, antes de todas las salidas de abajo. Ver `lib/configPublica`.
+  const safeStore = { ...sinInternos, storeConfig: configPublicaTexto(sinInternos.storeConfig) };
 
   /* ── Tienda que su dueño todavía no publicó ────────────────────────────────
      El mismo corte que ya hace la página en `/tienda/[slug]` ("Próximamente"

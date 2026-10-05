@@ -1,3 +1,4 @@
+import { configPublica } from "@/lib/configPublica";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import StoreShell from "@/components/store/StoreShell";
@@ -289,7 +290,8 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
 
   const config: StoreConfig = {
     ...DEFAULT_CONFIG,
-    ...parsed,
+    // Sin los datos bancarios: este objeto termina en el HTML (ver `lib/configPublica`).
+    ...configPublica(parsed),
     storeName: store.name,
     storeId: store.id,
     slug,
