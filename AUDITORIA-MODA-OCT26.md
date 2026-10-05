@@ -48,9 +48,13 @@ stock se descuenta de forma atómica.
   De paso: confirmar una consulta no tenía candado — dos clics acreditaban la
   comisión DOS veces; y un rechazo podía pisar una confirmación. Ahora las dos
   ramas son `updateMany` condicionado a PENDING.
-- [ ] **1.5 Envío gratis sin querer / con un id inventado.** El carrito arranca en
+- [x] ~~**1.5 Envío gratis sin querer / con un id inventado.** El carrito arranca en
   `"retiro"` aunque esté apagado; la pantalla suma el primer envío pero manda
-  `"retiro"`, y el servidor cae a un retiro sin mirar `enabled`.
+  `"retiro"`, y el servidor cae a un retiro sin mirar `enabled`.~~
+  → **Hecho (05/10).** El servidor rechaza (400) un envío inexistente o apagado;
+  el carrito marca y manda la opción que se ve. Probado con el checkout real en
+  base local: retiro apagado, id inventado, envío válido (cobra), tienda sin
+  configurar e id viejo "pickup".
 
 ## 2. Importante — stock, cobros, pagos
 
@@ -156,3 +160,6 @@ stock se descuenta de forma atómica.
   `history.replaceState`.
 - [x] Sin conexión al confirmar, el botón del checkout quedaba en "procesando"
   para siempre; y un doble clic rápido creaba dos pedidos.
+- [x] Había TRES copias de "crear el pedido" (tienda, ficha suelta, catálogo) y
+  las dos de afuera no mandaban la donación ni el cupón de premio: se perdían en
+  silencio comprando desde esas pantallas. Ahora una sola, `crearPedido`.

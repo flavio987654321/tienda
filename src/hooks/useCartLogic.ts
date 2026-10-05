@@ -664,6 +664,14 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const cartCount      = cartItems.reduce((s, i) => s + i.qty, 0);
   const envioOptions   = getEnvioOptions(shippingMethods);
   const selectedEnvio  = envioOptions.find(o => o.id === envioId) ?? envioOptions[0];
+  /* `envioId` arranca en "retiro". Si la tienda tiene el retiro apagado, la
+     pantalla mostraba y sumaba la primera opción (`envioOptions[0]`) pero no
+     marcaba ningún botón y mandaba "retiro" igual: el servidor lo convertía en
+     retiro gratis (05/10/26). Ahora el elegido es siempre el que se ve. */
+  const envioElegidoId = selectedEnvio?.id ?? envioId;
+  useEffect(() => {
+    if (selectedEnvio && selectedEnvio.id !== envioId) setEnvioId(selectedEnvio.id);
+  }, [selectedEnvio, envioId]);
   const selectedLiveQuotePrice = selectedEnvio?.liveQuote ? getLiveQuotePrice(selectedEnvio.id) : null;
   const envioPriceRaw  = selectedEnvio?.liveQuote ? (selectedLiveQuotePrice ?? 0) : (selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0));
   // Una promo de envío gratis pone el costo en 0 y deja de ser "a coordinar".
@@ -1110,7 +1118,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
        vuelve a tocar "Pagar" SIN cambiar nada, se reintenta el pago del pedido
        que ya existe en vez de crear otro: antes cada reintento era un pedido
        nuevo que volvía a descontar stock y a gastar un uso del cupón. */
-    const firma = JSON.stringify({ itemsDelPedido, customer, envioId, pagoId, cupon: cuponActivo?.id ?? null, donacion });
+    const firma = JSON.stringify({ itemsDelPedido, customer, envioId: envioElegidoId, pagoId, cupon: cuponActivo?.id ?? null, donacion });
     const previo = pagoId === "mercadopago" && pedidoSinPagar.current?.firma === firma ? pedidoSinPagar.current : null;
 
     let res: { ok: boolean; orderId?: string; donationId?: string; error?: string };
@@ -1120,7 +1128,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       res = await placeOrder({
         cartItems: itemsDelPedido,
         customer,
-        shippingMethod:  envioId,
+        shippingMethod:  envioElegidoId,
         paymentProvider: pagoId,
         // El bloqueado no se manda: el servidor lo ignoraría igual (chequea
         // `pricing.couponsAllowed`), pero así el pedido no queda con un cupón atado

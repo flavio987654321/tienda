@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment }
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams, OpcionProducto, SeleccionOpciones } from "@/hooks/useStorefront";
-import { getDemoPool, fillTargetFor, parsePromotions,  } from "@/hooks/useStorefront";
+import { getDemoPool, fillTargetFor, parsePromotions, crearPedido } from "@/hooks/useStorefront";
 import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { opcionesVisibles } from "@/lib/opciones";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
@@ -773,33 +773,11 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
     } catch { return { error: "Error de conexión" }; }
   }, []);
 
-  const placeOrder = useCallback(async (params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> => {
-    if (!storeIdRef.current) return { ok: false, error: "Tienda no disponible" };
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId: storeIdRef.current,
-          affiliateId: affiliateId ?? undefined,
-          couponId: params.couponId ?? null,
-          items: params.cartItems,
-          customer: params.customer,
-          shippingMethod: params.shippingMethod,
-          paymentProvider: params.paymentProvider,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-      /* El `orderId` NO es opcional, aunque el tipo lo deje pasar: con él, el
-         carrito arma la preferencia de MercadoPago y manda a pagar; sin él, se
-         saltea ese paso, vacía el carrito y muestra "listo" — con el pedido
-         creado y sin cobrar un peso.
-         Acá se devolvía sólo `{ ok: true }`. No se notaba porque esta pantalla
-         no ofrecía MercadoPago; al habilitarlo para que la comisión del afiliado
-         se pueda retener, se habría vuelto la falla principal. */
-      return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
-    } catch { return { ok: false, error: "Error de conexión" }; }
-  }, [affiliateId]);
+  // La misma función que la tienda y la ficha (ver `crearPedido`).
+  const placeOrder = useCallback(
+    (params: PlaceOrderParams) => crearPedido(storeIdRef.current, affiliateId, params),
+    [affiliateId]
+  );
 
   /* `affiliateId` y `hasMercadoPago` van juntos o no van.
      Con afiliado, el cobro EXIGE MercadoPago —es de donde se retiene la

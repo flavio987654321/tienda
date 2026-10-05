@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { registrarVista } from "@/lib/registrarVista";
-import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type PlaceOrderParams, type SeleccionOpciones } from "@/hooks/useStorefront";
+import { getDemoPool, isDemoProductId, parsePromotions, crearPedido, type StorefrontProduct, type PlaceOrderParams, type SeleccionOpciones } from "@/hooks/useStorefront";
 import { valoresElegidos } from "@/lib/opciones";
 import { buscarVariante } from "@/lib/variantMatch";
 import { opcionesVisibles, opcionesAElegir } from "@/lib/opciones";
@@ -240,25 +240,11 @@ export default function ProductDetailClient({
     } catch { return { error: "Error de conexión" }; }
   }, [storeId]);
 
-  const placeOrder = useCallback(async (params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> => {
-    if (!storeId) return { ok: false, error: "Tienda no disponible" };
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId, affiliateId: affiliateId ?? undefined,
-          couponId: params.couponId ?? null, items: params.cartItems,
-          customer: params.customer, shippingMethod: params.shippingMethod, paymentProvider: params.paymentProvider,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-      // Sin `orderId` el carrito nunca manda a pagar por MercadoPago: crea el
-      // pedido, vacía el carrito y dice que salió bien. Ver la nota larga en la
-      // pantalla de productos.
-      return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
-    } catch { return { ok: false, error: "Error de conexión" }; }
-  }, [storeId, affiliateId]);
+  // La misma función que la tienda y el catálogo (ver `crearPedido`).
+  const placeOrder = useCallback(
+    (params: PlaceOrderParams) => crearPedido(storeId, affiliateId, params),
+    [storeId, affiliateId]
+  );
 
   // `slug`, `isOwner` e `isPreview` no se pasaban, y sin ellos el hook no puede
   // registrar nada: el embudo se perdía justo los pasos de esta pantalla, que es

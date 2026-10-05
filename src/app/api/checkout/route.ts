@@ -54,35 +54,29 @@ function findShippingMethod(shippingMethodId: string, methods: ShippingMethod[])
 }
 
 async function resolveShipping(
-  found: ShippingMethod | undefined,
-  methods: ShippingMethod[],
+  found: ShippingMethod,
   storeId: string,
   destinationPostalCode: string,
   destinationProvince: string,
   items: { productId: string; quantity: number }[]
 ): Promise<{ label: string; cost: number }> {
-  if (found) {
-    if (found.liveQuote) {
-      // La cotización en vivo necesita destino real del comprador — si falta,
-      // no es un fallo del servicio de Envíopack, es un dato obligatorio que
-      // no se completó (el caller valida esto antes y rechaza el pedido).
-      // Acá solo nos queda el caso de que cotizarEnvio falle (Envíopack caído,
-      // tienda sin dirección de origen, etc.): ahí sí cae a "a coordinar" en
-      // vez de bloquear la venta.
-      try {
-        const quote = await cotizarEnvio({ storeId, destinationPostalCode, destinationProvince, items });
-        if (quote.available) {
-          const price = found.id === LIVE_QUOTE_DOMICILIO_ID ? quote.domicilio : null;
-          if (price != null) return { label: found.label, cost: price };
-        }
-      } catch { /* fallback a coordinar abajo */ }
-      return { label: `${found.label} (a coordinar)`, cost: 0 };
-    }
-    return { label: found.label, cost: found.coordinar ? 0 : found.price };
+  if (found.liveQuote) {
+    // La cotización en vivo necesita destino real del comprador — si falta,
+    // no es un fallo del servicio de Envíopack, es un dato obligatorio que
+    // no se completó (el caller valida esto antes y rechaza el pedido).
+    // Acá solo nos queda el caso de que cotizarEnvio falle (Envíopack caído,
+    // tienda sin dirección de origen, etc.): ahí sí cae a "a coordinar" en
+    // vez de bloquear la venta.
+    try {
+      const quote = await cotizarEnvio({ storeId, destinationPostalCode, destinationProvince, items });
+      if (quote.available) {
+        const price = found.id === LIVE_QUOTE_DOMICILIO_ID ? quote.domicilio : null;
+        if (price != null) return { label: found.label, cost: price };
+      }
+    } catch { /* fallback a coordinar abajo */ }
+    return { label: `${found.label} (a coordinar)`, cost: 0 };
   }
-  // fallback to pickup
-  const pickup = methods.find(m => m.isPickup) ?? DEFAULT_SHIPPING_METHODS[0];
-  return { label: pickup.label, cost: 0 };
+  return { label: found.label, cost: found.coordinar ? 0 : found.price };
 }
 
 // Los ids de este proyecto son cuid de Prisma (`c` + ~24 alfanuméricos), no UUID.
@@ -233,7 +227,17 @@ export async function POST(req: NextRequest) {
   } catch { /* noop */ }
 
   const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
-  if (foundShippingMethod?.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
+  /* Un método que no existe o que la tienda apagó se RECHAZA (05/10/26). Antes
+     caía a "retiro en local" a $0 sin mirar si el retiro estaba habilitado: en
+     una tienda que sólo hace envíos, el pedido salía sin cobrar el envío y
+     marcado como retiro. Y cualquier id inventado daba envío gratis. */
+  if (!foundShippingMethod) {
+    return NextResponse.json(
+      { error: "Elegí cómo querés recibir tu pedido: esa opción de envío ya no está disponible." },
+      { status: 400 }
+    );
+  }
+  if (foundShippingMethod.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
     return NextResponse.json(
       { error: "Ingresá tu código postal y provincia para cotizar el envío" },
       { status: 400 }
@@ -242,7 +246,6 @@ export async function POST(req: NextRequest) {
 
   const shipping = await resolveShipping(
     foundShippingMethod,
-    storeShippingMethods,
     storeId,
     customer?.postalCode ?? "",
     customer?.province ?? "",

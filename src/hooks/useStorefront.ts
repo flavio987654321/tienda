@@ -124,6 +124,42 @@ export type PlaceOrderParams = {
   donationAmount?: number | null;
 };
 
+export type ResultadoPedido = { ok: boolean; orderId?: string; donationId?: string; error?: string };
+
+/* ── Crear el pedido: UNA sola función (05/10/26) ───────────────────────────
+   Había tres copias —la tienda, la ficha suelta y el catálogo— y se habían
+   separado: las dos de afuera no mandaban la donación ni el cupón de premio,
+   que se perdían en silencio comprando desde esas pantallas, y una sola atajaba
+   el corte de conexión. Ahora las tres llaman a ésta. */
+export async function crearPedido(storeId: string | null | undefined, affiliateId: string | null | undefined, params: PlaceOrderParams): Promise<ResultadoPedido> {
+  if (!storeId) return { ok: false, error: "Tienda no disponible" };
+  // Sin el `catch`, un corte de conexión tiraba acá y el botón del checkout
+  // quedaba en "procesando" para siempre, sin ningún mensaje.
+  const res = await fetch("/api/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      storeId,
+      affiliateId: affiliateId ?? undefined,
+      couponId:        params.couponId ?? null,
+      rewardCouponCode: params.rewardCouponCode ?? null,
+      items: params.cartItems,
+      customer: params.customer,
+      shippingMethod:  params.shippingMethod,
+      paymentProvider: params.paymentProvider,
+      donationAmount:  params.donationAmount ?? undefined,
+    }),
+  }).catch(() => null);
+  if (!res) return { ok: false, error: "No hay conexión. Revisá tu internet e intentá de nuevo." };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
+  /* El `orderId` NO es opcional, aunque el tipo lo deje pasar: con él, el
+     carrito arma la preferencia de MercadoPago y manda a pagar; sin él, se
+     saltea ese paso, vacía el carrito y muestra "listo" — con el pedido creado
+     y sin cobrar un peso. */
+  return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
+}
+
 
 /* ── Productos de muestra para el preview del dashboard ─────── */
 const DEMO_PRODUCTS: StorefrontProduct[] = [
@@ -448,29 +484,8 @@ export function useStorefront() {
     return res.json();
   }
 
-  async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> {
-    if (!storeId) return { ok: false, error: "Tienda no disponible" };
-    // Sin el `catch`, un corte de conexión tiraba acá y el botón del checkout
-    // quedaba en "procesando" para siempre, sin ningún mensaje.
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        storeId,
-        affiliateId: affiliateId ?? undefined,
-        couponId:        params.couponId ?? null,
-        rewardCouponCode: params.rewardCouponCode ?? null,
-        items: params.cartItems,
-        customer: params.customer,
-        shippingMethod:  params.shippingMethod,
-        paymentProvider: params.paymentProvider,
-        donationAmount:  params.donationAmount ?? undefined,
-      }),
-    }).catch(() => null);
-    if (!res) return { ok: false, error: "No hay conexión. Revisá tu internet e intentá de nuevo." };
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-    return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
+  function placeOrder(params: PlaceOrderParams): Promise<ResultadoPedido> {
+    return crearPedido(storeId, affiliateId, params);
   }
 
   const storeTypeConfig    = getStoreType(config?.tipoTienda || "GENERAL");
