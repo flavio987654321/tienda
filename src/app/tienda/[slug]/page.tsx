@@ -1,3 +1,4 @@
+import { infoVerificadaPublica } from "@/lib/infoVerificada";
 import { configPublica } from "@/lib/configPublica";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -305,12 +306,8 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     // que lleva a "esta tienda todavía no publicó sus políticas".
     legales: documentosPublicados(store),
     isVerified: store.isVerified,
-    verifiedInfo: {
-      showName: store.verifiedShowName, name: store.owner?.name ?? null,
-      showCity: store.verifiedShowCity, city: store.owner?.city ?? null,
-      showPhone: store.verifiedShowPhone, phone: store.owner?.phone ?? null,
-      showSince: store.verifiedShowSince, memberSince,
-    },
+    // Sólo lo que la dueña eligió mostrar: esto termina en el HTML.
+    verifiedInfo: infoVerificadaPublica(store, memberSince),
     // Solo mostrar el flyer si el dueño tiene Premium
     flyerConfig: ownerIsPremium ? parsed.flyerConfig : undefined,
   };

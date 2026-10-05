@@ -32,9 +32,12 @@ stock se descuenta de forma atómica.
   usan la API pública y la página. El mail del pedido sigue leyendo la base.
   Verificado en vivo (girly-store, amaranta, tiendaapps) y con
   `configPublica.check.ts`.
-- [ ] **1.3 Teléfono, nombre y ciudad de la dueña en el HTML aunque estén ocultos.**
+- [x] ~~**1.3 Teléfono, nombre y ciudad de la dueña en el HTML aunque estén ocultos.**
   `verifiedInfo` se arma siempre con los datos; las banderas sólo deciden si se
-  dibuja. `tienda/[slug]/page.tsx`, `tienda/[slug]/producto/[id]/page.tsx`.
+  dibuja. `tienda/[slug]/page.tsx`, `tienda/[slug]/producto/[id]/page.tsx`.~~
+  → **Hecho (05/10).** `lib/infoVerificada`: el dato sale sólo si la tienda está
+  verificada y la dueña lo eligió. Verificado en vivo: el teléfono de la dueña de
+  girly-store aparecía 1 vez en el HTML antes, 0 después (portada y ficha).
 - [ ] **1.4 Comisión de consulta con precio que manda el navegador.** `api/leads`
   (POST `productPrice`) y `api/leads/[id]` lo usan para acreditar al afiliado. Sin
   chequeo de que el producto sea de la tienda, sin topes, sin captcha.

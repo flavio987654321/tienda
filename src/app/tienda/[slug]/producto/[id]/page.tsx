@@ -1,3 +1,4 @@
+import { infoVerificadaPublica } from "@/lib/infoVerificada";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { mapProduct, type RawProduct } from "@/lib/productoStorefront";
@@ -268,12 +269,8 @@ async function findStoreConfig(slug: string) {
     isOwnerInicial: isOwner,
     showPushBell: ownerIsPremium && !isOwner,
     isVerified: store?.isVerified ?? false,
-    verifiedInfo: {
-      showName: store?.verifiedShowName ?? false, name: store?.owner?.name ?? null,
-      showCity: store?.verifiedShowCity ?? false, city: store?.owner?.city ?? null,
-      showPhone: store?.verifiedShowPhone ?? false, phone: store?.owner?.phone ?? null,
-      showSince: store?.verifiedShowSince ?? false, memberSince,
-    },
+    // Sólo lo que la dueña eligió mostrar: esto termina en el HTML.
+    verifiedInfo: infoVerificadaPublica(store, memberSince),
   };
 
   try {
