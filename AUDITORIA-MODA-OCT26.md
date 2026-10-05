@@ -38,9 +38,16 @@ stock se descuenta de forma atómica.
   → **Hecho (05/10).** `lib/infoVerificada`: el dato sale sólo si la tienda está
   verificada y la dueña lo eligió. Verificado en vivo: el teléfono de la dueña de
   girly-store aparecía 1 vez en el HTML antes, 0 después (portada y ficha).
-- [ ] **1.4 Comisión de consulta con precio que manda el navegador.** `api/leads`
+- [x] ~~**1.4 Comisión de consulta con precio que manda el navegador.** `api/leads`
   (POST `productPrice`) y `api/leads/[id]` lo usan para acreditar al afiliado. Sin
-  chequeo de que el producto sea de la tienda, sin topes, sin captcha.
+  chequeo de que el producto sea de la tienda, sin topes, sin captcha.~~
+  → **Hecho (05/10).** Nombre y precio salen del producto real de esa tienda (si
+  no es de la tienda, 404); textos con tope y sin caracteres de control. Captcha
+  no: el único que llama es el botón de WhatsApp de autos, ya tiene tope por IP,
+  y sin precio inventable una consulta falsa no da plata. Probado en base local.
+  De paso: confirmar una consulta no tenía candado — dos clics acreditaban la
+  comisión DOS veces; y un rechazo podía pisar una confirmación. Ahora las dos
+  ramas son `updateMany` condicionado a PENDING.
 - [ ] **1.5 Envío gratis sin querer / con un id inventado.** El carrito arranca en
   `"retiro"` aunque esté apagado; la pantalla suma el primer envío pero manda
   `"retiro"`, y el servidor cae a un retiro sin mirar `enabled`.

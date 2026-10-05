@@ -29,10 +29,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
-    const { storeId, affiliateId, productId, productName, productPrice, customerName, customerPhone, customerMessage } = body;
+    const body = await req.json().catch(() => null);
+    const { storeId, affiliateId, productId, customerName, customerPhone, customerMessage } = body ?? {};
 
-    if (!storeId || !productName || productPrice == null) {
+    if (typeof storeId !== "string" || typeof productId !== "string" || !storeId || !productId) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
@@ -42,13 +42,31 @@ export async function POST(req: NextRequest) {
     });
     if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
+    /* ── El precio sale de la BASE, no del navegador (05/10/26) ──────────────
+       La comisión del afiliado se calcula con `productPrice` al confirmar la
+       consulta. Antes ese número lo mandaba quien hacía el POST: un afiliado
+       (su id es público, va en los links `?ref=`) podía crear una consulta con
+       el precio inflado y, si la dueña la confirmaba, cobrar la comisión sobre
+       un auto que no valía eso. Tampoco se miraba que el producto fuera de esta
+       tienda. Ahora el nombre y el precio son los del producto real, y si no es
+       de la tienda no hay consulta. */
+    const product = await prisma.product.findFirst({
+      where: { id: productId, storeId: store.id, deletedAt: null },
+      select: { id: true, name: true, price: true },
+    });
+    if (!product) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+
+    // Textos libres: sólo texto, sin caracteres de control y con tope de largo.
+    const texto = (v: unknown, max: number) =>
+      typeof v === "string" && v.trim() ? v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim().slice(0, max) : null;
+
     /* El corte que importa de verdad, porque acá es donde nacería la comisión:
        si el rubro no tiene afiliados habilitados, la consulta se guarda igual
        —el dueño la necesita— pero sin dueño de la comisión y sin porcentaje.
        La consulta sigue funcionando; lo único que no pasa es que se prometa
        plata que todavía no sabemos cómo pagar. */
     let resolvedAffiliateId: string | null = null;
-    if (affiliateId && soportaAfiliados(store.tipoTienda)) {
+    if (typeof affiliateId === "string" && affiliateId && soportaAfiliados(store.tipoTienda)) {
       const aff = await prisma.affiliate.findFirst({
         where: { id: affiliateId, storeId, isActive: true },
         select: { id: true },
@@ -60,12 +78,12 @@ export async function POST(req: NextRequest) {
       data: {
         storeId,
         affiliateId: resolvedAffiliateId,
-        productId: productId || null,
-        productName,
-        productPrice: Number(productPrice),
-        customerName: customerName || null,
-        customerPhone: customerPhone || null,
-        customerMessage: customerMessage || null,
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+        customerName: texto(customerName, 80),
+        customerPhone: texto(customerPhone, 30),
+        customerMessage: texto(customerMessage, 1000),
         status: "PENDING",
         commissionRate: resolvedAffiliateId ? store.commissionRate : null,
       },
