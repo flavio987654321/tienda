@@ -241,7 +241,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   // Ranking de ventas — solo se calcula cuando se pide explícitamente (ej: panel de afiliados)
   // para no sumar una consulta extra en cada visita normal de un comprador a la tienda.
-  if (!withSales) return NextResponse.json({ store: { ...safeStore, products: visibleProducts }, isOwner, hasMercadoPago, legales });
+  /* Sólo para quien tiene por qué saberlo (05/10/26): la dueña o un afiliado
+     aprobado de ESTA tienda. Antes `?withSales=1` era público y cualquiera —un
+     competidor— veía las unidades vendidas de cada producto en 90 días. A los
+     demás se les contesta lo de siempre, sin el ranking. */
+  const puedeVerVentas = withSales && !!currentUser && (isOwner || !!(await prisma.affiliate.findFirst({
+    where: { userId: currentUser.id, storeId: store.id, status: "APPROVED", isActive: true },
+    select: { id: true },
+  })));
+  if (!puedeVerVentas) return NextResponse.json({ store: { ...safeStore, products: visibleProducts }, isOwner, hasMercadoPago, legales });
 
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const visibleProductIds = visibleProducts.map((p) => p.id);

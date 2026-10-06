@@ -135,7 +135,7 @@ stock se descuenta de forma atómica.
   mandan. Tipear un mail ya no da sello ni delata nada. Como el campo de email de
   las reseñas quedó sin uso, se sacó de todos los formularios (regla: ningún input
   por estar). Probado: 5 casos en base local + 3 tiendas en el navegador.
-- [ ] **3.2 `?withSales=1` público** muestra unidades vendidas por producto.
+- [x] ~~**3.2 `?withSales=1` público** muestra unidades vendidas por producto.~~ → Hecho (05/10): sólo la dueña o un afiliado aprobado de esa tienda; a los demás, la respuesta normal (verificado sin sesión).
 - [ ] **3.3 Seguimiento devuelve dirección completa** con sólo el código.
 - [ ] **3.4 `instagramUrl`/`facebookUrl`/`tiktokUrl` sin validar** (hoy no se
   usan en un `href`).
