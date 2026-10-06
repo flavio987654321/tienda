@@ -69,13 +69,16 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);
+  const registrando = useRef(false);
   const soloMirando = !storeId || isOwner || isPreview;
 
   /* El toque de WhatsApp anota la consulta (sin datos: el chat sigue afuera).
      Una sola vez por vehículo cada 30 minutos: tocarlo dos veces no son dos
      interesados. */
   function registrarToqueWhatsApp() {
-    if (soloMirando || consultaPrevia(product.id)) return;
+    /* Dos toques seguidos (antes de que vuelva la respuesta) no son dos consultas. */
+    if (soloMirando || registrando.current || consultaPrevia(product.id)) return;
+    registrando.current = true;
     fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,7 +86,8 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { leadId?: string } | null) => { if (d?.leadId) recordarConsulta(product.id, d.leadId); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { registrando.current = false; });
   }
 
   async function enviar(e: React.FormEvent) {
@@ -124,7 +128,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
 
   const campo: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", border: "1px solid #dcdcdc", borderRadius: 6,
-    padding: "11px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", outline: "none",
+    padding: "11px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff",
   };
 
   return (
@@ -141,7 +145,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
       )}
 
       {estado === "listo" ? (
-        <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
+        <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5, overflowWrap: "anywhere" }}>
           <strong>¡Listo, {nombre.trim().split(/\s+/)[0]}!</strong> Recibimos tu consulta y te vamos a contactar al {telefono.trim()}.
         </div>
       ) : !abierto ? (

@@ -4,7 +4,7 @@
    la vista y, desplegando, la nota, el "volver a llamar" y la visita o prueba
    de manejo. Todo opcional. Ver `lib/seguimiento`. */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, Bell, CalendarDays, StickyNote, MessageCircle, X, Loader2 } from "lucide-react";
 import {
   ETAPAS, ATAJOS, TIPOS_VISITA, fechaDeAtajo, desdeCamposAR, aCamposAR, cuandoAR, mensajeDeVisita,
@@ -43,7 +43,12 @@ export default function SeguimientoFila({ leadId, seguimiento, nombre, telefono,
   const [visHora, setVisHora] = useState("17:00");
   const [visTipo, setVisTipo] = useState<TipoVisita>("VISITA");
 
+  // Un doble click no manda dos veces (el botón se apaga recién al pintar).
+  const enCurso = useRef(false);
+
   async function guardar(que: string, cuerpo: Record<string, unknown>) {
+    if (enCurso.current) return false;
+    enCurso.current = true;
     setGuardando(que);
     setError("");
     try {
@@ -58,6 +63,7 @@ export default function SeguimientoFila({ leadId, seguimiento, nombre, telefono,
       setError("Sin conexión. Revisá internet y probá de nuevo.");
       return false;
     } finally {
+      enCurso.current = false;
       setGuardando(null);
     }
   }

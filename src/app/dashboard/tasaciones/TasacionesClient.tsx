@@ -5,7 +5,7 @@
    respuesta es un NÚMERO: se carga cuánto se lo toman y se manda por WhatsApp
    con el mensaje armado. Ver `lib/tasaciones`. */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Check, X, Phone, MessageCircle, Loader2, RotateCcw, Repeat } from "lucide-react";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
 import { ESTADO_TASACION, esEstadoTasacion, resumenDelUsado, mensajeDeOferta, enteroDe, type EstadoTasacion } from "@/lib/tasaciones";
@@ -51,21 +51,29 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
   const [montos, setMontos] = useState<Record<string, string>>({});
   const [notas, setNotas] = useState<Record<string, string>>({});
   const [editando, setEditando] = useState<string | null>(null);
+  /* Cambiar de filtro rápido: la respuesta vieja puede llegar DESPUÉS de la
+     nueva y pisarla. Sólo se usa la del último pedido. */
+  const ultimoPedido = useRef(0);
+  // Un doble click no manda dos veces (el botón se apaga recién al pintar).
+  const accionEnCurso = useRef(false);
 
   async function traer(f: Filtro, p: number, sumar: boolean) {
+    const pedido = ++ultimoPedido.current;
     setCargando(true);
     try {
       const q = new URLSearchParams({ page: String(p), ...(f !== "ALL" ? { status: f } : {}) });
       const res = await fetch(`/api/tasaciones?${q}`);
       if (!res.ok) throw new Error();
       const d = await res.json() as { tasaciones: TasacionDelPanel[]; pages: number };
+      if (pedido !== ultimoPedido.current) return;
       setLista((prev) => (sumar ? [...prev, ...d.tasaciones] : d.tasaciones));
       setPagina(p);
       setPaginas(d.pages);
     } catch {
+      if (pedido !== ultimoPedido.current) return;
       setErrores((e) => ({ ...e, _lista: "No se pudieron cargar las tasaciones. Revisá la conexión y probá de nuevo." }));
     } finally {
-      setCargando(false);
+      if (pedido === ultimoPedido.current) setCargando(false);
     }
   }
 
@@ -84,7 +92,8 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
   }
 
   async function accion(t: TasacionDelPanel, cuerpo: Record<string, unknown>) {
-    if (ocupada) return;
+    if (accionEnCurso.current) return;
+    accionEnCurso.current = true;
     setOcupada(t.id);
     setErrores(({ [t.id]: _, ...resto }) => resto);
     try {
@@ -105,6 +114,7 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
     } catch {
       setErrores((e) => ({ ...e, [t.id]: "Sin conexión. Revisá internet y probá de nuevo." }));
     } finally {
+      accionEnCurso.current = false;
       setOcupada(null);
     }
   }
@@ -167,7 +177,7 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-gray-200 panel-oscuro:border-gray-700 text-gray-600 panel-oscuro:text-gray-400">
                       {t.modalidad === "VENTA" ? "Quiere venderlo" : "Parte de pago"}
                     </span>
-                    <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">{hace(t.createdAt)}</span>
+                    <span suppressHydrationWarning className="text-xs text-gray-400 panel-oscuro:text-gray-500">{hace(t.createdAt)}</span>
                   </div>
                   <p className="mt-1 font-semibold truncate text-gray-900 panel-oscuro:text-gray-100 text-base">{t.nombre}</p>
                   <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">{t.telefono}</p>
@@ -188,9 +198,9 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
 
               {/* 2. El auto que ofrece */}
               <div className="mt-3 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 px-3 py-2.5">
-                <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">{auto}</p>
+                <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100 [overflow-wrap:anywhere]">{auto}</p>
                 {datos.length > 0 && <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{datos.join(" · ")}</p>}
-                {t.comentario && <p className="mt-1.5 text-sm text-gray-700 panel-oscuro:text-gray-300">“{t.comentario}”</p>}
+                {t.comentario && <p className="mt-1.5 text-sm text-gray-700 panel-oscuro:text-gray-300 [overflow-wrap:anywhere] whitespace-pre-line">“{t.comentario}”</p>}
                 {t.productoNombre && (
                   <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
                     Le interesa: {t.productoId ? (
@@ -204,7 +214,7 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
               {/* 3. La respuesta: cuánto se lo toman */}
               {t.ofertaMonto != null && editando !== t.id && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <p className="text-sm text-gray-700 panel-oscuro:text-gray-300">
+                  <p className="min-w-0 text-sm text-gray-700 panel-oscuro:text-gray-300 [overflow-wrap:anywhere] whitespace-pre-line">
                     Oferta: <strong className="text-gray-900 panel-oscuro:text-gray-100">{precio(t.ofertaMonto, moneda)}</strong>
                     {t.ofertaNota && <span className="text-gray-500 panel-oscuro:text-gray-400"> · {t.ofertaNota}</span>}
                   </p>
@@ -234,9 +244,9 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
                   </label>
                   <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 flex-1 min-w-[10rem]">
                     Nota para vos <span className="font-normal text-gray-400">(opcional)</span>
-                    <input value={notas[t.id] ?? ""} maxLength={300} placeholder="Ej: sujeto a ver la caja"
+                    <textarea value={notas[t.id] ?? ""} maxLength={300} rows={2} placeholder="Ej: sujeto a ver la caja"
                       onChange={(e) => setNotas((n) => ({ ...n, [t.id]: e.target.value }))}
-                      className="mt-1 w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 panel-oscuro:text-gray-100 bg-white panel-oscuro:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      className="mt-1 block w-full resize-y border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 panel-oscuro:text-gray-100 bg-white panel-oscuro:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   </label>
                   <button type="submit" disabled={!!ocupada || !enteroDe(montos[t.id] ?? "")}
                     className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50">

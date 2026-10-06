@@ -18,7 +18,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   /** Lo que estaba escrito en el buscador, para no hacérselo tipear de nuevo. */
   marcaInicial?: string;
 }) {
-  const [f, setF] = useState({ categoria: "", marca: marcaInicial, modelo: "", anioDesde: "", precioHasta: "", nombre: "", telefono: "" });
+  const [f, setF] = useState({ categoria: "", marca: marcaInicial.slice(0, 40), modelo: "", anioDesde: "", precioHasta: "", nombre: "", telefono: "" });
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);
@@ -53,7 +53,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
 
   const campo: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", border: "1px solid #dcdcdc", borderRadius: 6,
-    padding: "10px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", outline: "none", marginTop: 4,
+    padding: "10px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", marginTop: 4,
   };
   const etiqueta: React.CSSProperties = { fontSize: 12, color: "#555", minWidth: 0 };
   const opcional = <span style={{ color: "#999" }}>(opcional)</span>;
@@ -61,7 +61,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
 
   if (estado === "listo") {
     return (
-      <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
+      <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5, overflowWrap: "anywhere" }}>
         <strong>¡Listo, {f.nombre.trim().split(/\s+/)[0]}!</strong> Cuando entre algo así te avisamos al {f.telefono.trim()}. La búsqueda queda guardada 90 días.
       </div>
     );

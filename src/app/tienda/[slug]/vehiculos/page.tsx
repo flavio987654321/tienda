@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -209,6 +209,23 @@ function VehiculosPageInner() {
   // "Tasá tu usado" (ver lib/tasaciones) y "Avisame si entra" (ver lib/busquedas),
   // en la misma ventana (06/10/26).
   const [dialogo,        setDialogo]     = useState<null | "tasar" | "avisame">(null);
+  // Igual que el modal del vehículo: el fondo no se mueve detrás, Escape cierra
+  // (escribiendo, primero suelta el campo) y el fondo cierra sólo si el toque
+  // EMPEZÓ ahí (seleccionar texto y soltar afuera no pierde lo escrito).
+  const tocoElFondo = useRef(false);
+  useEffect(() => {
+    if (!dialogo) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) t.blur();
+      else setDialogo(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
+  }, [dialogo]);
 
   useEffect(() => {
     if (!slug) return;
@@ -576,7 +593,8 @@ function VehiculosPageInner() {
             {/* El mejor momento para "Avisame si entra": buscó y no estaba. */}
             <button type="button" onClick={() => setDialogo("avisame")}
               style={{ marginTop:16, background:accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border:"none",
-                padding:"12px 18px", minHeight:44, fontSize:13, fontWeight:700, cursor:"pointer", borderRadius:6, fontFamily:"inherit" }}>
+                padding:"12px 18px", minHeight:44, fontSize:13, fontWeight:700, cursor:"pointer", borderRadius:6, fontFamily:"inherit",
+                maxWidth:"100%", overflowWrap:"anywhere" }}>
               {search.trim() ? `Avisame si entra un ${search.trim()}` : "Avisame si entra lo que busco"}
             </button>
           </div>
@@ -620,8 +638,8 @@ function VehiculosPageInner() {
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
       {dialogo && (
-        <div role="dialog" aria-modal="true" aria-label={dialogo === "tasar" ? "Tasá tu usado" : "Avisame si entra"} onClick={() => setDialogo(null)}
-          onKeyDown={e => { if (e.key === "Escape") setDialogo(null); }}
+        <div role="dialog" aria-modal="true" aria-label={dialogo === "tasar" ? "Tasá tu usado" : "Avisame si entra"} onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
+          onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) setDialogo(null); tocoElFondo.current = false; }}
           style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:CAPAS.critico, display:"flex",
             alignItems:"flex-start", justifyContent:"center", padding:"20px 16px", overflowY:"auto" }}>
           <div onClick={e => e.stopPropagation()}

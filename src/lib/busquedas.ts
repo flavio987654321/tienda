@@ -43,7 +43,7 @@ function entero(v: unknown): number | null {
   if (typeof v === "number") return Number.isFinite(v) && v > 0 ? Math.trunc(v) : null;
   if (typeof v !== "string") return null;
   const d = v.replace(/,\d{1,2}$/, "").replace(/\D/g, "");
-  return d ? Number(d) : null;
+  return d && Number(d) > 0 ? Number(d) : null;
 }
 
 /** Lo que llega de la tienda, validado. Al menos UN criterio además del contacto. */
@@ -55,8 +55,11 @@ export function validarBusqueda(b: Record<string, unknown> | null | undefined, a
   if (!telefono || telefono.replace(/\D/g, "").length < 8) return { error: "Poné un teléfono con característica, así te pueden avisar." };
 
   const categoria = CATEGORIAS_BUSQUEDA.some((c) => c.id === b.categoria) ? (b.categoria as CategoriaBusqueda) : null;
-  const marca = texto(b.marca, 40);
-  const modelo = texto(b.modelo, 60);
+  /* Una marca "-" o "..." no es un criterio: normalizada queda vacía y
+     coincidía con TODOS los vehículos (un aviso por cada auto del stock). */
+  const conLetras = (s: string | null) => (s && normalizar(s) ? s : null);
+  const marca = conLetras(texto(b.marca, 40));
+  const modelo = conLetras(texto(b.modelo, 60));
   const anioDesde = entero(b.anioDesde);
   const precioHasta = entero(b.precioHasta);
   if (anioDesde != null && (anioDesde < 1950 || anioDesde > anioActual + 1)) return { error: `El año tiene que estar entre 1950 y ${anioActual + 1}.` };
@@ -102,8 +105,8 @@ export function coincide(b: CriteriosBusqueda, v: VehiculoParaBuscar): boolean {
   // Lo que se lee del vehículo: marca, modelo y nombre juntos (muchos sólo
   // completan el nombre, "Gol Trend 1.6 2015").
   const todo = ` ${marcaCanonica(v.marca)} ${normalizar(v.modelo)} ${normalizar(v.nombre)} `;
-  if (b.marca) {
-    const m = marcaCanonica(b.marca);
+  const m = marcaCanonica(b.marca);
+  if (m) {
     if (!todo.includes(` ${m} `) && marcaCanonica(v.marca) !== m) return false;
   }
   if (b.modelo) {

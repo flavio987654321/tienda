@@ -179,14 +179,20 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   if (servicesRaw) { try { servicesData = JSON.parse(servicesRaw); } catch {} }
   const hasServices = Object.keys(servicesData).length > 0;
 
+  /* Se cierra tocando el fondo sólo si el toque EMPEZÓ en el fondo: seleccionar
+     texto en un campo y soltar afuera cerraba la ventana y se perdía lo escrito. */
+  const tocoElFondo = useRef(false);
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      // Escribiendo en el formulario de consulta, las flechas mueven el cursor, no la foto.
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      const escribiendo = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      // Escape escribiendo suelta el campo; recién el segundo cierra (no se pierde lo escrito).
+      if (e.key === "Escape") { if (escribiendo) t!.blur(); else onClose(); return; }
+      // Escribiendo en el formulario de consulta, las flechas mueven el cursor, no la foto.
+      if (escribiendo) return;
       if (e.key === "ArrowLeft") setImgIdx(i => (i - 1 + imgs.length) % imgs.length);
       if (e.key === "ArrowRight") setImgIdx(i => (i + 1) % imgs.length);
     };
@@ -195,7 +201,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   }, [imgs.length, onClose]);
 
   return (
-    <div onClick={onClose}
+    <div onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
+      onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) onClose(); tocoElFondo.current = false; }}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: CAPAS.critico,
         display: "flex", alignItems: "flex-start", justifyContent: "center",
         padding: "20px 16px", backdropFilter: "blur(4px)", overflow: "hidden" }}>

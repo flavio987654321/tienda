@@ -4,7 +4,7 @@
    qué comprar) y cada búsqueda con lo que HOY coincide, con "Avisarle por
    WhatsApp" armado. Ver `lib/busquedas`. */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MessageCircle, Phone, Check, X, RotateCcw, Target } from "lucide-react";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
 import { resumenDeBusqueda, mensajeDeAviso } from "@/lib/busquedas";
@@ -28,7 +28,13 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
   const [errores, setErrores] = useState<Record<string, string>>({});
   const precio = (n: number) => (moneda === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
 
+  // Un doble click no manda dos veces (el botón se apaga recién al pintar).
+  const enCurso = useRef(new Set<string>());
+
   async function patch(id: string, cuerpo: object) {
+    const clave = id + JSON.stringify(cuerpo);
+    if (enCurso.current.has(clave)) return false;
+    enCurso.current.add(clave);
     setOcupada(id);
     setErrores(({ [id]: _, ...r }) => r);
     try {
@@ -39,6 +45,7 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
       setErrores((e) => ({ ...e, [id]: "No se pudo guardar. Probá de nuevo." }));
       return false;
     } finally {
+      enCurso.current.delete(clave);
       setOcupada(null);
     }
   }
@@ -79,8 +86,8 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
           <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mb-3">Búsquedas activas. Sirve para decidir qué comprar.</p>
           <ul className="flex flex-wrap gap-2">
             {demanda.map((d) => (
-              <li key={d.que} className="rounded-xl border border-gray-100 panel-oscuro:border-gray-800 px-3 py-2">
-                <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">{d.que}</p>
+              <li key={d.que} className="min-w-0 max-w-full rounded-xl border border-gray-100 panel-oscuro:border-gray-800 px-3 py-2">
+                <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100 [overflow-wrap:anywhere]">{d.que}</p>
                 <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
                   {d.cuantas} {d.cuantas === 1 ? "persona" : "personas"} ·{" "}
                   {d.enStock > 0 ? <span className="text-green-700 panel-oscuro:text-green-400 font-semibold">tenés {d.enStock}</span> : <span className="text-amber-700 panel-oscuro:text-amber-400 font-semibold">no tenés</span>}
@@ -111,9 +118,9 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       {pendientes > 0 && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300">{pendientes === 1 ? "Entró 1 que coincide" : `Entraron ${pendientes} que coinciden`}</span>}
-                      <span className="text-xs text-gray-400">{hace(b.createdAt)}</span>
+                      <span suppressHydrationWarning className="text-xs text-gray-400">{hace(b.createdAt)}</span>
                     </div>
-                    <p className="mt-1 font-semibold text-gray-900 panel-oscuro:text-gray-100">{b.nombre}</p>
+                    <p className="mt-1 font-semibold text-gray-900 panel-oscuro:text-gray-100 [overflow-wrap:anywhere]">{b.nombre}</p>
                     <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">{b.telefono}</p>
                   </div>
                   <a href={`tel:${b.telefono.replace(/[^\d+]/g, "")}`}
@@ -121,7 +128,7 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
                     <Phone className="h-4 w-4" /> Llamar
                   </a>
                 </div>
-                <p className="mt-2 text-sm text-gray-800 panel-oscuro:text-gray-200 rounded-lg bg-indigo-50/60 panel-oscuro:bg-indigo-500/10 px-3 py-2">
+                <p className="mt-2 text-sm text-gray-800 panel-oscuro:text-gray-200 rounded-lg bg-indigo-50/60 panel-oscuro:bg-indigo-500/10 px-3 py-2 [overflow-wrap:anywhere]">
                   Busca: <strong>{resumenDeBusqueda(b, moneda)}</strong>{b.comentario ? ` — “${b.comentario}”` : ""}
                 </p>
 

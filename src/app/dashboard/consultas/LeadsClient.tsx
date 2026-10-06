@@ -15,7 +15,7 @@
    vehículo (foto, precio, link), el estado, y las acciones. "Se vendió" ofrece
    marcar la unidad como vendida, para que deje de verse en la tienda. */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Check, X, Phone, MessageCircle, ChevronDown, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { money } from "@/lib/utils";
 import { estadoConsulta, quienConsulto } from "@/lib/consultas";
@@ -97,6 +97,11 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
   const [filtro, setFiltro] = useState<Filtro>("ALL");
   const [totales, setTotales] = useState(totalesIniciales);
   const [cargando, setCargando] = useState(false);
+  /* Cambiar de filtro rápido: la respuesta vieja puede llegar DESPUÉS de la
+     nueva y pisarla. Sólo se usa la del último pedido. */
+  const ultimoPedido = useRef(0);
+  // Un doble click no manda dos veces (el botón se apaga recién al pintar).
+  const accionEnCurso = useRef(false);
   const [ocupada, setOcupada] = useState<string | null>(null);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -104,19 +109,22 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
   const [ofrecerVendido, setOfrecerVendido] = useState<Record<string, "pregunta" | "marcando" | "hecho" | "error">>({});
 
   async function traer(f: Filtro, p: number, sumar: boolean) {
+    const pedido = ++ultimoPedido.current;
     setCargando(true);
     try {
       const q = new URLSearchParams({ page: String(p), ...(f !== "ALL" ? { status: f } : {}) });
       const res = await fetch(`/api/leads?${q}`);
       if (!res.ok) throw new Error();
       const d = await res.json() as { leads: ConsultaPanel[]; pages: number };
+      if (pedido !== ultimoPedido.current) return;
       setConsultas((prev) => (sumar ? [...prev, ...d.leads] : d.leads));
       setPagina(p);
       setPaginas(d.pages);
     } catch {
+      if (pedido !== ultimoPedido.current) return;
       setErrores((e) => ({ ...e, _lista: "No se pudieron cargar las consultas. Revisá la conexión y probá de nuevo." }));
     } finally {
-      setCargando(false);
+      if (pedido === ultimoPedido.current) setCargando(false);
     }
   }
 
@@ -127,7 +135,8 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
   }
 
   async function cambiarEstado(c: ConsultaPanel, status: "CONFIRMED" | "REJECTED") {
-    if (ocupada) return;
+    if (accionEnCurso.current) return;
+    accionEnCurso.current = true;
     setOcupada(c.id);
     setErrores(({ [c.id]: _, ...resto }) => resto);
     try {
@@ -152,12 +161,14 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
     } catch {
       setErrores((e) => ({ ...e, [c.id]: "Sin conexión. Revisá internet y probá de nuevo." }));
     } finally {
+      accionEnCurso.current = false;
       setOcupada(null);
     }
   }
 
   async function marcarVendido(c: ConsultaPanel) {
-    if (!c.productId) return;
+    if (!c.productId || accionEnCurso.current) return;
+    accionEnCurso.current = true;
     setOfrecerVendido((o) => ({ ...o, [c.id]: "marcando" }));
     try {
       const res = await fetch(`/api/productos/${c.productId}/vehicle-status`, {
@@ -170,6 +181,8 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
       setConsultas((prev) => prev.map((x) => (x.productId === c.productId && x.vehiculo ? { ...x, vehiculo: { ...x.vehiculo, estado: "SOLD", activo: false } } : x)));
     } catch {
       setOfrecerVendido((o) => ({ ...o, [c.id]: "error" }));
+    } finally {
+      accionEnCurso.current = false;
     }
   }
 
@@ -251,9 +264,9 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${est.cls}`}>{est.label}</span>
-                    <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">{hace(c.createdAt)}</span>
+                    <span suppressHydrationWarning className="text-xs text-gray-400 panel-oscuro:text-gray-500">{hace(c.createdAt)}</span>
                     {demora >= HORAS_DEMORA && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300">
+                      <span suppressHydrationWarning className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300">
                         Sin responder hace {demora < 48 ? `${demora} h` : `${Math.floor(demora / 24)} días`}
                       </span>
                     )}
@@ -284,7 +297,7 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
               </div>
 
               {c.customerMessage && (
-                <p className="mt-2 text-sm text-gray-700 panel-oscuro:text-gray-300 bg-indigo-50/60 panel-oscuro:bg-indigo-500/10 rounded-lg px-3 py-2">“{c.customerMessage}”</p>
+                <p className="mt-2 text-sm text-gray-700 panel-oscuro:text-gray-300 bg-indigo-50/60 panel-oscuro:bg-indigo-500/10 rounded-lg px-3 py-2 [overflow-wrap:anywhere] whitespace-pre-line">“{c.customerMessage}”</p>
               )}
 
               {/* 2. El vehículo */}

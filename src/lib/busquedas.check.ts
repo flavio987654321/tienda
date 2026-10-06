@@ -25,6 +25,8 @@ ok("sin ningún criterio → error", "error" in v({ nombre: "Juan", telefono: "1
 ok("sólo precio máximo alcanza", "datos" in v({ nombre: "Juan", telefono: "11 5555-1234", precioHasta: "15.000.000" }));
 ok("precio '15.000.000' → 15000000", (v({ nombre: "Juan", telefono: "11 5555-1234", precioHasta: "15.000.000" }) as { datos: { precioHasta: number } }).datos.precioHasta === 15_000_000);
 ok("año 1900 → error", "error" in v({ nombre: "Juan", telefono: "11 5555-1234", anioDesde: "1900" }));
+ok("marca '-' sola no es un criterio → error", "error" in v({ nombre: "Juan", telefono: "11 5555-1234", marca: "-", modelo: "..." }));
+ok("precio hasta 0 no es un criterio → error", "error" in v({ nombre: "Juan", telefono: "11 5555-1234", precioHasta: "0" }));
 ok("categoría inventada → null", (v({ nombre: "Juan", telefono: "11 5555-1234", categoria: "aviones", marca: "x" }) as { datos: { categoria: null } }).datos.categoria === null);
 
 const c = (b: object, veh: VehiculoParaBuscar) => coincide({ ...sinFiltros, ...b }, veh);
@@ -41,6 +43,7 @@ ok("año desde, vehículo sin año → no (no se sabe)", !c({ anioDesde: 2015 },
 ok("precio hasta 10M → el de 9M sí", c({ precioHasta: 10_000_000 }, gol));
 ok("precio hasta 8M → el de 9M no", !c({ precioHasta: 8_000_000 }, gol));
 ok("otra marca → no", !c({ marca: "Ford" }, gol));
+ok("marca '-' (sin letras) no deja pasar cualquier cosa", !c({ marca: "-", modelo: "hilux" }, gol));
 ok("'Toyota' no encuentra 'Toyotomi' por un pedazo", !c({ marca: "toyo" }, soloNombre));
 
 ok("resumen", resumenDeBusqueda({ ...sinFiltros, marca: "Volkswagen", modelo: "Gol", anioDesde: 2015, precioHasta: 9_000_000 }) === "Volkswagen Gol · 2015 en adelante · hasta $9.000.000",

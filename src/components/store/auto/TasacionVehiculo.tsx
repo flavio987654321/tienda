@@ -60,7 +60,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 
   const campo: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", border: "1px solid #dcdcdc", borderRadius: 6,
-    padding: "10px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", outline: "none", marginTop: 4,
+    padding: "10px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", marginTop: 4,
   };
   const etiqueta: React.CSSProperties = { fontSize: 12, color: "#555", minWidth: 0 };
   const opcional = <span style={{ color: "#999" }}>(opcional)</span>;
@@ -68,7 +68,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 
   if (estado === "listo") {
     return (
-      <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
+      <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5, overflowWrap: "anywhere" }}>
         <strong>¡Listo, {f.nombre.trim().split(/\s+/)[0]}!</strong> Recibimos los datos de tu {f.marca} {f.modelo}. Te vamos a contactar al {f.telefono.trim()} con una oferta. Tené a mano unas fotos del auto: te las vamos a pedir por WhatsApp.
       </div>
     );
