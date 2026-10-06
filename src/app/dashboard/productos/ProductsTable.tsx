@@ -12,6 +12,7 @@ import VehicleStatusModal, { VehicleStatusBadge, type VehicleStatus, type Vehicl
 import StockAdjustModal from "./StockAdjustModal";
 import { Boxes } from "lucide-react";
 import { calcVehicleCostTotal } from "@/lib/margin";
+import { precioEn } from "@/lib/monedaVehiculo";
 import { SITE_URL } from "@/lib/site";
 
 interface Variant { id: string; name: string; value: string; stock: number; lowStockThreshold?: number | null }
@@ -31,6 +32,8 @@ interface Product {
   soldPrice?: number | null;
   soldBuyerName?: string | null;
   expenses?: { monto: number }[];
+  /** La moneda de este producto (la del vehículo, o la principal). */
+  moneda?: string;
 }
 
 /* Búsqueda, filtros, orden y página viven en la URL y los resuelve el servidor.
@@ -260,7 +263,7 @@ export default function ProductsTable({
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [qrProduct,     setQrProduct]     = useState<{ id: string; name: string; price: number; year?: string; km?: string } | null>(null);
   const [qrLoading,     setQrLoading]     = useState(false);
-  const [vehicleModal,  setVehicleModal]  = useState<{ id: string; name: string; status: VehicleStatus; costTotal: number } | null>(null);
+  const [vehicleModal,  setVehicleModal]  = useState<{ id: string; name: string; status: VehicleStatus; costTotal: number; moneda?: string } | null>(null);
   const [stockModal,    setStockModal]    = useState<Product | null>(null);
   const [showBulkStock, setShowBulkStock] = useState(false);
   const [bulkStockCategory, setBulkStockCategory] = useState("all");
@@ -691,6 +694,7 @@ export default function ProductsTable({
           productName={vehicleModal.name}
           currentStatus={vehicleModal.status}
           costTotal={vehicleModal.costTotal}
+          moneda={vehicleModal.moneda}
           onSave={handleVehicleStatusSaved}
           onClose={() => setVehicleModal(null)}
         />
@@ -1074,13 +1078,13 @@ export default function ProductsTable({
                 <div className="p-3">
                   <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 capitalize truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ""}</p>
                   <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100 mt-0.5 line-clamp-2 leading-tight">{product.name}</p>
-                  <p className="text-sm font-bold text-indigo-600 panel-oscuro:text-indigo-400 mt-1">${product.price.toLocaleString("es-AR")}</p>
+                  <p className="text-sm font-bold text-indigo-600 panel-oscuro:text-indigo-400 mt-1">{precioEn(product.price, product.moneda)}</p>
                   {/* Acciones: todos íconos a igual ancho (flex-1) — así ninguno queda
                       apretado ni "perdido" al final de la fila (incluido Eliminar). */}
                   <div className="mt-3 flex gap-1.5">
                     {!showStock && (
                       <button
-                        onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []) })}
+                        onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []), moneda: product.moneda })}
                         className="flex-1 flex items-center justify-center py-2 rounded-lg text-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15 transition-colors"
                         title="Cambiar estado">
                         <Car className="h-4 w-4" />
@@ -1187,8 +1191,8 @@ export default function ProductsTable({
                       {product.subcategory && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 capitalize">{product.subcategory}</p>}
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100 text-sm">${product.price.toLocaleString("es-AR")}</p>
-                      {product.comparePrice && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 line-through">${product.comparePrice.toLocaleString("es-AR")}</p>}
+                      <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100 text-sm">{precioEn(product.price, product.moneda)}</p>
+                      {product.comparePrice && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 line-through">{precioEn(product.comparePrice, product.moneda)}</p>}
                     </td>
                     {showStock && <td className="px-6 py-4">{stockLabel(stock)}</td>}
                     <td className="px-6 py-4">
@@ -1211,7 +1215,7 @@ export default function ProductsTable({
                       <div className="flex items-center gap-3">
                         {!showStock && (
                           <button
-                            onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []) })}
+                            onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []), moneda: product.moneda })}
                             className="flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300 font-medium"
                             title="Cambiar estado"
                           >

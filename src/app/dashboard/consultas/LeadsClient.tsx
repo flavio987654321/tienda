@@ -22,6 +22,7 @@ import { estadoConsulta, quienConsulto } from "@/lib/consultas";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
 import type { ConsultaPanel, SeguimientoDeConsulta } from "@/lib/consultasPanel";
 import { horasSinResponder, HORAS_DEMORA, etiquetaEtapa } from "@/lib/seguimiento";
+import { precioEn } from "@/lib/monedaVehiculo";
 import SeguimientoFila from "./SeguimientoFila";
 
 const RESPUESTAS = [
@@ -311,7 +312,7 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 panel-oscuro:text-gray-100 truncate">{c.productName}</p>
                   <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-                    {money(c.productPrice)}
+                    {precioEn(c.productPrice, c.moneda)}
                     {vehiculoFuera && <span className="ml-2 font-semibold text-amber-700 panel-oscuro:text-amber-400">· {vehiculoFuera}</span>}
                     {c.affiliate && <span className="ml-2 text-indigo-600 panel-oscuro:text-indigo-400">· vino por {c.affiliate.userName || c.affiliate.userEmail}</span>}
                     {conComisiones && c.status === "CONFIRMED" && c.commissionAmount ? <span className="ml-2 text-green-600">· comisión {money(c.commissionAmount)}</span> : null}

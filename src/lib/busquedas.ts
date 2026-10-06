@@ -98,6 +98,10 @@ export type VehiculoParaBuscar = {
   nombre: string;
   anio: number | null;
   precio: number;
+  /** Publicado en otra moneda que la principal de la tienda (ver lib/monedaVehiculo).
+      El "hasta cuánto" de la búsqueda está en la principal: sin tipo de cambio,
+      contra ese tope no se puede comparar. */
+  enOtraMoneda?: boolean;
 };
 
 export function coincide(b: CriteriosBusqueda, v: VehiculoParaBuscar): boolean {
@@ -117,7 +121,7 @@ export function coincide(b: CriteriosBusqueda, v: VehiculoParaBuscar): boolean {
     if (!palabras.every((p) => todo.includes(` ${p} `))) return false;
   }
   if (b.anioDesde != null && (v.anio == null || v.anio < b.anioDesde)) return false;
-  if (b.precioHasta != null && !(v.precio > 0 && v.precio <= b.precioHasta)) return false;
+  if (b.precioHasta != null && (v.enOtraMoneda || !(v.precio > 0 && v.precio <= b.precioHasta))) return false;
   return true;
 }
 

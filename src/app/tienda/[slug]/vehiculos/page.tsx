@@ -10,6 +10,7 @@ import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
 import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
+import { monedaDe, compararPrecio } from "@/lib/monedaVehiculo";
 import { esAtributoInterno } from "@/lib/fichaVehiculo";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
@@ -300,8 +301,10 @@ function VehiculosPageInner() {
       }
       return true;
     });
-    if (sortBy === "price_asc")  r = [...r].sort((a, b) => a.price - b.price);
-    if (sortBy === "price_desc") r = [...r].sort((a, b) => b.price - a.price);
+    // Cada vehículo en su moneda: sin tipo de cambio, primero pesos y después dólares.
+    const conMoneda = (p: StorefrontProduct) => ({ price: p.price, moneda: monedaDe(p, currency) });
+    if (sortBy === "price_asc")  r = [...r].sort((a, b) => compararPrecio(conMoneda(a), conMoneda(b), true));
+    if (sortBy === "price_desc") r = [...r].sort((a, b) => compararPrecio(conMoneda(a), conMoneda(b), false));
     if (sortBy === "name_az")    r = [...r].sort((a, b) => a.name.localeCompare(b.name));
     if (sortBy === "km_asc")     r = [...r].sort((a, b) => {
       const kA = parseInt(getKm(a).replace(/\D/g,"") || "0");
@@ -314,7 +317,7 @@ function VehiculosPageInner() {
       return yB - yA;
     });
     return r;
-  }, [products, activeCategory, activeMarca, activeCiudad, search, sortBy, getAttr, getCiudad, getKm]);
+  }, [products, activeCategory, activeMarca, activeCiudad, search, sortBy, getAttr, getCiudad, getKm, currency]);
 
   const hasActiveFilter = activeCategory !== "Todos" || activeMarca !== "Todas" || activeCiudad !== "Todas" || !!search;
 

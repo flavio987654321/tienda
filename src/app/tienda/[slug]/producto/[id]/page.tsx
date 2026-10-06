@@ -15,6 +15,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { isSubscriptionActive } from "@/lib/subscription";
 import { PushBellProvider } from "@/contexts/PushBellContext";
 import StorePushBanner from "@/components/store/StorePushBanner";
+import { monedaDe } from "@/lib/monedaVehiculo";
 import {
   construirProductSchema,
   construirBreadcrumbSchema,
@@ -344,6 +345,9 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
   // ── Datos estructurados ────────────────────────────────────────────────────
   // Sólo para productos REALES: los demo del editor no existen para nadie más y
   // marcarlos sería declararle a Google un producto que no se puede comprar.
+  // Un vehículo puede tener su propia moneda (ver lib/monedaVehiculo): Google y el
+  // Pixel tienen que recibir la del auto, no la principal de la tienda.
+  const monedaDelProducto = esAutos && product ? monedaDe(product, currency) : currency;
   let schemas: string[] = [];
   if (product) {
     const resenas = await findResenas(slug, product.id);
@@ -365,7 +369,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
             variants: product.variants,
           },
           tienda,
-          currency,
+          monedaDelProducto,
           resenas
         )
       ),
@@ -386,7 +390,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
         googleAnalyticsId={analytics?.googleAnalyticsId}
         facebookPixelId={analytics?.facebookPixelId}
         clarityProjectId={analytics?.clarityProjectId}
-        viewContent={product ? { contentId: product.id, value: product.price, currency } : undefined}
+        viewContent={product ? { contentId: product.id, value: product.price, currency: monedaDelProducto } : undefined}
       />
       {/* `productoInicial` es lo que arregla el SEO de esta pantalla.
           Antes acá iba sólo `slug` y `productId`: el HTML que salía del servidor

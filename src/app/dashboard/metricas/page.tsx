@@ -42,6 +42,7 @@ import { resumirClientes } from "@/lib/clientes";
 import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fechas";
 import { granoPara, nombreGrano, serieParaGrafico, agrupar, etiquetaMes } from "@/lib/serie-grafico";
 import { AVISO_RETENCION, periodoExcedeRetencion } from "@/lib/retencion";
+import { monedaDe, monedaDeTienda, precioEn } from "@/lib/monedaVehiculo";
 import { RangeSelector } from "./RangeSelector";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
@@ -558,7 +559,7 @@ export default async function MetricasPage({
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, name: true, slug: true, tipoTienda: true },
+    select: { id: true, name: true, slug: true, tipoTienda: true, storeConfig: true },
   });
   if (!store) redirect("/dashboard");
 
@@ -1018,19 +1019,31 @@ export default async function MetricasPage({
   // Un vehículo solo cuenta para la ganancia si tiene al menos un gasto cargado —
   // si nunca se cargó ni la "Compra", sumar soldPrice - 0 mostraría el 100% del
   // precio de venta como ganancia, lo cual sería falso.
-  let soldVehiclesPeriod: { id: string; soldPrice: number | null; expenses: { monto: number }[] }[] = [];
+  let soldVehiclesPeriod: { id: string; soldPrice: number | null; attributes: string; expenses: { monto: number }[] }[] = [];
   if (isAutos) {
     soldVehiclesPeriod = await prisma.product.findMany({
       where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: periodStart, lt: periodEndExclusive } },
-      select: { id: true, soldPrice: true, expenses: { select: { monto: true } } },
+      select: { id: true, soldPrice: true, attributes: true, expenses: { select: { monto: true } } },
     });
   }
   const soldVehiclesWithGastos = soldVehiclesPeriod.filter((v) => v.expenses.length > 0);
-  const vehicleProfits = soldVehiclesWithGastos
-    .map((v) => calcVehicleProfit(v.soldPrice, v.expenses))
-    .filter((p): p is number => p != null);
-  const totalVehicleProfit = vehicleProfits.reduce((s, p) => s + p, 0);
-  const avgVehicleProfit = vehicleProfits.length > 0 ? totalVehicleProfit / vehicleProfits.length : null;
+  /* Cada vehículo en su moneda (ver lib/monedaVehiculo): sin tipo de cambio, la
+     ganancia se suma por moneda y se muestra "USD 5.000 + $2.000.000". */
+  const monedaPrincipal = monedaDeTienda(store.storeConfig);
+  const gananciasPorMoneda = new Map<string, number[]>();
+  for (const v of soldVehiclesWithGastos) {
+    const g = calcVehicleProfit(v.soldPrice, v.expenses);
+    if (g == null) continue;
+    const m = monedaDe(v, monedaPrincipal);
+    gananciasPorMoneda.set(m, [...(gananciasPorMoneda.get(m) ?? []), g]);
+  }
+  const monedasGanancia = [...gananciasPorMoneda.keys()].sort((a, b) => (a === b ? 0 : a === "ARS" ? -1 : 1));
+  const totalVehicleProfit = monedasGanancia.length
+    ? monedasGanancia.map((m) => precioEn(Math.round(gananciasPorMoneda.get(m)!.reduce((s, x) => s + x, 0)), m)).join(" + ")
+    : precioEn(0, monedaPrincipal);
+  const avgVehicleProfit = monedasGanancia.length
+    ? monedasGanancia.map((m) => { const l = gananciasPorMoneda.get(m)!; return precioEn(Math.round(l.reduce((s, x) => s + x, 0) / l.length), m); }).join(" + ")
+    : null;
 
   // ── Queries de StoreView (requieren migración SQL — fallan silenciosamente si la tabla no existe) ──
   let viewsPrevAgg: { _sum: { count: number | null } } = { _sum: { count: null } };
@@ -2593,14 +2606,14 @@ export default async function MetricasPage({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <KPICard
                 label="Ganancia total del período"
-                value={money(totalVehicleProfit)}
+                value={totalVehicleProfit}
                 sub={`${soldVehiclesWithGastos.length} de ${soldVehiclesPeriod.length} vehículo${soldVehiclesPeriod.length !== 1 ? "s" : ""} vendido${soldVehiclesPeriod.length !== 1 ? "s" : ""} con gastos cargados`}
                 icon={Wallet}
                 iconBg="bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-600 panel-oscuro:text-emerald-400"
               />
               <KPICard
                 label="Ganancia promedio por vehículo vendido"
-                value={avgVehicleProfit !== null ? money(avgVehicleProfit) : "—"}
+                value={avgVehicleProfit ?? "—"}
                 icon={TrendingUp}
                 iconBg="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400"
               />

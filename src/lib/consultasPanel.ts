@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { monedaDe, monedaDeTienda, type Moneda } from "@/lib/monedaVehiculo";
 import { diaAR, HORAS_DEMORA } from "@/lib/seguimiento";
 
 /* El listado de consultas del panel: una página, con el vehículo de cada una
@@ -18,6 +19,8 @@ export type ConsultaPanel = {
   productId: string | null;
   productName: string;
   productPrice: number;
+  /** La moneda del precio: la del vehículo, o la principal de la tienda. */
+  moneda: Moneda;
   customerName: string | null;
   customerPhone: string | null;
   customerMessage: string | null;
@@ -65,7 +68,7 @@ const primeraFoto = (raw: string | null) => {
 
 export async function consultasDelPanel(storeId: string, { status, page = 1 }: { status?: string; page?: number }) {
   const where = { storeId, ...(status ? { status } : {}) };
-  const [filas, total] = await Promise.all([
+  const [filas, total, tienda] = await Promise.all([
     prisma.lead.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -74,14 +77,16 @@ export async function consultasDelPanel(storeId: string, { status, page = 1 }: {
       include: { affiliate: { select: { id: true, user: { select: { name: true, email: true } } } } },
     }),
     prisma.lead.count({ where }),
+    prisma.store.findUnique({ where: { id: storeId }, select: { storeConfig: true } }),
   ]);
+  const principal = monedaDeTienda(tienda?.storeConfig);
 
   // El vehículo de cada una: la consulta guarda el id, sin relación en la base.
   const ids = [...new Set(filas.map((l) => l.productId).filter((x): x is string => !!x))];
   const productos = ids.length
     ? await prisma.product.findMany({
         where: { id: { in: ids }, storeId, deletedAt: null },
-        select: { id: true, images: true, vehicleStatus: true, isActive: true },
+        select: { id: true, images: true, vehicleStatus: true, isActive: true, attributes: true },
       })
     : [];
   const porId = new Map(productos.map((p) => [p.id, p]));
@@ -94,6 +99,7 @@ export async function consultasDelPanel(storeId: string, { status, page = 1 }: {
       productId: l.productId,
       productName: l.productName,
       productPrice: l.productPrice,
+      moneda: p ? monedaDe(p, principal) : principal,
       customerName: l.customerName,
       customerPhone: l.customerPhone,
       customerMessage: l.customerMessage,

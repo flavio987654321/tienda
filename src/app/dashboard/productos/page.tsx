@@ -12,6 +12,7 @@ import { STORE_TYPES } from "@/lib/storeTypes";
 import { parseStringArray } from "@/lib/promotions";
 import type { Prisma } from "@prisma/client";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
+import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 // Sin `export`: una página de Next sólo puede exportar cosas de una lista fija
@@ -129,7 +130,7 @@ export default async function ProductosPage({ searchParams }: Props) {
   const SELECT = {
     id: true, name: true, category: true, subcategory: true,
     price: true, comparePrice: true, images: true, isActive: true,
-    vehicleStatus: true, soldAt: true, soldPrice: true, soldBuyerName: true,
+    vehicleStatus: true, soldAt: true, soldPrice: true, soldBuyerName: true, attributes: true,
     expenses: { select: { monto: true } },
     variants: { select: { id: true, name: true, value: true, stock: true, lowStockThreshold: true } },
   } satisfies Prisma.ProductSelect;
@@ -303,7 +304,11 @@ export default async function ProductosPage({ searchParams }: Props) {
         </div>
       ) : (
         <ProductsTable
-          products={products}
+          products={products.map(({ attributes, ...p }) => ({
+            ...p,
+            // Cada vehículo en su moneda (ver lib/monedaVehiculo); los atributos no viajan.
+            moneda: esAutos ? monedaDe({ attributes }, monedaDeTienda(store.storeConfig)) : monedaDeTienda(store.storeConfig),
+          }))}
           storeSlug={store.slug ?? ""}
           storeName={store.name ?? ""}
           storeType={store.tipoTienda ?? ""}

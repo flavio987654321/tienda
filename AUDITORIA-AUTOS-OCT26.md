@@ -423,7 +423,13 @@ y en el servidor local esas pantallas fallan hasta subir.
   cargados en producción: no quedó nada para corregir.)
 - [x] ~~**"Atrás" en el celular sacaba de la tienda con una ventana abierta.**~~ La ventana del
   vehículo y las de `/vehiculos` (tasar, avisame) ahora se cierran con "atrás" (`useCerrarConAtras`).
-- [ ] **El catálogo de Meta, Google Shopping y la imagen de cupones mandan la moneda vieja.**
+- [x] ~~**El catálogo de Meta, Google Shopping y la imagen de cupones mandan la moneda vieja.**~~ Arreglado con la moneda por vehículo: ahora leen `storeConfig` y la moneda de cada auto.
   `/api/store/feed`, `/api/google/shopping/feed` y `/api/cupones/[id]/imagen` usan
   `Store.currency` (siempre "ARS"). Hoy hay UNA tienda en dólares (de ropa): sus precios le llegan
   a Meta y a Google como pesos. Fuera de autos: se dejó anotado, sin tocar la sincronización con Meta.
+- [x] ~~**Pedido del dueño: moneda por vehículo y cifras con puntos.**~~ Cada vehículo elige Pesos o
+  Dólares en el formulario (atributo interno "Moneda", ver `lib/monedaVehiculo`); los campos de precio,
+  precio de lista, gastos y precio de venta muestran los puntos de miles. La moneda se respeta en las
+  tarjetas, la ventana, el WhatsApp, el PDF, `/vehiculos` (orden: pesos primero), la lista de productos,
+  Consultas, Stock (sumas por moneda), Estadísticas, Búsquedas (el tope de precio sólo compara en la
+  moneda principal), Google y el Pixel. Tasaciones y búsquedas siguen en la moneda principal.

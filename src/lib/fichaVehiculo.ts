@@ -21,11 +21,13 @@
  * la tienda y el armado del PDF.
  */
 
+import { CLAVE_MONEDA } from "./monedaVehiculo";
+
 export const CLAVE_FICHA = "Ficha";
 
 /** Los atributos que no son "un dato más" y no se listan tal cual. */
 export function esAtributoInterno(key: string): boolean {
-  return key === "Condición" || key === "Servicios" || key === CLAVE_FICHA;
+  return key === "Condición" || key === "Servicios" || key === CLAVE_FICHA || key === CLAVE_MONEDA;
 }
 
 export type TipoDeFicha = "auto" | "moto";

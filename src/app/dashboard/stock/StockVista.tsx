@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Warehouse, AlertTriangle, Clock, MessageCircle, Eye } from "lucide-react";
 import type { FilaDeStock } from "@/lib/stockPanel";
+import { precioEn } from "@/lib/monedaVehiculo";
 import { resumenDeStock, resumenDeVendidos, textoEstancado, DIAS_ESTANCADO, DIAS_SIN_INTERES } from "@/lib/rentabilidadAutos";
 /* "Stock y ganancia" (06/10/26): cuánto hay invertido, cuánto deja cada auto,
    cuántos días lleva y cuáles están estancados. Ver `lib/rentabilidadAutos`.
@@ -23,9 +24,22 @@ const ESTADO: Record<FilaDeStock["estado"], { label: string; cls: string }> = {
 
 export default function StockVista({ enStock, vendidos, moneda, orden }: { enStock: FilaDeStock[]; vendidos: FilaDeStock[]; moneda: string; orden: Orden }) {
   // El signo va adelante de la moneda: "-$500.000", no "$-500.000".
-  const plata = (n: number) => (n < 0 ? "-" : "") + (moneda === "USD" ? "USD " : "$") + Math.abs(Math.round(n)).toLocaleString("es-AR");
+  const plata = (n: number, m: string) => precioEn(Math.round(n), m);
   const r = resumenDeStock(enStock);
   const v = resumenDeVendidos(vendidos);
+  /* Cada vehículo tiene su moneda (ver lib/monedaVehiculo) y no hay tipo de
+     cambio: la plata se suma por moneda, una línea por cada una. */
+  const monedasDe = (filas: FilaDeStock[]) => {
+    const m = [...new Set(filas.map((f) => f.moneda))].sort((a, b) => (a === b ? 0 : a === "ARS" ? -1 : 1));
+    return m.length ? m : [moneda];
+  };
+  const stockPor = monedasDe(enStock).map((m) => ({ m, r: resumenDeStock(enStock.filter((f) => f.moneda === m)) }));
+  const vendidosPor = monedasDe(vendidos).map((m) => ({ m, v: resumenDeVendidos(vendidos.filter((f) => f.moneda === m)) }));
+  const cifras = (de: { m: string; n: number }[], rojo?: boolean) => (
+    <>{de.map(({ m, n }) => (
+      <p key={m} className={`${numero} ${rojo === undefined ? "" : n < 0 ? "!text-red-600" : "!text-green-700 panel-oscuro:!text-green-400"}`}>{plata(n, m)}</p>
+    ))}</>
+  );
   const estancados = enStock.filter((f) => f.estancado);
   const lista = [...enStock].sort(ORDENES[orden].fn);
 
@@ -38,7 +52,7 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
     <Link href={`/dashboard/productos/nuevo?edit=${f.id}`} className="text-xs font-semibold text-amber-700 panel-oscuro:text-amber-400 hover:underline">Sin costo: cargá los gastos</Link>
   ) : (
     <span className={`text-sm font-bold ${f.ganancia < 0 ? "text-red-600 panel-oscuro:text-red-400" : "text-green-700 panel-oscuro:text-green-400"}`}>
-      {plata(f.ganancia)} <span className="font-semibold opacity-80">({Math.round(f.margenPct ?? 0)}%)</span>
+      {plata(f.ganancia, f.moneda)} <span className="font-semibold opacity-80">({Math.round(f.margenPct ?? 0)}%)</span>
     </span>
   );
 
@@ -54,10 +68,10 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
 
       {/* Totales del stock */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <div className={tarjeta}><p className={titulo}>Invertido en stock</p><p className={numero}>{plata(r.invertido)}</p>
+        <div className={tarjeta}><p className={titulo}>Invertido en stock</p>{cifras(stockPor.map(({ m, r }) => ({ m, n: r.invertido })))}
           <p className="text-xs text-gray-400 mt-1">{r.unidades} {r.unidades === 1 ? "unidad" : "unidades"}{r.sinCosto ? ` · ${r.sinCosto} sin costo` : ""}</p></div>
-        <div className={tarjeta}><p className={titulo}>Valor publicado</p><p className={numero}>{plata(r.valorPublicado)}</p></div>
-        <div className={tarjeta}><p className={titulo}>Ganancia esperada</p><p className={`${numero} ${r.gananciaEsperada < 0 ? "!text-red-600" : "!text-green-700 panel-oscuro:!text-green-400"}`}>{plata(r.gananciaEsperada)}</p>
+        <div className={tarjeta}><p className={titulo}>Valor publicado</p>{cifras(stockPor.map(({ m, r }) => ({ m, n: r.valorPublicado })))}</div>
+        <div className={tarjeta}><p className={titulo}>Ganancia esperada</p>{cifras(stockPor.map(({ m, r }) => ({ m, n: r.gananciaEsperada })), true)}
           <p className="text-xs text-gray-400 mt-1">al precio publicado</p></div>
         <div className={tarjeta}><p className={titulo}>Días promedio</p><p className={numero}>{r.diasPromedio ?? "—"}</p><p className="text-xs text-gray-400 mt-1">en stock</p></div>
       </div>
@@ -117,8 +131,8 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
                       </div>
                       <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs text-gray-500 panel-oscuro:text-gray-400">
                         <span className={`inline-flex items-center gap-1 ${f.estancado ? "font-bold text-red-700 panel-oscuro:text-red-400" : ""}`}><Clock className="h-3.5 w-3.5" /> {f.dias} días</span>
-                        <span>Costo: <strong className="text-gray-800 panel-oscuro:text-gray-200">{f.costo != null ? plata(f.costo) : "—"}</strong></span>
-                        <span>Precio: <strong className="text-gray-800 panel-oscuro:text-gray-200">{plata(f.precio)}</strong></span>
+                        <span>Costo: <strong className="text-gray-800 panel-oscuro:text-gray-200">{f.costo != null ? plata(f.costo, f.moneda) : "—"}</strong></span>
+                        <span>Precio: <strong className="text-gray-800 panel-oscuro:text-gray-200">{plata(f.precio, f.moneda)}</strong></span>
                         <span className="inline-flex flex-wrap items-center gap-x-2"><span className="inline-flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" />{f.consultas} {f.consultas === 1 ? "consulta" : "consultas"}</span><span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{f.visitas} visitas</span></span>
                       </div>
                       <div className="mt-1"><Margen f={f} /></div>
@@ -127,7 +141,7 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
                           pesos en una tienda en dólares, o con un cero de más. */}
                       {f.costo != null && f.precio > 0 && f.costo > f.precio * 3 && (
                         <p className="mt-1.5 text-xs font-medium text-amber-700 panel-oscuro:text-amber-400">
-                          Revisá los gastos: suman más del triple del precio.{moneda === "USD" ? " ¿Cargaste alguno en pesos? Van en dólares." : ""}
+                          Revisá los gastos: suman más del triple del precio.{f.moneda === "USD" ? " ¿Cargaste alguno en pesos? Van en dólares." : ""}
                         </p>
                       )}
                     </div>
@@ -145,7 +159,7 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
           <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Vendidos en los últimos 12 meses ({v.unidades})</h2>
           {v.unidades > 0 && (
             <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
-              Facturado {plata(v.facturado)} · Ganancia {plata(v.ganancia)}{v.conCosto < v.unidades ? ` (de ${v.conCosto} con costo cargado)` : ""} · Tardaron {v.diasPromedio} días en promedio
+              Facturado {vendidosPor.map(({ m, v }) => plata(v.facturado, m)).join(" + ")} · Ganancia {vendidosPor.map(({ m, v }) => plata(v.ganancia, m)).join(" + ")}{v.conCosto < v.unidades ? ` (de ${v.conCosto} con costo cargado)` : ""} · Tardaron {v.diasPromedio} días en promedio
             </p>
           )}
         </div>
@@ -158,7 +172,7 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
                 <div className="min-w-0">
                   <p className="font-semibold text-gray-900 panel-oscuro:text-gray-100 truncate">{f.nombre}</p>
                   <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-                    {f.soldAt ? new Date(f.soldAt).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" }) : ""} · tardó {f.dias} días · vendido en {plata(f.precio)}{f.costo != null ? ` · costo ${plata(f.costo)}` : ""}
+                    {f.soldAt ? new Date(f.soldAt).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" }) : ""} · tardó {f.dias} días · vendido en {plata(f.precio, f.moneda)}{f.costo != null ? ` · costo ${plata(f.costo, f.moneda)}` : ""}
                   </p>
                 </div>
                 <Margen f={f} />

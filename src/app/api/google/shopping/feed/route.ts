@@ -6,6 +6,7 @@ import { getClientIp } from "@/lib/request-ip";
 // Igual que el feed de Meta: lo descarga Google, así que los links van al
 // dominio público y no al localhost del que lo genera.
 import { PUBLIC_APP_URL as APP_URL } from "@/lib/site";
+import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { aTextoPlano } from "@/lib/structured-data";
 
 // Tope por tienda para que el feed no crezca sin control si una tienda tiene
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
     select: {
       name: true,
       slug: true,
-      currency: true,
+      storeConfig: true,
       products: {
         where: { isActive: true, deletedAt: null, soloMayorista: false },
         select: {
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
           comparePrice: true,
           images: true,
           category: true,
+          attributes: true,
           variants: { select: { stock: true } },
         },
         take: MAX_PRODUCTS_PER_STORE,
@@ -78,9 +80,9 @@ export async function GET(req: NextRequest) {
         // oferta. Google espera g:price = lista y g:sale_price = promo.
         const hasSale = p.comparePrice != null && p.comparePrice > p.price;
         const priceTag = hasSale
-          ? `<g:price>${p.comparePrice!.toFixed(2)} ${store.currency}</g:price>
-      <g:sale_price>${p.price.toFixed(2)} ${store.currency}</g:sale_price>`
-          : `<g:price>${p.price.toFixed(2)} ${store.currency}</g:price>`;
+          ? `<g:price>${p.comparePrice!.toFixed(2)} ${monedaDe(p, monedaDeTienda(store.storeConfig))}</g:price>
+      <g:sale_price>${p.price.toFixed(2)} ${monedaDe(p, monedaDeTienda(store.storeConfig))}</g:sale_price>`
+          : `<g:price>${p.price.toFixed(2)} ${monedaDe(p, monedaDeTienda(store.storeConfig))}</g:price>`;
 
         return `    <item>
       <g:id><![CDATA[${p.id}]]></g:id>

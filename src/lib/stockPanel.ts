@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { monedaDe, type Moneda } from "@/lib/monedaVehiculo";
 import { numerosDeUnidad, estancado, DIA_MS, type NumerosDeUnidad, type MotivoEstancado } from "@/lib/rentabilidadAutos";
 
 /* Lo que pide la pantalla "Stock y ganancia" (06/10/26). Ver `lib/rentabilidadAutos`.
@@ -17,6 +18,8 @@ export type FilaDeStock = NumerosDeUnidad & {
   visitas: number;
   estancado: MotivoEstancado;
   soldAt: string | null;
+  /** La moneda de este vehículo: su precio, su costo y su ganancia van en ella. */
+  moneda: Moneda;
 };
 
 const primeraFoto = (raw: string | null) => {
@@ -27,7 +30,7 @@ const primeraFoto = (raw: string | null) => {
   } catch { return null; }
 };
 
-export async function stockDelPanel(storeId: string, ahora = new Date()) {
+export async function stockDelPanel(storeId: string, ahora = new Date(), principal: Moneda = "ARS") {
   const haceUnAnio = new Date(ahora.getTime() - 365 * DIA_MS);
   const hace30 = new Date(ahora.getTime() - 30 * DIA_MS);
   const [productos, consultas, consultas30] = await Promise.all([
@@ -39,7 +42,7 @@ export async function stockDelPanel(storeId: string, ahora = new Date()) {
       },
       select: {
         id: true, name: true, price: true, images: true, createdAt: true, isActive: true, viewCount: true,
-        vehicleStatus: true, soldAt: true, soldPrice: true,
+        vehicleStatus: true, soldAt: true, soldPrice: true, attributes: true,
         expenses: { select: { concepto: true, monto: true, fecha: true } },
       },
       take: 500,
@@ -62,6 +65,7 @@ export async function stockDelPanel(storeId: string, ahora = new Date()) {
       consultas: total.get(p.id) ?? 0, consultas30: c30, visitas: p.viewCount,
       estancado: vendido || p.vehicleStatus === "RESERVED" ? null : estancado(n.dias, c30),
       soldAt: p.soldAt?.toISOString() ?? null,
+      moneda: monedaDe(p, principal),
     };
   });
 

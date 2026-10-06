@@ -7,6 +7,7 @@ import { PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import sanitizeHtml from "sanitize-html";
 import { DESCRIPTION_TEXT_COLORS } from "@/lib/richTextColors";
 import { CLAVE_FICHA, LARGO_MAXIMO_FICHA } from "@/lib/fichaVehiculo";
+import { CLAVE_MONEDA, esMoneda } from "@/lib/monedaVehiculo";
 
 // Solo se acepta exactamente uno de los hex de la paleta cerrada del editor
 // (ver richTextColors.ts) — así un POST directo a la API (sin pasar por el
@@ -275,6 +276,10 @@ export function validateProductBody(
     });
     if (malFormado) {
       return { error: NextResponse.json({ error: "Hay un atributo mal cargado. Revisá las especificaciones y probá de nuevo." }, { status: 400 }) };
+    }
+    // La moneda de un vehículo (ver lib/monedaVehiculo): sólo pesos o dólares.
+    if (attributes.some((a) => (a as { key?: unknown }).key === CLAVE_MONEDA && !esMoneda((a as { value?: unknown }).value))) {
+      return { error: NextResponse.json({ error: "La moneda tiene que ser pesos o dólares." }, { status: 400 }) };
     }
   }
   /* Las fotos: texto o `{ url }`, y la url `https://` o una ruta propia (06/10/26).

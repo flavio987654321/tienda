@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import { stockDelPanel } from "@/lib/stockPanel";
+import { monedaDeTienda } from "@/lib/monedaVehiculo";
 import StockVista, { esOrden } from "./StockVista";
 
 /* "Stock y ganancia" (06/10/26). La carga acá; el dibujo en `StockVista`. */
@@ -17,10 +18,9 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   if (store.tipoTienda !== "AUTOS") redirect("/dashboard");
 
   const { orden } = await searchParams;
-  let moneda = "ARS";
-  try { moneda = JSON.parse(store.storeConfig || "{}")?.currency === "USD" ? "USD" : "ARS"; } catch { /* pesos */ }
+  const moneda = monedaDeTienda(store.storeConfig);
   const [{ enStock, vendidos }, pendingAffiliateCount] = await Promise.all([
-    stockDelPanel(store.id),
+    stockDelPanel(store.id, new Date(), moneda),
     prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } }),
   ]);
 

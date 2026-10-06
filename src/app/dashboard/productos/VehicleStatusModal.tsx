@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Check, Loader2, AlertTriangle } from "lucide-react";
+import { conPuntos, precioEn } from "@/lib/monedaVehiculo";
 
 export type VehicleStatus = "AVAILABLE" | "RESERVED" | "SOLD";
 
@@ -20,6 +21,8 @@ interface Props {
   productName: string;
   currentStatus: VehicleStatus;
   costTotal: number;
+  /** La moneda del vehículo: el precio de venta y la ganancia van en ella. */
+  moneda?: string;
   onSave: (data: VehicleStatusData) => void;
   onClose: () => void;
 }
@@ -40,7 +43,7 @@ export function VehicleStatusBadge({ status, animate = false }: { status: Vehicl
   );
 }
 
-export default function VehicleStatusModal({ productId, productName, currentStatus, costTotal, onSave, onClose }: Props) {
+export default function VehicleStatusModal({ productId, productName, currentStatus, costTotal, moneda, onSave, onClose }: Props) {
   const [selected, setSelected]   = useState<VehicleStatus>(currentStatus);
   const [soldPrice, setSoldPrice] = useState("");
   const [buyerName, setBuyerName] = useState("");
@@ -162,23 +165,23 @@ export default function VehicleStatusModal({ productId, productName, currentStat
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Precio de venta ($)</label>
+                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Precio de venta ({moneda === "USD" ? "USD" : "$"})</label>
                 <input
-                  value={soldPrice}
+                  value={conPuntos(soldPrice)}
                   onChange={e => {
                     // Sólo dígitos: el punto acá es de miles, y "12.500.000"
                     // con `parseFloat` se guardaba como 12,5 (06/10/26).
                     const v = e.target.value.replace(/\D/g, "");
                     setSoldPrice(v);
                   }}
-                  placeholder="Ej: 12500000"
+                  placeholder={moneda === "USD" ? "Ej: 25.000" : "Ej: 12.500.000"}
                   type="text"
                   inputMode="numeric"
                   className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
                 {soldPrice && !isNaN(parseFloat(soldPrice)) && (
                   <p className={`mt-1.5 text-xs font-semibold ${parseFloat(soldPrice) - costTotal < 0 ? "text-red-600 panel-oscuro:text-red-400" : "text-emerald-600 panel-oscuro:text-emerald-400"}`}>
-                    Ganancia estimada: ${Math.round(parseFloat(soldPrice) - costTotal).toLocaleString("es-AR")}
+                    Ganancia estimada: {precioEn(Math.round(parseFloat(soldPrice) - costTotal), moneda)}
                     {costTotal === 0 && <span className="text-gray-400 panel-oscuro:text-gray-500 font-normal"> (sin gastos cargados)</span>}
                   </p>
                 )}

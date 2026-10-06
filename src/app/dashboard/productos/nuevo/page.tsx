@@ -27,6 +27,10 @@ import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/comp
 import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
 import FichaTecnicaForm from "./FichaTecnicaForm";
 import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, type FichaVehiculo } from "@/lib/fichaVehiculo";
+import { CLAVE_MONEDA, conPuntos, sinPuntos, esMoneda, precioEn, type Moneda } from "@/lib/monedaVehiculo";
+
+/** Un precio guardado ("30000000", "9500.5") para mostrarlo con puntos: entero. */
+const puntosDe = (v: string) => { const n = parseFloat(v); return v === "" || Number.isNaN(n) ? "" : conPuntos(String(Math.round(n))); };
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -493,6 +497,8 @@ function ProductoFormPage() {
   const [services, setServices] = useState<Record<string, boolean>>({});
   /** Equipamiento, papeles, motor, medidas y folleto de un vehículo. Ver `lib/fichaVehiculo`. */
   const [ficha, setFicha] = useState<FichaVehiculo>(FICHA_VACIA);
+  /** La moneda de ESTE vehículo; null = la principal de la tienda. Ver lib/monedaVehiculo. */
+  const [monedaVehiculo, setMonedaVehiculo] = useState<Moneda | null>(null);
   type VehicleExpenseItem = { id: string; concepto: string; monto: number; fecha: string | null };
   const [gastos, setGastos] = useState<VehicleExpenseItem[]>([]);
   const [gastoConcepto, setGastoConcepto] = useState(GASTO_CONCEPTOS[0]);
@@ -690,7 +696,9 @@ function ProductoFormPage() {
         const svcAttr = allAttrs.find((a) => a.key === "Servicios");
         if (svcAttr) { try { setServices(JSON.parse(svcAttr.value)); } catch {} }
         setFicha(leerFicha(allAttrs));
-        setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios" && a.key !== CLAVE_FICHA));
+        const monAttr = allAttrs.find((a) => a.key === CLAVE_MONEDA)?.value;
+        setMonedaVehiculo(esMoneda(monAttr) ? monAttr : null);
+        setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios" && a.key !== CLAVE_FICHA && a.key !== CLAVE_MONEDA));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
         try {
@@ -1217,9 +1225,11 @@ function ProductoFormPage() {
     /* La ficha sólo para vehículos: si pasó a "repuestos", se va con el cambio. */
     const fichaAttr = storeTypeConfig.id === "AUTOS" && tipoDeFicha(category) ? fichaComoAtributo(ficha) : null;
     const fichaList = fichaAttr ? [fichaAttr] : [];
+    // La moneda se guarda siempre explícita: si mañana cambia la principal, este auto no cambia solo.
+    const monedaList = esVehiculo ? [{ key: CLAVE_MONEDA, value: monedaPrecio }] : [];
     const finalAttrs = storeTypeConfig.supportsCondicion
-      ? [{ key: "Condición", value: condicion }, ...baseAttrs, ...svcList, ...fichaList]
-      : [...baseAttrs, ...svcList, ...fichaList];
+      ? [{ key: "Condición", value: condicion }, ...baseAttrs, ...svcList, ...fichaList, ...monedaList]
+      : [...baseAttrs, ...svcList, ...fichaList, ...monedaList];
 
     const res = await fetch(isEditing ? `/api/productos/${editingId}` : "/api/productos", {
       method: isEditing ? "PATCH" : "POST",
@@ -1270,9 +1280,12 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
-  // Los gastos van en la moneda de la tienda: con "$" fijo, una que vende en
-  // dólares cargaba el service en pesos y la ganancia salía cualquier cosa.
-  const simboloGasto = store.currency === "USD" ? "USD " : "$";
+  /* Un vehículo tiene su moneda (ver lib/monedaVehiculo): su precio y sus gastos
+     van en ella, así el margen se calcula entre cifras de la misma moneda. Con
+     "$" fijo, una agencia en dólares cargaba el service en pesos. */
+  const esVehiculo = !!storeTypeConfig.usesVehicleExpenses;
+  const monedaPrecio: string = esVehiculo ? (monedaVehiculo ?? (store.currency === "USD" ? "USD" : "ARS")) : store.currency;
+  const simboloGasto = monedaPrecio === "USD" ? "USD " : "$";
   // La sugerencia sale de la CATEGORÍA elegida, no del rubro: dentro de Moda, un
   // collar se sugiere como "Largo" con valores en centímetros, y una remera como
   // "Talle" con S/M/L. El nombre es sólo una sugerencia — manda `opcionNombre`,
@@ -1937,17 +1950,42 @@ function ProductoFormPage() {
             <div className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5 space-y-4">
               {/* Precio de venta */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Precio de venta *</label>
+                <label htmlFor="precio-venta" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Precio de venta *</label>
+                {esVehiculo ? (
+                  /* Vehículos: la moneda de ESTE auto y la cifra con puntos (30.000.000). */
+                  <div className="flex flex-wrap gap-2">
+                    <div role="radiogroup" aria-label="Moneda del precio" className="inline-flex shrink-0 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 p-1">
+                      {(["ARS", "USD"] as const).map((m) => (
+                        <button key={m} type="button" role="radio" aria-checked={monedaPrecio === m}
+                          onClick={() => { setMonedaVehiculo(m); markDirty(); }}
+                          className={`min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors ${monedaPrecio === m ? "bg-indigo-600 text-white" : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"}`}>
+                          {m === "ARS" ? "Pesos" : "Dólares"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative flex-1 min-w-[10rem]">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">{monedaPrecio === "USD" ? "USD" : "$"}</span>
+                      <input
+                        id="precio-venta" type="text" inputMode="numeric"
+                        value={puntosDe(form.price)}
+                        onChange={(e) => updateForm("price", sinPuntos(e.target.value).slice(0, 12))}
+                        required placeholder={monedaPrecio === "USD" ? "25.000" : "30.000.000"}
+                        className={`w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl ${monedaPrecio === "USD" ? "pl-14" : "pl-8"} pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                      />
+                    </div>
+                  </div>
+                ) : (
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">$</span>
                   <input
-                    type="number"
+                    id="precio-venta" type="number"
                     value={form.price}
                     onChange={(e) => updateForm("price", e.target.value)}
                     required min="0" step="0.01" placeholder="0"
                     className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                )}
                 {/* F6-C9 — el candado del monto fijo protege el momento de CREAR
                     la promo. Este es el otro lado: un producto barato cargado
                     después entra a una promo que ya está corriendo, y hasta acá
@@ -2026,7 +2064,7 @@ function ProductoFormPage() {
                   </div>
                   <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-3">
                     Compra, lavado, service, cubiertas... Es de uso interno, tus clientes no lo verán en la tienda.
-                    {store.currency === "USD" && <> <strong className="text-gray-600 panel-oscuro:text-gray-300">En dólares, igual que el precio:</strong> lo que pagaste en pesos, pasalo a dólares; si no, la ganancia sale mal.</>}
+                    {monedaPrecio === "USD" && <> <strong className="text-gray-600 panel-oscuro:text-gray-300">En dólares, como el precio de este vehículo:</strong> lo que pagaste en pesos, pasalo a dólares; si no, la ganancia sale mal.</>}
                   </p>
 
                   {!isEditing ? (
@@ -2077,11 +2115,11 @@ function ProductoFormPage() {
                         <div className="relative w-full sm:w-32">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 text-sm">{simboloGasto.trim()}</span>
                           <input
-                            type="number"
-                            value={gastoMonto}
-                            onChange={(e) => setGastoMonto(e.target.value)}
-                            min="0" step="0.01" placeholder="Monto"
-                            className={`w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl ${store.currency === "USD" ? "pl-11" : "pl-6"} pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                            type="text" inputMode="numeric"
+                            value={conPuntos(gastoMonto)}
+                            onChange={(e) => setGastoMonto(sinPuntos(e.target.value).slice(0, 12))}
+                            placeholder="Monto"
+                            className={`w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl ${monedaPrecio === "USD" ? "pl-11" : "pl-6"} pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                           />
                         </div>
                         <input
@@ -2146,13 +2184,13 @@ function ProductoFormPage() {
                         const cpTooLow = !cpInvalid && cp !== null && cp <= sp;
                         return <>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 font-medium">{esVehiculo && monedaPrecio === "USD" ? "USD" : "$"}</span>
                             <input
-                              type="number"
-                              value={form.comparePrice}
-                              onChange={(e) => { updateForm("comparePrice", e.target.value); markDirty(); }}
-                              min="0" step="0.01" placeholder="ej: 60000"
-                              className={`w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                              type={esVehiculo ? "text" : "number"} inputMode={esVehiculo ? "numeric" : undefined}
+                              value={esVehiculo ? puntosDe(form.comparePrice) : form.comparePrice}
+                              onChange={(e) => { updateForm("comparePrice", esVehiculo ? sinPuntos(e.target.value).slice(0, 12) : e.target.value); markDirty(); }}
+                              min="0" step="0.01" placeholder={esVehiculo ? "ej: 32.000.000" : "ej: 60000"}
+                              className={`w-full border rounded-xl ${esVehiculo && monedaPrecio === "USD" ? "pl-14" : "pl-8"} pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                                 cpInvalid ? "border-red-400 bg-red-50 panel-oscuro:bg-red-500/10"
                                 : cpTooLow ? "border-amber-400 bg-amber-50 panel-oscuro:bg-amber-500/10"
                                 : "border-gray-200 panel-oscuro:border-gray-700"
@@ -3210,11 +3248,11 @@ function ProductoFormPage() {
                       {form.price ? (
                         <>
                           <span className="text-lg font-bold" style={{ color: store.primaryColor }}>
-                            {store.currency} {parseFloat(form.price).toLocaleString("es-AR")}
+                            {precioEn(parseFloat(form.price), monedaPrecio)}
                           </span>
                           {form.comparePrice && parseFloat(form.comparePrice) > parseFloat(form.price) && (
                             <span className="text-sm text-gray-400 line-through">
-                              {store.currency} {parseFloat(form.comparePrice).toLocaleString("es-AR")}
+                              {precioEn(parseFloat(form.comparePrice), monedaPrecio)}
                             </span>
                           )}
                         </>

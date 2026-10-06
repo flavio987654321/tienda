@@ -6,6 +6,7 @@ import { aTextoPlano } from "@/lib/structured-data";
 import { getClientIp } from "@/lib/request-ip";
 // El feed lo lee Meta desde afuera: los links de producto tienen que apuntar al
 // dominio público, nunca al localhost del que generó el feed.
+import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { PUBLIC_APP_URL as APP_URL } from "@/lib/site";
 
 // GET /api/store/feed?store=<slug>
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
       id: true,
       name: true,
       slug: true,
-      currency: true,
+      storeConfig: true,
       products: {
         where: { isActive: true, deletedAt: null, soloMayorista: false },
         select: {
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
           comparePrice: true,
           images: true,
           category: true,
+          attributes: true,
         },
         take: 500,
       },
@@ -52,6 +54,9 @@ export async function GET(req: NextRequest) {
     return new NextResponse("No encontrado", { status: 404 });
   }
 
+  /* La moneda de verdad está en storeConfig (la columna `currency` quedó vieja:
+     dice "ARS" en todas), y un vehículo puede tener la suya (lib/monedaVehiculo). */
+  const principal = monedaDeTienda(store.storeConfig);
   const items = store.products
     .map((p) => {
       const img = parseFirstImage(p.images);
@@ -71,9 +76,9 @@ export async function GET(req: NextRequest) {
       // una sola vez (antes se emitía g:price duplicado y el descuento se perdía).
       const hasSale = p.comparePrice != null && p.comparePrice > p.price;
       const priceTags = hasSale
-        ? `<g:price>${p.comparePrice!.toFixed(2)} ${store.currency}</g:price>
-      <g:sale_price>${p.price.toFixed(2)} ${store.currency}</g:sale_price>`
-        : `<g:price>${p.price.toFixed(2)} ${store.currency}</g:price>`;
+        ? `<g:price>${p.comparePrice!.toFixed(2)} ${monedaDe(p, principal)}</g:price>
+      <g:sale_price>${p.price.toFixed(2)} ${monedaDe(p, principal)}</g:sale_price>`
+        : `<g:price>${p.price.toFixed(2)} ${monedaDe(p, principal)}</g:price>`;
 
       return `    <item>
       <g:id><![CDATA[${p.id}]]></g:id>

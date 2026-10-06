@@ -14,6 +14,7 @@ import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { monedaDe } from "@/lib/monedaVehiculo";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -745,7 +746,7 @@ export default function AutoMotor() {
                     <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", background:"#f5f5f5" }} />
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontSize:13, fontWeight:600, margin:"0 0 4px" }}>{p.name}</p>
-                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmtPrice(p.price, currency)}</p>
+                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmtPrice(p.price, monedaDe(p, currency))}</p>
                     </div>
                   </button>
                 ))}
@@ -777,7 +778,7 @@ export default function AutoMotor() {
                 <img src={product.images[0] ?? ""} alt={product.name} style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
-                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
+                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, monedaDe(product, currency))}</p>
                   <div style={{ display:"flex", gap:8 }}>
                     <button onClick={() => { setFavoritesOpen(false); setSelected(product); }}
                       style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer" }}>

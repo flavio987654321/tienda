@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 import { getCouponVisualSeed } from "@/lib/coupons";
+import { monedaDeTienda } from "@/lib/monedaVehiculo";
 import { getCurrentUser } from "@/lib/auth-session";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -250,7 +251,7 @@ export async function GET(req: Request, ctx: Ctx) {
           primaryColor: true,
           accentColor: true,
           footerText: true,
-          currency: true,
+          storeConfig: true,
         },
       },
     },
@@ -262,7 +263,8 @@ export async function GET(req: Request, ctx: Ctx) {
 
   const primary = safeColor(coupon.store.primaryColor, "#6366f1");
   const accent = safeColor(coupon.store.accentColor, "#f59e0b");
-  const currency = coupon.store.currency || "ARS";
+  // La moneda de verdad está en storeConfig; la columna `currency` quedó vieja (dice "ARS" en todas).
+  const currency = monedaDeTienda(coupon.store.storeConfig);
   const template = getTemplate(coupon);
   const searchParams = new URL(req.url).searchParams;
   const download = searchParams.get("download") === "1";

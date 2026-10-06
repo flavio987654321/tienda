@@ -10,6 +10,7 @@ import { DescargasDeFicha, BloquesDeLaFicha } from "./FichaDelVehiculo";
 import TasacionVehiculo from "./TasacionVehiculo";
 import { tipoDeFicha } from "@/lib/fichaVehiculo";
 import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
+import { monedaDe } from "@/lib/monedaVehiculo";
 import { CAPAS } from "@/lib/capas-tienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 
@@ -364,11 +365,11 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       textTransform:"uppercase", fontWeight:600 }}>Precio</p>
                     <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,36px)", fontWeight: 800,
                       color: "#1a2744", letterSpacing: -1, lineHeight: 1 }}>
-                      {fmtPrice(product.price, currency)}
+                      {fmtPrice(product.price, monedaDe(product, currency))}
                     </p>
                     {product.comparePrice && (
                       <p style={{ margin: "4px 0 0", fontSize: 14, color: "#bbb", textDecoration: "line-through" }}>
-                        {fmtPrice(product.comparePrice, currency)}
+                        {fmtPrice(product.comparePrice, monedaDe(product, currency))}
                       </p>
                     )}
                   </div>
@@ -378,7 +379,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       <strong>Este vehículo está reservado.</strong> Podés consultar igual: si la reserva se cae, sos el primero en enterarte.
                     </p>
                   )}
-                  <ConsultaVehiculo product={product} accent={accent} precioTexto={fmtPrice(product.price, currency)}
+                  <ConsultaVehiculo product={product} accent={accent} precioTexto={fmtPrice(product.price, monedaDe(product, currency))}
                     whatsappNumber={whatsapp.number} whatsappEnabled={whatsapp.enabled}
                     storeId={storeId} isOwner={isOwner} isPreview={isPreview} año={año} />
                   <DescargasDeFicha product={product} accent={accent} isPreview={isPreview} />
@@ -516,7 +517,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                         overflow: "hidden", display: "-webkit-box",
                         WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
                       <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#333" }}>
-                        {fmtPrice(p.price, currency)}
+                        {fmtPrice(p.price, monedaDe(p, currency))}
                       </p>
                       {(attr(p, "Año") || kmDe(p) != null) && (
                         <p style={{ margin: "3px 0 0", fontSize: 11, color: "#999" }}>
@@ -615,7 +616,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
           overflow: "hidden" }}>{product.name}</p>
         <p style={{ margin: 0, fontSize: "clamp(18px,2.2vw,22px)", fontWeight: 700, color: priceCol, letterSpacing: -0.5 }}>
-          {fmtPrice(product.price, currency)}
+          {fmtPrice(product.price, monedaDe(product, currency))}
         </p>
         {metaLine && <p style={{ margin: 0, fontSize: 12, color: subCol, lineHeight: 1.4 }}>{metaLine}</p>}
         {ubicacion && <p style={{ margin: 0, fontSize: 11, color: subCol }}>{ubicacion}</p>}

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
+import { monedaDe, monedaDeTienda, type Moneda } from "@/lib/monedaVehiculo";
 import { coincide, demanda, normalizar, DIAS_VIGENCIA, type VehiculoParaBuscar } from "@/lib/busquedas";
 
 /* La parte de "Avisame si entra" que toca la base (06/10/26). Ver `lib/busquedas`. */
@@ -16,11 +17,20 @@ function atributos(crudo: string): { key: string; value: string }[] {
   } catch { return []; }
 }
 
-export function vehiculoDeProducto(p: Pick<ProductoCrudo, "name" | "price" | "category" | "attributes">): VehiculoParaBuscar {
+export function vehiculoDeProducto(p: Pick<ProductoCrudo, "name" | "price" | "category" | "attributes">, principal: Moneda = "ARS"): VehiculoParaBuscar {
   const attrs = atributos(p.attributes);
   const valor = (k: string) => attrs.find((a) => normalizar(a.key) === normalizar(k))?.value.trim() || null;
   const anio = Number((valor("Año") ?? "").replace(/\D/g, "").slice(0, 4));
-  return { categoria: p.category, marca: valor("Marca"), modelo: valor("Modelo"), nombre: p.name, anio: anio >= 1900 ? anio : null, precio: p.price };
+  return {
+    categoria: p.category, marca: valor("Marca"), modelo: valor("Modelo"), nombre: p.name, anio: anio >= 1900 ? anio : null, precio: p.price,
+    enOtraMoneda: monedaDe(p, principal) !== principal,
+  };
+}
+
+/** La moneda principal de la tienda: en la que están los "hasta cuánto" de las búsquedas. */
+async function principalDe(storeId: string): Promise<Moneda> {
+  const s = await prisma.store.findUnique({ where: { id: storeId }, select: { storeConfig: true } });
+  return monedaDeTienda(s?.storeConfig);
 }
 
 /** Los vehículos que se pueden ofrecer hoy: activos, no vendidos, no repuestos. */
@@ -48,8 +58,8 @@ export async function revisarBusquedas(storeId: string, ahora = new Date()): Pro
   });
   const busquedas = await prisma.busquedaGuardada.findMany({ where: { storeId, status: "ACTIVA" }, take: 2000 });
   if (!busquedas.length) return 0;
-  const productos = await vehiculosALaVenta(storeId);
-  const vehiculos = productos.map((p) => ({ p, v: vehiculoDeProducto(p) }));
+  const [productos, principal] = await Promise.all([vehiculosALaVenta(storeId), principalDe(storeId)]);
+  const vehiculos = productos.map((p) => ({ p, v: vehiculoDeProducto(p, principal) }));
 
   const nuevas: { nombre: string; vehiculo: string }[] = [];
   for (const b of busquedas) {
@@ -89,18 +99,19 @@ const primeraFoto = (raw: string) => {
 
 /** Lo que pide la pantalla Búsquedas: cada búsqueda con lo que hoy coincide, y la demanda. */
 export async function busquedasDelPanel(storeId: string) {
-  const [busquedas, productos] = await Promise.all([
+  const [busquedas, productos, principal] = await Promise.all([
     prisma.busquedaGuardada.findMany({ where: { storeId }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 300 }),
     vehiculosALaVenta(storeId),
+    principalDe(storeId),
   ]);
-  const vehiculos = productos.map((p) => ({ p, v: vehiculoDeProducto(p) }));
+  const vehiculos = productos.map((p) => ({ p, v: vehiculoDeProducto(p, principal) }));
   const filas = busquedas.map((b) => ({
     id: b.id, nombre: b.nombre, telefono: b.telefono, categoria: b.categoria, marca: b.marca, modelo: b.modelo,
     anioDesde: b.anioDesde, precioHasta: b.precioHasta, comentario: b.comentario, status: b.status,
     createdAt: b.createdAt.toISOString(),
     coincidencias: b.status === "ACTIVA"
       ? vehiculos.filter(({ v }) => coincide(b, v)).map(({ p, v }) => ({
-          id: p.id, nombre: p.name, precio: p.price, imagen: primeraFoto(p.images), anio: v.anio, reservado: p.vehicleStatus === "RESERVED",
+          id: p.id, nombre: p.name, precio: p.price, moneda: monedaDe(p, principal), imagen: primeraFoto(p.images), anio: v.anio, reservado: p.vehicleStatus === "RESERVED",
           avisado: b.avisadoIds.includes(p.id),
         }))
       : [],

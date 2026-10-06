@@ -9,6 +9,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
 import { leerFicha, bloquesDeFicha, tipoDeFicha, type FilaDeFicha } from "@/lib/fichaVehiculo";
 import { armarFichaPdf } from "@/lib/fichaVehiculoPdf";
+import { monedaDe } from "@/lib/monedaVehiculo";
 
 export const runtime = "nodejs";
 
@@ -140,7 +141,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     tienda: { nombre: store.name, logo, whatsapp: wa, link, acento: config.colors?.accent ?? "#2563eb" },
     vehiculo: {
       nombre: producto.name,
-      precio: precioTexto(producto.price, config.currency ?? "ARS"),
+      // La moneda de ESTE vehículo (ver lib/monedaVehiculo), no sólo la principal.
+      precio: precioTexto(producto.price, monedaDe({ attributes: attrs }, config.currency === "USD" ? "USD" : "ARS")),
       chips: [valor("Año"), km, valor("Condición")].filter(Boolean),
       ubicacion,
       reservado: producto.vehicleStatus === "RESERVED",

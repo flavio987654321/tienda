@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { MessageCircle, Phone, Check, X, RotateCcw, Target } from "lucide-react";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
 import { resumenDeBusqueda, mensajeDeAviso } from "@/lib/busquedas";
+import { precioEn } from "@/lib/monedaVehiculo";
 import type { BusquedaDelPanel } from "@/lib/busquedasServidor";
 
 type Demanda = { que: string; cuantas: number; enStock: number };
@@ -26,7 +27,7 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
   const [filtro, setFiltro] = useState<"ACTIVA" | "CERRADA">("ACTIVA");
   const [ocupada, setOcupada] = useState<string | null>(null);
   const [errores, setErrores] = useState<Record<string, string>>({});
-  const precio = (n: number) => (moneda === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
+  const precio = (n: number, m: string = moneda) => precioEn(n, m);
 
   // Un doble click no manda dos veces (el botón se apaga recién al pintar).
   const enCurso = useRef(new Set<string>());
@@ -139,7 +140,7 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
                     <ul className="mt-3 space-y-2">
                       {b.coincidencias.map((c) => {
                         const link = `${origen}/tienda/${slug}?producto=${encodeURIComponent(c.id)}`;
-                        const texto = mensajeDeAviso(b.nombre, c.nombre, precio(c.precio), link, tienda);
+                        const texto = mensajeDeAviso(b.nombre, c.nombre, precio(c.precio, c.moneda), link, tienda);
                         return (
                           <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-2.5">
                             {c.imagen ? (
@@ -148,7 +149,7 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
                             ) : <div className="h-10 w-14 rounded-lg bg-gray-100 panel-oscuro:bg-gray-800 shrink-0" />}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-900 panel-oscuro:text-gray-100 truncate">{c.nombre}</p>
-                              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">{precio(c.precio)}{c.anio ? ` · ${c.anio}` : ""}{c.reservado ? " · Reservado" : ""}</p>
+                              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">{precio(c.precio, c.moneda)}{c.anio ? ` · ${c.anio}` : ""}{c.reservado ? " · Reservado" : ""}</p>
                             </div>
                             {c.avisado ? (
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 panel-oscuro:text-green-400"><Check className="h-4 w-4" /> Ya le avisaste</span>
