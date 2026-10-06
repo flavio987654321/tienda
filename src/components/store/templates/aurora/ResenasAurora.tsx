@@ -53,7 +53,7 @@ export function ResenasAurora({
   slug, isPreview, isOwner, products, onAbrirProducto, escena, isMobile, capa,
 }: {
   slug: string | undefined;
-  isPreview: boolean;
+  isPreview: boolean;
   isOwner: boolean;
   products: StorefrontProduct[];
   onAbrirProducto: (p: StorefrontProduct) => void;
@@ -163,11 +163,6 @@ export function ResenasAurora({
             </div>
             <input value={r.form.reviewer} maxLength={RESENADOR_MAX} required placeholder="Tu nombre"
               onChange={e => r.setForm(p => ({ ...p, reviewer: e.target.value }))} style={campo} />
-            <div>
-              <input value={r.form.email} type="email" maxLength={120} autoComplete="email" placeholder="Tu email (opcional)"
-                onChange={e => r.setForm(p => ({ ...p, email: e.target.value }))} style={campo} />
-              <p style={{ margin:"6px 4px 0", fontSize:11, lineHeight:1.5, opacity:0.62 }}>Si compraste acá, sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
-            </div>
             <textarea value={r.form.comment} rows={3} maxLength={COMENTARIO_MAX} placeholder="Contá tu experiencia (opcional)"
               onChange={e => r.setForm(p => ({ ...p, comment: e.target.value }))} style={{ ...campo, resize:"none" }} />
             {r.form.comment.length > COMENTARIO_MAX - 80 && (

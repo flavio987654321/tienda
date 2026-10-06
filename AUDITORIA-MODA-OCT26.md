@@ -128,8 +128,13 @@ stock se descuenta de forma atómica.
 
 ## 3. Seguridad menor
 
-- [ ] **3.1 Sello "compra verificada" con cualquier mail**, y la respuesta delata
-  si ese mail compró.
+- [x] ~~**3.1 Sello "compra verificada" con cualquier mail**, y la respuesta delata
+  si ese mail compró.~~ → Hecho (05/10): el sello sale de una FIRMA (`lib/firmaResena`,
+  HMAC del pedido + mail) que viaja en el link del mail de "tu pedido fue
+  entregado"; la tienda la guarda (`firmaResenaCliente`) y los 7 formularios la
+  mandan. Tipear un mail ya no da sello ni delata nada. Como el campo de email de
+  las reseñas quedó sin uso, se sacó de todos los formularios (regla: ningún input
+  por estar). Probado: 5 casos en base local + 3 tiendas en el navegador.
 - [ ] **3.2 `?withSales=1` público** muestra unidades vendidas por producto.
 - [ ] **3.3 Seguimiento devuelve dirección completa** con sólo el código.
 - [ ] **3.4 `instagramUrl`/`facebookUrl`/`tiktokUrl` sin validar** (hoy no se

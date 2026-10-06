@@ -1,4 +1,5 @@
 "use client";
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
@@ -224,7 +225,7 @@ export default function ChicParis() {
   // tienda. Inline al final de la lista quedaba inalcanzable: con 50 reseñas
   // cargadas había que scrollear las 50 para llegar a escribir la propia.
   const [resenaProdOpen, setResenaProdOpen] = useState(false);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
@@ -774,12 +775,12 @@ export default function ChicParis() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewCaptcha.token, resenaFirma: firmaDeResena() }),
       });
       if (res.ok) {
         const data = await res.json();
         resenasProd.agregar(data.review);
-        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewForm({ reviewer: "", rating: 5, comment: "" });
         setReviewError(null);
         // Se cierra el modal: la reseña recién publicada está en la lista de
         // atrás, y dejarlo abierto con el formulario vacío parece que no pasó nada.
@@ -2926,14 +2927,6 @@ export default function ChicParis() {
                     placeholder="Tu nombre"
                     style={{ border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, outline: "none" }} />
 
-                  <input value={tiendaForm.email} type="email" maxLength={120}
-                    onChange={e => setTiendaForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="Tu email (opcional)"
-                    style={{ border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, outline: "none" }} />
-                  <p style={{ margin: "-6px 0 0", fontSize: 10.5, color: "#777", lineHeight: 1.5 }}>
-                    Si compraste acá, tu reseña sale con el sello “✓ Compra verificada”. El email no se publica.
-                  </p>
-
                   <textarea value={tiendaForm.comment} rows={3} maxLength={COMENTARIO_MAX}
                     onChange={e => setTiendaForm(p => ({ ...p, comment: e.target.value }))}
                     placeholder="La atención, el envío, la experiencia..."
@@ -3025,14 +3018,6 @@ export default function ChicParis() {
                 <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                   placeholder="Tu nombre" readOnly={isPreview}
                   style={{ border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, outline: "none" }} />
-                <div>
-                  <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
-                    style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, outline: "none" }} />
-                  <p style={{ fontSize: 10.5, color: "#777", margin: "4px 0 0", lineHeight: 1.4 }}>
-                    Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
-                  </p>
-                </div>
                 <div style={{ display: "flex", gap: 4 }}>
                   {[1,2,3,4,5].map(s => (
                     <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}

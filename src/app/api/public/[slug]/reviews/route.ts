@@ -1,3 +1,4 @@
+import { leerFirmaResena } from "@/lib/firmaResena";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -241,22 +242,26 @@ export async function POST(
     }
   }
 
-  // Verificación automática: si viene email, se busca un pedido ENTREGADO de esa
-  // persona en esta tienda.
+  // Verificación automática: con la FIRMA del mail de "tu pedido fue entregado"
+  // (ver `lib/firmaResena`), se busca ese pedido ENTREGADO en esta tienda.
   //
-  // Para una reseña de PRODUCTO tiene que haber comprado ESE producto. Para una
-  // de TIENDA alcanza con haber comprado cualquier cosa acá: está opinando de la
-  // atención y del envío, no de un artículo, y exigirle un producto puntual
-  // dejaría sin sello a quien compró tres veces cosas distintas.
+  // Antes alcanzaba con tipear un mail: cualquiera que supiera el de un
+  // comprador se llevaba el sello, y la respuesta (`verified`) delataba si ese
+  // mail le había comprado a la tienda (05/10/26). `buyerEmail` ya no cuenta.
+  //
+  // Para una reseña de PRODUCTO el pedido tiene que tener ESE producto. Para una
+  // de TIENDA alcanza con el pedido: está opinando de la atención y del envío.
+  void buyerEmail;
   let verified = false;
   let verifiedBy: string | null = null;
-  if (buyerEmail && typeof buyerEmail === "string" && buyerEmail.includes("@")) {
-    const normalizedEmail = buyerEmail.trim().toLowerCase();
+  const firmada = leerFirmaResena(body.resenaFirma);
+  if (firmada) {
     const matchingOrder = await prisma.order.findFirst({
       where: {
+        id: firmada.orderId,
         storeId: store.id,
         status: "DELIVERED",
-        buyer: { email: { equals: normalizedEmail, mode: "insensitive" } },
+        buyer: { email: { equals: firmada.email, mode: "insensitive" } },
         ...(producto ? { items: { some: { productId: producto.id } } } : {}),
       },
       select: { id: true },

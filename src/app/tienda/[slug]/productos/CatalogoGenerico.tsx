@@ -1,5 +1,6 @@
 "use client";
 
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment } from "react";
 import Link from "next/link";
@@ -737,7 +738,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   // campo, una reseña dejada desde el listado no podía salir verificada nunca —
   // el modal del template sí lo pedía, así que la misma persona conseguía el sello
   // o no según desde qué pantalla escribiera.
-  const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,       setReviewDone]       = useState(false);
@@ -1251,12 +1252,12 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewCaptcha.token, resenaFirma: firmaDeResena() }),
       });
       if (res.ok) {
         const data = await res.json();
         resenasProd.agregar(data.review);
-        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewForm({ reviewer: "", rating: 5, comment: "" });
         // Se cierra el modal del formulario: si no, queda abierto y vacío tapando
         // la reseña que la persona acaba de publicar, que es justo lo que quiere ver.
         setResenaModalOpen(false);
@@ -3020,15 +3021,6 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                   placeholder="Tu nombre" readOnly={fromEditor}
                   style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, outline:"none" }}
                   onFocus={e => { if (!fromEditor) e.target.style.borderColor=chipBg; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                <div>
-                  <input value={reviewForm.email} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={fromEditor} autoComplete="email"
-                    style={{ width:"100%", boxSizing:"border-box", background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, outline:"none" }}
-                    onFocus={e => { if (!fromEditor) e.target.style.borderColor=chipBg; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                  <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
-                    Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
-                  </p>
-                </div>
                 <div style={{ display:"flex", gap:4 }}>
                   {[1,2,3,4,5].map(s => (
                     <button key={s} type="button" onClick={() => !fromEditor && setReviewForm(p => ({ ...p, rating: s }))}

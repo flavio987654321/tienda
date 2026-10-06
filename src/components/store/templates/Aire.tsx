@@ -3521,16 +3521,6 @@ export default function Aire() {
                   placeholder="Tu nombre"
                   style={{ background:BG, border:`1px solid ${LN}`, borderRadius:12, color:T, padding:"12px 14px", fontSize:13.5, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
 
-                <div>
-                  <input value={resenas.form.email} type="email" maxLength={120} autoComplete="email"
-                    onChange={e => resenas.setForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="Tu email (opcional)"
-                    style={{ background:BG, border:`1px solid ${LN}`, borderRadius:12, color:T, padding:"12px 14px", fontSize:13.5, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
-                  <p style={{ margin:"6px 2px 0", fontSize:11, color:T2, lineHeight:1.5 }}>
-                    Si compraste acá, tu reseña sale con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
-                  </p>
-                </div>
-
                 <textarea value={resenas.form.comment} rows={3} maxLength={COMENTARIO_MAX}
                   onChange={e => resenas.setForm(p => ({ ...p, comment: e.target.value }))}
                   placeholder="Contá tu experiencia (opcional)"

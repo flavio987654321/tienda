@@ -1,4 +1,5 @@
 "use client";
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
@@ -170,7 +171,7 @@ export default function UrbanPulse() {
   const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
   const [mobileCatsOpen,   setMobileCatsOpen]   = useState(false);
   const [mobileOpenCat,    setMobileOpenCat]    = useState<string | null>(null);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   // Trampa para bots: invisible para una persona, irresistible para un robot que
   // completa todo lo que encuentra. El captcha ya cubre esto, pero es la segunda
@@ -855,7 +856,7 @@ export default function UrbanPulse() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewCaptcha.token, resenaFirma: firmaDeResena() }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -863,7 +864,7 @@ export default function UrbanPulse() {
         // ahora vienen de la base. Sin esto, quien acaba de publicar ve su reseña
         // en la lista y el contador de arriba clavado en el número viejo.
         resenasProd.agregar(data.review);
-        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewForm({ reviewer: "", rating: 5, comment: "" });
         setReviewError(null);
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       } else {
@@ -3460,14 +3461,6 @@ export default function UrbanPulse() {
                         <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                           placeholder="Tu nombre" readOnly={isPreview} maxLength={RESENADOR_MAX}
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
-                        <div>
-                          <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                            placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email" maxLength={120}
-                            style={{ width:"100%", boxSizing:"border-box", background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
-                          <p style={{ fontSize:9, color:MID, margin:"3px 0 0", fontWeight:700, letterSpacing:0.5, textTransform:"uppercase", lineHeight:1.4 }}>
-                            Si compraste acá, tu reseña mostrará ✓ VERIFICADA. El email no se publica.
-                          </p>
-                        </div>
                         <div style={{ display:"flex", gap:4 }}>
                           {[1,2,3,4,5].map(s => (
                             <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
@@ -3604,14 +3597,6 @@ export default function UrbanPulse() {
                     onChange={e => resenas.setForm(p => ({ ...p, reviewer: e.target.value }))}
                     placeholder="Tu nombre"
                     style={{ border:`2px solid ${DARK}`, padding:"11px 12px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
-
-                  <input value={resenas.form.email} type="email" maxLength={120} autoComplete="email"
-                    onChange={e => resenas.setForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="Tu email (opcional)"
-                    style={{ border:`2px solid ${DARK}`, padding:"11px 12px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
-                  <p style={{ margin:"-6px 0 0", fontSize:10.5, color:MID, lineHeight:1.5 }}>
-                    Si compraste acá, tu reseña sale con el sello “✓ Compra verificada”. El email no se publica.
-                  </p>
 
                   <textarea value={resenas.form.comment} rows={3} maxLength={COMENTARIO_MAX}
                     onChange={e => resenas.setForm(p => ({ ...p, comment: e.target.value }))}

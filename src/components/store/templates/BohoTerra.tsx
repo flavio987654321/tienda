@@ -1,4 +1,5 @@
 ﻿"use client";
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
@@ -143,7 +144,7 @@ export default function BohoTerra() {
   // El tipo local de las reseñas se fue con el fetch propio: ahora la forma la
   // define `HomeReview`, en el hook compartido.
   const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
@@ -500,12 +501,12 @@ export default function BohoTerra() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewCaptcha.token, resenaFirma: firmaDeResena() }),
       });
       if (res.ok) {
         const data = await res.json();
         resenasProd.agregar(data.review);
-        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewForm({ reviewer: "", rating: 5, comment: "" });
         setReviewError(null);
         // Se cierra el modal del formulario: si no, queda abierto y vacío tapando
         // la reseña que la persona acaba de publicar, que es justo lo que quiere ver.
@@ -2488,15 +2489,6 @@ export default function BohoTerra() {
                     onChange={e => resenas.setForm(p => ({ ...p, reviewer: e.target.value }))}
                     placeholder="Tu nombre"
                     style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
-                  <div>
-                    <input value={resenas.form.email} type="email" maxLength={120} autoComplete="email"
-                      onChange={e => resenas.setForm(p => ({ ...p, email: e.target.value }))}
-                      placeholder="Tu email (opcional — verifica tu compra)"
-                      style={{ width:"100%", boxSizing:"border-box", border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
-                    <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
-                      Si compraste acá, tu reseña aparecerá con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
-                    </p>
-                  </div>
                   <textarea value={resenas.form.comment} rows={3} maxLength={COMENTARIO_MAX}
                     onChange={e => resenas.setForm(p => ({ ...p, comment: e.target.value }))}
                     placeholder="Comentario (opcional)"
@@ -2582,14 +2574,6 @@ export default function BohoTerra() {
                   <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                     placeholder="Tu nombre" readOnly={isPreview} maxLength={RESENADOR_MAX}
                     style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
-                  <div>
-                    <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                      placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email" maxLength={120}
-                      style={{ width:"100%", boxSizing:"border-box", border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
-                    <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
-                      Si compraste acá, tu reseña aparecerá con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
-                    </p>
-                  </div>
                   <div style={{ display:"flex", gap:4 }}>
                     {[1,2,3,4,5].map(s => (
                       <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}

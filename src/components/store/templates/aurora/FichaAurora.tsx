@@ -1,4 +1,5 @@
 "use client";
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useEditContext } from "@/contexts/EditContext";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
@@ -141,7 +142,7 @@ export function FichaAurora({
   // El aviso de "reseñas de ejemplo", sólo EDITANDO: ni en la vista previa ni en la tienda.
   const { editMode } = useEditContext();
   const [formAbierto, setFormAbierto] = useState(false);
-  const [form, setForm] = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [form, setForm] = useState({ reviewer: "", rating: 5, comment: "" });
   const captcha = useTurnstile("review");
   const [enviando, setEnviando] = useState(false);
   const [listo, setListo] = useState(false);
@@ -166,12 +167,12 @@ export function FichaAurora({
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: producto.id, rating: form.rating, comment: form.comment, reviewer: form.reviewer, buyerEmail: form.email.trim() || undefined, turnstileToken: captcha.token }),
+        body: JSON.stringify({ productId: producto.id, rating: form.rating, comment: form.comment, reviewer: form.reviewer, turnstileToken: captcha.token, resenaFirma: firmaDeResena() }),
       });
       if (res.ok) {
         const data = await res.json();
         resenas.agregar(data.review);
-        setForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setForm({ reviewer: "", rating: 5, comment: "" });
         setErrorResena(null); setFormAbierto(false);
         setListo(true); setTimeout(() => setListo(false), 4000);
       } else {
@@ -552,18 +553,12 @@ export function FichaAurora({
                           style={{ background:"none", border:"none", fontSize:22, cursor: isPreview ? "default" : "pointer", color: s <= form.rating ? G : "rgba(242,242,247,0.2)", padding:2, textShadow: s <= form.rating ? `0 0 12px ${luz(0.7)}` : "none" }}>★</button>
                       ))}
                     </div>
-                    {[
-                      { k: "reviewer" as const, ph: "Tu nombre", tipo: "text" },
-                      { k: "email" as const, ph: "Tu email (opcional, para verificar tu compra)", tipo: "email" },
-                    ].map(c => (
-                      <input key={c.k} type={c.tipo} value={form[c.k]} placeholder={c.ph} readOnly={isPreview}
-                        onChange={e => !isPreview && setForm(p => ({ ...p, [c.k]: e.target.value }))}
-                        style={{ background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:12, color:T, padding:"11px 14px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
-                    ))}
+                    <input type="text" value={form.reviewer} placeholder="Tu nombre" readOnly={isPreview}
+                      onChange={e => !isPreview && setForm(p => ({ ...p, reviewer: e.target.value }))}
+                      style={{ background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:12, color:T, padding:"11px 14px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
                     <textarea value={form.comment} placeholder="Contá qué te pareció (opcional)" rows={3} readOnly={isPreview}
                       onChange={e => !isPreview && setForm(p => ({ ...p, comment: e.target.value }))}
                       style={{ background:"rgba(255,255,255,0.05)", border:`1px solid ${LINEA_FUERTE}`, borderRadius:12, color:T, padding:"11px 14px", fontSize:13, resize:"none", outline:"none", fontFamily:"inherit" }} />
-                    <p style={{ margin:0, fontSize:10.5, opacity:0.62, lineHeight:1.5 }}>Si compraste en esta tienda, tu reseña sale con el sello &ldquo;Compra verificada&rdquo;. El email no se muestra.</p>
                     {!isPreview && captcha.widget}
                     <button type="submit" disabled={isPreview || enviando || !form.reviewer.trim() || !captcha.ready}
                       style={{ ...botonComprar, minHeight:46, flex:"none",

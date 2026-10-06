@@ -319,6 +319,7 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
           storeName: order.store.name,
           storeSlug: order.store.slug,
           products: order.items.map((i) => ({ id: i.product.id, name: i.product.name })),
+          orderId: order.id,
         }),
       });
       return delivered;

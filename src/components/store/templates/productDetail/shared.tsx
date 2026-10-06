@@ -1,4 +1,5 @@
 "use client";
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
@@ -428,7 +429,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews, setReviews] = useState<PReview[]>([]);
   const [reviewsShown, setReviewsShown] = useState(5);
-  const [reviewForm, setReviewForm] = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewForm, setReviewForm] = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone, setReviewDone] = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
@@ -483,12 +484,12 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, website: reviewHoneypot, turnstileToken: reviewCaptcha.token }),
+        body: JSON.stringify({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, website: reviewHoneypot, turnstileToken: reviewCaptcha.token, resenaFirma: firmaDeResena() }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
-        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewForm({ reviewer: "", rating: 5, comment: "" });
         setReviewDone(true);
       }
     } catch {}
@@ -1028,14 +1029,6 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
               <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                 placeholder="Tu nombre" readOnly={isPreview}
                 style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent", outline: "none" }} />
-              <div>
-                <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
-                  style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent", outline: "none" }} />
-                <p style={{ fontSize: 10, color: theme.muted, margin: "3px 0 0", lineHeight: 1.4 }}>
-                  Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
-                </p>
-              </div>
               <div style={{ display: "flex", gap: 4 }}>
                 {[1,2,3,4,5].map(s => (
                   <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}

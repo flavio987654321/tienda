@@ -1,5 +1,6 @@
 "use client";
 
+import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
 
@@ -45,9 +46,9 @@ export type EjemplosDeResenas = {
 
 type ProductoMinimo = { id: string; name: string; images: string[] };
 
-export type FormResenaTienda = { reviewer: string; rating: number; comment: string; email: string };
+export type FormResenaTienda = { reviewer: string; rating: number; comment: string };
 
-const FORM_VACIO: FormResenaTienda = { reviewer: "", rating: 5, comment: "", email: "" };
+const FORM_VACIO: FormResenaTienda = { reviewer: "", rating: 5, comment: "" };
 
 export function useHomeReviews({
   slug, isPreview, isOwner, productos, ejemplos,
@@ -197,12 +198,11 @@ export function useHomeReviews({
   // formulario de producto haría que el segundo envío viaje con uno ya gastado.
   const captcha = useTurnstile("review");
 
-  const email = form.email.trim();
-  const emailPlausible = !email || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+  // Sin campo de email desde el 05/10/26: el sello de "compra verificada" sale
+  // de la firma del mail de entrega (ver `lib/firmaResena`), no de tipear un mail.
   const valida =
     form.reviewer.trim().length >= 2 &&
-    form.rating >= 1 && form.rating <= 5 &&
-    emailPlausible;
+    form.rating >= 1 && form.rating <= 5;
 
   // Por qué este formulario no va a enviar, para poder DECIRLO. `enviar` corta en
   // seco con el dueño y en vista previa, pero el botón solo se apagaba en vista
@@ -227,7 +227,7 @@ export function useHomeReviews({
         // Sin `productId`: eso es lo que la vuelve una reseña de la tienda.
         body: JSON.stringify({
           rating: form.rating, comment: form.comment, reviewer: form.reviewer,
-          buyerEmail: form.email.trim() || undefined, turnstileToken: captcha.token,
+          turnstileToken: captcha.token, resenaFirma: firmaDeResena(),
         }),
       });
       if (res.ok) {

@@ -1,6 +1,7 @@
 ﻿import { Resend } from "resend";
 import { RUBROS, ESTETICAS, PALETAS, FOTOS, CATALOGO, LOGO } from "@/lib/designBrief";
 import { siteUrl } from "@/lib/site";
+import { crearFirmaResena } from "@/lib/firmaResena";
 
 function escapeHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -217,20 +218,26 @@ export async function sendReviewRequestEmail({
   storeName,
   storeSlug,
   products,
+  orderId,
 }: {
   buyerEmail: string;
   buyerName: string;
   storeName: string;
   storeSlug: string;
   products: { id: string; name: string }[];
+  /** Para firmar el link: la firma es lo que da el sello de "compra verificada" (ver `lib/firmaResena`). */
+  orderId?: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  // Sin secreto configurado el link sale sin firma (sin sello), pero el mail sale igual.
+  let firma = "";
+  try { if (orderId) firma = `&resena=${encodeURIComponent(crearFirmaResena(orderId, buyerEmail))}`; } catch { /* sin sello */ }
   const productLinks = products
     .map(
       (p) =>
-        `<a href="${appUrl}/tienda/${encodeURIComponent(storeSlug)}?producto=${encodeURIComponent(p.id)}"
+        `<a href="${appUrl}/tienda/${encodeURIComponent(storeSlug)}?producto=${encodeURIComponent(p.id)}${firma}"
            style="display:block;padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#6366f1;text-decoration:none;">
           ⭐ Dejar reseña de <strong>${escapeHtml(p.name)}</strong>
         </a>`
