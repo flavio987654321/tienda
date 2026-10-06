@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { soportaAfiliados, MOTIVO_SIN_AFILIADOS } from "@/lib/storeTypes";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
-import { isSafeUrl } from "@/lib/url-utils";
+import { isSafeUrl, isSafeExternalUrl } from "@/lib/url-utils";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateChangedEmail } from "@/lib/email";
 import { getClientIp } from "@/lib/request-ip";
@@ -160,6 +160,26 @@ function sanitizePageBlocks(raw: string): string {
   }
 }
 
+/* Texto libre del dueño: sólo string, sin caracteres de control, con tope de
+   largo (05/10/26). Estos campos se guardaban crudos y salen por la API
+   pública y en la tienda. */
+function texto(v: unknown, max: number, multilinea = false): string | null {
+  if (typeof v !== "string") return null;
+  let t = v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+  if (!multilinea) t = t.replace(/[\r\n\t]+/g, " ");
+  t = t.trim().slice(0, max);
+  return t || null;
+}
+/** Un link guardable: http(s) (las redes, absolutas; logo y banner aceptan
+ *  rutas propias). Un "javascript:" o cualquier otra cosa → null. Antes las
+ *  redes se guardaban crudas: hoy ningún template las pone en un href, pero el
+ *  día que alguno lo haga ya estaría abierta la puerta. */
+function urlSegura(v: unknown, externa = true): string | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const u = v.trim().slice(0, 500);
+  return (externa ? isSafeExternalUrl(u) : isSafeUrl(u)) ? u : null;
+}
+
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -239,11 +259,11 @@ export async function PUT(req: NextRequest) {
   const store = await prisma.store.update({
     where: { ownerId: user.id },
     data: {
-      name:               b.name,
-      tagline:            b.tagline        || null,
-      description:        b.description    || null,
-      logo:               b.logo           || null,
-      banner:             b.banner         || null,
+      name:               texto(b.name, 80) ?? b.name.trim().slice(0, 80),
+      tagline:            texto(b.tagline, 120),
+      description:        texto(b.description, 2000, true),
+      logo:               urlSegura(b.logo, false),
+      banner:             urlSegura(b.banner, false),
       primaryColor:       b.primaryColor,
       secondaryColor:     b.secondaryColor,
       accentColor:        b.accentColor,
@@ -260,17 +280,17 @@ export async function PUT(req: NextRequest) {
       showPrices:         b.showPrices     !== false,
       showStock:          b.showStock      !== false,
       showRatings:        Boolean(b.showRatings),
-      announcementBar:    b.announcementBar|| null,
+      announcementBar:    texto(b.announcementBar, 200),
       announcementBarColor: b.announcementBarColor || "#6366f1",
-      instagramUrl:       b.instagramUrl   || null,
-      facebookUrl:        b.facebookUrl    || null,
-      tiktokUrl:          b.tiktokUrl      || null,
-      whatsappNumber:     b.whatsappNumber || null,
+      instagramUrl:       urlSegura(b.instagramUrl),
+      facebookUrl:        urlSegura(b.facebookUrl),
+      tiktokUrl:          urlSegura(b.tiktokUrl),
+      whatsappNumber:     typeof b.whatsappNumber === "string" ? (b.whatsappNumber.replace(/[^\d+]/g, "").slice(0, 20) || null) : null,
       showWhatsappButton: Boolean(b.showWhatsappButton),
-      footerText:         b.footerText     || null,
+      footerText:         texto(b.footerText, 500, true),
       currency:           b.currency       || "ARS",
-      seoTitle:           b.seoTitle       || null,
-      seoDescription:     b.seoDescription || null,
+      seoTitle:           texto(b.seoTitle, 120),
+      seoDescription:     texto(b.seoDescription, 300),
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
       pageBlocks:         sanitizePageBlocks(b.pageBlocks || "[]"),

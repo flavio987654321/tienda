@@ -137,8 +137,11 @@ stock se descuenta de forma atómica.
   por estar). Probado: 5 casos en base local + 3 tiendas en el navegador.
 - [x] ~~**3.2 `?withSales=1` público** muestra unidades vendidas por producto.~~ → Hecho (05/10): sólo la dueña o un afiliado aprobado de esa tienda; a los demás, la respuesta normal (verificado sin sesión).
 - [x] ~~**3.3 Seguimiento devuelve dirección completa** con sólo el código.~~ → Hecho (05/10): sólo nombre de pila, ciudad y provincia (lo que la página muestra). Probado en base local.
-- [ ] **3.4 `instagramUrl`/`facebookUrl`/`tiktokUrl` sin validar** (hoy no se
-  usan en un `href`).
+- [x] ~~**3.4 `instagramUrl`/`facebookUrl`/`tiktokUrl` sin validar** (hoy no se
+  usan en un `href`).~~ → Hecho (05/10): `urlSegura` (http/https) para las redes,
+  logo y banner, y `texto` (tope + sin caracteres de control) para nombre,
+  bajada, descripción, barra, pie y SEO; el WhatsApp sólo dígitos y "+". Se
+  revisaron las 12 tiendas reales: ningún valor actual se recorta ni se pierde.
 - [ ] **3.5 Carritos abandonados aceptan texto libre sin tope.**
 
 ## 4. Pantallas — errores visibles (probados en vivo)
