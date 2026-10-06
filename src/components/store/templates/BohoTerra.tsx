@@ -2112,7 +2112,14 @@ export default function BohoTerra() {
                 <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
               {!isMobile && (
-                <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, marginTop:4, paddingTop:16 }}>
+                /* Pegado al fondo de la columna (05/10/26). La columna se recorta
+                   a la altura de la foto y scrollea por dentro: a 768 la foto es
+                   baja y el botón de comprar quedaba DEBAJO del corte, con
+                   "Reseñas" en su lugar. Sticky: si todo entra queda donde está;
+                   si no, queda a la vista y lo demás pasa por debajo. */
+                <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, marginTop:4, paddingTop:16, paddingBottom:4,
+                              position:"sticky", bottom:0, zIndex:3, background:"#ffffff",
+                              boxShadow:"0 -14px 14px -6px rgba(255,255,255,0.95)" }}>
                   {isInquiryMode ? (
                 <button onClick={() => openInquiry(modalProduct)} style={{ background:AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
                   Consultar disponibilidad

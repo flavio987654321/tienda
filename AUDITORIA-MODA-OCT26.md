@@ -149,7 +149,7 @@ stock se descuenta de forma atómica.
 
 ## 4. Pantallas — errores visibles (probados en vivo)
 
-- [ ] **4.1 Boho 768: "Agregar al carrito" de la ficha queda fuera de la vista.**
+- [x] ~~**4.1 Boho 768: "Agregar al carrito" de la ficha queda fuera de la vista.**~~ → Hecho (05/10): el bloque de compra queda pegado al fondo de la columna (sticky). Verificado en vivo (amaranta, Buzo Hoody) a 768, 1024 y 1280.
 - [ ] **4.2 Aire 768: links del encabezado pisan la marca y los íconos** (portada,
   ficha y `AireNav`).
 - [ ] **4.3 Boho 360: galería de la ficha más ancha que el modal** (flecha
