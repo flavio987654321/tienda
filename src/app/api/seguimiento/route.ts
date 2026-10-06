@@ -73,6 +73,20 @@ export async function GET(req: NextRequest) {
     if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) whatsapp = cfg.whatsapp.number;
   } catch { /* noop */ }
 
+  /* Del destinatario, sólo lo que la página muestra (05/10/26). Antes salía la
+     dirección entera —nombre completo, mail, teléfono, calle— a quien tuviera
+     el código, que va impreso en el comprobante y lo ve el cadete o quien
+     encuentre el papel. Ahora: el nombre de pila, la ciudad y la provincia. */
+  let destino = { name: "", city: "", province: "" };
+  try {
+    const a = JSON.parse(order.shippingAddress || "{}");
+    destino = {
+      name: typeof a.name === "string" ? a.name.trim().split(/\s+/)[0] ?? "" : "",
+      city: typeof a.city === "string" ? a.city : "",
+      province: typeof a.province === "string" ? a.province : "",
+    };
+  } catch { /* sin dirección legible: va vacía */ }
+
   const { name, slug, logo } = order.store;
-  return NextResponse.json({ order: { ...order, store: { name, slug, logo, whatsapp } } });
+  return NextResponse.json({ order: { ...order, shippingAddress: JSON.stringify(destino), store: { name, slug, logo, whatsapp } } });
 }
