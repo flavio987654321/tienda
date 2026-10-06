@@ -176,7 +176,7 @@ stock se descuenta de forma atómica.
 ## 5. Usabilidad — para vender más
 
 - [x] ~~**5.1 Talle preseleccionado**: pedir "Elegí tu talle".~~ → Hecho (05/10): al abrir la ficha se sigue eligiendo la combinación con stock (el color mueve la foto) pero el TALLE se suelta si hay más de uno (`sinTalleElegido`); "Agregar" avisa "Elegí talle". Probado en Boho (modal) y en la ficha de Aire.
-- [ ] **5.2 Carrito sin lugar en el encabezado** en Boho, Urban, Chic y Aurora.
+- [x] ~~**5.2 Carrito sin lugar en el encabezado** en Boho, Urban, Chic y Aurora.~~ → Hecho (05/10): carrito con contador en el encabezado en computadora (en celular sigue el flotante: arriba no entra). Probado: abre el cajón en los 4; sin superposiciones a 1280/1024/900/768. De paso, en Aurora las zonas táctiles de los íconos se pisaban 4 px (gap 4 con margin -4): gap 8.
 - [ ] **5.3 Objetivos táctiles chicos a 360** (× de anuncios, quitar del carrito,
   cerrar, ±, lupa de Boho, filtros del catálogo, agregar de Aire).
 - [ ] **5.4 Provincias del checkout en orden ISO** (Salta primero).

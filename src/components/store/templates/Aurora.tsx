@@ -941,7 +941,7 @@ export default function Aurora() {
               </button>
             ))}
           </div>}
-          <div style={{ display:"flex", alignItems:"center", gap: navApretada ? 4 : 12, flexShrink:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap: navApretada ? 8 : 12, flexShrink:0 }}>
             {/* Search icon */}
             <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1026,6 +1026,15 @@ export default function Aurora() {
                 </div>
               )}
             </div>
+            {/* El carrito también ARRIBA en computadora (05/10/26): estaba sólo el
+                botón flotante de abajo, y con el carrito lleno el cliente lo buscaba en
+                el encabezado. En celular no: no entra, y el flotante queda a mano. */}
+            {!isMobile && (
+              <button onClick={() => { setCartOpen(true); setUserDropdownOpen(false); setFavoritesOpen(false); }} aria-label={`Carrito, ${cartCount} ${cartCount === 1 ? "producto" : "productos"}`} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", alignItems:"center", position:"relative" }}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-2, right:-4, background:"#e53e3e", color:"#fff", borderRadius:999, minWidth:17, height:17, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 4px" }}>{cartCount}</span>}
+              </button>
+            )}
             {isMobile && (
               <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} aria-label="Menú" aria-expanded={mobileMenuOpen} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
                 <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>

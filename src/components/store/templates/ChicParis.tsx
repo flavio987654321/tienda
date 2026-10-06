@@ -1165,6 +1165,15 @@ export default function ChicParis() {
                 </div>
               )}
             </div>
+            {/* El carrito también ARRIBA en computadora (05/10/26): estaba sólo el
+                botón flotante de abajo, y con el carrito lleno el cliente lo buscaba en
+                el encabezado. En celular no: no entra, y el flotante queda a mano. */}
+            {!isMobile && (
+              <button onClick={() => { setCartOpen(true); setUserDropdownOpen(false); setFavoritesOpen(false); }} aria-label={`Carrito, ${cartCount} ${cartCount === 1 ? "producto" : "productos"}`} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s", position: "relative" }}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-2, right:-4, background:"#e53e3e", color:"#fff", borderRadius:999, minWidth:17, height:17, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 4px" }}>{cartCount}</span>}
+              </button>
+            )}
             {isMobile && (
               <button aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={mobileMenuOpen} onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
