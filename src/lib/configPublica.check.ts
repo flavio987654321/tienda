@@ -9,7 +9,8 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { configPublica, configPublicaTexto } from "./configPublica";
+import { configPublica, configPublicaTexto, esWhatsappDeEjemplo } from "./configPublica";
+import { DEFAULT_CONFIG, WHATSAPP_DE_EJEMPLO } from "../types/store-config";
 import { mediosHabilitados } from "./mediosDePago";
 
 let fallos = 0;
@@ -42,6 +43,12 @@ for (const pi of [undefined, {}, { transferencia: { enabled: true, cbu: "1" } },
     chequear(`mismos medios ${JSON.stringify(pi)} mp=${hasMercadoPago}`, JSON.stringify(servidor) === JSON.stringify(carrito), { servidor, carrito });
   }
 }
+// El WhatsApp de muestra grabado en una tienda real sale apagado (06/10/26).
+const conEjemplo = configPublica({ whatsapp: { enabled: true, number: WHATSAPP_DE_EJEMPLO, message: "hola" } }) as { whatsapp: { enabled: boolean; number: string; message: string } };
+chequear("WhatsApp de muestra → apagado y sin número", conEjemplo.whatsapp.enabled === false && conEjemplo.whatsapp.number === "" && conEjemplo.whatsapp.message === "hola", conEjemplo);
+const conReal = configPublica({ whatsapp: { enabled: true, number: "+54 9 2254 605521" } }) as { whatsapp: { enabled: boolean; number: string } };
+chequear("un WhatsApp real queda igual", conReal.whatsapp.enabled === true && conReal.whatsapp.number === "+54 9 2254 605521", conReal);
+chequear("la configuración de fábrica no trae el de muestra prendido", !(DEFAULT_CONFIG.whatsapp?.enabled && esWhatsappDeEjemplo(DEFAULT_CONFIG.whatsapp?.number)));
 chequear("texto roto → {}",configPublicaTexto("{no es json") === "{}");
 chequear("texto vacío → igual", configPublicaTexto("") === "" && configPublicaTexto(null) === null);
 

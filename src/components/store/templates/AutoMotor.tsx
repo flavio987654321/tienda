@@ -1,4 +1,5 @@
 "use client";
+import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -61,6 +62,9 @@ export default function AutoMotor() {
   const currency      = config?.currency ?? "ARS";
   const storeName     = config?.storeName ?? "AUTO MOTOR";
   const whatsapp      = config?.whatsapp ?? { enabled: false, number: "", message: "" };
+  /* El link armado con `linkWhatsApp` (06/10/26): saca el 0 y el 15, pone el
+     549 a un celular escrito sin país, y descarta el número de muestra. */
+  const waLink = whatsapp.enabled ? linkWhatsApp(whatsapp.number, whatsapp.message) : null;
 
   const iovr = config?.imageOverrides ?? {};
   const sc   = config?.sectionColors  ?? {};
@@ -442,8 +446,8 @@ export default function AutoMotor() {
                 letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
               Ver catálogo
             </button>
-            {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+            {waLink && (
+              <a href={waLink}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display:"flex", alignItems:"center", gap:8,
                   background:"rgba(255,255,255,0.12)", backdropFilter:"blur(8px)",
@@ -656,8 +660,8 @@ export default function AutoMotor() {
             maxWidth:420, marginInline:"auto" }}>
             <EditableZone field="contactSubtext" label="Subtítulo contacto">Escribinos y un asesor te responde en minutos para coordinar una visita sin compromiso.</EditableZone>
           </p>
-          {whatsapp.enabled && whatsapp.number && (
-            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+          {waLink && (
+            <a href={waLink}
               target="_blank" rel="noopener noreferrer"
               style={{ display:"inline-flex", alignItems:"center", gap:12, background:"#25d366",
                 color:"white", textDecoration:"none", padding:"18px 48px",
@@ -799,8 +803,8 @@ export default function AutoMotor() {
           storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
       )}
 
-      {!editMode && whatsapp.enabled && whatsapp.number && (
-        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+      {!editMode && waLink && (
+        <a href={waLink}
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel,
             background:"#25d366", color:"white", width:56, height:56,

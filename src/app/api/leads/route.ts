@@ -4,8 +4,25 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { consultaGeneraComision } from "@/lib/storeTypes";
 import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { createNotification } from "@/lib/notifications";
+import { sendPushToUser } from "@/lib/push";
+import { despues } from "@/lib/despues";
 
-// POST /api/leads — el cliente genera una consulta al presionar "Consultar por WhatsApp"
+/* La dueña se entera de una consulta nueva (06/10/26): campanita y teléfono,
+   como con un pedido. Sólo si trae datos (vino del formulario): el toque de
+   WhatsApp no avisa, porque ese mensaje ya le llega a su WhatsApp, y avisar dos
+   veces lo mismo es lo que hace que se silencien las notificaciones. */
+function avisarConsultaNueva(ownerId: string, vehiculo: string, nombre: string | null) {
+  if (!nombre) return;
+  const aviso = {
+    title: "Nueva consulta",
+    body: `${nombre.split(/\s+/)[0]} consultó por ${vehiculo}. Te dejó su teléfono para que lo contactes.`,
+  };
+  despues(() => createNotification({ userId: ownerId, type: "NEW_LEAD", ...aviso, link: "/dashboard/consultas" }), "consulta: campanita a la dueña");
+  despues(() => sendPushToUser(ownerId, { ...aviso, url: "/dashboard/consultas" }), "consulta: push a la dueña");
+}
+
+// POST /api/leads — una consulta por un vehículo: el toque de WhatsApp (sin datos) o el formulario (con nombre y teléfono)
 export async function POST(req: NextRequest) {
   /* Sin sesión y sin techo era el endpoint más fácil de inundar de todo el
      proyecto: cualquiera con el id de una tienda podía escribirle mil consultas
@@ -98,7 +115,10 @@ export async function POST(req: NextRequest) {
         },
         data: datos,
       });
-      if (completada.count > 0) return NextResponse.json({ leadId }, { status: 200 });
+      if (completada.count > 0) {
+        avisarConsultaNueva(store.ownerId, product.name, datos.customerName);
+        return NextResponse.json({ leadId }, { status: 200 });
+      }
       // Si no se pudo (venció, ya tenía datos), se crea una nueva abajo.
     }
 
@@ -129,6 +149,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    avisarConsultaNueva(store.ownerId, product.name, datos.customerName);
     return NextResponse.json({ leadId: lead.id }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

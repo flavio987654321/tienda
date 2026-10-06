@@ -18,8 +18,21 @@
 
 type Medio = { enabled?: unknown };
 
+/** ¿Es el número de muestra (`WHATSAPP_DE_EJEMPLO`), escrito como sea? */
+export function esWhatsappDeEjemplo(numero: unknown): boolean {
+  return typeof numero === "string" && numero.replace(/\D/g, "") === "5491100000000";
+}
+
 /** Recibe el `storeConfig` ya parseado y devuelve una copia sin datos privados. */
-export function configPublica<T extends Record<string, unknown>>(cfg: T): T {
+export function configPublica<T extends Record<string, unknown>>(entrada: T): T {
+  /* El WhatsApp de MUESTRA no sale prendido (06/10/26). El editor graba el
+     config entero, así que hay tiendas con `+54 9 11 0000-0000` guardado y
+     activo: su botón abría un chat con nadie. Se apaga acá, que es por donde
+     pasan las dos salidas públicas, y así vale para todos los templates. */
+  const wa = entrada.whatsapp as { enabled?: unknown; number?: unknown } | undefined;
+  const cfg: T = wa && typeof wa === "object" && esWhatsappDeEjemplo(wa.number)
+    ? { ...entrada, whatsapp: { ...wa, enabled: false, number: "" } }
+    : entrada;
   const pi = cfg.paymentInfo as { transferencia?: Medio; efectivo?: Medio } | undefined;
   if (!pi || typeof pi !== "object") return cfg;
   /* Sólo las claves que existen: `mediosHabilitados` trata una tienda sin

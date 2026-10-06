@@ -24,6 +24,13 @@ const ICONS: Record<string, string> = {
   ORDER_CANCELLED: "❌",
   NEW_REVIEW: "⭐",
   ABANDONED_CART: "🛒",
+  NEW_LEAD: "💬",
+  ORDER_PENDING_REMINDER: "⏳",
+  // Pagos de MercadoPago que necesitan a la dueña (webhook, 05/10/26)
+  PAYMENT_REFUNDED: "↩️",
+  PAYMENT_DUPLICATED: "⚠️",
+  PAYMENT_WITHOUT_STOCK: "⚠️",
+  COMMISSION_REVERSED: "↩️",
   // Afiliados — estado en programa
   AFFILIATE_APPROVED: "🤝",
   AFFILIATE_REJECTED: "🚫",

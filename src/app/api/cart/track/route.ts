@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getStoreType } from "@/lib/storeTypes";
 import { createNotification } from "@/lib/notifications";
 import { despues } from "@/lib/despues";
 import { visitaLegitima } from "@/lib/visita-legitima";
@@ -178,9 +179,12 @@ export async function POST(req: NextRequest) {
   // una tienda dada de baja o sin publicar.
   const store = await prisma.store.findFirst({
     where: { id: storeId, isActive: true },
-    select: { id: true, ownerId: true },
+    select: { id: true, ownerId: true, tipoTienda: true },
   });
   if (!store) return NextResponse.json({ ok: false }, { status: 404 });
+  // Un rubro de consulta (autos) no tiene carrito: no hay nada que recuperar, y
+  // el mail de "te olvidaste algo" no tendría a dónde volver (06/10/26).
+  if (getStoreType(store.tipoTienda).checkoutMode === "inquiry") return NextResponse.json({ ok: false }, { status: 409 });
 
   const items = await itemsDeVerdad(store.id, crudos);
   if (items.length === 0) return NextResponse.json({ ok: false }, { status: 400 });

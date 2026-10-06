@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Aire from "@/components/store/templates/Aire";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
-import { DEFAULT_CONFIG, type StoreConfig } from "@/types/store-config";
+import { DEFAULT_CONFIG, WHATSAPP_DE_EJEMPLO, MENSAJE_WHATSAPP_INICIAL, type StoreConfig } from "@/types/store-config";
 
 /* Arranca con la config por defecto y `previewFill` prendido, en vez de con
    `null`.
@@ -14,7 +14,8 @@ import { DEFAULT_CONFIG, type StoreConfig } from "@/types/store-config";
    template. Cuando el editor manda su config, la pisa entera. */
 // `previewDemoPuro`: suelta, esta previa es sólo el diseño con sus ejemplos (también
 // el look de ejemplo de "Comprá el look"); el editor la pisa con la suya.
-const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, previewFill: true, previewDemoPuro: true };
+// La demo muestra el botón de WhatsApp con el número de muestra: la tienda real lo trae apagado.
+const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, whatsapp: { enabled: true, number: WHATSAPP_DE_EJEMPLO, message: MENSAJE_WHATSAPP_INICIAL }, previewFill: true, previewDemoPuro: true };
 
 export default function PreviewAire() {
   const [config, setConfig] = useState<StoreConfig>(CONFIG_INICIAL);

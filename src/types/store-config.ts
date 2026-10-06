@@ -469,12 +469,22 @@ export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
   "casa-clara":    ["HOGAR_TECH"],
 };
 
+/** El número de muestra de las vistas de demostración. NO es de nadie: una
+ *  tienda real con este número tiene el WhatsApp apagado (ver `configPublica`). */
+export const WHATSAPP_DE_EJEMPLO = "+54 9 11 0000-0000";
+export const MENSAJE_WHATSAPP_INICIAL = "Hola! Me gustaría consultar sobre sus productos 😊";
+
 export const DEFAULT_CONFIG: StoreConfig = {
   template:      "aire",
   storeName:     "Mi Tienda",
   storeTagline:  "Tu tienda online",
   colors:        { accent: "#1f5c3d" },
-  whatsapp:      { enabled: true, number: "+54 9 11 0000-0000", message: "Hola! Me gustaría consultar sobre sus productos 😊" },
+  /* Apagado y sin número (06/10/26). Antes venía PRENDIDO con el número de
+     muestra: toda tienda que nunca configuró WhatsApp —y toda la que guardó el
+     diseño sin tocarlo, porque el editor graba el config entero— mostraba un
+     botón que abría un chat con +54 9 11 0000-0000. En autos, ése era el único
+     botón para consultar. Se prende al cargar el número en Ajustes. */
+  whatsapp:      { enabled: false, number: "", message: MENSAJE_WHATSAPP_INICIAL },
   socialLinks:   { instagram: "", facebook: "", tiktok: "", youtube: "", pinterest: "" },
   currency:      "ARS",
   seo:           { enabled: false, title: "", description: "" },

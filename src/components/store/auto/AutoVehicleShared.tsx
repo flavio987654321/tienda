@@ -5,7 +5,7 @@ import { esOpcionDeColor } from "@/lib/opciones";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
-import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
+import ConsultaVehiculo from "./ConsultaVehiculo";
 import { CAPAS } from "@/lib/capas-tienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 
@@ -69,13 +69,18 @@ function SpecIcon({ label, accent }: { label: string; accent: string }) {
   return <svg {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 }
 
+/* Todas las columnas con `minmax(0, …)` y los hijos con `min-width: 0` (06/10/26).
+   Un `1fr` a secas no baja del ancho de su contenido: la tira de miniaturas en
+   fila (68 px cada una) ensanchaba la columna, y a 360 px con diez fotos el
+   modal medía 733 px — el botón de WhatsApp quedaba fuera de la pantalla. */
 export const AM_MODAL_CSS = `
-  .am-modal-body { grid-template-columns: 1fr !important }
-  @media(min-width:700px){ .am-modal-body { grid-template-columns: 3fr 2fr !important } }
-  .am-specs-grid { grid-template-columns: 1fr !important }
-  @media(min-width:560px){ .am-specs-grid { grid-template-columns: 1fr 1fr !important } }
-  .am-similar-grid { grid-template-columns: repeat(2,1fr) !important }
-  @media(min-width:560px){ .am-similar-grid { grid-template-columns: repeat(4,1fr) !important } }
+  .am-modal-body { grid-template-columns: minmax(0,1fr) !important }
+  .am-modal-body > * { min-width: 0 }
+  @media(min-width:700px){ .am-modal-body { grid-template-columns: minmax(0,3fr) minmax(0,2fr) !important } }
+  .am-specs-grid { grid-template-columns: minmax(0,1fr) !important }
+  @media(min-width:560px){ .am-specs-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important } }
+  .am-similar-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important }
+  @media(min-width:560px){ .am-similar-grid { grid-template-columns: repeat(4,minmax(0,1fr)) !important } }
   .am-img-wrap { flex-direction: column !important }
   .am-img-thumbs { flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; width: 100% !important; max-height: 64px !important; padding: 6px 8px !important }
   @media(min-width:700px){
@@ -140,38 +145,14 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   if (servicesRaw) { try { servicesData = JSON.parse(servicesRaw); } catch {} }
   const hasServices = Object.keys(servicesData).length > 0;
 
-  const waNumber = whatsapp.number.replace(/\D/g, "");
-  const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""}. ¿Está disponible?`);
-
-  /* La consulta es la venta en las tiendas de autos: ahí no hay carrito, así que
-     la comisión del afiliado NO nace de un pedido sino de que el dueño confirme
-     esta consulta (ver `api/leads/[id]`, que acredita el saldo).
-
-     Este formulario nunca mandaba el afiliado. La API lo aceptaba y lo validaba
-     desde el principio, pero como nadie se lo mandaba, toda consulta se guardaba
-     sin dueño y con el porcentaje en null — o sea que la rama que paga la
-     comisión no podía ejecutarse nunca. En un rubro donde ESTE es el único
-     camino, el afiliado no iba a cobrar jamás. */
-  function registerLead() {
-    if (!storeId || isOwner || isPreview) return;
-    fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        storeId,
-        affiliateId: afiliadoDeEstaTienda() ?? undefined,
-        productId: product.id,
-        productName: product.name,
-        productPrice: product.price,
-      }),
-    }).catch(() => {});
-  }
-
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      // Escribiendo en el formulario de consulta, las flechas mueven el cursor, no la foto.
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if (e.key === "ArrowLeft") setImgIdx(i => (i - 1 + imgs.length) % imgs.length);
       if (e.key === "ArrowRight") setImgIdx(i => (i + 1) % imgs.length);
     };
@@ -358,16 +339,9 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       </p>
                     )}
                   </div>
-                  {whatsapp.enabled && waNumber && (
-                    <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
-                      target="_blank" rel="noopener noreferrer" onClick={registerLead}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                        background: "#25d366", color: "white", textDecoration: "none",
-                        padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
-                        boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
-                      <WaIcon size={18} /> Consultar por WhatsApp
-                    </a>
-                  )}
+                  <ConsultaVehiculo product={product} accent={accent} precioTexto={fmtPrice(product.price, currency)}
+                    whatsappNumber={whatsapp.number} whatsappEnabled={whatsapp.enabled}
+                    storeId={storeId} isOwner={isOwner} isPreview={isPreview} año={año} />
                   {hasServices && (
                     <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14, marginTop: 4 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>

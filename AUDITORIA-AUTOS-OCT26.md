@@ -65,26 +65,53 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 
 ## 2. Que el comprador pueda consultar
 
-- [ ] **2.1 En el celular, el modal del auto se ensancha** (alta). La tira de miniaturas agranda
+- [x] ~~**2.1 En el celular, el modal del auto se ensancha** (alta).~~ → Hecho (06/10):
+  columnas con `minmax(0,…)` e hijos con `min-width:0`. Medido en 360, 768 y 1280: el modal
+  ocupa exactamente su ancho, y el botón queda adentro (44–316 px a 360).
+  Detalle original: la tira de miniaturas agranda
   la columna `1fr`. A 360 px con 10 fotos, el botón de WhatsApp queda fuera de la pantalla y hay
   que deslizar de costado.
-- [ ] **2.2 La ficha `/producto/[id]` de autos muestra un carrito** (alta). No hay ficha temática
+- [x] ~~**2.2 La ficha `/producto/[id]` de autos muestra un carrito** (alta).~~ → Hecho (06/10):
+  `redirect` a `/tienda/<slug>?producto=<id>`, probado llamando a la página contra la base de
+  prueba (autos redirige, ropa no). `cart/track` devuelve 409 en rubros de consulta. No hay ficha temática
   para auto-drive ni auto-motor, así que cae en la genérica: cantidad, "Agregar al carrito",
   cuotas, "Ver carrito". Llegan ahí Google (sitemap), el catálogo de Meta y Google Shopping.
   → Redirigir a `/tienda/<slug>?producto=<id>`, que abre el modal. Además, `cart/track` no
   registra carritos en rubros de consulta.
-- [ ] **2.3 Sin WhatsApp no hay cómo consultar, y el de ejemplo viene activo** (alta).
+- [x] ~~**2.3 Sin WhatsApp no hay cómo consultar, y el de ejemplo viene activo** (alta).~~ → Hecho (06/10):
+  - `DEFAULT_CONFIG.whatsapp` viene apagado y sin número. Las vistas de demostración (`/preview/*`)
+    lo ponen a mano.
+  - `configPublica` apaga el número de muestra si una tienda lo tiene grabado. Vale para todos
+    los templates, no solo autos: `importadosmalena` (ROPA) también lo tenía.
+  - Sin WhatsApp, el modal muestra el formulario abierto.
+  Detalle original:
   `DEFAULT_CONFIG.whatsapp` = `{enabled:true, number:"+54 9 11 0000-0000"}` queda grabado al
   guardar el diseño, y producción lo confirma. Si la dueña lo apaga, el modal se queda sin ningún
   botón.
-- [ ] **2.4 La consulta no guarda quién consultó** (alta). No hay formulario: la consulta se crea
+- [x] ~~**2.4 La consulta no guarda quién consultó** (alta).~~ → Hecho (06/10): `ConsultaVehiculo`.
+  - WhatsApp es el botón principal y abajo va "¿Preferís que te llamen? Dejá tus datos" (nombre,
+    teléfono y mensaje opcional).
+  - Valida antes de mandar, muestra el error del servidor (incluido el 429) y un mensaje de éxito.
+  - Si la persona ya tocó WhatsApp, completa esa consulta en vez de crear otra.
+  - El toque de WhatsApp registra una sola consulta por vehículo cada 30 minutos.
+  - Las flechas del teclado ya no cambian la foto mientras se escribe.
+  Detalle original: No hay formulario: la consulta se crea
   sola al tocar WhatsApp, sin nombre ni teléfono. En el panel salen filas "Sin nombre" y las
   respuestas rápidas no aparecen nunca.
-- [ ] **2.5 El número de WhatsApp no se normaliza.** "011 15 5555-1234" arma
+- [x] ~~**2.5 El número de WhatsApp no se normaliza.**~~ → Hecho (06/10): `lib/whatsappTienda`.
+  - Con código de país, se respeta tal cual: un "+54 2254…" sin el 9 puede ser un fijo con
+    WhatsApp Business.
+  - Sin código de país, se lee como celular argentino y se le pone el 549.
+  - El número de muestra da `null`.
+  - Lo usan el modal y los 7 botones de los templates. Hay 12 casos en `whatsappTienda.check.ts`.
+  Detalle original: "011 15 5555-1234" arma
   `wa.me/01115…`, que no funciona. Usar `celularArgentino` / `enlaceDeWhatsApp`.
-- [ ] **2.6 El mensaje de WhatsApp no dice precio ni link.** Dos Hilux 2023 distintas no se
-  distinguen en el chat.
-- [ ] **2.7 La dueña no se entera de una consulta nueva.** No hay campanita, push ni mail.
+- [x] ~~**2.6 El mensaje de WhatsApp no dice precio ni link.**~~ → Hecho (06/10): "Hola! Me
+  interesa el {vehículo} ({año}) de {precio}. ¿Está disponible?" y el link a la portada con
+  `?producto=` (desde /vehiculos se le saca ese tramo, porque esa página no abre el modal).
+- [x] ~~**2.7 La dueña no se entera de una consulta nueva.**~~ → Hecho (06/10): campanita
+  (`NEW_LEAD`, 💬) y push cuando la consulta trae nombre, es decir, cuando viene del formulario.
+  El toque de WhatsApp no avisa: ese mensaje ya le llega a su WhatsApp.
 
 ## 3. Datos del vehículo
 
@@ -143,5 +170,8 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 - [x] ~~**El precio de venta de un auto se guardaba mal.**~~ El campo aceptaba puntos, y
   `parseFloat("12.500.000")` da 12,5. Ahora acepta solo dígitos (`VehicleStatusModal`), y el
   servidor igual interpreta los puntos como miles.
+- [x] ~~**Los avisos nuevos de pagos no tenían ícono.**~~ Los que sumó la auditoría de moda
+  (devolución, pago duplicado, pago sin stock, comisión revertida, recordatorio de pedido sin
+  confirmar) caían en la 🔔 genérica de la campanita. Ahora tienen ícono propio.
 - **3.4, avance:** del lado del servidor ya está hecho. Reservado no oculta el auto, y volver a
   Disponible no publica uno que la dueña ocultó a mano. Falta la etiqueta en la tienda.

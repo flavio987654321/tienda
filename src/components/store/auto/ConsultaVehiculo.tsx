@@ -1,0 +1,181 @@
+"use client";
+import { useRef, useState } from "react";
+import type { StorefrontProduct } from "@/hooks/useStorefront";
+import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
+import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { getContrastColor } from "@/contexts/EditContext";
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CÓMO CONSULTA EL COMPRADOR POR UN VEHÍCULO (06/10/26)
+   ══════════════════════════════════════════════════════════════════════════
+
+   En autos no hay carrito: la consulta ES la venta. Antes había un solo
+   camino, el botón de WhatsApp, que además registraba la consulta sin ningún
+   dato —en el panel salían filas "Sin nombre" que no se podían contestar—, y
+   si la tienda no tenía WhatsApp no había forma de consultar.
+
+   Ahora (decisión del dueño, ver AUDITORIA-AUTOS-OCT26.md):
+   - WhatsApp sigue siendo el botón principal. El mensaje lleva la unidad, el
+     precio y el link, para que la concesionaria sepa de cuál le hablan.
+   - Abajo, "Dejá tus datos y te contactamos": nombre y teléfono. Si la persona
+     ya tocó WhatsApp, el formulario COMPLETA esa consulta (`leadId`) en vez de
+     crear otra.
+   - Sin WhatsApp (o con el número de muestra), queda sólo el formulario,
+     abierto. */
+
+const CLAVE = (id: string) => `consulta-vehiculo:${id}`;
+const VIGENCIA_MS = 30 * 60_000;
+
+/** La consulta que ya abrió este navegador para este vehículo (si es reciente). */
+function consultaPrevia(productId: string): string | null {
+  try {
+    const raw = sessionStorage.getItem(CLAVE(productId));
+    if (!raw) return null;
+    const { id, t } = JSON.parse(raw) as { id: string; t: number };
+    return Date.now() - t < VIGENCIA_MS ? id : null;
+  } catch { return null; }
+}
+function recordarConsulta(productId: string, id: string) {
+  try { sessionStorage.setItem(CLAVE(productId), JSON.stringify({ id, t: Date.now() })); } catch { /* sin storage */ }
+}
+
+type Estado = "idle" | "enviando" | "listo";
+
+export default function ConsultaVehiculo({ product, accent, precioTexto, whatsappNumber, whatsappEnabled, storeId, isOwner, isPreview, año }: {
+  product: StorefrontProduct;
+  accent: string;
+  /** El precio ya formateado (lo arma el modal con `fmtPrice`). */
+  precioTexto: string;
+  whatsappNumber: string;
+  whatsappEnabled: boolean;
+  storeId?: string;
+  isOwner?: boolean;
+  isPreview?: boolean;
+  año?: string;
+}) {
+  /* El link va a la PORTADA de la tienda, que abre este modal con `?producto=`.
+     Desde /vehiculos se le saca ese tramo: esa página no lo abre. Se arma con
+     la dirección actual para que sirva también en un dominio propio. */
+  const link = typeof window !== "undefined"
+    ? `${window.location.origin}${window.location.pathname.replace(/\/vehiculos\/?$/, "") || "/"}?producto=${encodeURIComponent(product.id)}`
+    : "";
+  const texto = `Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""} de ${precioTexto}. ¿Está disponible?${link ? `\n${link}` : ""}`;
+  const waHref = whatsappEnabled ? linkWhatsApp(whatsappNumber, texto) : null;
+
+  const [abierto, setAbierto] = useState(!waHref);
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [mensaje, setMensaje] = useState("");
+  const [estado, setEstado] = useState<Estado>("idle");
+  const [error, setError] = useState("");
+  const enviando = useRef(false);
+  const soloMirando = !storeId || isOwner || isPreview;
+
+  /* El toque de WhatsApp anota la consulta (sin datos: el chat sigue afuera).
+     Una sola vez por vehículo cada 30 minutos: tocarlo dos veces no son dos
+     interesados. */
+  function registrarToqueWhatsApp() {
+    if (soloMirando || consultaPrevia(product.id)) return;
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId, productId: product.id, affiliateId: afiliadoDeEstaTienda() ?? undefined }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { leadId?: string } | null) => { if (d?.leadId) recordarConsulta(product.id, d.leadId); })
+      .catch(() => {});
+  }
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (enviando.current) return;
+    setError("");
+    const digitos = telefono.replace(/\D/g, "");
+    if (!nombre.trim()) { setError("Escribí tu nombre."); return; }
+    if (digitos.length < 8 || digitos.length > 15) { setError("Revisá el teléfono: poné el número completo, con característica."); return; }
+    if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
+    enviando.current = true;
+    setEstado("enviando");
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId, productId: product.id, affiliateId: afiliadoDeEstaTienda() ?? undefined,
+          leadId: consultaPrevia(product.id) ?? undefined,
+          customerName: nombre, customerPhone: telefono, customerMessage: mensaje,
+        }),
+      });
+      const data = await res.json().catch(() => ({})) as { leadId?: string; error?: string };
+      if (!res.ok) {
+        setEstado("idle");
+        setError(data.error ?? "No se pudo enviar. Probá de nuevo en un momento.");
+        return;
+      }
+      if (data.leadId) recordarConsulta(product.id, data.leadId);
+      setEstado("listo");
+    } catch {
+      setEstado("idle");
+      setError("Sin conexión. Revisá internet y probá de nuevo.");
+    } finally {
+      enviando.current = false;
+    }
+  }
+
+  const campo: React.CSSProperties = {
+    width: "100%", boxSizing: "border-box", border: "1px solid #dcdcdc", borderRadius: 6,
+    padding: "11px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", outline: "none",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+      {waHref && (
+        <a href={waHref} target="_blank" rel="noopener noreferrer" onClick={registrarToqueWhatsApp}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            background: "#25d366", color: "white", textDecoration: "none",
+            padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
+            boxShadow: "0 4px 16px rgba(37,211,102,0.3)" }}>
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.42.25-.7.25-1.29.17-1.42-.07-.13-.27-.2-.57-.35M12.05 21.5h-.01a9.4 9.4 0 01-4.8-1.32l-.34-.2-3.57.94.95-3.48-.22-.36a9.4 9.4 0 01-1.44-5.01c0-5.2 4.23-9.43 9.44-9.43a9.38 9.38 0 016.67 2.77 9.37 9.37 0 012.76 6.67c0 5.2-4.23 9.43-9.44 9.43M20.08 3.9A11.3 11.3 0 0012.05.58C5.8.58.7 5.67.7 11.93c0 2 .52 3.95 1.52 5.67L.6 23.42l5.95-1.56a11.3 11.3 0 005.42 1.38h.01c6.25 0 11.35-5.09 11.35-11.35 0-3.03-1.18-5.88-3.32-8.02"/></svg>
+          Consultar por WhatsApp
+        </a>
+      )}
+
+      {estado === "listo" ? (
+        <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
+          <strong>¡Listo, {nombre.trim().split(/\s+/)[0]}!</strong> Recibimos tu consulta y te vamos a contactar al {telefono.trim()}.
+        </div>
+      ) : !abierto ? (
+        <button type="button" onClick={() => setAbierto(true)}
+          style={{ background: "none", border: "1px solid #dcdcdc", borderRadius: 6, padding: "12px 16px", minHeight: 44,
+            fontSize: 13, fontWeight: 600, color: "#1a2744", cursor: "pointer", fontFamily: "inherit" }}>
+          ¿Preferís que te llamen? Dejá tus datos
+        </button>
+      ) : (
+        <form onSubmit={enviar} noValidate style={{ display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+          <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#1a2744" }}>
+            {waHref ? "Dejá tus datos y te contactamos" : "Consultá por este vehículo"}
+          </p>
+          <label style={{ fontSize: 12, color: "#555" }}>
+            Nombre
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={80} autoComplete="name" required style={{ ...campo, marginTop: 4 }} />
+          </label>
+          <label style={{ fontSize: 12, color: "#555" }}>
+            Teléfono
+            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={30} type="tel" inputMode="tel" autoComplete="tel" placeholder="Ej: 11 5555-1234" required style={{ ...campo, marginTop: 4 }} />
+          </label>
+          <label style={{ fontSize: 12, color: "#555" }}>
+            Mensaje <span style={{ color: "#999" }}>(opcional)</span>
+            <textarea value={mensaje} onChange={(e) => setMensaje(e.target.value)} maxLength={1000} rows={2} placeholder="Ej: ¿Aceptan permuta? ¿Tiene financiación?" style={{ ...campo, marginTop: 4, resize: "vertical" }} />
+          </label>
+          {error && <p role="alert" style={{ margin: 0, fontSize: 12, color: "#b91c1c" }}>{error}</p>}
+          <button type="submit" disabled={estado === "enviando"}
+            style={{ background: accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border: "none", borderRadius: 6, padding: "12px 16px", minHeight: 44,
+              fontSize: 14, fontWeight: 700, cursor: estado === "enviando" ? "default" : "pointer", opacity: estado === "enviando" ? 0.7 : 1, fontFamily: "inherit" }}>
+            {estado === "enviando" ? "Enviando…" : "Enviar consulta"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+

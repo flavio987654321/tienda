@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
-import { DEFAULT_CONFIG, type StoreConfig } from "@/types/store-config";
+import { DEFAULT_CONFIG, WHATSAPP_DE_EJEMPLO, MENSAJE_WHATSAPP_INICIAL, type StoreConfig } from "@/types/store-config";
 
 /* Arranca con la config por defecto y `previewFill` prendido, en vez de con
    `null`. Es el mismo arreglo que ya tenía `/preview/aire`.
@@ -17,7 +17,8 @@ import { DEFAULT_CONFIG, type StoreConfig } from "@/types/store-config";
    Cuando el editor manda su config, la pisa entera. */
 // `previewDemoPuro`: suelta, esta previa es sólo el diseño con sus ejemplos (también
 // el look de ejemplo de "Comprá el look"); el editor la pisa con la suya.
-const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, template: "boho-terra", previewFill: true, previewDemoPuro: true };
+// La demo muestra el botón de WhatsApp con el número de muestra: la tienda real lo trae apagado.
+const CONFIG_INICIAL: StoreConfig = { ...DEFAULT_CONFIG, whatsapp: { enabled: true, number: WHATSAPP_DE_EJEMPLO, message: MENSAJE_WHATSAPP_INICIAL }, template: "boho-terra", previewFill: true, previewDemoPuro: true };
 
 export default function PreviewBohoTerra() {
   const [config, setConfig] = useState<StoreConfig>(CONFIG_INICIAL);
