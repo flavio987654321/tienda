@@ -150,8 +150,11 @@ stock se descuenta de forma atómica.
 ## 4. Pantallas — errores visibles (probados en vivo)
 
 - [x] ~~**4.1 Boho 768: "Agregar al carrito" de la ficha queda fuera de la vista.**~~ → Hecho (05/10): el bloque de compra queda pegado al fondo de la columna (sticky). Verificado en vivo (amaranta, Buzo Hoody) a 768, 1024 y 1280.
-- [ ] **4.2 Aire 768: links del encabezado pisan la marca y los íconos** (portada,
-  ficha y `AireNav`).
+- [x] ~~**4.2 Aire 768: links del encabezado pisan la marca y los íconos** (portada,
+  ficha y `AireNav`).~~ → Hecho (05/10): el encabezado pasa a hamburguesa por
+  debajo de 1024 (`navCompacta`), sin cambiar el resto del diseño. Medido en
+  portada y ficha a 768/900/1024/1280: ningún elemento superpuesto, sin scroll
+  horizontal; el menú abierto en tablet se ve bien.
 - [ ] **4.3 Boho 360: galería de la ficha más ancha que el modal** (flecha
   intocable).
 - [ ] **4.4 Chic 360: hamburguesa medio afuera; marca debajo del tilde.**

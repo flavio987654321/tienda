@@ -180,6 +180,10 @@ export default function Aire() {
   /** Qué tarjeta tiene el mouse encima, para agrandarle la foto. */
   const [hoveredId,          setHoveredId]          = useState<string | null>(null);
   const [isMobile,           setIsMobile]           = useState(false);
+  /* El encabezado pasa a hamburguesa antes que el resto del diseño (05/10/26):
+     entre 768 y 1023 la tienda se ve como en computadora, pero los tres links
+     del medio no entraban y se pisaban con la marca y los íconos. */
+  const [navCompacta,        setNavCompacta]        = useState(false);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
   const [mobileOpenCat,      setMobileOpenCat]      = useState<string | null>(null);
@@ -655,7 +659,7 @@ export default function Aire() {
   };
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => { setIsMobile(window.innerWidth < 768); setNavCompacta(window.innerWidth < 1024); };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -1741,7 +1745,7 @@ export default function Aire() {
           </div>
 
           {/* ── Los links, al medio ── */}
-          {!isMobile && (
+          {!navCompacta && (
             <div style={{ flex:1, display:"flex", gap:24, alignItems:"center", justifyContent:"center", minWidth:0 }}>
               {/* Lleva a la PÁGINA del catálogo, no a la grilla de la portada.
                   Antes bajaba a los seis destacados y ahí se quedaba: el link que
@@ -1848,7 +1852,7 @@ export default function Aire() {
           )}
 
           {/* ── Las acciones ── */}
-          <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 4 : 6, flexShrink:0, marginLeft: isMobile ? "auto" : 0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 4 : 6, flexShrink:0, marginLeft: navCompacta ? "auto" : 0 }}>
             <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background:"none", border:"none", color:T, cursor:"pointer", width:38, height:38, borderRadius:999, display:"grid", placeItems:"center" }}
               onMouseEnter={e => (e.currentTarget.style.background="rgba(20,22,26,0.05)")} onMouseLeave={e => (e.currentTarget.style.background="none")}>
               <svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1966,7 +1970,7 @@ export default function Aire() {
             )}
             </div>
 
-            {isMobile && (
+            {navCompacta && (
               <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                 aria-label="Menú" aria-expanded={mobileMenuOpen}
                 style={{ background:"none", border:"none", color:T, cursor:"pointer", width:38, height:38, borderRadius:999, display:"flex", flexDirection:"column", gap:4, alignItems:"center", justifyContent:"center" }}>
@@ -1996,7 +2000,7 @@ export default function Aire() {
       {!isPreview && <div aria-hidden style={{ height: altoBarra }} />}
 
       {/* ── MENÚ DE CELULAR ────────────────────────────────────────────────── */}
-      {isMobile && mobileMenuOpen && (
+      {navCompacta && mobileMenuOpen && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 64 + announcementBarHeight, left:0, right:0, bottom:0, background:BG, zIndex:CAPAS.menuMobile, overflowY:"auto", overscrollBehavior:"contain", padding:"14px 14px 40px" }}>
           {categoryList.length > 0 && (
             <div style={{ background:S, border:`1px solid ${LN}`, borderRadius:RAD, overflow:"hidden", marginBottom:12 }}>

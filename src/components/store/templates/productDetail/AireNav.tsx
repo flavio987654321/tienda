@@ -86,6 +86,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
    `false` —dibuja la barra de escritorio— y el navegador corrige en el primer
    pintado si el ancho es de celular. */
 const suscribirAncho = (avisar: () => void) => {
+  // Avisa ante cualquier cambio de ancho: cubre los dos cortes de abajo.
   const mq = window.matchMedia("(max-width: 767px)");
   mq.addEventListener("change", avisar);
   window.addEventListener("resize", avisar);
@@ -113,6 +114,14 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
   const esCelular = useSyncExternalStore(
     suscribirAncho,
     () => window.matchMedia("(max-width: 767px)").matches,
+    () => false,
+  );
+  /* El encabezado pasa a hamburguesa antes que el resto (05/10/26): entre 768
+     y 1023 los links del medio no entraban y se pisaban con la marca y los
+     íconos. Igual que en la portada de Aire. */
+  const navCompacta = useSyncExternalStore(
+    suscribirAncho,
+    () => window.matchMedia("(max-width: 1023px)").matches,
     () => false,
   );
 
@@ -249,7 +258,7 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
             </div>
 
             {/* ── Los links, al medio ── */}
-            {!esCelular && (
+            {!navCompacta && (
               <div style={{ flex: 1, display: "flex", gap: 24, alignItems: "center", justifyContent: "center", minWidth: 0 }}>
                 {linkMenu(catalogHref, "Catálogo")}
 
@@ -314,7 +323,7 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
             )}
 
             {/* ── Las acciones ── */}
-            <div style={{ display: "flex", alignItems: "center", gap: esCelular ? 4 : 6, flexShrink: 0, marginLeft: esCelular ? "auto" : 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: esCelular ? 4 : 6, flexShrink: 0, marginLeft: navCompacta ? "auto" : 0 }}>
               {botonRedondo(
                 <svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
                 { onClick: () => setSearchOpen(true), "aria-label": "Buscar" },
@@ -402,7 +411,7 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
                 </span>
               </button>
 
-              {esCelular && (
+              {navCompacta && (
                 <button onClick={() => { setMenuAbierto(!menuAbierto); setCatsCelAbiertas(false); setCatCelAbierta(null); }}
                   aria-label="Menú" aria-expanded={menuAbierto}
                   style={{ background: "none", border: "none", color: T, cursor: "pointer", width: 38, height: 38, borderRadius: 999, display: "flex", flexDirection: "column", gap: 4, alignItems: "center", justifyContent: "center" }}>
@@ -417,7 +426,7 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
       </nav>
 
       {/* ── MENÚ DE CELULAR ── */}
-      {esCelular && menuAbierto && (
+      {navCompacta && menuAbierto && (
         <div style={{ position: "fixed", top: altoAnuncio + altoBarra, left: 0, right: 0, bottom: 0, background: BG, zIndex: CAPAS.menuMobile, overflowY: "auto", overscrollBehavior: "contain", padding: "14px 14px 40px" }}>
           {categorias.length > 0 && (
             <div style={{ background: S, border: `1px solid ${LN}`, borderRadius: RAD, overflow: "hidden", marginBottom: 12 }}>
