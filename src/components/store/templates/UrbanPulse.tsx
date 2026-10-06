@@ -3115,7 +3115,6 @@ export default function UrbanPulse() {
                     </>
                   )}
                 </div>
-                {modalPromo?.primaryPromo && <div style={{ marginBottom:16 }}><PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={PALETA_PROMO_NEON} /></div>}
                 {!ocultarPrecios && modalProduct.offerNote && (
                   <div style={{ fontSize:12, color:"#f97316", background:"rgba(249,115,22,0.08)", border:"1px solid rgba(249,115,22,0.25)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -3226,6 +3225,11 @@ export default function UrbanPulse() {
                   {favorites.includes(modalProduct.id) ? "Guardado" : "Guardar en favoritos"}
                 </button>
 
+                {/* La caja de la promo va DESPUÉS de comprar (05/10/26): arriba, junto al
+                    cartel de la foto y el "20% OFF" del precio, era la tercera vez que se
+                    decía lo mismo, y empujaba color, talle y botón hacia abajo. Acá queda la
+                    letra chica ("no se acumula con cupones", vencimiento) para quien la busca. */}
+                {modalPromo?.primaryPromo && <div style={{ marginTop:14 }}><PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={PALETA_PROMO_NEON} /></div>}
                 {/* Compartir. Estaba arriba de todo, entre el nombre y el precio,
                     empujando el precio para abajo en un panel que tiene que ser
                     corto — y con colores heredados de un template oscuro: fondo

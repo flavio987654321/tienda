@@ -2058,7 +2058,6 @@ export default function BohoTerra() {
                   </>
                 )}
               </div>
-              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={PALETA_PROMO_TIERRA} />}
               {!ocultarPrecios && modalProduct.offerNote && (
                 <div style={{ fontSize:12, color:"#059669", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2160,6 +2159,11 @@ export default function BohoTerra() {
                 </button>
               )}</div>)}
 
+              {/* La caja de la promo va DESPUÉS de comprar (05/10/26): arriba, junto al
+                  cartel de la foto y el "20% OFF" del precio, era la tercera vez que se
+                  decía lo mismo, y empujaba color, talle y botón hacia abajo. Acá queda la
+                  letra chica ("no se acumula con cupones", vencimiento) para quien la busca. */}
+              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={PALETA_PROMO_TIERRA} />}
               {/* ── Lo que se LEE: la ficha de la pieza y después la descripción ──
                   Van juntas y debajo del botón, no arriba. Son dos criterios que
                   parecen pelearse y no se pelean:
