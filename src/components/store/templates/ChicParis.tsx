@@ -1122,9 +1122,14 @@ export default function ChicParis() {
                 )}
               </>
             )}
+            {/* En celular, Favoritos va al menú (05/10/26): con todos los íconos
+                en la barra, a 360 la hamburguesa quedaba medio afuera de la
+                pantalla y la ✕ del menú abierto se veía cortada. */}
+            {!isMobile && (
             <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} aria-label="Favoritos" style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </button>
+            )}
             <div ref={userDropdownRef} style={{ position: "relative" }}>
               <button onClick={() => { setUserDropdownOpen(v => !v); setFavoritesOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1212,6 +1217,12 @@ export default function ChicParis() {
               {label}
             </button>
           ))}
+          {/* Favoritos vive acá en celular (en la barra no entraba, ver arriba). */}
+          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "16px 24px", fontSize: 12, letterSpacing: 2, textTransform: "uppercase", textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}>
+            Favoritos
+            {favorites.length > 0 && <span style={{ background: ACC, color: "#fff", borderRadius: 999, minWidth: 20, height: 20, fontSize: 11, fontWeight: 700, display: "grid", placeItems: "center", padding: "0 6px", letterSpacing: 0 }}>{favorites.length}</span>}
+          </button>
         </div>
       )}
 
