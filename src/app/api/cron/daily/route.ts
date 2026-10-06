@@ -1,4 +1,5 @@
 import { vencerPedidosImpagos } from "@/lib/pedidosImpagos";
+import { avisarAgendaDelDia } from "@/lib/agendaDiaria";
 import { PROVEEDORES_MP } from "@/lib/proveedoresPago";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -99,6 +100,15 @@ export async function GET(req: NextRequest) {
     result.pedidosImpagos = await vencerPedidosImpagos(now);
   } catch (e) {
     console.error("[cron] pedidos impagos:", e);
+  }
+
+  // ── 1 quater. AGENDA DEL DÍA DE LAS CONCESIONARIAS ─────────────────────────
+  // Visitas, llamadas y consultas sin responder: un aviso por tienda a las 9.
+  // Ver `lib/agendaDiaria`.
+  try {
+    result.agendaDelDia = await avisarAgendaDelDia(now);
+  } catch (e) {
+    console.error("[cron] agenda del día:", e);
   }
 
   // ── 2. CARRITOS ABANDONADOS ────────────────────────────────────────────────

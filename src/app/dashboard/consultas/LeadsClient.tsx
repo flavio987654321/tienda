@@ -20,7 +20,9 @@ import { Check, X, Phone, MessageCircle, ChevronDown, Copy, ExternalLink, Loader
 import { money } from "@/lib/utils";
 import { estadoConsulta, quienConsulto } from "@/lib/consultas";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
-import type { ConsultaPanel } from "@/lib/consultasPanel";
+import type { ConsultaPanel, SeguimientoDeConsulta } from "@/lib/consultasPanel";
+import { horasSinResponder, HORAS_DEMORA, etiquetaEtapa } from "@/lib/seguimiento";
+import SeguimientoFila from "./SeguimientoFila";
 
 const RESPUESTAS = [
   { label: "Saludo", text: (n: string, v: string) => `Hola ${n}! 👋 Te escribo por tu consulta sobre el *${v}*. ¿Qué te gustaría saber?` },
@@ -82,11 +84,12 @@ function RespuestasRapidas({ telefono, nombre, vehiculo }: { telefono: string; n
   );
 }
 
-export default function LeadsClient({ inicial, totales: totalesIniciales, slug, conComisiones }: {
+export default function LeadsClient({ inicial, totales: totalesIniciales, slug, conComisiones, tienda }: {
   inicial: { consultas: ConsultaPanel[]; total: number; paginas: number };
   totales: Totales;
   slug: string;
   conComisiones: boolean;
+  tienda: string;
 }) {
   const [consultas, setConsultas] = useState(inicial.consultas);
   const [pagina, setPagina] = useState(1);
@@ -170,9 +173,29 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
     }
   }
 
+  function cambiarSeguimiento(id: string, s: SeguimientoDeConsulta) {
+    setConsultas((prev) => prev.map((x) => (x.id === id ? { ...x, seguimiento: s } : x)));
+  }
+
+  /* Tocar WhatsApp o Llamar ES contactarla: pasa sola a "Contactado" (sólo si
+     estaba nueva; el servidor no baja una etapa). No frena el link: si falla,
+     la dueña igual está hablando con la persona. */
+  function marcarContactada(c: ConsultaPanel) {
+    if (c.status !== "PENDING" || c.seguimiento?.etapa) return;
+    fetch(`/api/leads/${c.id}/seguimiento`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contactado: true }) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { seguimiento?: Record<string, string | null> } | null) => {
+        if (d?.seguimiento) cambiarSeguimiento(c.id, {
+          etapa: d.seguimiento.etapa ?? null, nota: d.seguimiento.nota ?? null, recordarEl: d.seguimiento.recordarEl ?? null,
+          visitaEl: d.seguimiento.visitaEl ?? null, visitaTipo: d.seguimiento.visitaTipo ?? null, contactadoAt: d.seguimiento.contactadoAt ?? null,
+        });
+      })
+      .catch(() => {});
+  }
+
   const filtros: { id: Filtro; label: string; n: number }[] = [
     { id: "ALL", label: "Todas", n: totales.nuevas + totales.vendidas + totales.descartadas },
-    { id: "PENDING", label: "Nuevas", n: totales.nuevas },
+    { id: "PENDING", label: "En curso", n: totales.nuevas },
     { id: "CONFIRMED", label: "Vendidas", n: totales.vendidas },
     { id: "REJECTED", label: "Descartadas", n: totales.descartadas },
   ];
@@ -209,11 +232,17 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
 
       <ul className="divide-y divide-gray-100 panel-oscuro:divide-gray-800">
         {consultas.map((c) => {
-          const est = estadoConsulta(c.status);
+          // Abierta y con etapa: se muestra la etapa ("Contactado"), no "Nueva".
+          const etapaAbierta = c.status === "PENDING" && c.seguimiento?.etapa ? etiquetaEtapa(c.seguimiento.etapa) : null;
+          const est = etapaAbierta
+            ? { label: etapaAbierta, cls: "bg-indigo-100 panel-oscuro:bg-indigo-500/15 text-indigo-800 panel-oscuro:text-indigo-300" }
+            : estadoConsulta(c.status);
           const conDatos = !!c.customerPhone;
           const wa = c.customerPhone ? enlaceWhatsApp(c.customerPhone, RESPUESTAS[0].text((c.customerName ?? "").split(/\s+/)[0] ?? "", c.productName)) : null;
           const abiertaEsta = abierta === c.id;
           const oferta = ofrecerVendido[c.id];
+          // Con teléfono, todavía nueva y sin tocar: cuántas horas lleva esperando.
+          const demora = conDatos && c.status === "PENDING" && !c.seguimiento?.etapa ? horasSinResponder(new Date(c.createdAt), new Date()) : 0;
           const vehiculoFuera = c.vehiculo?.estado === "SOLD" ? "Vendido" : c.vehiculo && !c.vehiculo.activo ? "Oculto" : !c.vehiculo && c.productId ? "Ya no existe" : c.vehiculo?.estado === "RESERVED" ? "Reservado" : null;
           return (
             <li key={c.id} className={`p-4 sm:p-5 ${c.status === "PENDING" ? "" : "bg-gray-50/40 panel-oscuro:bg-gray-950/30"}`}>
@@ -223,6 +252,11 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${est.cls}`}>{est.label}</span>
                     <span className="text-xs text-gray-400 panel-oscuro:text-gray-500">{hace(c.createdAt)}</span>
+                    {demora >= HORAS_DEMORA && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 panel-oscuro:bg-red-500/15 text-red-700 panel-oscuro:text-red-300">
+                        Sin responder hace {demora < 48 ? `${demora} h` : `${Math.floor(demora / 24)} días`}
+                      </span>
+                    )}
                   </div>
                   <p className={`mt-1 font-semibold truncate ${conDatos ? "text-gray-900 panel-oscuro:text-gray-100 text-base" : "text-gray-500 panel-oscuro:text-gray-400 text-sm"}`}>
                     {quienConsulto(c.customerName)}
@@ -236,12 +270,12 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
                 {conDatos && (
                   <div className="flex gap-2 shrink-0">
                     {wa && (
-                      <a href={wa} target="_blank" rel="noopener noreferrer"
+                      <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => marcarContactada(c)}
                         className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700">
                         <MessageCircle className="h-4 w-4" /> WhatsApp
                       </a>
                     )}
-                    <a href={`tel:${c.customerPhone!.replace(/[^\d+]/g, "")}`}
+                    <a href={`tel:${c.customerPhone!.replace(/[^\d+]/g, "")}`} onClick={() => marcarContactada(c)}
                       className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 text-xs font-semibold hover:bg-gray-50 panel-oscuro:hover:bg-gray-800">
                       <Phone className="h-4 w-4" /> Llamar
                     </a>
@@ -275,6 +309,12 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
                     className="shrink-0 text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline">Ver</a>
                 )}
               </div>
+
+              {/* 2 bis. El seguimiento: etapa, nota, recordatorio y visita (sólo abiertas) */}
+              {c.status === "PENDING" && (
+                <SeguimientoFila leadId={c.id} seguimiento={c.seguimiento} nombre={c.customerName ?? ""} telefono={c.customerPhone}
+                  vehiculo={c.productName} tienda={tienda} onCambio={(s) => cambiarSeguimiento(c.id, s)} />
+              )}
 
               {/* 3. Qué pasó con esta consulta */}
               {c.status === "PENDING" && (

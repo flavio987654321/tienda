@@ -2098,9 +2098,34 @@ model Lead {
   confirmedAt      DateTime?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
+  seguimiento      SeguimientoConsulta?
 
   @@index([storeId, createdAt(sort: Desc)])
   @@index([affiliateId])
+}
+
+// El seguimiento de una consulta (06/10/26): en qué etapa está (contactado,
+// visita agendada, negociando), una nota, cuándo volver a llamar y la visita o
+// prueba de manejo. Tabla APARTE de Lead a propósito: una columna nueva en Lead
+// rompe toda lectura de consultas en una base que todavía no la tiene, y esto
+// es opcional — una consulta sin fila es una consulta "nueva". Ver `lib/seguimiento`.
+model SeguimientoConsulta {
+  leadId       String    @id
+  lead         Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  storeId      String
+  // CONTACTADO | VISITA | NEGOCIANDO (null = todavía nueva)
+  etapa        String?
+  nota         String?
+  recordarEl   DateTime?
+  visitaEl     DateTime?
+  // VISITA | PRUEBA (prueba de manejo)
+  visitaTipo   String?
+  contactadoAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([storeId, recordarEl])
+  @@index([storeId, visitaEl])
 }
 
 // Un pedido de tasación de un usado (06/10/26): alguien quiere entregar su

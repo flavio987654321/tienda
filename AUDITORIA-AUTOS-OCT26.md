@@ -301,7 +301,40 @@ y en el servidor local esas pantallas fallan hasta subir.
     - El SQL a mano comparado con el esquema: la diferencia da vacía.
   - **Encontrado probando:** el año con `maxLength` se cortaba antes de limpiar. "20a15" quedaba
     "201". Ahora se limpia primero y después se recorta.
-- [ ] 2. Seguimiento de consultas y agenda.
+- [x] ~~**2. Seguimiento de consultas y agenda.**~~
+  - **En cada consulta abierta:**
+    - etapa a la vista: Contactado → Visita agendada → Negociando;
+    - una nota que ve solo la dueña;
+    - "Recordarme volver a llamar": Mañana, En 3 días, En una semana o una fecha (a las 10, hora
+      argentina);
+    - visita o prueba de manejo con fecha y hora, y "Confirmar por WhatsApp" con el mensaje
+      armado.
+  - **Contacto automático:** tocar WhatsApp o Llamar desde el panel la pasa sola a
+    "Contactado", solo si estaba nueva; nunca baja una etapa. Agendar una visita la sube a
+    "Visita agendada".
+  - **Etiquetas:** la de arriba muestra la etapa ("Contactado"), no "Nueva". El filtro y la
+    tarjeta "Nuevas" pasaron a "En curso".
+  - **Agenda arriba de Consultas:**
+    - "Sin responder": con teléfono, más de 2 horas y nadie las tocó;
+    - "Para llamar": hoy y lo atrasado;
+    - "Próximas visitas": 7 días.
+
+    Cada renglón tiene WhatsApp y Llamar. Además, cada consulta vieja sin tocar lleva "Sin
+    responder hace 5 h" en rojo.
+  - **Resumen de las 9 de la mañana** (cron diario, `lib/agendaDiaria`): "Hoy tenés 1 visita, 2
+    para llamar y 1 consulta sin responder", en la campanita y el teléfono. Va uno por tienda y
+    solo si hay algo. No hay aviso a las 2 horas exactas porque el cron corre una vez por día; eso
+    lo marca el panel en rojo.
+  - **Datos:** tabla aparte `SeguimientoConsulta` (migración `20261006130000`), no columnas en
+    `Lead`. Una columna nueva en `Lead` rompe toda lectura de consultas en una base que no la
+    tiene, incluida la de recibirlas. El panel lee el seguimiento con `.catch`, así que sin la
+    tabla Consultas anda igual, sin seguimiento. Probado renombrando la tabla.
+  - **Probado:**
+    - `seguimiento.check.ts`: 32 casos, con las fechas en hora argentina, los bordes de día y el
+      fin de mes.
+    - Ruta, agenda y resumen contra la base de prueba: 19 casos.
+    - Panel en 360, 768 y 1280.
+    - Las pruebas viejas de consultas siguen pasando.
 - [ ] 3. Rentabilidad y días en stock.
 - [ ] 4. "Avisame si entra".
 

@@ -6,7 +6,8 @@ import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import { MessageCircle } from "lucide-react";
 import LeadsClient from "./LeadsClient";
-import { consultasDelPanel, totalesDeConsultas } from "@/lib/consultasPanel";
+import { consultasDelPanel, totalesDeConsultas, agendaDeConsultas } from "@/lib/consultasPanel";
+import AgendaConsultas from "./AgendaConsultas";
 import { consultaGeneraComision } from "@/lib/storeTypes";
 
 export default async function ConsultasPage() {
@@ -18,16 +19,17 @@ export default async function ConsultasPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, slug: true, tipoTienda: true },
+    select: { id: true, slug: true, name: true, tipoTienda: true },
   });
   if (!store) redirect("/dashboard");
 
   /* Los totales se cuentan en la base y la lista se pagina (06/10/26): antes
      se traían 50 y se contaba sobre esas 50 (ver `lib/consultasPanel`). */
-  const [pendingAffiliateCount, totales, primera] = await Promise.all([
+  const [pendingAffiliateCount, totales, primera, agenda] = await Promise.all([
     prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } }),
     totalesDeConsultas(store.id),
     consultasDelPanel(store.id, { page: 1 }),
+    agendaDeConsultas(store.id),
   ]);
   // La comisión por consulta está apagada en todos los rubros de hoy: la
   // tarjeta de "Comisiones acreditadas" daba siempre $0 (ver `consultaGeneraComision`).
@@ -55,7 +57,7 @@ export default async function ConsultasPage() {
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className={tarjeta}>
-          <p className={titulo}>Nuevas</p>
+          <p className={titulo}>En curso</p>
           <p className="text-2xl sm:text-3xl font-black text-amber-600 panel-oscuro:text-amber-400">{totales.nuevas}</p>
         </div>
         <div className={tarjeta}>
@@ -75,11 +77,14 @@ export default async function ConsultasPage() {
         )}
       </div>
 
+      <AgendaConsultas agenda={agenda} />
+
       <LeadsClient
         inicial={primera}
         totales={totales}
         slug={store.slug}
         conComisiones={conComisiones}
+        tienda={store.name}
       />
     </DashboardLayout>
   );
