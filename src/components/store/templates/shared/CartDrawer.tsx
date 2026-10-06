@@ -261,8 +261,14 @@ export function CartDrawer({
               </div>
             ) : null}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-              <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", color:T }}>Subtotal</span>
-              <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? voz.unidad : voz.unidades}</span>
+              {/* El monto a la derecha, no la cantidad (05/10/26): decía "SUBTOTAL ·
+                  1 pieza" y debajo "Promoción −$11.000", así que no se veía de qué
+                  se restaba el descuento. `cartTotal` ya viene con la promo, por
+                  eso el subtotal es el total MÁS lo ahorrado. */}
+              <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, color:T }}>
+                <span style={{ textTransform:"uppercase" }}>Subtotal</span> ({cartCount} {cartCount === 1 ? voz.unidad : voz.unidades})
+              </span>
+              <span style={{ fontSize:12, opacity:0.75, color:T }}>{fmt(cartTotal + (promoSavings > 0.01 ? promoSavings : 0))}</span>
             </div>
             {promoSavings > 0.01 && (
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
