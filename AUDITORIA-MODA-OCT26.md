@@ -196,7 +196,7 @@ stock se descuenta de forma atómica.
   (`textOverrides.heroHeading`), y el editor ya le avisa "este color casi no se
   lee" con un botón para el tono más parecido que sí se lee. No se pisa su
   decisión.
-- [ ] **5.10 Botones de sólo ícono sin `aria-label`** y tarjetas de Boho sin foco.
+- [x] ~~**5.10 Botones de sólo ícono sin `aria-label`** y tarjetas de Boho sin foco.~~ → Hecho (06/10): relevados en el navegador los 5 templates a 1280 y 360. Con nombre: WhatsApp flotante, Mi cuenta (y si está abierto), Novedades (en los 10 templates), corazones de favoritos (según estado), puntitos y flechas de carruseles; el sello de verificada sin verificar queda oculto para lectores. Tarjetas de producto (Boho, Urban, Chic, Aire, Aurora y la destacada) y baldosas de Urban se alcanzan con Tab y abren con Enter/Espacio. Re-relevado: 0 sin nombre, 0 tarjetas sin teclado. En el camino: con el talle sin elegir (5.1), el stock miraba sólo la primera variante; ahora todas las posibles.
 
 ## Encontrado en el camino
 

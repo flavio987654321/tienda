@@ -1323,7 +1323,7 @@ export default function Aire() {
       const agotado = product.variants.length > 0 && product.variants.reduce((n, v) => n + (v.stock || 0), 0) === 0;
       const mirando = hoveredId === product.id;
       return (
-        <div key={product.id} className="ai-card" onClick={() => abrirProducto(product)}
+        <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirProducto(product); } }} key={product.id} className="ai-card" onClick={() => abrirProducto(product)}
           onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
           style={{ position:"relative", background:S, border:`1px solid ${LN}`, borderRadius:16, overflow:"hidden", display:"flex", flexDirection:"column", cursor:"pointer" }}>
 
@@ -3648,7 +3648,7 @@ export default function Aire() {
                         style={{ background:G, color:accentText, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
                         Ver producto
                       </button>
-                      <button onClick={() => toggleFavorite(product.id)}
+                      <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={() => toggleFavorite(product.id)}
                         style={{ background:"transparent", color:"#666", border:"1px solid rgba(20,22,26,0.10)", padding:"7px 14px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
                         onMouseEnter={e => (e.currentTarget.style.color=T)}
                         onMouseLeave={e => (e.currentTarget.style.color="#666")}>
@@ -3681,7 +3681,7 @@ export default function Aire() {
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <button
-          className="ai-wa-fab"
+          className="ai-wa-fab" aria-label="Escribinos por WhatsApp"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel, width:52, height:52, borderRadius:"50%", border:"none", cursor: editMode ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
           onMouseEnter={e => { if (!editMode) e.currentTarget.style.transform="scale(1.1)"; }}

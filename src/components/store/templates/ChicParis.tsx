@@ -1095,7 +1095,7 @@ export default function ChicParis() {
               <StoreFollowButton storeSlug={storeConfig?.slug ?? ""} color={(isPreview || scrolled) ? "#555" : "#fff"} size={18} />
             )}
             {pushBell && storeConfig?.showPushBell && !isPreview && (
-              <button onClick={pushBell.openDrawer} style={{ position:"relative", background:"none", border:"none", cursor:"pointer", color:(isPreview || scrolled) ? "#555" : "#fff", padding:6, display:"flex", transition:"color 0.3s" }}>
+              <button onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" style={{ position:"relative", background:"none", border:"none", cursor:"pointer", color:(isPreview || scrolled) ? "#555" : "#fff", padding:6, display:"flex", transition:"color 0.3s" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill={pushBell.followState === "following" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 {pushBell.hasNew && <span style={{ position:"absolute", top:4, right:4, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid white" }} />}
               </button>
@@ -1135,7 +1135,7 @@ export default function ChicParis() {
             </button>
             )}
             <div ref={userDropdownRef} style={{ position: "relative" }}>
-              <button onClick={() => { setUserDropdownOpen(v => !v); setFavoritesOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
+              <button onClick={() => { setUserDropdownOpen(v => !v); setFavoritesOpen(false); }} aria-label="Mi cuenta" aria-expanded={userDropdownOpen} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userDropdownOpen && (
@@ -1352,7 +1352,7 @@ export default function ChicParis() {
           onMouseLeave={() => setHeroPaused(false)}
           style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 10, zIndex: 10 }}>
           {Array.from({ length: BANNER_COUNT }, (_, i) => (
-            <button key={i} onClick={() => goToSlide(i)} style={{
+            <button key={i} onClick={() => goToSlide(i)} aria-label={`Ir a la portada ${i + 1}`} aria-current={heroSlide === i ? "true" : undefined} style={{
               width: heroSlide === i ? 28 : 8, height: 8, borderRadius: 4, border: "none", padding: 0,
               background: heroSlide === i ? ACC : "rgba(255,255,255,0.45)",
               cursor: "pointer", transition: "all 0.3s ease",
@@ -1504,7 +1504,7 @@ export default function ChicParis() {
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24 }}>
                 {filtered.map(product => {
                   return (
-                  <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(product); } }} key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     {avisoPromo(product)}
                     <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }}>
                       <FadeImage className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw"
@@ -1524,7 +1524,7 @@ export default function ChicParis() {
                           : { background: "rgba(0,0,0,0.35)", alignItems: "center" }) }}>
                         <span style={{ color: "#fff", fontSize: 11, letterSpacing: 3, fontWeight: 700, textTransform: "uppercase", border: "1px solid #fff", padding: "10px 20px" }}>Ver detalle</span>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
+                      <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
                         style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                         <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? ACC : "none"} stroke={favorites.includes(product.id) ? ACC : "#555"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       </button>
@@ -1626,7 +1626,7 @@ export default function ChicParis() {
                         ? promoP.pctOff
                         : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
                       return (
-                        <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer", display: "flex", gap: 20, alignItems: "center" }}>
+                        <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer", display: "flex", gap: 20, alignItems: "center" }}>
                           <div style={{ position: "relative", width: 140, height: 175, flexShrink: 0, background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                             {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="140px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
                             {/* Adentro de la foto, no a caballo del borde. El contenedor
@@ -1733,7 +1733,7 @@ export default function ChicParis() {
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 16 }}>
                   {displayList.map((p) => (
-                    <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
+                    <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
                       {/* Sin el "#1, #2…" de antes: numerar sugiere un ranking firme
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
@@ -2853,7 +2853,7 @@ export default function ChicParis() {
                 <p style={CP_MODAL_TITULO}>Productos similares</p>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 12 }}>
                   {similarProducts.map(p => (
-                    <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
+                    <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", borderRadius: 4, overflow: "hidden", background: "#f5f5f5" }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 200px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
                         {avisoPromo(p)}
@@ -3113,7 +3113,7 @@ export default function ChicParis() {
                       Ver
                     </button>
                   </div>
-                  <button onClick={() => toggleFavorite(product.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#bbb", fontSize: 18, alignSelf: "flex-start" }}>×</button>
+                  <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={() => toggleFavorite(product.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#bbb", fontSize: 18, alignSelf: "flex-start" }}>×</button>
                 </div>
               ))}
             </div>
@@ -3164,7 +3164,7 @@ export default function ChicParis() {
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {!cart.cartOpen && !cart.checkoutOpen && hasWA && (
         <button
-          className="cp-wa-fab"
+          className="cp-wa-fab" aria-label="Escribinos por WhatsApp"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel, width:52, height:52, borderRadius:"50%", border:"none", cursor: editMode ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
           onMouseEnter={e => { if (!editMode) e.currentTarget.style.transform="scale(1.1)"; }}

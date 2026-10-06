@@ -53,7 +53,7 @@ export function TarjetaAurora({
   return (
     <PiezaQueLlega indice={indice}>
       <Inclinable grados={5} style={{ borderRadius:18 }}>
-        <div onClick={onAbrir} onMouseEnter={() => setEncima(true)} onMouseLeave={() => setEncima(false)}
+        <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }} onClick={onAbrir} onMouseEnter={() => setEncima(true)} onMouseLeave={() => setEncima(false)}
           style={{ ...vidrio("oscuro"), borderRadius:18, overflow:"hidden", cursor:"pointer", position:"relative" }}>
           {/* El cartel es el compartido y se estira hasta el 78% del ancho: con
               un nombre de promo largo ("Liquidación invierno - 20% OFF") llegaba

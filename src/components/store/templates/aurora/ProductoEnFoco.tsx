@@ -115,7 +115,8 @@ export function ProductoEnFoco({
         {/* ── La pieza ── */}
         <div style={{ perspective:"1400px", maxWidth: isMobile ? 420 : 520, width:"100%", margin:"0 auto" }}>
           <Inclinable grados={7} style={{ borderRadius:26 }}>
-            <div ref={piezaRef} onClick={e => onAbrir(producto, e)}
+            <div ref={piezaRef} onClick={e => onAbrir(producto, e)} aria-label={`Ver ${producto.name}`}
+              role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}
               style={{ position:"relative", borderRadius:26, overflow:"hidden", cursor:"pointer", border:`1px solid ${LINEA_FUERTE}`,
                 boxShadow:`0 40px 90px rgba(0,0,0,0.6), 0 0 80px ${luz(0.22)}` }}>
               <div data-foto style={{ position:"relative", aspectRatio:"4/5", background:"#0e0f1a" }}>

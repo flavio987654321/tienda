@@ -952,7 +952,7 @@ export default function Aurora() {
             )}
             {/* Bell de novedades */}
             {pushBell && storeConfig?.showPushBell && !isPreview && (
-              <button onClick={pushBell.openDrawer} style={{ position:"relative", background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", alignItems:"center" }}>
+              <button onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" style={{ position:"relative", background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", alignItems:"center" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill={pushBell.followState === "following" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid #06070d" }} />}
               </button>
@@ -1788,7 +1788,7 @@ export default function Aurora() {
                         style={{ background:G, color:textoSobreAcento, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
                         Ver producto
                       </button>
-                      <button onClick={() => toggleFavorite(product.id)}
+                      <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={() => toggleFavorite(product.id)}
                         style={{ background:"transparent", color:"#666", border:"1px solid rgba(242,242,247,0.15)", padding:"7px 14px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
                         onMouseEnter={e => (e.currentTarget.style.color=T)}
                         onMouseLeave={e => (e.currentTarget.style.color="#666")}>
@@ -1838,7 +1838,7 @@ export default function Aurora() {
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <button
-          className="au-wa-fab"
+          className="au-wa-fab" aria-label="Escribinos por WhatsApp"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel, width:52, height:52, borderRadius:"50%", border:"none", cursor: editMode ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
           onMouseEnter={e => { if (!editMode) e.currentTarget.style.transform="scale(1.1)"; }}

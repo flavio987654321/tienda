@@ -69,6 +69,9 @@ export default function VerifiedIconButton({
           flexShrink: 0,
         }}
         aria-label={isVerified ? "Ver datos verificados" : undefined}
+        // Sin verificar es un adorno: un botón sin nombre que no hace nada
+        // confunde al lector de pantalla (06/10/26).
+        aria-hidden={isVerified ? undefined : true}
         tabIndex={isVerified ? 0 : -1}
       >
         <svg

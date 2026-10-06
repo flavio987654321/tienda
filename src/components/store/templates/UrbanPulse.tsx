@@ -1212,7 +1212,7 @@ export default function UrbanPulse() {
             <StoreFollowButton storeSlug={storeConfig?.slug ?? ""} color={DARK} size={20} />
           )}
           {pushBell && storeConfig?.showPushBell && !isPreview && (
-            <button onClick={pushBell.openDrawer} style={{ ...iconBtn, position:"relative" }}>
+            <button onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" style={{ ...iconBtn, position:"relative" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={pushBell.followState === "following" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               {pushBell.hasNew && <span style={{ position:"absolute", top:4, right:4, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:`2px solid ${DARK}` }} />}
             </button>
@@ -1250,7 +1250,7 @@ export default function UrbanPulse() {
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
           <div style={{ position:"relative" }} ref={userDropdownRef}>
-            <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ ...iconBtn, cursor:"pointer" }}>
+            <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} aria-label="Mi cuenta" aria-expanded={userDropdownOpen} style={{ ...iconBtn, cursor:"pointer" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userDropdownOpen && (
@@ -1663,7 +1663,7 @@ export default function UrbanPulse() {
                imposible de mirar desde Diseño.
                Ya tampoco hace falta impedirlo: desde que el catálogo abre acá
                adentro, tocar una baldosa no saca a nadie del editor. */
-            <div key={c.field} className="up-cat" onClick={() => abrirCatalogo({ categoria: c.cat })}
+            <div key={c.field} className="up-cat" role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirCatalogo({ categoria: c.cat }); } }} aria-label={`Ver ${c.cat}`} onClick={() => abrirCatalogo({ categoria: c.cat })}
               style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer",
                        // Sin foto la baldosa va al negro del template con el nombre
                        // en grande, que es de lo que está hecho Urban Pulse. Antes
@@ -2022,7 +2022,7 @@ export default function UrbanPulse() {
             const big = !isMobile && (idx === 0 || idx === 5);
             const promo = resolveProductPromo(product, promotions);
             return (
-              <div key={product.id} className="up-prod" onClick={() => openModal(product)}
+              <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(product); } }} key={product.id} className="up-prod" onClick={() => openModal(product)}
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", background:WHITE }}>
                 {(() => {
                   if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} paleta={PALETA_PROMO_NEON} />;
@@ -2083,7 +2083,7 @@ export default function UrbanPulse() {
                     </span>
                   )}
                 </div>
-                <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
+                <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
                   style={{ position:"absolute", top:12, right:12, background:WHITE, border:"none", borderRadius:"50%", width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
                   <svg width={15} height={15} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? DARK : "none"} stroke={DARK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </button>
@@ -2383,7 +2383,7 @@ export default function UrbanPulse() {
                       ? promoP.pctOff
                       : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
                     return (
-                      <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
+                      <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:DARK, overflow:"hidden" }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
                           <SegundaFoto images={p.images} sizes="(max-width: 768px) 50vw, 25vw" zoom={1.06} />
@@ -2442,7 +2442,7 @@ export default function UrbanPulse() {
                 )}
                 <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap:2 }}>
                   {displayList.map((p) => (
-                    <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
+                    <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                       {/* Sin el "#1, #2…" de antes: numerar sugiere un ranking firme
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#1a1a1a", overflow:"hidden" }}>
@@ -2882,7 +2882,7 @@ export default function UrbanPulse() {
       {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <a href={`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`} target="_blank" rel="noopener noreferrer"
           onClick={e => { if (editMode) e.preventDefault(); }}
-          className="up-wa-fab"
+          className="up-wa-fab" aria-label="Escribinos por WhatsApp"
           style={{ position:"fixed", bottom:24, right:24, width:56, height:56, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", zIndex:CAPAS.panel, textDecoration:"none", cursor: editMode ? "default" : "pointer" }}>
           <svg viewBox="0 0 24 24" width={28} height={28} fill={WHITE}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </a>
@@ -2944,7 +2944,7 @@ export default function UrbanPulse() {
                       <div style={{ marginBottom:10 }}>{avisoPromo(p, "chip")}</div>
                       <button onClick={() => openModal(p)} style={{ background:DARK, color:accSobreDark, border:"none", padding:"7px 14px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Ver</button>
                     </div>
-                    <button onClick={() => toggleFavorite(p.id)} style={{ background:"none", border:"none", fontSize:16, cursor:"pointer", alignSelf:"flex-start", padding:4, color:MID }}>✕</button>
+                    <button aria-label={favorites.includes(p.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={() => toggleFavorite(p.id)} style={{ background:"none", border:"none", fontSize:16, cursor:"pointer", alignSelf:"flex-start", padding:4, color:MID }}>✕</button>
                   </div>
                 ))
               }
@@ -3511,7 +3511,7 @@ export default function UrbanPulse() {
                     {tituloModal("También te puede gustar")}
                     <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap:14 }}>
                       {similarProducts.map(p => (
-                        <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
+                        <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
                           <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:BG }}>
                             {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
                             {avisoPromo(p)}

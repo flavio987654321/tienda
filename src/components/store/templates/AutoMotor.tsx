@@ -301,7 +301,7 @@ export default function AutoMotor() {
               <StoreFollowButton storeSlug={config?.slug ?? ""} color={navTextMid} size={20} />
             )}
             {pushBell && config?.showPushBell && !isPreview && (
-              <button onClick={pushBell.openDrawer}
+              <button onClick={pushBell.openDrawer} aria-label="Novedades de la tienda"
                 style={{ position:"relative", background:"none", border:"none", cursor:"pointer", padding:4,
                   display:"flex", alignItems:"center", color:navTextMid }}>
                 <svg width={20} height={20} viewBox="0 0 24 24"

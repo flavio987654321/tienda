@@ -913,7 +913,7 @@ export default function BohoTerra() {
               <StoreFollowButton storeSlug={storeConfig?.slug ?? ""} color={T} size={18} />
             )}
             {pushBell && storeConfig?.showPushBell && !isPreview && (
-              <button onClick={pushBell.openDrawer} style={{ position:"relative", background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+              <button onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" style={{ position:"relative", background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill={pushBell.followState === "following" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid #faf7f2" }} />}
               </button>
@@ -953,7 +953,7 @@ export default function BohoTerra() {
             {/* User icon */}
             {!isMobile && (
               <div ref={userDropdownRef} style={{ position:"relative" }}>
-                <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} aria-label="Mi cuenta" aria-expanded={userDropdownOpen} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </button>
                 {userDropdownOpen && (
@@ -1335,7 +1335,7 @@ export default function BohoTerra() {
               {carouselProducts.map(product=>{
                 const promo = resolveProductPromo(product, promotions);
                 return (
-                <div key={product.id}
+                <div key={product.id} role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(product); } }}
                   style={{ flexShrink:0, width: isMobile ? "85%" : `calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}
                   onClick={()=>openModal(product)}>
                   {(() => {
@@ -1360,7 +1360,7 @@ export default function BohoTerra() {
                       <span style={{ background:"rgba(250,247,242,0.92)", color:T, fontSize:10, letterSpacing:2, textTransform:"uppercase", padding:"7px 18px" }}>Ver pieza</span>
                     </div>
                     {/* Favorite button */}
-                    <button
+                    <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
                       onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
                       style={{ position:"absolute", top:14, right:14, background:"rgba(250,247,242,0.85)", border:"none", borderRadius:"50%", width:30, height:30, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
                       onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
@@ -1393,14 +1393,14 @@ export default function BohoTerra() {
 
           {/* flechas */}
           {idxColeccion > 0 && (
-            <button onClick={prevSlide} style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", zIndex:10 }}
+            <button onClick={prevSlide} aria-label="Anteriores" style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", zIndex:10 }}
               onMouseEnter={e=>{ e.currentTarget.style.background=T; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=BG; }}
               onMouseLeave={e=>{ e.currentTarget.style.background=BG; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=T; }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
           )}
           {idxColeccion < maxIdx && (
-            <button onClick={nextSlide} style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", zIndex:10 }}
+            <button onClick={nextSlide} aria-label="Siguientes" style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", zIndex:10 }}
               onMouseEnter={e=>{ e.currentTarget.style.background=T; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=BG; }}
               onMouseLeave={e=>{ e.currentTarget.style.background=BG; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=T; }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1412,7 +1412,7 @@ export default function BohoTerra() {
         {maxIdx > 0 && (
           <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:32 }}>
             {Array.from({ length: maxIdx + 1 }).map((_, i) => (
-              <button key={i} onClick={()=>setCarouselIdx(i)}
+              <button key={i} onClick={()=>setCarouselIdx(i)} aria-label={`Ir al grupo ${i + 1}`} aria-current={i===idxColeccion ? "true" : undefined}
                 style={{ width: i===idxColeccion ? 28 : 8, height:8, border:"none", borderRadius:4, background: i===idxColeccion ? A : "rgba(44,34,24,0.2)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
             ))}
           </div>
@@ -1463,7 +1463,7 @@ export default function BohoTerra() {
                       ? promoP.pctOff
                       : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
                     return (
-                      <div key={p.id} onClick={() => openModal(p)} className="bt-zoom"
+                      <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="bt-zoom"
                         style={{ flexShrink:0, width: isMobile ? "85%" : `calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}>
                         <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:BG, marginBottom:16 }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes={isMobile ? "85vw" : "30vw"} className="bt-zoom-img" style={{ objectFit:"cover" }} />}
@@ -1481,12 +1481,12 @@ export default function BohoTerra() {
                 </div>
               </div>
               {idxOfertas > 0 && (
-                <button onClick={prevOferta} style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
+                <button onClick={prevOferta} aria-label="Ofertas anteriores" style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
               )}
               {idxOfertas < ofertasMaxIdx && (
-                <button onClick={nextOferta} style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
+                <button onClick={nextOferta} aria-label="Más ofertas" style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
               )}
@@ -1528,7 +1528,7 @@ export default function BohoTerra() {
                 )}
                 <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:16 }}>
                   {displayList.map((p) => (
-                    <div key={p.id} onClick={() => openModal(p)} className="bt-zoom" style={{ cursor:"pointer" }}>
+                    <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} className="bt-zoom" style={{ cursor:"pointer" }}>
                       {/* Sin el "#1, #2…" de antes: numerar sugiere un ranking firme
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#ede8e0", overflow:"hidden" }}>
@@ -2370,7 +2370,7 @@ export default function BohoTerra() {
                   <p style={{ fontSize:10, letterSpacing:3, color:ATextoBlanco, textTransform:"uppercase", margin:"0 0 14px" }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similarProducts.map(p => (
-                      <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
+                      <div role="button" tabIndex={0} onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(p); } }} key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
                           {/* Las tarjetas salían PELADAS: el mismo producto mostraba
@@ -2454,7 +2454,7 @@ export default function BohoTerra() {
                         style={{ background:A, color:"#fff", border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:600, textTransform:"uppercase", cursor:"pointer" }}>
                         Ver producto
                       </button>
-                      <button onClick={() => toggleFavorite(product.id)}
+                      <button aria-label={favorites.includes(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"} onClick={() => toggleFavorite(product.id)}
                         style={{ background:"transparent", color:MID, border:`1px solid rgba(44,34,24,0.18)`, padding:"7px 14px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
                         onMouseEnter={e => (e.currentTarget.style.color=T)}
                         onMouseLeave={e => (e.currentTarget.style.color=MID)}>
@@ -2689,7 +2689,7 @@ export default function BohoTerra() {
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <button
-          className="bt-wa-fab"
+          className="bt-wa-fab" aria-label="Escribinos por WhatsApp"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel, width:52, height:52, borderRadius:"50%", border:"none", cursor: editMode ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
           onMouseEnter={e => { if (!editMode) e.currentTarget.style.transform="scale(1.1)"; }}
