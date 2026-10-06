@@ -523,7 +523,12 @@ function ProductoFormPage() {
       .then((r) => r.json())
       .then((d) => {
         if (!d.store) return;
-        setStore((p) => ({ ...p, ...d.store }));
+        /* La moneda de verdad está en storeConfig (la que elige en Configuración y
+           ve el comprador). La columna `Store.currency` quedó vieja: dice "ARS" en
+           todas, también en la que vende en dólares. */
+        let moneda = "ARS";
+        try { moneda = JSON.parse(d.store.storeConfig || "{}")?.currency === "USD" ? "USD" : "ARS"; } catch { /* pesos */ }
+        setStore((p) => ({ ...p, ...d.store, currency: moneda }));
         setStoreLoaded(true);
         const typeConfig = getStoreType(d.store.tipoTienda || "ROPA");
         setProductCategories(typeConfig.categorias);
@@ -1265,6 +1270,9 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
+  // Los gastos van en la moneda de la tienda: con "$" fijo, una que vende en
+  // dólares cargaba el service en pesos y la ganancia salía cualquier cosa.
+  const simboloGasto = store.currency === "USD" ? "USD " : "$";
   // La sugerencia sale de la CATEGORÍA elegida, no del rubro: dentro de Moda, un
   // collar se sugiere como "Largo" con valores en centímetros, y una remera como
   // "Talle" con S/M/L. El nombre es sólo una sugerencia — manda `opcionNombre`,
@@ -2012,12 +2020,13 @@ function ProductoFormPage() {
                     <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Gastos del vehículo</label>
                     {gastos.length > 0 && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 panel-oscuro:bg-gray-800 text-gray-600 panel-oscuro:text-gray-400">
-                        Costo total: ${calcVehicleCostTotal(gastos).toLocaleString("es-AR")}
+                        Costo total: {simboloGasto}{calcVehicleCostTotal(gastos).toLocaleString("es-AR")}
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-3">
                     Compra, lavado, service, cubiertas... Es de uso interno, tus clientes no lo verán en la tienda.
+                    {store.currency === "USD" && <> <strong className="text-gray-600 panel-oscuro:text-gray-300">En dólares, igual que el precio:</strong> lo que pagaste en pesos, pasalo a dólares; si no, la ganancia sale mal.</>}
                   </p>
 
                   {!isEditing ? (
@@ -2035,7 +2044,7 @@ function ProductoFormPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">${g.monto.toLocaleString("es-AR")}</span>
+                            <span className="text-sm font-semibold text-gray-700 panel-oscuro:text-gray-300">{simboloGasto}{g.monto.toLocaleString("es-AR")}</span>
                             <button
                               type="button"
                               onClick={() => handleDeleteGasto(g.id)}
@@ -2066,13 +2075,13 @@ function ProductoFormPage() {
                           />
                         )}
                         <div className="relative w-full sm:w-32">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 text-sm">$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 panel-oscuro:text-gray-500 text-sm">{simboloGasto.trim()}</span>
                           <input
                             type="number"
                             value={gastoMonto}
                             onChange={(e) => setGastoMonto(e.target.value)}
                             min="0" step="0.01" placeholder="Monto"
-                            className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className={`w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl ${store.currency === "USD" ? "pl-11" : "pl-6"} pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                           />
                         </div>
                         <input

@@ -123,6 +123,13 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
                       </div>
                       <div className="mt-1"><Margen f={f} /></div>
                       {aviso && <p className="mt-1.5 text-xs font-medium text-red-700 panel-oscuro:text-red-400">{aviso}</p>}
+                      {/* Gastos de más del triple del precio: casi seguro cargados en
+                          pesos en una tienda en dólares, o con un cero de más. */}
+                      {f.costo != null && f.precio > 0 && f.costo > f.precio * 3 && (
+                        <p className="mt-1.5 text-xs font-medium text-amber-700 panel-oscuro:text-amber-400">
+                          Revisá los gastos: suman más del triple del precio.{moneda === "USD" ? " ¿Cargaste alguno en pesos? Van en dólares." : ""}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </li>

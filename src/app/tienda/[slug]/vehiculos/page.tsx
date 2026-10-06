@@ -9,6 +9,7 @@ import { getContrastColor } from "@/contexts/EditContext";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
+import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
 import { esAtributoInterno } from "@/lib/fichaVehiculo";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
@@ -178,6 +179,12 @@ function brandAbbr(name: string): string {
 
 const NAVY = "#0d1f3c";
 
+/** Montado mientras la ventana de tasar / avisame está abierta: "atrás" la cierra. */
+function AtrasCierra({ cerrar }: { cerrar: () => void }) {
+  useCerrarConAtras(cerrar);
+  return null;
+}
+
 function VehiculosPageInner() {
   const params       = useParams();
   const searchParams = useSearchParams();
@@ -213,6 +220,7 @@ function VehiculosPageInner() {
   // (escribiendo, primero suelta el campo) y el fondo cierra sólo si el toque
   // EMPEZÓ ahí (seleccionar texto y soltar afuera no pierde lo escrito).
   const tocoElFondo = useRef(false);
+  const cerrarDialogo = useCallback(() => setDialogo(null), []);
   useEffect(() => {
     if (!dialogo) return;
     const prev = document.body.style.overflow;
@@ -637,6 +645,7 @@ function VehiculosPageInner() {
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
+      {dialogo && <AtrasCierra cerrar={cerrarDialogo} />}
       {dialogo && (
         <div role="dialog" aria-modal="true" aria-label={dialogo === "tasar" ? "Tasá tu usado" : "Avisame si entra"} onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
           onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) setDialogo(null); tocoElFondo.current = false; }}

@@ -415,3 +415,15 @@ y en el servidor local esas pantallas fallan hasta subir.
 - [x] ~~**Los avisos nuevos de pagos no tenían ícono.**~~ Los que sumó la auditoría de moda
   (devolución, pago duplicado, pago sin stock, comisión revertida, recordatorio de pedido sin
   confirmar) caían en la 🔔 genérica de la campanita. Ahora tienen ícono propio.
+- [x] ~~**La moneda de los gastos estaba fija en pesos.**~~ El formulario de un vehículo leía
+  `Store.currency`, una columna vieja que dice "ARS" en todas las tiendas; la moneda de verdad está
+  en `storeConfig`. Una concesionaria en dólares veía "$" en los gastos y "ARS" en el precio, y la
+  ganancia de "Stock y ganancia" salía mezclada. Ahora lee la de `storeConfig`, los gastos dicen
+  la moneda, y Stock avisa si los gastos suman más del triple del precio. (Hoy no hay gastos
+  cargados en producción: no quedó nada para corregir.)
+- [x] ~~**"Atrás" en el celular sacaba de la tienda con una ventana abierta.**~~ La ventana del
+  vehículo y las de `/vehiculos` (tasar, avisame) ahora se cierran con "atrás" (`useCerrarConAtras`).
+- [ ] **El catálogo de Meta, Google Shopping y la imagen de cupones mandan la moneda vieja.**
+  `/api/store/feed`, `/api/google/shopping/feed` y `/api/cupones/[id]/imagen` usan
+  `Store.currency` (siempre "ARS"). Hoy hay UNA tienda en dólares (de ropa): sus precios le llegan
+  a Meta y a Google como pesos. Fuera de autos: se dejó anotado, sin tocar la sincronización con Meta.

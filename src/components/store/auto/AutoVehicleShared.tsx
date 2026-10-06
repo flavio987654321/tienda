@@ -9,6 +9,7 @@ import ConsultaVehiculo from "./ConsultaVehiculo";
 import { DescargasDeFicha, BloquesDeLaFicha } from "./FichaDelVehiculo";
 import TasacionVehiculo from "./TasacionVehiculo";
 import { tipoDeFicha } from "@/lib/fichaVehiculo";
+import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
 import { CAPAS } from "@/lib/capas-tienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 
@@ -182,6 +183,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   /* Se cierra tocando el fondo sólo si el toque EMPEZÓ en el fondo: seleccionar
      texto en un campo y soltar afuera cerraba la ventana y se perdía lo escrito. */
   const tocoElFondo = useRef(false);
+  // En el celular, "atrás" cierra la ventana en vez de salir de la tienda.
+  useCerrarConAtras(onClose);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
