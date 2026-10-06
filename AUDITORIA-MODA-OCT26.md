@@ -160,7 +160,7 @@ stock se descuenta de forma atómica.
   secciones de Boho con el mismo patrón). Verificado a 360: la foto entra y la
   flecha queda adentro.
 - [x] ~~**4.4 Chic 360: hamburguesa medio afuera; marca debajo del tilde.**~~ → Hecho (05/10): en celular Favoritos pasa de la barra al menú (con su contador). Medido en /preview/chic-paris: a 360 y 390 la hamburguesa y la ✕ quedan adentro; a 768 nada cambia.
-- [ ] **4.5 Catálogo genérico 360: cartel de promo tapa el chip de categoría.**
+- [x] ~~**4.5 Catálogo genérico 360: cartel de promo tapa el chip de categoría.**~~ → Hecho (05/10): con promo u oferta, el chip de categoría no se dibuja (un solo cartel arriba, como ya hacía el estilo "vidrio").
 - [ ] **4.6 Barras de anuncio con texto pisado** (Aire ficha, Aurora 360, Boho 360).
 - [ ] **4.7 Aurora 360: precio tachado debajo de la ✕ de la ficha.**
 - [ ] **4.8 Escape no cierra** el checkout, el zoom de Aire ni el menú de Aire,

@@ -1461,7 +1461,11 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                       de abajo, y arriba sólo servía para chocar con la etiqueta de la
                       promo. Medido con "SAN VALENTÍN · $10.000 OFF", que ocupa dos
                       renglones: se montaba encima y del chip se leía "…ICA". */}
-                  {tabStyle !== "vidrio" && (product.subcategory || product.category !== "general") && (
+                  {/* Y con promo u oferta tampoco, en ningún estilo (05/10/26): a 360
+                      "LIQUIDACIÓN INVIERNO · 20% OFF" tapaba el chip de la categoría
+                      en la misma tarjeta. Arriba va UN cartel, y el que vende es la
+                      promo. */}
+                  {tabStyle !== "vidrio" && !ofertaBadge && (product.subcategory || product.category !== "general") && (
                     <div style={{ position:"absolute", top:10, right:10, background: dark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)", color:T, fontSize:9, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>
                       {product.subcategory ?? product.category}
                     </div>
