@@ -31,6 +31,7 @@ export type RawProduct = {
   offerBadge?: string | null;
   offerNote?: string | null;
   offerEndsAt?: string | null;
+  vehicleStatus?: string | null;
 };
 
 export function mapProduct(raw: RawProduct): StorefrontProduct {
@@ -77,5 +78,6 @@ export function mapProduct(raw: RawProduct): StorefrontProduct {
     images, imageItems, reelUrls,
     opciones, variants,
     attributes,
+    vehicleStatus: raw.vehicleStatus ?? null,
   };
 }

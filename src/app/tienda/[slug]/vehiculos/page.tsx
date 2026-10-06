@@ -22,6 +22,7 @@ type RawVehicle = {
   reelUrls?: string;
   variants?: StorefrontProduct["variants"];
   badge?: string;
+  vehicleStatus?: string | null;
 };
 
 function mapVehicle(raw: RawVehicle): StorefrontProduct {
@@ -54,6 +55,8 @@ function mapVehicle(raw: RawVehicle): StorefrontProduct {
     variants: raw.variants ?? [],
     attributes,
     badge: raw.badge ?? undefined,
+    // Sin esto, /vehiculos no mostraba la etiqueta de "Reservado" (06/10/26).
+    vehicleStatus: raw.vehicleStatus ?? null,
   };
 }
 

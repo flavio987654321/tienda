@@ -43,7 +43,7 @@ const findProduct = cache(async (slug: string, id: string) => {
       comparePrice: true, precioMayorista: true, cantMinMayorista: true,
       preciosEscalonados: true, soloMayorista: true, cuotas: true,
       subcategory: true, gender: true, reelUrls: true, attributes: true,
-      offerBadge: true, offerNote: true,
+      offerBadge: true, offerNote: true, vehicleStatus: true,
       // Lo de acá abajo lo usan los datos estructurados (ver `structured-data.ts`).
       // La categoría y la fecha de fin de oferta salen del producto; el precio y
       // el stock por variante deciden si se declara un precio o un rango, y si

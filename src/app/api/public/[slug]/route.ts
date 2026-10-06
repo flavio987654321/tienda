@@ -127,6 +127,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
             preciosEscalonados: true,
             soloMayorista: true,
             offerBadge: true,
+            // Sólo el estado ("RESERVED" se muestra con su etiqueta). Los datos de
+            // la venta —comprador, precio— nunca salen de acá.
+            vehicleStatus: true,
             offerNote: true,
             offerEndsAt: true,
             cuotas: true,

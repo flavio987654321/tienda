@@ -115,16 +115,36 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 
 ## 3. Datos del vehículo
 
-- [ ] **3.1 Kilómetros mal mostrados.** "28.000" sale como "28 km" y "1500 km" como "NaN km".
-  Pasa en los datos de ejemplo del editor, en la importación CSV y en el formulario.
-- [ ] **3.2 Los similares nunca muestran los km.** Leen `"Km"` y el formulario guarda `"Kilómetros"`.
-- [ ] **3.3 Al abrir un similar, la foto queda en blanco** ("5 / 2"). El modal no tiene `key`.
-- [ ] **3.4 "Reservado" saca el auto de la tienda**, y volverlo a Disponible lo publica aunque
-  estuviera oculto a propósito.
-- [ ] **3.5 Alta sin validaciones.** Marca, modelo y año no son obligatorios, y año no tiene rango.
-- [ ] **3.6 La etiqueta de condición es ilegible con acentos claros** (blanco sobre amarillo) y
-  aparece dos veces en el modal.
-- [ ] **3.7 El zoom de escritorio tapa el precio y el botón de WhatsApp.**
+- [x] ~~**3.1 Kilómetros mal mostrados.**~~ → Hecho (06/10):
+  - `kmDe` y `fmtKm` leen el número sea cual sea la forma en que se escribió y la clave que use
+    ("Kilómetros" o "Km").
+  - En el formulario, los campos numéricos (año, km, código postal) son de texto con teclado
+    numérico y solo aceptan dígitos. Con `type=number`, "50.000" daba 50 y un dato viejo con
+    puntos se veía vacío.
+  - La importación CSV deja solo los dígitos de km y año.
+  - Probado: "28.000" → 28.000 km, "1500 km" → 1.500 km, y la clave "Km" (Fiat) → 60.000 km.
+- [x] ~~**3.2 Los similares nunca muestran los km.**~~ → Hecho (06/10): resuelto con `kmDe`, que lee las dos claves.
+- [x] ~~**3.3 Al abrir un similar, la foto queda en blanco** ("5 / 2").~~ → Hecho (06/10):
+  dentro del modal, en un solo lugar en vez de en tres. Al cambiar de vehículo vuelve a la primera
+  foto, cierra la foto ampliada y sube el scroll. Probado: estando en "5 / 10", el similar abre en
+  "1 / 2" y arriba de todo.
+- [x] ~~**3.4 "Reservado" saca el auto de la tienda.**~~ → Hecho (06/10):
+  - El servidor ya estaba resuelto desde el grupo 1.
+  - El estado del vehículo (solo el estado, no los datos de la venta) llega al navegador por la
+    API pública y la ficha, y lo leen los tres lugares que arman el producto. El de
+    `/vehiculos` se había quedado afuera y lo atrapó la prueba.
+  - En la tarjeta, una etiqueta ámbar "Reservado" y la foto un poco atenuada.
+  - En el modal, la etiqueta arriba y el aviso "Este vehículo está reservado. Podés consultar
+    igual: si la reserva se cae, sos el primero en enterarte."
+- [x] ~~**3.5 Alta sin validaciones.**~~ → Hecho (06/10): en autos, motos y camionetas (no en
+  repuestos ni accesorios) piden marca, modelo y año, con el año de cuatro cifras entre 1900 y el
+  año que viene.
+- [x] ~~**3.6 La etiqueta de condición es ilegible con acentos claros.**~~ → Hecho (06/10): el
+  texto usa `getContrastColor` (negro sobre amarillo) y la condición sale una sola vez. En el
+  encabezado, ese lugar ahora lo ocupa "Reservado".
+- [x] ~~**3.7 El zoom de escritorio tapa el precio y el botón de WhatsApp.**~~ → Hecho (06/10):
+  zoom en la misma foto (`backgroundSize 250%`) en vez de reemplazar la columna de la derecha.
+  Probado a 1280: con el zoom activo, el precio y el WhatsApp siguen visibles.
 
 ## 4. Panel de consultas
 
@@ -173,5 +193,3 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 - [x] ~~**Los avisos nuevos de pagos no tenían ícono.**~~ Los que sumó la auditoría de moda
   (devolución, pago duplicado, pago sin stock, comisión revertida, recordatorio de pedido sin
   confirmar) caían en la 🔔 genérica de la campanita. Ahora tienen ícono propio.
-- **3.4, avance:** del lado del servidor ya está hecho. Reservado no oculta el auto, y volver a
-  Disponible no publica uno que la dueña ocultó a mano. Falta la etiqueta en la tienda.

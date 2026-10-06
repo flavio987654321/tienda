@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
@@ -23,6 +23,20 @@ export function attr(p: StorefrontProduct, key: string): string {
   return p.attributes.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "";
 }
 
+/* Los kilómetros como NÚMERO, se hayan escrito como se hayan escrito (06/10/26).
+   Se mostraban con `Number(km)`: "28.000" daba 28 (el punto es de miles acá) y
+   "1500 km" daba NaN. Pasaba con los datos de muestra del editor, con planillas
+   importadas y con lo que se tipeara a mano. Además el formulario guarda la
+   clave "Kilómetros" y algunas partes leían sólo "Km": se leen las dos. */
+export function kmDe(p: StorefrontProduct): number | null {
+  const crudo = (attr(p, "Kilómetros") || attr(p, "Km")).trim().replace(/,\d{1,2}$/, "");
+  const d = crudo.replace(/\D/g, "");
+  return d ? Number(d) : null;
+}
+export function fmtKm(km: number): string {
+  return `${km.toLocaleString("es-AR")} km`;
+}
+
 // "Localidad, Provincia" (campos nuevos) con fallback a los campos viejos
 // (Ubicación/Ciudad/"Ciudad / Zona") para vehículos publicados antes de que
 // existieran los selectores de Provincia/Localidad/Código Postal.
@@ -30,6 +44,12 @@ export function vehicleLocation(p: StorefrontProduct): string {
   const combined = [attr(p, "Localidad"), attr(p, "Provincia")].filter(Boolean).join(", ");
   return combined || attr(p, "Ubicación") || attr(p, "Ciudad") || attr(p, "Ciudad / Zona") || "";
 }
+
+/* "Reservado" (06/10/26): el auto sigue a la vista —decisión del dueño— pero
+   tiene que leerse a primera vista que no está libre. Ámbar con texto oscuro:
+   se lee sobre cualquier foto y no se confunde con el acento de la tienda. */
+export const esReservado = (p: StorefrontProduct) => p.vehicleStatus === "RESERVED";
+const ESTILO_RESERVADO = { background: "#f59e0b", color: "#111", fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: 0.8 };
 
 export function WaIcon({ size = 18 }: { size?: number }) {
   return (
@@ -104,6 +124,17 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string|null>(null);
+  /* Otro vehículo en el mismo modal (desde "también podrían interesarte"): se
+     vuelve a la primera foto y arriba de todo (06/10/26). Antes quedaba el
+     índice del anterior —"5 / 2" y la foto en blanco— y el scroll abajo. */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [vehiculoMostrado, setVehiculoMostrado] = useState(product.id);
+  if (vehiculoMostrado !== product.id) {
+    setVehiculoMostrado(product.id);
+    setImgIdx(0);
+    setLightboxSrc(null);
+  }
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [product.id]);
   const isTouch = useSyncExternalStore(noopSubscribe, getIsTouch, () => false);
   const imgSwipe = useTouchSwipe(
     () => setImgIdx(i => (i + 1) % imgs.length),
@@ -114,7 +145,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
     : ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80"];
 
   const año = attr(product, "Año");
-  const km = attr(product, "Km") || attr(product, "Kilómetros");
+  const km = kmDe(product);
   const condicion = attr(product, "Condición");
   const ubicacion = vehicleLocation(product);
 
@@ -123,7 +154,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
     { label: "Modelo",      value: attr(product, "Modelo") },
     { label: "Versión",     value: attr(product, "Versión") },
     { label: "Año",         value: año },
-    { label: "Kilómetros",  value: km ? `${Number(km).toLocaleString("es-AR")} km` : "" },
+    { label: "Kilómetros",  value: km != null ? fmtKm(km) : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
@@ -182,10 +213,10 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                 {product.badge}
               </span>
             )}
-            {condicion && (
-              <span style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 3,
-                background: "#f0f0f0", color: "#666" }}>
-                {condicion}
+            {/* La condición iba también acá y en la fila de datos: queda sólo abajo. */}
+            {esReservado(product) && (
+              <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 3, ...ESTILO_RESERVADO }}>
+                Reservado
               </span>
             )}
             {product.category && (
@@ -210,7 +241,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
           </div>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div className="am-modal-body" style={{ display: "grid" }}>
             <div style={{ background: "#ffffff" }}>
               <div className="am-img-wrap" style={{ display: "flex" }}>
@@ -243,16 +274,17 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   <img src={imgs[imgIdx]} alt={product.name}
                     style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", cursor: isTouch ? "zoom-in" : undefined, background: "#ffffff" }}
                     onClick={() => { if (isTouch) setLightboxSrc(imgs[imgIdx]); }} />
+                  {/* Zoom EN EL LUGAR (06/10/26). Antes la vista ampliada
+                      reemplazaba la columna de la derecha mientras el mouse
+                      estaba sobre la foto, y con ella el precio y el botón de
+                      consultar: mirar de cerca escondía cómo comprar. */}
                   {mousePos && (
-                    <div style={{
-                      position: "absolute",
-                      width: 110, height: 110,
-                      left: `calc(${mousePos.x * 100}% - 55px)`,
-                      top: `calc(${mousePos.y * 100}% - 55px)`,
-                      border: "2px solid rgba(255,255,255,0.95)",
-                      boxShadow: "0 0 0 1px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(0,0,0,0.08)",
-                      background: "rgba(255,255,255,0.12)",
-                      pointerEvents: "none", boxSizing: "border-box", zIndex: 2,
+                    <div aria-hidden="true" style={{
+                      position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none",
+                      backgroundColor: "#fff",
+                      backgroundImage: `url(${imgs[imgIdx]})`,
+                      backgroundSize: "250%", backgroundRepeat: "no-repeat",
+                      backgroundPosition: `${mousePos.x * 100}% ${mousePos.y * 100}%`,
                     }} />
                   )}
                   {imgs.length > 1 && (
@@ -293,27 +325,15 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
             </div>
 
             <div style={{ padding: "28px 28px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {mousePos ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: 11, color: "#999", textAlign: "center" }}>Vista ampliada</p>
-                  <div style={{
-                    flex: 1, minHeight: 260,
-                    backgroundImage: `url(${imgs[imgIdx]})`,
-                    backgroundSize: "350%", backgroundRepeat: "no-repeat",
-                    backgroundPositionX: `${mousePos.x * 100}%`,
-                    backgroundPositionY: `${mousePos.y * 100}%`,
-                    border: "1px solid #e0e0e0", borderRadius: 4, overflow: "hidden",
-                  }} />
-                </div>
-              ) : (
+              {(
                 <>
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
                     {año && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20,
                       background:"#eef2ff", color:"#4466bb", letterSpacing:0.3 }}>{año}</span>}
-                    {km && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20,
-                      background:"#eef2ff", color:"#4466bb", letterSpacing:0.3 }}>{Number(km).toLocaleString("es-AR")} km</span>}
+                    {km != null && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20,
+                      background:"#eef2ff", color:"#4466bb", letterSpacing:0.3 }}>{fmtKm(km)}</span>}
                     {condicion && <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20,
-                      background:accent, color:"#fff", letterSpacing:0.3 }}>{condicion}</span>}
+                      background:accent, color: getContrastColor(accent) === "light" ? "#fff" : "#111", letterSpacing:0.3 }}>{condicion}</span>}
                   </div>
                   <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,26px)", fontWeight: 800,
                     color: "#1a2744", lineHeight: 1.15 }}>{product.name}</h2>
@@ -339,6 +359,12 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       </p>
                     )}
                   </div>
+                  {esReservado(product) && (
+                    <p role="note" style={{ margin: "2px 0 0", fontSize: 12.5, lineHeight: 1.45, color: "#92400e",
+                      background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "9px 12px" }}>
+                      <strong>Este vehículo está reservado.</strong> Podés consultar igual: si la reserva se cae, sos el primero en enterarte.
+                    </p>
+                  )}
                   <ConsultaVehiculo product={product} accent={accent} precioTexto={fmtPrice(product.price, currency)}
                     whatsappNumber={whatsapp.number} whatsappEnabled={whatsapp.enabled}
                     storeId={storeId} isOwner={isOwner} isPreview={isPreview} año={año} />
@@ -470,9 +496,9 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#333" }}>
                         {fmtPrice(p.price, currency)}
                       </p>
-                      {(attr(p, "Año") || attr(p, "Km")) && (
+                      {(attr(p, "Año") || kmDe(p) != null) && (
                         <p style={{ margin: "3px 0 0", fontSize: 11, color: "#999" }}>
-                          {[attr(p, "Año"), attr(p, "Km") && `${Number(attr(p, "Km")).toLocaleString("es-AR")} Km`].filter(Boolean).join(" | ")}
+                          {[attr(p, "Año"), kmDe(p) != null && fmtKm(kmDe(p)!)].filter(Boolean).join(" | ")}
                         </p>
                       )}
                     </div>
@@ -505,7 +531,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
   const img = product.images[0]
     ?? "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75";
   const año = attr(product, "Año");
-  const km = attr(product, "Km") || attr(product, "Kilómetros");
+  const km = kmDe(product);
   const trans = attr(product, "Transmisión");
   const comb = attr(product, "Combustible");
   const condicion = attr(product, "Condición");
@@ -518,7 +544,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
   const subCol    = D ? "#888"    : "#999";
   const borderCol = D ? (hov ? "#444" : "#2a2a2a") : (hov ? "#c8c8c8" : "#e0e0e0");
 
-  const metaLine = [año, km ? `${Number(km).toLocaleString("es-AR")} km` : null, trans, comb]
+  const metaLine = [año, km != null ? fmtKm(km) : null, trans, comb]
     .filter(Boolean).join(" · ");
 
   return (
@@ -531,9 +557,14 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: D ? "#111" : "#f5f5f5" }}>
         <img src={img} alt={product.name}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#ffffff" }}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#ffffff",
+            opacity: esReservado(product) ? 0.7 : 1 }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"; }} />
-        {product.badge && (
+        {esReservado(product) ? (
+          <div style={{ position: "absolute", top: 10, left: 10, fontSize: 10, padding: "3px 10px", borderRadius: 4, ...ESTILO_RESERVADO }}>
+            Reservado
+          </div>
+        ) : product.badge && (
           <div style={{ position: "absolute", top: 10, left: 10,
             background: accent, color: getContrastColor(accent) === "light" ? "#fff" : "#111",
             fontSize: 10, fontWeight: 700, padding: "3px 10px",

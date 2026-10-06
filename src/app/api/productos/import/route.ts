@@ -45,7 +45,10 @@ function buildVehicleAttributes(row: CsvRow): { key: string; value: string }[] {
   const attrs: { key: string; value: string }[] = [];
   if (row.condicion?.trim()) attrs.push({ key: "Condición", value: row.condicion.trim() });
   for (const [field, label] of VEHICLE_ATTR_LABELS) {
-    const value = (row[field] as string | undefined)?.trim();
+    let value = (row[field] as string | undefined)?.trim();
+    // Kilómetros y año, sólo dígitos (06/10/26): una planilla con "32.000"
+    // guardaba el texto y la tienda lo mostraba como "32 km".
+    if (value && (field === "km" || field === "anio")) value = value.replace(/,\d{1,2}$/, "").replace(/\D/g, "");
     if (value) attrs.push({ key: label, value });
   }
   return attrs;

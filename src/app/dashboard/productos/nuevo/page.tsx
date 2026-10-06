@@ -1155,6 +1155,28 @@ function ProductoFormPage() {
       setLoading(false);
       return;
     }
+    /* Autos: marca, modelo y año son lo primero que mira el comprador y lo que
+       usan los filtros (06/10/26). Se podía publicar un vehículo sin ninguna
+       especificación, o con año 3. Sólo para vehículos: un repuesto o un
+       accesorio no lleva modelo ni año. */
+    if (storeTypeConfig.id === "AUTOS" && ["autos", "motos", "camionetas"].includes(category)) {
+      const valorDe = (label: string) => attributes.find((a) => a.key === label)?.value?.trim() ?? "";
+      const faltan = activeExtraFields
+        .filter((f) => ["marca", "modelo", "año"].includes(f.key) && !valorDe(f.label))
+        .map((f) => f.label.toLowerCase());
+      if (faltan.length > 0) {
+        setError(`Completá ${faltan.join(", ").replace(/, ([^,]*)$/, " y $1")} del vehículo: es lo primero que mira quien busca.`);
+        setLoading(false);
+        return;
+      }
+      const año = valorDe("Año");
+      const tope = new Date().getFullYear() + 1;
+      if (año && (!/^\d{4}$/.test(año) || Number(año) < 1900 || Number(año) > tope)) {
+        setError(`El año tiene que ser de cuatro cifras, entre 1900 y ${tope}.`);
+        setLoading(false);
+        return;
+      }
+    }
     if (!isHideVariants && preparedVariants.some((variant) => !variant.value)) {
       setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
       setLoading(false);
@@ -2761,10 +2783,15 @@ function ProductoFormPage() {
                           // Números y fechas se quedan como input: el teclado que
                           // abre el teléfono y los controles propios del tipo valen
                           // más que envolver un valor que nunca es largo.
+                          /* Los "number" (año, km, código postal) son enteros y
+                             van como texto con teclado numérico, sólo dígitos
+                             (06/10/26). Con `type=number`, "50.000" se leía como
+                             50 y un valor viejo con puntos aparecía VACÍO. */
                           <input
-                            type={field.type}
+                            type={field.type === "number" ? "text" : field.type}
+                            inputMode={field.type === "number" ? "numeric" : undefined}
                             value={val}
-                            onChange={(e) => onChange(e.target.value)}
+                            onChange={(e) => onChange(field.type === "number" ? e.target.value.replace(/\D/g, "") : e.target.value)}
                             placeholder={field.placeholder || ""}
                             className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />

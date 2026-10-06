@@ -41,6 +41,8 @@ export type StorefrontProduct = {
   id: string;
   name: string;
   price: number;
+  /** Autos: "AVAILABLE" | "RESERVED" | "SOLD" (o null). Un reservado sigue a la vista con su etiqueta. */
+  vehicleStatus?: string | null;
   comparePrice: number | null;
   viewCount?: number;
   /** Promedio de las reseñas aprobadas, o `null` si el producto no tiene
@@ -237,6 +239,7 @@ type RawProduct = {
   offerBadge?: string | null;
   offerNote?: string | null;
   offerEndsAt?: string | Date | null;
+  vehicleStatus?: string | null;
   cuotas?: number;
   category?: string;
   subcategory?: string;
@@ -323,6 +326,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     opciones,
     variants,
     attributes,
+    vehicleStatus: raw.vehicleStatus ?? null,
   };
 }
 
