@@ -20,6 +20,8 @@ export default function StoreTypeModal({
   const [wholesale, setWholesale] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Cambio de rubro terminado: la pantalla de carga muestra "Listo" antes de ir al panel.
+  const [listo, setListo] = useState(false);
   // confirm step: solo cuando isEditing y cambia de tipo
   const [confirmStep, setConfirmStep] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -133,10 +135,27 @@ export default function StoreTypeModal({
       return;
     }
 
+    window.dispatchEvent(new CustomEvent("store-type-changed", { detail: { newType: selected } }));
+
+    /* ── Cambio de rubro: "Listo" y el panel de cero (06/10/26) ───────────────
+       Antes, al terminar de borrar, el modal volvía 0,7 s a la pantalla de
+       elegir rubro (con la tarjeta parpadeando) y recién ahí se cerraba con un
+       refresco a medias: la dueña quedaba en Productos, con el estado que el
+       panel ya tenía cargado (contadores, lo que pidió al montar), y la guía —que se reinicia al cambiar—
+       no arrancaba en ese momento porque el panel ya tenía el rubro "elegido":
+       aparecía más tarde, en cualquier recarga y en cualquier pantalla.
+       Ahora: la pantalla de carga pasa a "Listo" y se carga el panel de inicio
+       entero. Todo lo que se ve es del rubro nuevo, y la guía arranca ahí. */
+    if (isChangingType) {
+      setListo(true);
+      await new Promise((r) => setTimeout(r, 1100));
+      window.location.assign("/dashboard");
+      return;
+    }
+
     setSaving(false);
     setConfirmStep(false);
     setSaved(true);
-    window.dispatchEvent(new CustomEvent("store-type-changed", { detail: { newType: selected } }));
     await new Promise((r) => setTimeout(r, 700));
     router.refresh();
     if (isEditing) onClose?.();
@@ -145,6 +164,19 @@ export default function StoreTypeModal({
   // ── Overlay de carga mientras borra ──
   if (saving) {
     const toConfig = STORE_TYPES.find((t) => t.id === selected);
+    if (listo) {
+      return (
+        <div role="status" className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-5 px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center animate-pop-in">
+            <Check className="h-10 w-10 text-white" />
+          </div>
+          <div>
+            <p className="text-white text-xl font-bold">Listo: tu tienda ahora es de {toConfig?.label} {toConfig?.emoji}</p>
+            <p className="text-white/70 text-sm mt-1.5">Te llevamos al panel para que cargues tus primeros {toConfig?.id === "AUTOS" ? "vehículos" : "productos"}…</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-6 animate-fade-slide">
         <div className="relative flex items-center justify-center">

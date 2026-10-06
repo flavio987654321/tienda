@@ -181,6 +181,32 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 
 ---
 
+## Pedido del dueño: pasar de ropa a autos se siente forzado (06/10/26)
+
+"Cuando entré a modo vehículo tardó o apareció mal la guía, no lo siento normal."
+
+- [x] ~~**Al terminar el cambio, el modal volvía a la pantalla de elegir rubro.**~~ La tarjeta
+  parpadeaba en verde 0,7 s y recién ahí se cerraba, con un refresco a medias que dejaba a la
+  dueña en Productos con el estado anterior cargado. Ahora la pantalla de carga pasa a "Listo:
+  tu tienda ahora es de Autos y motos 🚗 — Te llevamos al panel…" y se carga el panel de inicio
+  entero.
+- [x] ~~**La guía no arrancaba al cambiar de rubro: aparecía más tarde, en cualquier
+  pantalla.**~~ El cambio borra la marca de "guía vista", pero el panel solo la arrancaba cuando
+  el rubro pasaba de no elegido a elegido, y la tienda ya lo tenía elegido. Con la carga completa
+  del inicio, la guía arranca ahí, a los 1,4 s.
+- [x] ~~**Una tienda de autos veía el menú de ropa un instante, en cada pantalla.**~~ El panel
+  arrancaba sin rubro (`null`) hasta que respondía `/api/pedidos`. Ahora el layout del servidor
+  pasa el rubro y si fue elegido (`RubroDelPanel`), así que el primer dibujo ya es el correcto.
+  `tour-rubro.check.ts` quedó actualizado.
+- [x] ~~**La guía de autos prometía comisiones y no hablaba del WhatsApp.**~~
+  - Afiliados ya no se muestra en autos: sale de `supportsAffiliates`, así que vuelve solo el
+    día que se prenda. Es el punto 4.4.
+  - Consultas explica el flujo real.
+  - En Configuración, para autos, la guía arranca por el WhatsApp.
+- **Sin probar en el navegador:** el panel pide sesión, y el cambio de rubro borra la tienda de
+  verdad (el servidor local usa la base de producción). Verificado con la compilación, los
+  chequeos y la lectura del código.
+
 ## Encontrado en el camino
 
 - [x] ~~**Un guardado sin rubro pasaba la tienda a ROPA.**~~ El PUT de configuración guardaba

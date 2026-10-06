@@ -94,9 +94,18 @@ chequear(
   "el layout lo lee de ahí",
   /if \(data\?\.tipoTiendaConfigurado\) setRubroElegido\(true\)/.test(layout)
 );
+/* Desde el 06/10/26 arranca con lo que leyó el layout del servidor
+   (`RubroDelPanel`), que es `tipoTiendaConfigurado` de la base: la misma
+   condición, sabida antes. Y si no hay dato, el contexto dice `false`. */
+const contexto = leer("src/contexts/RubroDelPanel.tsx");
 chequear(
-  "arranca en false: sin saber, el tour no abre",
-  /const \[rubroElegido, setRubroElegido\] = useState\(false\)/.test(layout)
+  "arranca con tipoTiendaConfigurado (del servidor), no con el rubro",
+  /useState\(rubroInicial\.configurado\)/.test(layout)
+    && /configurado: !!store\?\.tipoTiendaConfigurado/.test(gate)
+);
+chequear(
+  "sin saber, arranca en false: el tour no abre",
+  /createContext<RubroDelPanel>\(\{ tipoTienda: null, configurado: false \}\)/.test(contexto)
 );
 
 console.log("\n4) Al confirmar el rubro, el tour se destraba");

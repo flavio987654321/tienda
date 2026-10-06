@@ -19,9 +19,16 @@ import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import TourGuide from "@/components/TourGuide";
 import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
+import { useRubroDelPanel } from "@/contexts/RubroDelPanel";
+import { STORE_TYPES } from "@/lib/storeTypes";
 import BarraDeAtajosTienda, { BotonTemaTiendas } from "@/components/dashboard/BarraDeAtajosTienda";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
+/* Los rubros con el programa de afiliados en pausa (hoy, autos). Sale de la
+   misma definición que `soportaAfiliados`: el día que se prendan, el ítem del
+   menú vuelve solo (06/10/26). Antes se mostraba igual y llevaba a una
+   pantalla que no se podía usar. */
+const RUBROS_SIN_AFILIADOS = STORE_TYPES.filter((t) => !t.supportsAffiliates).map((t) => t.id);
 
 // Suscripción a los eventos online/offline del navegador para useSyncExternalStore.
 // A nivel de módulo para que la referencia sea estable entre renders.
@@ -75,7 +82,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/promociones",    label: "Promociones",    icon: BadgePercent, tourId: "promociones", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/carritos-abandonados", label: "Carritos abandonados", icon: ShoppingCart, tourId: "carritos-abandonados", hiddenFor: LEADS_STORE_TYPES },
-      { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
+      { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados", hiddenFor: RUBROS_SIN_AFILIADOS },
       { href: "/dashboard/resenas",         label: "Reseñas",        icon: Star,  tourId: "resenas", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell, tourId: "notificaciones" },
     ],
@@ -139,12 +146,14 @@ export default function DashboardLayout({
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [newCartsCount, setNewCartsCount] = useState(0);
-  const [storeType, setStoreType] = useState<string | null>(null);
+  // Arranca con lo que ya leyó el layout del servidor (ver `RubroDelPanel`).
+  const rubroInicial = useRubroDelPanel();
+  const [storeType, setStoreType] = useState<string | null>(rubroInicial.tipoTienda);
   /* La dirección de la tienda, para "Ver mi tienda" en la barra de arriba. */
   const [storeSlug, setStoreSlug] = useState<string | null>(null);
   // Arranca en false, no en null: mientras no sepamos, el tour NO se abre.
   // Al revés se abriría durante la espera del fetch, que es el escenario malo.
-  const [rubroElegido, setRubroElegido] = useState(false);
+  const [rubroElegido, setRubroElegido] = useState(rubroInicial.configurado);
   // Estado online/offline vía useSyncExternalStore (patrón canónico de React para
   // suscribirse a una fuente externa del navegador). El snapshot de servidor es
   // "online" para no romper la hidratación; en el cliente lee navigator.onLine.

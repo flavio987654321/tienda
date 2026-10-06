@@ -43,7 +43,7 @@ export const GUION_PANEL: Guion = {
   consultas: {
     icon: MessageCircle,
     title: "Consultas de clientes",
-    body: "Cuando alguien completa el formulario de contacto, la consulta llega acá. Podés responderle por WhatsApp desde el panel.",
+    body: "Cuando alguien consulta por un vehículo y deja su nombre y teléfono, llega acá y te avisamos. Le escribís por WhatsApp o lo llamás desde el panel.",
   },
   productos: {
     icon: Package,
@@ -78,7 +78,9 @@ export const GUION_PANEL: Guion = {
     porTipo: {
       AUTOS: {
         title: "Afiliados",
-        body: "Invitá vendedores externos que te traigan clientes. Vos definís la comisión por venta concretada y se acredita sola cuando confirmás la consulta.",
+        // Hoy el ítem no se muestra en autos (afiliados en pausa, ver `soportaAfiliados`).
+        // Si se prende, este texto se revisa junto con el modelo de comisión.
+        body: "Invitá vendedores externos que te traigan clientes interesados en tus vehículos.",
       },
     },
   },
@@ -118,6 +120,12 @@ export const GUION_PANEL: Guion = {
     icon: Settings,
     title: "Configuración",
     body: "Todo lo que no es el diseño: tu logo, la dirección web, el WhatsApp, tus redes, la moneda y cómo aparecés en Google. Está dividida en secciones, con un buscador arriba.",
+    porTipo: {
+      AUTOS: {
+        title: "Configuración",
+        body: "Empezá por el WhatsApp de la concesionaria: es el botón con el que te consultan por cada vehículo. Acá también están tu logo, la dirección web, tus redes y cómo aparecés en Google.",
+      },
+    },
   },
   pagos: {
     icon: Wallet,

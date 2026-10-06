@@ -16,6 +16,7 @@ import { DASHBOARD_VERSION } from "@/lib/app-versions";
 import { OSCURO_TIENDAS_LISTO, SCRIPT_TEMA_TIENDAS } from "@/lib/tema-tiendas";
 import TemaDelPanelTiendas from "@/components/dashboard/TemaDelPanelTiendas";
 import { Suspense } from "react";
+import { RubroDelPanelProvider } from "@/contexts/RubroDelPanel";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -117,7 +118,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const store = isOwner
     ? await prisma.store.findUnique({
         where: { ownerId: user.id },
-        select: { id: true, tipoTiendaConfigurado: true, closedAt: true },
+        select: { id: true, tipoTienda: true, tipoTiendaConfigurado: true, closedAt: true },
       })
     : null;
 
@@ -193,7 +194,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           inicio: no llegaba tarde, aparecía en otra pantalla.
           Desde el layout cubre las 21 sin pasar nada por prop. */}
       {store && <CelebrationManager storeId={store.id} />}
-      {children}
+      <RubroDelPanelProvider value={{ tipoTienda: store?.tipoTienda ?? null, configurado: !!store?.tipoTiendaConfigurado }}>
+        {children}
+      </RubroDelPanelProvider>
     </>
   );
 }
