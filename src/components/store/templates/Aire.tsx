@@ -1645,8 +1645,10 @@ export default function Aire() {
 
       {/* ── AVISO FLOTANTE ─────────────────────────────────── */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:T, color:"#ffffff", padding:"13px 26px", fontSize:13.5, fontWeight:600, borderRadius:999, zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", textAlign:"center", boxShadow:"0 12px 34px rgba(20,22,26,0.28)" }}>
-          ✓ {toastMsg}
+        /* Sin "✓" adelante (05/10/26): el mismo aviso confirma ("Agregado") y
+           pide ("Elegí talle"), y el tilde a un pedido se leía como "listo". */
+        <div role="status" aria-live="polite" style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:T, color:"#ffffff", padding:"13px 26px", fontSize:13.5, fontWeight:600, borderRadius:999, zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", textAlign:"center", boxShadow:"0 12px 34px rgba(20,22,26,0.28)" }}>
+          {toastMsg}
         </div>
       )}
 

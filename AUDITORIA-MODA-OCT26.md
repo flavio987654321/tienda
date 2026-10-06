@@ -224,5 +224,6 @@ stock se descuenta de forma atómica.
   No se pierde nada: el cartel escucha el evento por su cuenta. Sólo es ruido de
   desarrollo; `next/script` con `beforeInteractive` no se puede usar fuera del
   layout raíz.
-- [ ] El cartelito flotante (toast) antepone "✓" a todo, también a los avisos
-  que piden algo ("✓ Elegí talle"). Ver con el grupo 5.
+- [x] El cartelito flotante (toast) de Aire y Boho anteponía "✓" a todo, también
+  a los avisos que piden algo ("✓ Elegí talle"): se sacó (los otros tres no lo
+  usaban) y se le sumó role="status".
