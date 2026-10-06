@@ -426,6 +426,13 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   const [cp, setCp] = useState("");
   const [cpResult, setCpResult] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  // Escape cierra el zoom (05/10/26: el visor no escuchaba teclas).
+  useEffect(() => {
+    if (!lightboxSrc) return;
+    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxSrc(null); };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [lightboxSrc]);
 
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews, setReviews] = useState<PReview[]>([]);

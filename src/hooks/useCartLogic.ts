@@ -241,9 +241,14 @@ type StorefrontDeps = {
   // flotante encima — por eso no deben heredar el bloqueo de scroll del body pensado
   // para el quick-view modal del catálogo.
   lockScrollOnModal?: boolean;
+  /** La ficha suelta usa `modalProduct` como el producto de la página, no como
+   *  un modal: Escape no tiene que descargarlo (05/10/26). Antes un Escape
+   *  cualquiera —para cerrar el buscador, por ejemplo— lo vaciaba y "Agregar al
+   *  carrito" dejaba de hacer nada. */
+  fichaFija?: boolean;
 };
 
-export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, isPreview = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, paymentInfo = null, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
+export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, isPreview = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, paymentInfo = null, lockScrollOnModal = true, fichaFija = false, currency = "ARS" }: StorefrontDeps) {
   /* Va arriba de todo porque abajo lo usan `fmtLiveQuote` y el resto del hook.
      Hasta acá `fmt` era la constante en pesos importada del módulo, así que la
      moneda que este hook ya recibía sólo llegaba al evento Purchase del Pixel y
@@ -545,14 +550,19 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // El checkout va encima de todo (05/10/26: no estaba en la lista, y
+      // Escape no lo cerraba en ningún template). Mientras se envía el pedido,
+      // no: cerrarlo a mitad de camino dejaría al comprador sin el resultado.
+      if (checkoutOpen) { if (checkoutStatus !== "placing") setCheckoutOpen(false); return; }
       if (userDropdownOpen) { setUserDropdownOpen(false); return; }
       if (cartOpen)         { setCartOpen(false);         return; }
       if (favoritesOpen)    { setFavoritesOpen(false);    return; }
-      setSearchOpen(false); setModalProduct(null);
+      setSearchOpen(false);
+      if (!fichaFija) setModalProduct(null);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [userDropdownOpen, cartOpen, favoritesOpen]);
+  }, [userDropdownOpen, cartOpen, favoritesOpen, checkoutOpen, checkoutStatus, fichaFija]);
 
   const savedScrollY = useRef(0);
   // true solo mientras el modal estuvo abierto en esta instancia — evita

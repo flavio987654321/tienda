@@ -163,8 +163,13 @@ stock se descuenta de forma atómica.
 - [x] ~~**4.5 Catálogo genérico 360: cartel de promo tapa el chip de categoría.**~~ → Hecho (05/10): con promo u oferta, el chip de categoría no se dibuja (un solo cartel arriba, como ya hacía el estilo "vidrio").
 - [x] ~~**4.6 Barras de anuncio con texto pisado** (Aire ficha, Aurora 360, Boho 360).~~ → Hecho (05/10): el texto lleva margen para la ✕, una línea y puntos suspensivos (Aire, Aurora, Boho); la ficha de Aire usa las rayitas de 28×12 abajo como la portada; Aurora y Boho también (eran de 6×4) y la ✕ pasa a 36×36 con nombre. Verificado a 360 en las 4 barras.
 - [x] ~~**4.7 Aurora 360: precio tachado debajo de la ✕ de la ficha.**~~ → Hecho (05/10): la ✕ pasa a fondo casi opaco con desenfoque; el contenido pasa por debajo sin mezclarse.
-- [ ] **4.8 Escape no cierra** el checkout, el zoom de Aire ni el menú de Aire,
-  Boho y Aurora.
+- [x] ~~**4.8 Escape no cierra** el checkout, el zoom de Aire ni el menú de Aire,
+  Boho y Aurora.~~ → Hecho (05/10): el checkout es lo primero que cierra Escape
+  (salvo mientras se envía); el zoom de la ficha escucha Escape; los menús de
+  Aire, Boho y Aurora también, en captura como Chic. **En el camino:** en la
+  ficha suelta, un Escape cualquiera vaciaba el producto del carrito y "Agregar
+  al carrito" dejaba de andar → `fichaFija`. Probado en el navegador (ficha,
+  checkout, zoom y los 3 menús).
 - [x] ~~**4.9 "¡Últimas 1 unidades!".**~~ → Hecho (05/10): `avisoUltimas` en las 5 pantallas ("¡Última unidad!" con stock 1). Aurora ya lo decía bien.
 - [x] ~~**4.10 Aire 1280: botón de volver sobre la barra de anuncios y el logo.**~~ → Hecho (05/10): el botón (y el gesto del celular) sólo aparece si el visitante llegó desde el listado de tiendas —antes lo veía también quien entraba desde el Instagram de la tienda, y lo mandaba a la competencia—, y va al borde izquierdo a media altura, lejos de los encabezados de los 10 templates. Probado: directo no aparece; desde /tiendas sí.
 

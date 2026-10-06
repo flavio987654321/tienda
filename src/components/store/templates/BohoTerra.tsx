@@ -330,6 +330,19 @@ export default function BohoTerra() {
      medida de las de "Lo más visto". */
   const [esAncho,             setEsAncho]             = useState(false);
   const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
+  /* Escape cierra el menú del celular (05/10/26: no lo cerraba). En captura
+     y cortando la propagación, como en Chic: un Escape cierra UNA cosa, y
+     así no llega también a `useCartLogic`. */
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", tecla, true);
+    return () => window.removeEventListener("keydown", tecla, true);
+  }, [mobileMenuOpen]);
   const [mobileCatsOpen,      setMobileCatsOpen]      = useState(false);
   const [mobileOpenCat,       setMobileOpenCat]       = useState<string | null>(null);
   const [lightboxSrc,         setLightboxSrc]         = useState<string|null>(null);

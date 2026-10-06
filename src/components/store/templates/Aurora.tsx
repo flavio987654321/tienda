@@ -140,6 +140,19 @@ export default function Aurora() {
   const [hoveredNavCat,      setHoveredNavCat]      = useState<string | null>(null);
   const [isMobile,           setIsMobile]           = useState(false);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
+  /* Escape cierra el menú del celular (05/10/26: no lo cerraba). En captura
+     y cortando la propagación, como en Chic: un Escape cierra UNA cosa, y
+     así no llega también a `useCartLogic`. */
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", tecla, true);
+    return () => window.removeEventListener("keydown", tecla, true);
+  }, [mobileMenuOpen]);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
   const [mobileOpenCat,      setMobileOpenCat]      = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
@@ -1014,7 +1027,7 @@ export default function Aurora() {
               )}
             </div>
             {isMobile && (
-              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} aria-label="Menú" style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
+              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} aria-label="Menú" aria-expanded={mobileMenuOpen} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:8, margin:-4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
                 <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
                 <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
                 <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-3px)" : "none" }}/>

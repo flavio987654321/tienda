@@ -271,7 +271,7 @@ export default function ProductDetailClient({
      pantalla nunca ofrecía MercadoPago: sólo transferencia y pago al retirar.
      Sin él, sumar el afiliado dejaría la lista de pagos vacía, porque una venta
      con comisión sólo puede cobrarse por MercadoPago. */
-  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, affiliateId, hasMercadoPago, shippingMethods: envios, paymentInfo: infoPago, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
+  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, affiliateId, hasMercadoPago, shippingMethods: envios, paymentInfo: infoPago, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false, fichaFija: true });
   const {
     seleccion, setSeleccion, setOpcion, qty, setQty,
     addToCart, cartCount, toastMsg, openModal,

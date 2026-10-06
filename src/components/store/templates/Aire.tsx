@@ -185,6 +185,19 @@ export default function Aire() {
      del medio no entraban y se pisaban con la marca y los íconos. */
   const [navCompacta,        setNavCompacta]        = useState(false);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
+  /* Escape cierra el menú del celular (05/10/26: no lo cerraba). En captura
+     y cortando la propagación, como en Chic: un Escape cierra UNA cosa, y
+     así no llega también a `useCartLogic`. */
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", tecla, true);
+    return () => window.removeEventListener("keydown", tecla, true);
+  }, [mobileMenuOpen]);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
   const [mobileOpenCat,      setMobileOpenCat]      = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
