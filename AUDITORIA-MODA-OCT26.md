@@ -187,7 +187,7 @@ stock se descuenta de forma atómica.
 - [x] ~~**5.4 Provincias del checkout en orden ISO** (Salta primero).~~ → Hecho (05/10): Buenos Aires y CABA primero y después por nombre, en `lib/provincias` (vale para el checkout, el panel y los filtros). Las 24 siguen; nadie dependía del orden.
 - [x] ~~**5.5 Carrito de Boho: "SUBTOTAL 1 pieza"** en vez del monto.~~ → Hecho (05/10): era el carrito compartido (los 5 templates). Ahora "Subtotal (1 pieza) $55.000 → Promoción −$11.000 → Total $44.000"; verificado en vivo.
 - [x] ~~**5.6 Promo repetida tres veces** en las fichas de Boho y Urban.~~ → Hecho (05/10): la caja de la promo pasa debajo del botón de compra (queda la letra chica para quien la busca); arriba quedan el cartel de la foto y el precio tachado. Verificado en Boho (Buzo Hoody): talle → botón → caja.
-- [ ] **5.7 Aire 768: filtros del catálogo ocupan toda la primera pantalla.**
+- [x] ~~**5.7 Aire 768: filtros del catálogo ocupan toda la primera pantalla.**~~ → Hecho (06/10): se pliegan por debajo de 1024 (`navCompacta`), donde no hay barra lateral; antes sólo en celular. Verificado: plegados a 768 y se abren al tocar; barra lateral desde 1024 como antes.
 - [ ] **5.8 Aire 360 sin nombre de tienda; Urban "AMARAN" cortado y logo sin link.**
 - [ ] **5.9 Contraste**: colores de la tienda sin corrección (titular de Aire,
   "Nueva colección" de Chic).

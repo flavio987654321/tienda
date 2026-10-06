@@ -3123,7 +3123,10 @@ export default function Aire() {
 
           <div className="ai-catalogo">
 
-            {/* ── Los filtros ── */}
+            {/* ── Los filtros ──
+                Plegados por debajo de 1024 (`navCompacta`), donde no hay barra
+                lateral (05/10/26): antes se plegaban sólo en celular, y a 768
+                ocupaban toda la primera pantalla antes del primer producto. */}
             <aside style={{ minWidth:0 }}>
 
               {/* ── Colecciones ──
@@ -3137,14 +3140,14 @@ export default function Aire() {
                   Sólo se dibuja si hay alguna: en una tienda sin ofertas, sin
                   vistas suficientes y con menos de siete productos, las tres listas
                   quedan vacías y serían tres filtros que no filtran nada. */}
-              {colecciones.length > 0 && (!isMobile || filtrosAbiertos) && (
+              {colecciones.length > 0 && (!navCompacta || filtrosAbiertos) && (
                 <div style={{ marginBottom:14, background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
                   <p style={{ margin:0, padding:"16px 18px", fontSize:15, fontWeight:800, color:catalogoText, letterSpacing:"-0.3px" }}>Colecciones</p>
                   {[{ id:null, titulo:"Todo el catálogo" }, ...colecciones.map(c => ({ id:c.id as string | null, titulo:c.titulo }))].map(op => {
                     const elegida = modo === op.id;
                     return (
                       <button key={op.id ?? "todo"} type="button"
-                        onClick={() => { setModo(op.id as typeof modo); if (isMobile) setFiltrosAbiertos(false); }}
+                        onClick={() => { setModo(op.id as typeof modo); if (navCompacta) setFiltrosAbiertos(false); }}
                         style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"13px 18px", background:"none", border:"none", borderTop:`1px solid ${catalogoBorde}`, cursor:"pointer", fontFamily:"inherit", fontSize:14, textAlign:"left", color: elegida ? catalogoText : catalogoMid, fontWeight: elegida ? 700 : 500 }}
                         onMouseEnter={e => { if (!elegida) e.currentTarget.style.color = G; }}
                         onMouseLeave={e => { if (!elegida) e.currentTarget.style.color = catalogoMid; }}>
@@ -3162,19 +3165,19 @@ export default function Aire() {
 
               <div style={{ background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
                 <button type="button"
-                  onClick={() => { if (isMobile) setFiltrosAbiertos(v => !v); }}
-                  aria-expanded={!isMobile || filtrosAbiertos}
-                  style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, background:"none", border:"none", padding:"16px 18px", cursor: isMobile ? "pointer" : "default", fontFamily:"inherit" }}>
+                  onClick={() => { if (navCompacta) setFiltrosAbiertos(v => !v); }}
+                  aria-expanded={!navCompacta || filtrosAbiertos}
+                  style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, background:"none", border:"none", padding:"16px 18px", cursor: navCompacta ? "pointer" : "default", fontFamily:"inherit" }}>
                   <span style={{ fontSize:15, fontWeight:800, color:catalogoText, letterSpacing:"-0.3px" }}>Categorías</span>
                   {/* La flecha sólo en celular: en escritorio la lista está
                       siempre abierta y una flecha que no hace nada es una promesa
                       incumplida. */}
-                  {isMobile && (
+                  {navCompacta && (
                     <span aria-hidden style={{ color:catalogoMid, fontSize:11, transform: filtrosAbiertos ? "rotate(180deg)" : "none", transition:"transform 0.2s" }}>▼</span>
                   )}
                 </button>
 
-                {(!isMobile || filtrosAbiertos) && (
+                {(!navCompacta || filtrosAbiertos) && (
                   <div>
                     {/* Las categorias vienen en minuscula de la base ("remeras"),
                         asi que se capitalizan con CSS. "Todos los productos" NO:
@@ -3184,7 +3187,7 @@ export default function Aire() {
                       const elegida = activeCategory === op.v && !modo;
                       return (
                         <button key={op.v} type="button"
-                          onClick={() => { aplicarCategoria(op.v); if (isMobile) setFiltrosAbiertos(false); }}
+                          onClick={() => { aplicarCategoria(op.v); if (navCompacta) setFiltrosAbiertos(false); }}
                           style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"13px 18px", background:"none", border:"none", borderTop:`1px solid ${catalogoBorde}`, cursor:"pointer", fontFamily:"inherit", fontSize:14, textAlign:"left", color: elegida ? catalogoText : catalogoMid, fontWeight: elegida ? 700 : 500 }}
                           onMouseEnter={e => { if (!elegida) e.currentTarget.style.color = G; }}
                           onMouseLeave={e => { if (!elegida) e.currentTarget.style.color = catalogoMid; }}>
@@ -3209,7 +3212,7 @@ export default function Aire() {
                   `tramosPrecio` viene vacío —y entonces no se dibuja nada— cuando
                   el filtro no serviría: precios escondidos, catálogo de menos de
                   cuatro productos, o todo al mismo precio. */}
-              {tramosPrecio.length > 0 && (!isMobile || filtrosAbiertos) && (
+              {tramosPrecio.length > 0 && (!navCompacta || filtrosAbiertos) && (
                 <div style={{ marginTop:14, background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
                   <p style={{ margin:0, padding:"16px 18px", fontSize:15, fontWeight:800, color:catalogoText, letterSpacing:"-0.3px" }}>Precio</p>
                   {[{ i:null as number | null, texto:"Cualquier precio" },
@@ -3217,7 +3220,7 @@ export default function Aire() {
                     const elegido = rangoPrecio === op.i;
                     return (
                       <button key={op.i ?? "todos"} type="button"
-                        onClick={() => { setRangoPrecio(op.i); if (isMobile) setFiltrosAbiertos(false); }}
+                        onClick={() => { setRangoPrecio(op.i); if (navCompacta) setFiltrosAbiertos(false); }}
                         style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"13px 18px", background:"none", border:"none", borderTop:`1px solid ${catalogoBorde}`, cursor:"pointer", fontFamily:"inherit", fontSize:14, textAlign:"left", color: elegido ? catalogoText : catalogoMid, fontWeight: elegido ? 700 : 500 }}
                         onMouseEnter={e => { if (!elegido) e.currentTarget.style.color = G; }}
                         onMouseLeave={e => { if (!elegido) e.currentTarget.style.color = catalogoMid; }}>
@@ -3240,7 +3243,7 @@ export default function Aire() {
               {/* El filtro de género sólo si el catálogo tiene de los dos. Ver
                   `catalogoTieneGeneros`: con todo de un solo género son tres
                   botones que no filtran nada. */}
-              {hayGeneros && (!isMobile || filtrosAbiertos) && (
+              {hayGeneros && (!navCompacta || filtrosAbiertos) && (
                 <div style={{ marginTop:14, background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
                   <p style={{ margin:0, padding:"16px 18px", fontSize:15, fontWeight:800, color:catalogoText, letterSpacing:"-0.3px" }}>Para quién</p>
                   {([null, "mujer", "hombre"] as const).map(g => {
