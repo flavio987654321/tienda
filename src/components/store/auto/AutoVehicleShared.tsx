@@ -7,6 +7,8 @@ import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
 import ConsultaVehiculo from "./ConsultaVehiculo";
 import { DescargasDeFicha, BloquesDeLaFicha } from "./FichaDelVehiculo";
+import TasacionVehiculo from "./TasacionVehiculo";
+import { tipoDeFicha } from "@/lib/fichaVehiculo";
 import { CAPAS } from "@/lib/capas-tienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 
@@ -370,6 +372,12 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                     whatsappNumber={whatsapp.number} whatsappEnabled={whatsapp.enabled}
                     storeId={storeId} isOwner={isOwner} isPreview={isPreview} año={año} />
                   <DescargasDeFicha product={product} accent={accent} isPreview={isPreview} />
+                  {/* Sólo vehículos (un repuesto no se "permuta"). key: otro vehículo
+                      en el mismo modal arranca con el formulario limpio. */}
+                  {tipoDeFicha(product.category) && (
+                    <TasacionVehiculo key={product.id} storeId={storeId} accent={accent} producto={{ id: product.id, name: product.name }}
+                      isOwner={isOwner} isPreview={isPreview} />
+                  )}
                   {hasServices && (
                     <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14, marginTop: 4 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>

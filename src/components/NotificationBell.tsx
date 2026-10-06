@@ -25,6 +25,7 @@ const ICONS: Record<string, string> = {
   NEW_REVIEW: "⭐",
   ABANDONED_CART: "🛒",
   NEW_LEAD: "💬",
+  NEW_TASACION: "🔁",
   ORDER_PENDING_REMINDER: "⏳",
   // Pagos de MercadoPago que necesitan a la dueña (webhook, 05/10/26)
   PAYMENT_REFUNDED: "↩️",

@@ -270,6 +270,41 @@ cuatro bloques: equipamiento, papeles y condiciones, motor y prestaciones, y med
   - El PDF mirado como imagen, con foto y sin foto.
 - **Sin probar logueado:** el guardado real desde el panel, por lo mismo de siempre.
 
+## Funciones nuevas para concesionarias (06/10/26)
+
+El dueño eligió pensar el panel como concesionaria y sumar cuatro funciones, en este orden. Las
+tablas nuevas **no se aplican a producción antes del deploy**: se prueban en la base de prueba,
+y en el servidor local esas pantallas fallan hasta subir.
+
+- [x] ~~**1. Tasación y permuta.**~~
+  - **En la tienda:** dos entradas.
+    - En el modal de cada vehículo (no en repuestos): "¿Tenés un usado para entregar? Tasalo",
+      ligado a ese auto.
+    - En `/vehiculos`: "Tasá tu usado", para quien todavía no eligió.
+  - **Qué se pide:** marca, modelo, versión, año, km, combustible, caja, estado, comentario,
+    nombre y teléfono, y si lo entrega en parte de pago o solo lo vende.
+  - **Sin fotos, a propósito:** subir archivos sin sesión abre el depósito a cualquiera. Se piden
+    después por WhatsApp.
+  - **Al recibirla:** `POST /api/tasaciones` acepta 5 por hora por IP y 60 por hora por tienda,
+    solo de tiendas de autos activas y publicadas. El vehículo de interés sale de la base, y la
+    dueña recibe aviso en la campanita y en el teléfono.
+  - **En el panel**, la pantalla Tasaciones (menú solo para autos, con contador rojo):
+    - "Pedir fotos" y "Llamar".
+    - El usado resumido.
+    - "Cuánto se lo tomás", que arma el mensaje de la oferta para WhatsApp.
+    - "Aceptó", "Descartar" y "Reabrir". No se puede aceptar sin una oferta cargada.
+  - **Datos:** tabla `Tasacion`, migración `20261006120000_tasaciones`. El reset de rubro las
+    borra, y al borrar la tienda se van en cascada.
+  - **Probado:**
+    - API contra la base de prueba: 31 casos.
+    - Tienda y panel en 360, 768 y 1280.
+    - El SQL a mano comparado con el esquema: la diferencia da vacía.
+  - **Encontrado probando:** el año con `maxLength` se cortaba antes de limpiar. "20a15" quedaba
+    "201". Ahora se limpia primero y después se recorta.
+- [ ] 2. Seguimiento de consultas y agenda.
+- [ ] 3. Rentabilidad y días en stock.
+- [ ] 4. "Avisame si entra".
+
 ## Encontrado en el camino
 
 - [x] ~~**El chequeo de afiliados buscaba la consulta de autos en el archivo viejo.**~~ Se mudó

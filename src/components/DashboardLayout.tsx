@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
-  BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight,
+  BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight, Repeat,
   CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
@@ -78,6 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard",            label: "Inicio",     icon: TrendingUp,    exact: true, tourId: "inicio" },
       { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES, tourId: "consultas" },
+      { href: "/dashboard/tasaciones", label: "Tasaciones", icon: Repeat,        onlyFor: LEADS_STORE_TYPES, tourId: "tasaciones" },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/promociones",    label: "Promociones",    icon: BadgePercent, tourId: "promociones", hiddenFor: LEADS_STORE_TYPES },
@@ -145,6 +146,7 @@ export default function DashboardLayout({
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
+  const [pendingTasacionesCount, setPendingTasacionesCount] = useState(0);
   const [newCartsCount, setNewCartsCount] = useState(0);
   // Arranca con lo que ya leyó el layout del servidor (ver `RubroDelPanel`).
   const rubroInicial = useRubroDelPanel();
@@ -300,6 +302,11 @@ export default function DashboardLayout({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setPendingLeadsCount(data?.count ?? 0))
       .catch(() => {});
+    // Las tasaciones sin responder también esperan una respuesta: mismo rojo.
+    fetch("/api/tasaciones?status=PENDIENTE&count=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setPendingTasacionesCount(data?.count ?? 0))
+      .catch(() => {});
   }, [storeType]);
 
   // Carritos abandonados con actividad desde la última visita. Se espera a saber
@@ -348,6 +355,7 @@ export default function DashboardLayout({
   const badges: Record<string, { count: number; color: string }> = {
     "/dashboard/vendedoras": { count: pendingAffiliateCount, color: "bg-red-500" },
     "/dashboard/consultas":  { count: pendingLeadsCount,     color: "bg-red-500" },
+    "/dashboard/tasaciones": { count: pendingTasacionesCount, color: "bg-red-500" },
     "/dashboard/productos":  { count: lowStockCount,         color: "bg-orange-500" },
     "/dashboard/pedidos":    { count: pendingOrderCount,     color: "bg-yellow-500" },
     "/dashboard/carritos-abandonados": { count: newCartsCount, color: "bg-yellow-500" },

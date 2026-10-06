@@ -364,6 +364,7 @@ model Store {
   opinionesDigital    OpinionDigital[]
   affiliateGoals      AffiliateGoal[]
   leads               Lead[]
+  tasaciones          Tasacion[]
   publicReviews       PublicReview[]
   verificationRequest VerificationRequest?
   storeReports        StoreReport[]
@@ -2100,6 +2101,44 @@ model Lead {
 
   @@index([storeId, createdAt(sort: Desc)])
   @@index([affiliateId])
+}
+
+// Un pedido de tasación de un usado (06/10/26): alguien quiere entregar su
+// auto en parte de pago (o venderlo) y la concesionaria le hace una oferta.
+// Entra desde la tienda sin sesión, como una consulta. Ver `lib/tasaciones`.
+model Tasacion {
+  id            String    @id @default(cuid())
+  storeId       String
+  store         Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  nombre        String
+  telefono      String
+  // El auto que ofrece
+  marca         String
+  modelo        String
+  version       String?
+  anio          Int
+  km            Int
+  combustible   String?
+  transmision   String?
+  estado        String?
+  comentario    String?
+  // PERMUTA = lo entrega por otro de la tienda / VENTA = sólo lo vende
+  modalidad     String    @default("PERMUTA")
+  // El vehículo de la tienda que le interesa (si vino desde uno). Texto y no
+  // relación, igual que en Lead: si se borra el producto, la tasación queda.
+  productoId     String?
+  productoNombre String?
+  // PENDIENTE = sin responder / OFERTADA = se le pasó un número /
+  // ACEPTADA = cerró / DESCARTADA = no sigue
+  status        String    @default("PENDIENTE")
+  ofertaMonto   Float?
+  ofertaNota    String?
+  ofertadaAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([storeId, createdAt(sort: Desc)])
+  @@index([storeId, status])
 }
 
 // Visitas diarias a la tienda — un registro por día por tienda.

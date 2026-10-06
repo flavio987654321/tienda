@@ -208,6 +208,8 @@ export async function POST(req: Request) {
 
     // ── Consultas y cupones ──
     await tx.lead.deleteMany({ where: { storeId: store.id } });
+    // Las tasaciones de usados (06/10/26) son de la concesionaria que se va.
+    await tx.tasacion.deleteMany({ where: { storeId: store.id } });
     await tx.coupon.deleteMany({ where: { storeId: store.id } });
 
     // ── Promociones de tienda ──

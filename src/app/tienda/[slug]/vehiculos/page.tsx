@@ -10,6 +10,7 @@ import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
 import { esAtributoInterno } from "@/lib/fichaVehiculo";
+import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 
 type RawVehicle = {
   id: string;
@@ -204,6 +205,8 @@ function VehiculosPageInner() {
   const [activeMarca,    setActiveMarca] = useState("Todas");
   const [activeCiudad,   setActiveCiudad]= useState("Todas");
   const [sortBy,         setSortBy]      = useState("newest");
+  // "Tasá tu usado" sin un vehículo elegido todavía (06/10/26). Ver lib/tasaciones.
+  const [tasar,          setTasar]       = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -369,6 +372,11 @@ function VehiculosPageInner() {
             </p>
           </div>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+            <button type="button" onClick={() => setTasar(true)}
+              style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12,
+                fontWeight:700, cursor:"pointer", borderRadius:4, fontFamily:"inherit" }}>
+              Tasá tu usado
+            </button>
             <div style={{ position:"relative" }}>
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar marca, modelo..."
@@ -597,6 +605,21 @@ function VehiculosPageInner() {
       </footer>
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
+
+      {tasar && (
+        <div role="dialog" aria-modal="true" aria-label="Tasá tu usado" onClick={() => setTasar(false)}
+          onKeyDown={e => { if (e.key === "Escape") setTasar(false); }}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:CAPAS.critico, display:"flex",
+            alignItems:"flex-start", justifyContent:"center", padding:"20px 16px", overflowY:"auto" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:"#fff", borderRadius:8, width:"100%", maxWidth:480, margin:"auto 0", padding:16, position:"relative" }}>
+            <button type="button" onClick={() => setTasar(false)} aria-label="Cerrar"
+              style={{ position:"absolute", top:10, right:10, width:32, height:32, borderRadius:"50%", border:"none",
+                background:"#f5f5f5", color:"#666", fontSize:18, cursor:"pointer", zIndex:1 }}>×</button>
+            <TasacionVehiculo storeId={storeId} accent={accent} isOwner={isOwner} abiertoDeEntrada />
+          </div>
+        </div>
+      )}
 
       {selected && (
         <VehicleModal
