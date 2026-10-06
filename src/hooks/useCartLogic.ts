@@ -54,6 +54,16 @@ function indiceFotoDe(p: StorefrontProduct, valor: string): number {
 // que queda es únicamente el del producto sin variantes — que se sigue tratando
 // como disponible, igual que antes.
 function resolveVariantStock(product: StorefrontProduct, seleccion: SeleccionOpciones): number | null {
+  /* Con la selección INCOMPLETA —el talle sin elegir, que desde el 06/10/26 es
+     como abre la ficha— no hay "una" variante: se mira el mejor stock entre
+     todas las que siguen siendo posibles. Con la primera que coincidía, un L
+     agotado apagaba el botón con "Sin stock" aunque el M tuviera, antes de que
+     el cliente eligiera nada. El talle lo pide `addToCart` al agregar. */
+  const faltaElegir = opcionesAElegir(product.opciones).some(o => !seleccion[o.nombre]);
+  if (faltaElegir && product.variants.length > 1) {
+    const posibles = product.variants.filter(x => varianteTiene(x, valoresElegidos(seleccion)));
+    return posibles.length ? Math.max(...posibles.map(x => x.stock)) : 0;
+  }
   const v = buscarVariante(product.variants, valoresElegidos(seleccion));
   if (v) return v.stock;
   return product.variants.length > 1 ? 0 : null;
