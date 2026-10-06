@@ -184,7 +184,7 @@ stock se descuenta de forma atómica.
   Aurora y Boho, rayitas 28×12 en Chic, lupa de Boho 38×38, "+" de Aire 38×38
   en celular, filtros del catálogo con 10 px más arriba y abajo. El dibujo no
   cambia (margen negativo) salvo el "+" de Aire, que es un recuadro.
-- [ ] **5.4 Provincias del checkout en orden ISO** (Salta primero).
+- [x] ~~**5.4 Provincias del checkout en orden ISO** (Salta primero).~~ → Hecho (05/10): Buenos Aires y CABA primero y después por nombre, en `lib/provincias` (vale para el checkout, el panel y los filtros). Las 24 siguen; nadie dependía del orden.
 - [ ] **5.5 Carrito de Boho: "SUBTOTAL 1 pieza"** en vez del monto.
 - [ ] **5.6 Promo repetida tres veces** en las fichas de Boho y Urban.
 - [ ] **5.7 Aire 768: filtros del catálogo ocupan toda la primera pantalla.**
