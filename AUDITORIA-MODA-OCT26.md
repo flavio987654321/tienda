@@ -175,7 +175,7 @@ stock se descuenta de forma atómica.
 
 ## 5. Usabilidad — para vender más
 
-- [ ] **5.1 Talle preseleccionado**: pedir "Elegí tu talle".
+- [x] ~~**5.1 Talle preseleccionado**: pedir "Elegí tu talle".~~ → Hecho (05/10): al abrir la ficha se sigue eligiendo la combinación con stock (el color mueve la foto) pero el TALLE se suelta si hay más de uno (`sinTalleElegido`); "Agregar" avisa "Elegí talle". Probado en Boho (modal) y en la ficha de Aire.
 - [ ] **5.2 Carrito sin lugar en el encabezado** en Boho, Urban, Chic y Aurora.
 - [ ] **5.3 Objetivos táctiles chicos a 360** (× de anuncios, quitar del carrito,
   cerrar, ±, lupa de Boho, filtros del catálogo, agregar de Aire).
@@ -224,3 +224,5 @@ stock se descuenta de forma atómica.
   No se pierde nada: el cartel escucha el evento por su cuenta. Sólo es ruido de
   desarrollo; `next/script` con `beforeInteractive` no se puede usar fuera del
   layout raíz.
+- [ ] El cartelito flotante (toast) antepone "✓" a todo, también a los avisos
+  que piden algo ("✓ Elegí talle"). Ver con el grupo 5.

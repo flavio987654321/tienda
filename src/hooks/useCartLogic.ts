@@ -914,9 +914,24 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalImg, modalProduct?.id]);
 
+  /* El TALLE no viene elegido (05/10/26). Se sigue abriendo en la primera
+     combinación con stock —el color mueve la foto y conviene que venga puesto—,
+     pero el talle se suelta salvo que haya uno solo: abría con el primero
+     marcado ("26"), "Agregar" lo mandaba directo al carrito, y en ropa eso
+     termina en talle equivocado y en un cambio. `addToCart` ya pide "Elegí
+     talle" si falta, y la ficha suelta ya trabajaba así. */
+  const ES_TALLE = /^(talle|talla|talles|tallas|size|medida|n[uú]mero)$/i;
+  const sinTalleElegido = (p: StorefrontProduct, combo: SeleccionOpciones): SeleccionOpciones => {
+    const salida = { ...combo };
+    for (const o of p.opciones) {
+      if (ES_TALLE.test(o.nombre.trim()) && o.valores.length > 1) delete salida[o.nombre];
+    }
+    return salida;
+  };
+
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
-    const inicial = primerComboConStock(p);
+    const inicial = sinTalleElegido(p, primerComboConStock(p));
     // La ficha abre mostrando la foto del color que viene elegido, no la primera
     // del carrete: si el producto abre en Rojo, se ve el rojo.
     let idx = -1;
