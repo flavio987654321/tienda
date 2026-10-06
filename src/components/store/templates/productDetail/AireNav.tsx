@@ -224,12 +224,14 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
             {anuncios[anuncioIdx]}
           </span>
           {anuncios.length > 1 && (
-            <div style={{ position: "absolute", bottom: 5, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5 }}>
-              {/* Blanco de 26px con la rayita de 3 adentro — ver la misma barra en
-                  `Aire.tsx`: tocar tres píxeles de alto en un celular es suerte. */}
+            <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5 }}>
+              {/* 28×12 con la rayita ABAJO, igual que la barra de `Aire.tsx`. Acá
+                  quedaba la versión vieja, 28×28 centrada a 5px del fondo: la
+                  rayita caía a media barra y tachaba el texto ("Envi~~os…")
+                  (05/10/26). Más alto que 12 tapa el texto. */}
               {anuncios.map((_, i) => (
                 <button key={i} onClick={() => setAnuncioIdx(i)} aria-label={`Anuncio ${i + 1}`}
-                  style={{ background: "none", border: "none", padding: 0, width: 28, height: 28, display: "grid", placeItems: "center", cursor: "pointer" }}>
+                  style={{ background: "none", border: "none", padding: "0 0 4px", width: 28, height: 12, display: "grid", placeItems: "end center", cursor: "pointer" }}>
                   <span aria-hidden style={{ display: "block", width: i === anuncioIdx ? 16 : 6, height: 3, borderRadius: 999, background: accentText, opacity: i === anuncioIdx ? 0.95 : 0.4, transition: "all 0.3s" }}/>
                 </button>
               ))}

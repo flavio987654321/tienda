@@ -724,19 +724,23 @@ export default function BohoTerra() {
       {showAnnouncement && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center",
           ...(isPreview ? null : { transform: barraEscondida ? "translateY(-100%)" : "none", transition:transicionBarra }) }}>
-          <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>
+          <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1, display:"block", maxWidth:"100%", boxSizing:"border-box", padding:"0 40px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
           {/* Dots */}
-          <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
+          {/* 28×12 con la rayita abajo, como en Aire (05/10/26): de 6×4, cambiar de
+              anuncio con el dedo era suerte. Más alto que 12 taparía el texto. */}
+          <div style={{ position:"absolute", bottom:0, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
             {announcementMessages.map((_, i) => (
-              <button key={i} onClick={() => setAnnouncementIdx(i)}
-                style={{ width: i === announcementIdx ? 16 : 6, height:4, border:"none", borderRadius:2, background: i === announcementIdx ? "#fff" : "rgba(255,255,255,0.35)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
+              <button key={i} onClick={() => setAnnouncementIdx(i)} aria-label={`Anuncio ${i + 1}`}
+                style={{ background:"none", border:"none", padding:"0 0 4px", width:28, height:12, display:"grid", placeItems:"end center", cursor:"pointer" }}>
+                <span aria-hidden style={{ display:"block", width: i === announcementIdx ? 16 : 6, height:3, borderRadius:999, background: i === announcementIdx ? "#fff" : "rgba(255,255,255,0.35)", transition:"all 0.3s" }}/>
+              </button>
             ))}
           </div>
           {/* Close */}
-          <button onClick={() => setAnnouncementVisible(false)}
-            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.8 }}>×</button>
+          <button onClick={() => setAnnouncementVisible(false)} aria-label="Cerrar anuncio"
+            style={{ position:"absolute", right:4, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.8, width:36, height:36, display:"grid", placeItems:"center", padding:0 }}>×</button>
         </div>
       )}
 

@@ -1606,7 +1606,7 @@ export default function Aire() {
       {/* ── BARRA DE ANUNCIOS ──────────────────────────────── */}
       {showAnnouncement && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center", ...corrimientoBarra }}>
-          <span style={{ fontSize:12, fontWeight:600, color:accentText, letterSpacing:0.3 }}>
+          <span style={{ fontSize:12, fontWeight:600, color:accentText, letterSpacing:0.3, display:"block", maxWidth:"100%", boxSizing:"border-box", padding:"0 40px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
           {/* Pegados al borde de abajo. Con botones de 28 px en una barra de 36, la

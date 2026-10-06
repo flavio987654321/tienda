@@ -161,7 +161,7 @@ stock se descuenta de forma atómica.
   flecha queda adentro.
 - [x] ~~**4.4 Chic 360: hamburguesa medio afuera; marca debajo del tilde.**~~ → Hecho (05/10): en celular Favoritos pasa de la barra al menú (con su contador). Medido en /preview/chic-paris: a 360 y 390 la hamburguesa y la ✕ quedan adentro; a 768 nada cambia.
 - [x] ~~**4.5 Catálogo genérico 360: cartel de promo tapa el chip de categoría.**~~ → Hecho (05/10): con promo u oferta, el chip de categoría no se dibuja (un solo cartel arriba, como ya hacía el estilo "vidrio").
-- [ ] **4.6 Barras de anuncio con texto pisado** (Aire ficha, Aurora 360, Boho 360).
+- [x] ~~**4.6 Barras de anuncio con texto pisado** (Aire ficha, Aurora 360, Boho 360).~~ → Hecho (05/10): el texto lleva margen para la ✕, una línea y puntos suspensivos (Aire, Aurora, Boho); la ficha de Aire usa las rayitas de 28×12 abajo como la portada; Aurora y Boho también (eran de 6×4) y la ✕ pasa a 36×36 con nombre. Verificado a 360 en las 4 barras.
 - [ ] **4.7 Aurora 360: precio tachado debajo de la ✕ de la ficha.**
 - [ ] **4.8 Escape no cierra** el checkout, el zoom de Aire ni el menú de Aire,
   Boho y Aurora.
