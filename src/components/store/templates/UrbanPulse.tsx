@@ -1110,8 +1110,14 @@ export default function UrbanPulse() {
             recortara a tres letras—; para que entre entero habría que sacar un
             ícono de la barra, y el candidato (cuenta) es hoy el único acceso al
             login en celular, porque el menú hamburguesa no tiene esa sección. */}
-        <div style={{ display:"flex", alignItems:"center", gap:6, fontWeight:900, fontSize: isMobile ? 14 : 18, letterSpacing: isMobile ? 1.5 : 4, textTransform:"uppercase", minWidth:0, overflow:"hidden" }}>
-          <span style={{ maxWidth:200, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+        {/* La marca lleva al inicio, como en todos los templates (06/10/26: acá
+            no hacía nada). En celular, menos espaciado: con 1,5 un nombre como
+            "AMARANTA" ya se cortaba en "AMARAN…". */}
+        <div style={{ display:"flex", alignItems:"center", gap:6, fontWeight:900, fontSize: isMobile ? 14 : 18, letterSpacing: isMobile ? 0.6 : 4, textTransform:"uppercase", minWidth:0, overflow:"hidden" }}>
+          <span role="link" tabIndex={0} aria-label="Ir al inicio"
+            onClick={() => { if (editMode) return; if (vista.enPortada) window.scrollTo({ top: 0, behavior: "smooth" }); else vista.irALaPortada(); }}
+            onKeyDown={e => { if (e.key === "Enter" && !editMode) { if (vista.enPortada) window.scrollTo({ top: 0, behavior: "smooth" }); else vista.irALaPortada(); } }}
+            style={{ maxWidth:200, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor: editMode ? undefined : "pointer" }}>
             <EditableZone field="storeName" label="Nombre de la tienda">
               {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:accSobreDark, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
             </EditableZone>

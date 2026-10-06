@@ -1746,7 +1746,7 @@ export default function Aire() {
                 </svg>
               </span>
               <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", lineHeight:1.05, maxWidth: isMobile ? 118 : 210, minWidth:0, overflow:"hidden" }}>
-                <span style={{ fontSize: isMobile ? 15 : 17, fontWeight:800, letterSpacing:"-0.4px", textTransform:"uppercase", color:T, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
+                <span style={{ fontSize: isMobile ? 13.5 : 17, fontWeight:800, letterSpacing: isMobile ? "-0.5px" : "-0.4px", textTransform:"uppercase", color:T, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
                   <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "AIRE"}</EditableZone>
                 </span>
                 {!isMobile && (
@@ -1876,7 +1876,11 @@ export default function Aire() {
             {pushBell && storeConfig?.showPushBell && !isPreview && (
               <StoreFollowButton storeSlug={storeConfig?.slug ?? ""} color={T} size={19} />
             )}
-            {pushBell && storeConfig?.showPushBell && !isPreview && (
+            {/* En celular, Novedades y Mi cuenta van al menú (06/10/26): con seis
+                íconos en la barra, a 360 el nombre de la tienda no tenía lugar y
+                se veía sólo el logo. "Seguir" queda: su globo de ayuda y sus
+                confirmaciones se ubican respecto del botón. */}
+            {pushBell && storeConfig?.showPushBell && !isPreview && !isMobile && (
               <button onClick={pushBell.openDrawer} aria-label="Novedades" style={{ position:"relative", background:"none", border:"none", color:T, cursor:"pointer", width:38, height:38, borderRadius:999, display:"grid", placeItems:"center" }}>
                 <svg width={19} height={19} viewBox="0 0 24 24" fill={pushBell.followState === "following" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 {pushBell.hasNew && <span style={{ position:"absolute", top:5, right:5, width:9, height:9, background:"#ef4444", borderRadius:"50%", border:"2px solid #ffffff" }} />}
@@ -1915,7 +1919,7 @@ export default function Aire() {
             )}
 
             {/* ── Entrar / Mi cuenta ── */}
-            <div ref={userDropdownRef} style={{ position:"relative" }}>
+            <div ref={userDropdownRef} style={{ position:"relative", display: isMobile ? "none" : "block" }}>
               <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }}
                 aria-label="Mi cuenta"
                 style={{ display:"flex", alignItems:"center", gap:8, background:S, border:`1px solid ${LN}`, borderRadius:999, color:T, cursor:"pointer", padding: isMobile ? "0" : "9px 16px 9px 13px", width: isMobile ? 38 : undefined, height: isMobile ? 38 : undefined, justifyContent:"center", fontSize:13.5, fontWeight:600, fontFamily:"inherit" }}>
@@ -2077,6 +2081,23 @@ export default function Aire() {
               style={{ display:"block", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color:T, padding:"16px 18px", fontSize:15, fontWeight:500, textAlign:"left", cursor:"pointer", fontFamily:"inherit" }}>
               Favoritos {favorites.length > 0 && <span style={{ color:G, fontWeight:800 }}>({favorites.length})</span>}
             </button>
+            {/* Lo que en celular no entra en la barra (ver arriba). */}
+            {isMobile && pushBell && storeConfig?.showPushBell && !isPreview && (
+              <button onClick={() => { pushBell.openDrawer(); setMobileMenuOpen(false); }} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color:T, padding:"16px 18px", fontSize:15, fontWeight:500, textAlign:"left", cursor:"pointer", fontFamily:"inherit", textDecoration:"none", boxSizing:"border-box" }}>
+                Novedades {pushBell.hasNew && <span aria-label="hay novedades" style={{ width:9, height:9, borderRadius:999, background:G }} />}
+              </button>
+            )}
+            {isMobile && !cargando && (logueado ? (
+              <>
+                <a href={panelHref} onClick={() => setMobileMenuOpen(false)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color:T, padding:"16px 18px", fontSize:15, fontWeight:500, textAlign:"left", cursor:"pointer", fontFamily:"inherit", textDecoration:"none", boxSizing:"border-box" }}>{panelLabel}</a>
+                <button onClick={() => { if (isPreview) return; setMobileMenuOpen(false); signOut("/"); }} style={{ ...{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color:T, padding:"16px 18px", fontSize:15, fontWeight:500, textAlign:"left", cursor:"pointer", fontFamily:"inherit", textDecoration:"none", boxSizing:"border-box" }, color:"#dc2626" }}>Cerrar sesión</button>
+              </>
+            ) : (
+              <>
+                <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setMobileMenuOpen(false)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color:T, padding:"16px 18px", fontSize:15, fontWeight:500, textAlign:"left", cursor:"pointer", fontFamily:"inherit", textDecoration:"none", boxSizing:"border-box" }}>Iniciar sesión</a>
+                <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => setMobileMenuOpen(false)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color:T, padding:"16px 18px", fontSize:15, fontWeight:500, textAlign:"left", cursor:"pointer", fontFamily:"inherit", textDecoration:"none", boxSizing:"border-box" }}>Crear cuenta</a>
+              </>
+            ))}
           </div>
         </div>
       )}

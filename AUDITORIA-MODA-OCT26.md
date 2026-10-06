@@ -188,7 +188,7 @@ stock se descuenta de forma atómica.
 - [x] ~~**5.5 Carrito de Boho: "SUBTOTAL 1 pieza"** en vez del monto.~~ → Hecho (05/10): era el carrito compartido (los 5 templates). Ahora "Subtotal (1 pieza) $55.000 → Promoción −$11.000 → Total $44.000"; verificado en vivo.
 - [x] ~~**5.6 Promo repetida tres veces** en las fichas de Boho y Urban.~~ → Hecho (05/10): la caja de la promo pasa debajo del botón de compra (queda la letra chica para quien la busca); arriba quedan el cartel de la foto y el precio tachado. Verificado en Boho (Buzo Hoody): talle → botón → caja.
 - [x] ~~**5.7 Aire 768: filtros del catálogo ocupan toda la primera pantalla.**~~ → Hecho (06/10): se pliegan por debajo de 1024 (`navCompacta`), donde no hay barra lateral; antes sólo en celular. Verificado: plegados a 768 y se abren al tocar; barra lateral desde 1024 como antes.
-- [ ] **5.8 Aire 360 sin nombre de tienda; Urban "AMARAN" cortado y logo sin link.**
+- [x] ~~**5.8 Aire 360 sin nombre de tienda; Urban "AMARAN" cortado y logo sin link.**~~ → Hecho (06/10): Aire en celular pasa Novedades y Mi cuenta al menú (con Iniciar sesión/Crear cuenta o panel/cerrar sesión) y la letra del nombre baja a 13,5: a 360 se lee "GIRLY STORE" entero. Urban: la marca lleva al inicio y en celular tiene menos espaciado. "Seguir" queda arriba (su globo y sus confirmaciones dependen del botón).
 - [ ] **5.9 Contraste**: colores de la tienda sin corrección (titular de Aire,
   "Nueva colección" de Chic).
 - [ ] **5.10 Botones de sólo ícono sin `aria-label`** y tarjetas de Boho sin foco.
