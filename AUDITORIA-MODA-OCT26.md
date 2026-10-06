@@ -142,7 +142,10 @@ stock se descuenta de forma atómica.
   logo y banner, y `texto` (tope + sin caracteres de control) para nombre,
   bajada, descripción, barra, pie y SEO; el WhatsApp sólo dígitos y "+". Se
   revisaron las 12 tiendas reales: ningún valor actual se recorta ni se pierde.
-- [ ] **3.5 Carritos abandonados aceptan texto libre sin tope.**
+- [x] ~~**3.5 Carritos abandonados aceptan texto libre sin tope.**~~ → Hecho (05/10):
+  `itemsDeVerdad` arma cada línea con la base (producto de esa tienda, variante
+  válida, nombre, foto https y precio reales; cantidad ≤ 99; talle/color ≤ 40).
+  Nombre/teléfono no-texto ya no tiran 500. Probado en base local.
 
 ## 4. Pantallas — errores visibles (probados en vivo)
 

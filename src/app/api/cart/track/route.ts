@@ -66,6 +66,51 @@ type TrackBody = {
  * El techo no necesita estar sincronizado para servir: sólo tiene que ser un
  * techo.
  */
+/* ── Las líneas del carrito, armadas con la BASE (05/10/26) ───────────────
+   Antes `items` se guardaba tal cual llegaba: nombre, imagen y precio los
+   ponía quien hacía el POST, y después salían en el mail de recordatorio y en
+   el panel de la dueña (una imagen de cualquier servidor se cargaba en su
+   panel). Ahora de lo que manda el navegador sólo cuenta QUÉ producto, qué
+   variante y cuántos; el nombre, la foto y el precio son los de la tienda, y
+   un producto que no es de esta tienda no entra. */
+async function itemsDeVerdad(storeId: string, crudos: TrackItem[]): Promise<TrackItem[]> {
+  const ids = [...new Set(crudos.map((i) => String(i?.productId ?? "")).filter(Boolean))].slice(0, MAX_ITEMS);
+  if (ids.length === 0) return [];
+  const productos = await prisma.product.findMany({
+    where: { id: { in: ids }, storeId, deletedAt: null },
+    select: { id: true, name: true, price: true, images: true, variants: { select: { id: true, price: true } } },
+  });
+  const porId = new Map(productos.map((p) => [p.id, p]));
+  const primeraFoto = (raw: string | null) => {
+    try {
+      const f = (JSON.parse(raw || "[]") as (string | { url?: string })[])[0];
+      const url = typeof f === "string" ? f : f?.url;
+      return typeof url === "string" && /^https:\/\//.test(url) ? url : null;
+    } catch { return null; }
+  };
+  const corto = (v: unknown) => (typeof v === "string" ? v.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, 40) : undefined);
+  const salida: TrackItem[] = [];
+  for (const it of crudos) {
+    const p = porId.get(String(it?.productId ?? ""));
+    if (!p) continue;
+    const variante = it?.variantId ? p.variants.find((v) => v.id === it.variantId) : undefined;
+    if (it?.variantId && !variante) continue;
+    const qty = Math.floor(Number(it?.qty));
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    salida.push({
+      productId: p.id,
+      variantId: variante?.id ?? null,
+      name: p.name,
+      image: primeraFoto(p.images),
+      price: variante?.price != null && variante.price > 0 ? variante.price : p.price,
+      qty: Math.min(qty, 99),
+      size: corto(it.size),
+      color: corto(it.color),
+    });
+  }
+  return salida;
+}
+
 async function totalDeVerdad(
   storeId: string,
   items: TrackItem[],
@@ -123,9 +168,9 @@ export async function POST(req: NextRequest) {
 
   const storeId = String(body.storeId ?? "");
   const email = String(body.email ?? "").toLowerCase().trim();
-  const items = (Array.isArray(body.items) ? body.items : []).slice(0, MAX_ITEMS);
+  const crudos = (Array.isArray(body.items) ? body.items : []).slice(0, MAX_ITEMS);
 
-  if (!storeId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || items.length === 0) {
+  if (!storeId || email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || crudos.length === 0) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
@@ -137,11 +182,13 @@ export async function POST(req: NextRequest) {
   });
   if (!store) return NextResponse.json({ ok: false }, { status: 404 });
 
+  const items = await itemsDeVerdad(store.id, crudos);
+  if (items.length === 0) return NextResponse.json({ ok: false }, { status: 400 });
   const total = await totalDeVerdad(store.id, items, Number(body.total));
 
   const data = {
-    customerName: body.name?.trim().slice(0, MAX_TEXTO) || null,
-    customerPhone: body.phone?.trim().slice(0, MAX_TEXTO) || null,
+    customerName: typeof body.name === "string" ? body.name.trim().slice(0, MAX_TEXTO) || null : null,
+    customerPhone: typeof body.phone === "string" ? body.phone.trim().slice(0, MAX_TEXTO) || null : null,
     items: JSON.stringify(items),
     total,
     lastActivityAt: new Date(),
