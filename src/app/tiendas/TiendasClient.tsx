@@ -105,6 +105,12 @@ export default function TiendasPage({ tiendasIniciales }: { tiendasIniciales: St
   const [tipo, setTipo] = useState("TODAS");
   const [search, setSearch] = useState("");
 
+  // Deja la marca de que el visitante viene del listado: el botón "‹ volver a
+  // las tiendas" de cada tienda sólo aparece con ella (ver VisitorBackButton).
+  useEffect(() => {
+    try { sessionStorage.setItem("vino-del-listado", "1"); } catch { /* sin storage */ }
+  }, []);
+
   // Sólo si el servidor no pudo traerlas (la base caída, por ejemplo). En el
   // camino normal no se pide nada: el dato ya vino con la página.
   useEffect(() => {

@@ -164,7 +164,7 @@ stock se descuenta de forma atómica.
 - [ ] **4.8 Escape no cierra** el checkout, el zoom de Aire ni el menú de Aire,
   Boho y Aurora.
 - [x] ~~**4.9 "¡Últimas 1 unidades!".**~~ → Hecho (05/10): `avisoUltimas` en las 5 pantallas ("¡Última unidad!" con stock 1). Aurora ya lo decía bien.
-- [ ] **4.10 Aire 1280: botón de volver sobre la barra de anuncios y el logo.**
+- [x] ~~**4.10 Aire 1280: botón de volver sobre la barra de anuncios y el logo.**~~ → Hecho (05/10): el botón (y el gesto del celular) sólo aparece si el visitante llegó desde el listado de tiendas —antes lo veía también quien entraba desde el Instagram de la tienda, y lo mandaba a la competencia—, y va al borde izquierdo a media altura, lejos de los encabezados de los 10 templates. Probado: directo no aparece; desde /tiendas sí.
 
 ## 5. Usabilidad — para vender más
 
@@ -211,3 +211,9 @@ stock se descuenta de forma atómica.
 - [x] Había TRES copias de "crear el pedido" (tienda, ficha suelta, catálogo) y
   las dos de afuera no mandaban la donación ni el cupón de premio: se perdían en
   silencio comprando desde esas pantallas. Ahora una sola, `crearPedido`.
+- [ ] (menor, sin arreglar a propósito) Al llegar a una tienda navegando desde
+  `/tiendas`, React avisa en desarrollo por el `<script>` que captura temprano el
+  "instalá la app" (`tienda/[slug]/page.tsx`): en navegación interna no corre.
+  No se pierde nada: el cartel escucha el evento por su cuenta. Sólo es ruido de
+  desarrollo; `next/script` con `beforeInteractive` no se puede usar fuera del
+  layout raíz.

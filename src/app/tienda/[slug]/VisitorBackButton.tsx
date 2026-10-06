@@ -17,6 +17,19 @@ export default function VisitorBackButton() {
      De paso saca un choque en Android: en standalone el desliz desde el borde es
      el gesto de retroceso del sistema, y se pisaba con este. */
   const inPwa = useIsPwa();
+  /* Sólo para quien LLEGÓ desde el listado de tiendas (05/10/26). Lo veía
+     cualquiera —también el cliente que entró desde el Instagram de la tienda—
+     y lo mandaba al catálogo de la competencia. Se recuerda en la sesión para
+     que siga apareciendo mientras navega la tienda. */
+  const [vieneDelListado, setVieneDelListado] = useState(false);
+  useEffect(() => {
+    try {
+      // La marca la deja el listado de tiendas al mostrarse (TiendasClient):
+      // el referrer no sirve, porque la navegación interna no lo actualiza.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura del navegador al montar
+      setVieneDelListado(sessionStorage.getItem("vino-del-listado") === "1");
+    } catch { /* sin storage: no se muestra */ }
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -26,7 +39,7 @@ export default function VisitorBackButton() {
   }, []);
 
   useEffect(() => {
-    if (!isMobile || inPwa) return;
+    if (!isMobile || inPwa || !vieneDelListado) return;
     let startX = 0;
     let startY = 0;
     const onTouchStart = (e: TouchEvent) => {
@@ -46,17 +59,21 @@ export default function VisitorBackButton() {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [isMobile, inPwa, router]);
+  }, [isMobile, inPwa, router, vieneDelListado]);
 
-  if (isMobile || inPwa) return null;
+  if (isMobile || inPwa || !vieneDelListado) return null;
 
   return (
     <Link
       href="/tiendas"
       style={{
+        /* Al borde izquierdo, a media altura (05/10/26). Arriba a la
+           izquierda caía encima del logo y de la barra de anuncios de todos
+           los templates; ningún encabezado vive a media pantalla. */
         position: "fixed",
-        top: 16,
-        left: 16,
+        top: "50%",
+        left: 8,
+        marginTop: -20,
         zIndex: CAPAS.panel,
         width: 40,
         height: 40,
