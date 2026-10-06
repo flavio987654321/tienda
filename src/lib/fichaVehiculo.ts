@@ -30,13 +30,44 @@ export function esAtributoInterno(key: string): boolean {
   return key === "Condición" || key === "Servicios" || key === CLAVE_FICHA || key === CLAVE_MONEDA;
 }
 
-export type TipoDeFicha = "auto" | "moto";
+export type TipoDeFicha = "auto" | "moto" | "camion" | "utilitario" | "agro" | "cuatri";
 
-/** Autos y camionetas comparten ficha; las motos tienen la suya. Repuestos y accesorios, ninguna. */
+/**
+ * Las categorías que son VEHÍCULOS (06/10/26): unidades que se compran, se
+ * venden de a una, llevan marca, modelo y año, ficha técnica, tasación y
+ * "Avisame si entra". Repuestos y accesorios no. Es la única lista: el resto
+ * del código pregunta acá en vez de repetir "autos, motos, camionetas".
+ */
+export const CATEGORIAS_VEHICULO = ["autos", "camionetas", "motos", "camiones", "utilitarios", "maquinaria", "cuatriciclos"] as const;
+export type CategoriaVehiculo = (typeof CATEGORIAS_VEHICULO)[number];
+
+export function esVehiculo(category: string | null | undefined): boolean {
+  return (CATEGORIAS_VEHICULO as readonly string[]).includes((category ?? "").toLowerCase().trim());
+}
+
+/** Cómo se nombra cada tipo, en singular y plural. */
+export const NOMBRE_TIPO: Record<CategoriaVehiculo, { uno: string; varios: string }> = {
+  autos: { uno: "Auto", varios: "Autos" },
+  camionetas: { uno: "Camioneta", varios: "Camionetas" },
+  motos: { uno: "Moto", varios: "Motos" },
+  camiones: { uno: "Camión", varios: "Camiones" },
+  utilitarios: { uno: "Utilitario", varios: "Utilitarios" },
+  maquinaria: { uno: "Máquina agrícola", varios: "Maquinaria agrícola" },
+  cuatriciclos: { uno: "Cuatriciclo / UTV", varios: "Cuatris y UTV" },
+};
+
+/** Una máquina agrícola se mide en horas de uso; el resto, en kilómetros. */
+export const usaHoras = (category: string | null | undefined) => (category ?? "").toLowerCase().trim() === "maquinaria";
+
+/** Qué ficha técnica lleva cada tipo. Repuestos y accesorios, ninguna. */
 export function tipoDeFicha(category: string | null | undefined): TipoDeFicha | null {
   const c = (category ?? "").toLowerCase().trim();
   if (c === "autos" || c === "camionetas") return "auto";
   if (c === "motos") return "moto";
+  if (c === "camiones") return "camion";
+  if (c === "utilitarios") return "utilitario";
+  if (c === "maquinaria") return "agro";
+  if (c === "cuatriciclos") return "cuatri";
   return null;
 }
 
@@ -84,6 +115,68 @@ export const EQUIPAMIENTO: Record<TipoDeFicha, Item[]> = {
     { id: "baul", label: "Baúl" },
     { id: "alforjas", label: "Alforjas" },
   ],
+  camion: [
+    { id: "aire", label: "Aire acondicionado" },
+    { id: "direccion", label: "Dirección asistida" },
+    { id: "abs", label: "Frenos ABS" },
+    { id: "frenoMotor", label: "Freno motor" },
+    { id: "retarder", label: "Retarder" },
+    { id: "suspensionNeumatica", label: "Suspensión neumática" },
+    { id: "cajaAutomatizada", label: "Caja automatizada" },
+    { id: "bloqueoDiferencial", label: "Bloqueo de diferencial" },
+    { id: "cabinaCama", label: "Cabina con cama" },
+    { id: "rastreo", label: "Rastreo satelital" },
+    { id: "tacografo", label: "Tacógrafo digital" },
+    { id: "quintaRueda", label: "Quinta rueda" },
+    { id: "deflector", label: "Deflector de techo" },
+    { id: "camara", label: "Cámara de retroceso" },
+    { id: "enganche", label: "Enganche" },
+  ],
+  utilitario: [
+    { id: "aire", label: "Aire acondicionado" },
+    { id: "direccion", label: "Dirección asistida" },
+    { id: "vidrios", label: "Levantavidrios eléctricos" },
+    { id: "cierre", label: "Cierre centralizado" },
+    { id: "airbags", label: "Airbags frontales" },
+    { id: "abs", label: "Frenos ABS" },
+    { id: "puertaLateral", label: "Puerta lateral corrediza" },
+    { id: "puertaLateralDoble", label: "Dos puertas laterales" },
+    { id: "puertasTraseras", label: "Puertas traseras batientes" },
+    { id: "techoAlto", label: "Techo alto" },
+    { id: "mampara", label: "Mampara divisoria" },
+    { id: "pisoCarga", label: "Piso de carga revestido" },
+    { id: "sensores", label: "Sensores de estacionamiento" },
+    { id: "camara", label: "Cámara de retroceso" },
+    { id: "bluetooth", label: "Bluetooth" },
+    { id: "enganche", label: "Enganche" },
+  ],
+  agro: [
+    { id: "cabinaCerrada", label: "Cabina cerrada" },
+    { id: "aire", label: "Aire acondicionado" },
+    { id: "pilotoAutomatico", label: "Piloto automático / GPS" },
+    { id: "monitorRendimiento", label: "Monitor de rendimiento" },
+    { id: "tomaFuerza", label: "Toma de fuerza" },
+    { id: "tresPuntos", label: "Enganche de tres puntos" },
+    { id: "remotos", label: "Remotos hidráulicos" },
+    { id: "rodadoDual", label: "Rodado dual" },
+    { id: "doblePrecision", label: "Corte por secciones" },
+    { id: "pala", label: "Pala frontal" },
+    { id: "cabezal", label: "Con cabezal / plataforma" },
+  ],
+  cuatri: [
+    { id: "traccion4x4", label: "Tracción 4x4 seleccionable" },
+    { id: "direccion", label: "Dirección asistida" },
+    { id: "arranque", label: "Arranque eléctrico" },
+    { id: "inyeccion", label: "Inyección electrónica" },
+    { id: "discos", label: "Frenos a disco" },
+    { id: "malacate", label: "Malacate" },
+    { id: "jaula", label: "Jaula antivuelco" },
+    { id: "techo", label: "Techo" },
+    { id: "parabrisas", label: "Parabrisas" },
+    { id: "cinturones", label: "Cinturones de seguridad" },
+    { id: "led", label: "Luces LED" },
+    { id: "enganche", label: "Enganche" },
+  ],
 };
 
 export const PAPELES: Item[] = [
@@ -126,6 +219,33 @@ export const MOTOR: Record<TipoDeFicha, CampoNumerico[]> = {
     { id: "velocidad", label: "Velocidad máxima", unidad: "km/h", ejemplo: "170" },
     { id: "tanque", label: "Tanque", unidad: "litros", ejemplo: "17" },
   ],
+  camion: [
+    { id: "potencia", label: "Potencia", unidad: "CV", ejemplo: "260" },
+    { id: "torque", label: "Torque", unidad: "Nm", ejemplo: "1000" },
+    { id: "cilindrada", label: "Cilindrada", unidad: "cc", ejemplo: "7200" },
+    { id: "marchas", label: "Marchas", unidad: "", ejemplo: "12" },
+    { id: "consumo", label: "Consumo mixto", unidad: "l/100 km", ejemplo: "28", decimal: true },
+    { id: "tanque", label: "Tanque", unidad: "litros", ejemplo: "300" },
+  ],
+  utilitario: [
+    { id: "potencia", label: "Potencia", unidad: "CV", ejemplo: "115" },
+    { id: "torque", label: "Torque", unidad: "Nm", ejemplo: "300" },
+    { id: "cilindrada", label: "Cilindrada", unidad: "cc", ejemplo: "1600" },
+    { id: "consumo", label: "Consumo mixto", unidad: "l/100 km", ejemplo: "7,5", decimal: true },
+    { id: "tanque", label: "Tanque", unidad: "litros", ejemplo: "60" },
+  ],
+  agro: [
+    { id: "potencia", label: "Potencia", unidad: "CV", ejemplo: "145" },
+    { id: "cilindrada", label: "Cilindrada", unidad: "cc", ejemplo: "6800" },
+    { id: "levante", label: "Capacidad de levante", unidad: "kg", ejemplo: "5000" },
+    { id: "tanque", label: "Tanque", unidad: "litros", ejemplo: "300" },
+  ],
+  cuatri: [
+    { id: "potencia", label: "Potencia", unidad: "CV", ejemplo: "48" },
+    { id: "cilindrada", label: "Cilindrada", unidad: "cc", ejemplo: "570" },
+    { id: "velocidad", label: "Velocidad máxima", unidad: "km/h", ejemplo: "100" },
+    { id: "tanque", label: "Tanque", unidad: "litros", ejemplo: "20" },
+  ],
 };
 
 export const MEDIDAS: Record<TipoDeFicha, CampoNumerico[]> = {
@@ -142,6 +262,31 @@ export const MEDIDAS: Record<TipoDeFicha, CampoNumerico[]> = {
     { id: "alturaAsiento", label: "Altura del asiento", unidad: "mm", ejemplo: "785" },
     { id: "entreEjes", label: "Distancia entre ejes", unidad: "mm", ejemplo: "1410" },
     { id: "peso", label: "Peso", unidad: "kg", ejemplo: "192" },
+    { id: "plazas", label: "Plazas", unidad: "", ejemplo: "2" },
+  ],
+  camion: [
+    { id: "ejes", label: "Ejes", unidad: "", ejemplo: "3" },
+    { id: "cargaUtil", label: "Carga útil", unidad: "kg", ejemplo: "15000" },
+    { id: "pbt", label: "Peso bruto total", unidad: "kg", ejemplo: "26000" },
+    { id: "largoCaja", label: "Largo de caja", unidad: "mm", ejemplo: "8500" },
+    { id: "entreEjes", label: "Distancia entre ejes", unidad: "mm", ejemplo: "4800" },
+    { id: "plazas", label: "Plazas", unidad: "", ejemplo: "2" },
+  ],
+  utilitario: [
+    { id: "cargaUtil", label: "Carga útil", unidad: "kg", ejemplo: "800" },
+    { id: "volumenCarga", label: "Volumen de carga", unidad: "m³", ejemplo: "3,3", decimal: true },
+    { id: "largo", label: "Largo", unidad: "mm", ejemplo: "4280" },
+    { id: "alto", label: "Alto", unidad: "mm", ejemplo: "1840" },
+    { id: "plazas", label: "Plazas", unidad: "", ejemplo: "2" },
+  ],
+  agro: [
+    { id: "peso", label: "Peso", unidad: "kg", ejemplo: "6500" },
+    { id: "anchoLabor", label: "Ancho de labor", unidad: "m", ejemplo: "9,1", decimal: true },
+    { id: "entreEjes", label: "Distancia entre ejes", unidad: "mm", ejemplo: "2800" },
+  ],
+  cuatri: [
+    { id: "peso", label: "Peso", unidad: "kg", ejemplo: "320" },
+    { id: "alturaAsiento", label: "Altura del asiento", unidad: "mm", ejemplo: "880" },
     { id: "plazas", label: "Plazas", unidad: "", ejemplo: "2" },
   ],
 };
@@ -161,10 +306,12 @@ export const FICHA_VACIA: FichaVehiculo = { equipamiento: [], papeles: [], datos
 /** El tope del valor guardado. Alcanza con todo tildado y todos los datos cargados. */
 export const LARGO_MAXIMO_FICHA = 3000;
 
-const IDS_EQUIPAMIENTO = new Set([...EQUIPAMIENTO.auto, ...EQUIPAMIENTO.moto].map((i) => i.id));
+const IDS_EQUIPAMIENTO = new Set(Object.values(EQUIPAMIENTO).flat().map((i) => i.id));
 const IDS_PAPELES = new Set(PAPELES.map((i) => i.id));
+/* Un mismo id ("peso", "potencia") puede estar en varios tipos: siempre con la
+   misma unidad y la misma regla de decimales (lo cuida el chequeo). */
 const CAMPOS = new Map<string, CampoNumerico>(
-  [...MOTOR.auto, ...MOTOR.moto, ...MEDIDAS.auto, ...MEDIDAS.moto].map((c) => [c.id, c]),
+  [...Object.values(MOTOR).flat(), ...Object.values(MEDIDAS).flat()].map((c) => [c.id, c]),
 );
 
 /**

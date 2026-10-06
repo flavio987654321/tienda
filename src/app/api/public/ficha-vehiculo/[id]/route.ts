@@ -116,10 +116,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const valor = (k: string) => attrs.find((a) => a.key.toLowerCase() === k.toLowerCase())?.value.trim() ?? "";
   const kmCrudo = (valor("Kilómetros") || valor("Km")).replace(/,\d{1,2}$/, "").replace(/\D/g, "");
   const km = kmCrudo ? `${Number(kmCrudo).toLocaleString("es-AR")} km` : "";
+  // Maquinaria agrícola: horas de uso en vez de kilómetros.
+  const horasCrudo = valor("Horas de uso").replace(/\D/g, "");
+  const horas = horasCrudo ? `${Number(horasCrudo).toLocaleString("es-AR")} h` : "";
 
   const principales: FilaDeFicha[] = [
     ["Marca", valor("Marca")], ["Modelo", valor("Modelo")], ["Versión", valor("Versión")],
-    ["Año", valor("Año")], ["Kilómetros", km], ["Motor", valor("Motor")],
+    ["Año", valor("Año")], ["Kilómetros", km], ["Horas de uso", horas], ["Motor", valor("Motor")],
     ["Transmisión", valor("Transmisión")], ["Combustible", valor("Combustible")], ["Tracción", valor("Tracción")],
     ["Carrocería", valor("Carrocería")], ["Color", valor("Color")], ["Puertas", valor("Puertas")],
   ].filter(([, v]) => v).map(([label, v]) => ({ label, valor: v }));
@@ -143,7 +146,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       nombre: producto.name,
       // La moneda de ESTE vehículo (ver lib/monedaVehiculo), no sólo la principal.
       precio: precioTexto(producto.price, monedaDe({ attributes: attrs }, config.currency === "USD" ? "USD" : "ARS")),
-      chips: [valor("Año"), km, valor("Condición")].filter(Boolean),
+      chips: [valor("Año"), km || horas, valor("Condición")].filter(Boolean),
       ubicacion,
       reservado: producto.vehicleStatus === "RESERVED",
       foto,

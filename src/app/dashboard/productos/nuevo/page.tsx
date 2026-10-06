@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
+import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, camposOcultos, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { MAX_VIDEO_MB, MAX_VIDEO_BYTES, VIDEO_PESADO_MB, CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
@@ -26,7 +26,7 @@ import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/
 import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
 import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
 import FichaTecnicaForm from "./FichaTecnicaForm";
-import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, type FichaVehiculo } from "@/lib/fichaVehiculo";
+import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, esVehiculo as esCategoriaVehiculo, type FichaVehiculo } from "@/lib/fichaVehiculo";
 import { CLAVE_MONEDA, conPuntos, sinPuntos, esMoneda, precioEn, type Moneda } from "@/lib/monedaVehiculo";
 
 /** Un precio guardado ("30000000", "9500.5") para mostrarlo con puntos: entero. */
@@ -1177,7 +1177,7 @@ function ProductoFormPage() {
        usan los filtros (06/10/26). Se podía publicar un vehículo sin ninguna
        especificación, o con año 3. Sólo para vehículos: un repuesto o un
        accesorio no lleva modelo ni año. */
-    if (storeTypeConfig.id === "AUTOS" && ["autos", "motos", "camionetas"].includes(category)) {
+    if (storeTypeConfig.id === "AUTOS" && esCategoriaVehiculo(category)) {
       const valorDe = (label: string) => attributes.find((a) => a.key === label)?.value?.trim() ?? "";
       const faltan = activeExtraFields
         .filter((f) => ["marca", "modelo", "año"].includes(f.key) && !valorDe(f.label))
@@ -1218,7 +1218,11 @@ function ProductoFormPage() {
       }
     }
 
-    const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim());
+    /* Los campos del rubro que ESTA categoría no lleva (los km de una cosechadora,
+       las puertas de una moto) no se guardan, aunque hayan quedado escritos de
+       antes de cambiar de categoría. */
+    const ocultos = camposOcultos(storeTypeConfig, activeExtraFields);
+    const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim() && !ocultos.has(a.key));
     const svcList = storeTypeConfig.hideVariants && Object.keys(services).length > 0
       ? [{ key: "Servicios", value: JSON.stringify(services) }]
       : [];
@@ -2872,7 +2876,7 @@ function ProductoFormPage() {
 
               {attributes
                 .map((attr, idx) => ({ attr, idx }))
-                .filter(({ attr }) => !activeExtraFields.some((f) => f.label === attr.key))
+                .filter(({ attr }) => !activeExtraFields.some((f) => f.label === attr.key) && !camposOcultos(storeTypeConfig, activeExtraFields).has(attr.key))
                 .map(({ attr, idx }) => (
                   <div key={idx} className="flex flex-col sm:flex-row gap-3 sm:items-end">
                     <div className="flex-1">

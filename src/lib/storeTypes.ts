@@ -21,6 +21,9 @@ export interface ExtraField {
   // Aclaración opcional para campos que pueden confundirse con otro ya
   // visible en el formulario (ej. Carrocería vs. Subcategoría).
   tip?: string;
+  /** Sólo en `extraFieldsByCategory`: esta categoría NO lleva el campo del rubro
+      con esa `key` (una cosechadora no tiene puertas ni kilómetros). */
+  ocultar?: boolean;
 }
 
 export interface StoreTypeConfig {
@@ -151,7 +154,13 @@ export function camposActivos(config: StoreTypeConfig, category: string, subcate
   return [
     ...config.extraFields.map(f => propios.find(p => p.key === f.key) ?? f),
     ...propios.filter(p => !config.extraFields.some(f => f.key === p.key)),
-  ];
+  ].filter(f => !f.ocultar);
+}
+
+/** Los campos del rubro que la categoría elegida NO lleva (por nombre, que es
+    como se guardan): no se muestran como "otro atributo" ni se guardan. */
+export function camposOcultos(config: StoreTypeConfig, activos: ExtraField[]): Set<string> {
+  return new Set(config.extraFields.filter(f => !activos.some(a => a.key === f.key)).map(f => f.label));
 }
 
 /* ── Cómo se escribe cada categoría en pantalla ──────────────────────────────
@@ -298,11 +307,19 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     variantValuePlaceholder: "Rojo, Blanco, Negro",
     namePlaceholder: "Ej: Toyota Corolla 2022 automático",
     tagsPlaceholder: "sedan, automatico, nafta",
-    categorias: ["autos", "motos", "camionetas", "repuestos", "accesorios"],
+    /* Los tipos de vehículo (06/10/26): además de autos, camionetas y motos,
+       camiones, utilitarios, maquinaria agrícola y cuatriciclos. La lista de
+       cuáles son vehículos (y no repuestos) vive en `lib/fichaVehiculo`. */
+    categorias: ["autos", "camionetas", "motos", "camiones", "utilitarios", "maquinaria", "cuatriciclos", "repuestos", "accesorios"],
     subcategorias: {
-      autos: ["sedán", "suv", "hatchback", "coupé", "convertible"],
-      motos: ["naked", "enduro", "scooter", "trail", "cuatriciclo"],
-      camionetas: ["pickup", "van", "utilitario"],
+      autos: ["sedán", "suv", "hatchback", "coupé", "convertible", "rural", "monovolumen"],
+      // "cuatriciclo", "van" y "utilitario" quedan por los vehículos que ya los tenían.
+      motos: ["naked", "enduro", "scooter", "trail", "deportiva", "custom", "cuatriciclo"],
+      camionetas: ["pickup", "suv", "van", "utilitario"],
+      camiones: ["liviano", "mediano", "pesado", "tractor (semi)", "volcador", "chasis"],
+      utilitarios: ["furgón", "combi", "chasis cabina", "minibús"],
+      maquinaria: ["tractor", "cosechadora", "pulverizadora", "sembradora", "implemento"],
+      cuatriciclos: ["cuatriciclo", "utv", "buggy"],
       repuestos: ["motor", "frenos", "suspensión", "eléctrico", "carrocería"],
       accesorios: ["audio", "seguridad", "limpieza", "interior"],
     },
@@ -325,6 +342,56 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       { key: "localidad",  label: "Localidad",   placeholder: "Ej: San Isidro, Nueva Córdoba, Rosario..." },
       { key: "codigoPostal", label: "Código Postal", placeholder: "Ej: 1642", type: "number" },
     ],
+    /* Lo que cambia según el tipo de vehículo (06/10/26). Sólo por CATEGORÍA:
+       hay subcategorías que se llaman igual en dos tipos ("tractor"). */
+    extraFieldsByCategory: {
+      autos: [
+        { key: "carroceria", label: "Carrocería", options: ["Sedán", "SUV", "Hatchback", "Coupé", "Convertible", "Rural / Familiar", "Monovolumen"] },
+        { key: "traccion",   label: "Tracción",   options: ["Delantera", "Trasera", "4x4", "AWD"] },
+      ],
+      camionetas: [
+        { key: "carroceria", label: "Carrocería", options: ["Pickup cabina simple", "Pickup cabina doble", "SUV", "Van"] },
+        { key: "traccion",   label: "Tracción",   options: ["4x2", "4x4", "AWD"] },
+      ],
+      motos: [
+        { key: "carroceria", label: "Carrocería", options: ["Naked", "Deportiva", "Enduro", "Trail", "Scooter", "Custom", "Touring", "Cub / Ciclomotor"] },
+        { key: "transmision",label: "Transmisión", options: ["Manual", "Automática", "Semiautomática"] },
+        { key: "traccion",   label: "Tracción", ocultar: true },
+        { key: "puertas",    label: "Puertas",  ocultar: true },
+      ],
+      camiones: [
+        { key: "carroceria", label: "Carrocería", options: ["Chasis", "Caja seca", "Térmica / refrigerada", "Volcador", "Playo", "Tanque", "Jaula", "Tractor (semi)"] },
+        { key: "traccion",   label: "Tracción",   options: ["4x2", "6x2", "6x4", "8x4", "4x4"] },
+        { key: "transmision",label: "Transmisión", options: ["Manual", "Automatizada", "Automática"] },
+        { key: "puertas",    label: "Puertas",  ocultar: true },
+      ],
+      utilitarios: [
+        { key: "carroceria", label: "Carrocería", options: ["Furgón", "Furgón techo alto", "Combi / pasajeros", "Chasis cabina", "Minibús"] },
+        { key: "traccion",   label: "Tracción",   options: ["Delantera", "Trasera", "4x4"] },
+      ],
+      maquinaria: [
+        // Una máquina se mide en horas de uso, no en kilómetros.
+        { key: "km",         label: "Kilómetros", ocultar: true },
+        { key: "horas",      label: "Horas de uso", placeholder: "3500", type: "number" },
+        { key: "transmision",label: "Transmisión", options: ["Mecánica", "Powershift", "Hidrostática", "CVT"] },
+        { key: "traccion",   label: "Tracción",   options: ["Simple", "Doble (4x4)", "Orugas"] },
+        { key: "carroceria", label: "Carrocería", ocultar: true },
+        { key: "puertas",    label: "Puertas",  ocultar: true },
+      ],
+      cuatriciclos: [
+        { key: "carroceria", label: "Carrocería", options: ["Cuatriciclo", "UTV / Side by side", "Buggy"] },
+        { key: "traccion",   label: "Tracción",   options: ["4x2", "4x4"] },
+        { key: "transmision",label: "Transmisión", options: ["Manual", "Automática (CVT)", "Semiautomática"] },
+        { key: "puertas",    label: "Puertas",  ocultar: true },
+      ],
+    },
+    ejemplosPorCategoria: {
+      camiones: { nombre: "Mercedes-Benz Atego 1726 2019 con caja seca", tags: "camion, caja seca, diesel" },
+      utilitarios: { nombre: "Renault Kangoo Furgón 1.6 2021", tags: "furgon, utilitario, carga" },
+      maquinaria: { nombre: "John Deere 6145J 2018 doble tracción", tags: "tractor, john deere, agro" },
+      cuatriciclos: { nombre: "Can-Am Outlander 570 4x4 2022", tags: "cuatriciclo, 4x4, can-am" },
+      motos: { nombre: "Honda CB 500F 2023", tags: "moto, naked, honda" },
+    },
   },
   {
     id: "HOGAR_TECH",

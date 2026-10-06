@@ -12,13 +12,11 @@
  *
  * Este archivo no importa nada de servidor.
  */
+import { CATEGORIAS_VEHICULO, NOMBRE_TIPO, type CategoriaVehiculo } from "./fichaVehiculo";
 
-export const CATEGORIAS_BUSQUEDA = [
-  { id: "autos", label: "Auto" },
-  { id: "camionetas", label: "Camioneta" },
-  { id: "motos", label: "Moto" },
-] as const;
-export type CategoriaBusqueda = (typeof CATEGORIAS_BUSQUEDA)[number]["id"];
+/** Todos los tipos de vehículo (ver lib/fichaVehiculo), con su nombre en singular. */
+export const CATEGORIAS_BUSQUEDA = CATEGORIAS_VEHICULO.map((id) => ({ id, label: NOMBRE_TIPO[id].uno }));
+export type CategoriaBusqueda = CategoriaVehiculo;
 
 /** Una búsqueda que no encontró nada en 90 días se cierra sola. */
 export const DIAS_VIGENCIA = 90;

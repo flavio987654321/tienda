@@ -160,6 +160,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
     { label: "Versión",     value: attr(product, "Versión") },
     { label: "Año",         value: año },
     { label: "Kilómetros",  value: km != null ? fmtKm(km) : "" },
+    // Maquinaria agrícola: horas de uso en vez de kilómetros (ver lib/fichaVehiculo).
+    { label: "Horas de uso", value: attr(product, "Horas de uso") ? `${Number(attr(product, "Horas de uso").replace(/\D/g, "")).toLocaleString("es-AR")} h` : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
