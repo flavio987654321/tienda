@@ -1302,7 +1302,10 @@ export default function ChicParis() {
                   <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.42) 26%, rgba(0,0,0,0) 58%)" }} />
                 )}
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: isMobile ? "flex-end" : "center", padding: isMobile ? "0 24px 104px" : "0 80px", maxWidth: isMobile ? undefined : 640 }}>
-                  <span style={{ color: ACC, fontSize: 11, letterSpacing: 5, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>
+                  {/* El acento SOLO si se lee sobre la foto oscureada (06/10/26): con
+                      un acento oscuro —un verde #1f5c3d— el "Nueva colección" quedaba
+                      verde sobre casi negro. Si no se lee, va blanco. */}
+                  <span style={{ color: getReadableAccentText(ACC, "#141414", "#ffffff"), fontSize: 11, letterSpacing: 5, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>
                     <EditableZone field={`slide${i + 1}Kicker`} label={`Slide ${i + 1} — Kicker`}>Nueva Colección</EditableZone>
                   </span>
                   <h1 style={{ color: "#fff", fontSize: isMobile ? "clamp(28px,7.5vw,40px)" : "clamp(36px,5.5vw,72px)", fontWeight: 900, lineHeight: 1.05, margin: "0 0 20px", textTransform: "uppercase", letterSpacing: "-1px" }}>
