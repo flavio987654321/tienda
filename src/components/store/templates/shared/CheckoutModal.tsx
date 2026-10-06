@@ -85,7 +85,7 @@ export function CheckoutModal({
             <p style={{ fontFamily: serif ?? "inherit", fontSize:20, margin:"0 0 4px", color:T }}>Checkout</p>
             <p style={{ fontSize:11, opacity:0.5, margin:0, color:T }}>Completá tus datos para finalizar</p>
           </div>
-          <button onClick={() => setCheckoutOpen(false)} aria-label="Cerrar checkout" style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+          <button onClick={() => setCheckoutOpen(false)} aria-label="Cerrar checkout" style={{ display:"grid", placeItems:"center", width:40, height:40, margin:-8, padding:0, background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
         </div>
 
         {checkoutStatus === "done" ? (
@@ -130,9 +130,9 @@ export function CheckoutModal({
                       </p>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, borderRadius:forma?.boton, height:28, flexShrink:0 }}>
-                      <button type="button" onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
+                      <button type="button" onClick={() => updateQty(idx, -1)} aria-label="Restar uno" style={{ width:36, height:36, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
                       <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
-                      <button type="button" onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
+                      <button type="button" onClick={() => updateQty(idx, 1)} aria-label="Sumar uno" style={{ width:36, height:36, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
                     </div>
                   </div>
                 ))}

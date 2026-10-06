@@ -2075,7 +2075,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
               {/* Categoría */}
               <div style={{ position:"relative", zIndex:CAPAS.contenidoMedio }}>
                 <button onClick={() => { setCatDropdownOpen(o => !o); setSubDropdownOpen(false); }}
-                  style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
+                  style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:"10px 0", margin:"-10px 0", display:"flex", alignItems:"center", gap:5 }}>
                   <span style={{ opacity:0.5 }}>Categoría:</span>
                   <span style={{ fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>{activeCategory}</span>
                   <span style={{ fontSize:10 }}>{catDropdownOpen ? "▴" : "▾"}</span>
@@ -2096,7 +2096,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
               {activeCategory !== "Todos" && (subcategoriesFor[activeCategory] || []).length > 0 && (
                 <div style={{ position:"relative", zIndex:CAPAS.contenidoMedio }}>
                   <button onClick={() => { setSubDropdownOpen(o => !o); setCatDropdownOpen(false); }}
-                    style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
+                    style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:"10px 0", margin:"-10px 0", display:"flex", alignItems:"center", gap:5 }}>
                     <span style={{ opacity:0.5 }}>Subcategoría:</span>
                     <span style={{ fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>{activeSubcategory ?? "Todas"}</span>
                     <span style={{ fontSize:10 }}>{subDropdownOpen ? "▴" : "▾"}</span>
@@ -2123,7 +2123,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                   dice "+ Precio" en vez de "+ Filtros" para no prometer más de lo que abre */}
               {(priceBounds[1] > priceBounds[0] || availableAttrFilters.length > 0) && (
                 <button onClick={() => setFiltersOpen(o => !o)}
-                  style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, textDecoration:"underline", fontSize:12.5 }}>
+                  style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:"10px 0", margin:"-10px 0", textDecoration:"underline", fontSize:12.5 }}>
                   {filtersOpen
                     ? `− Ocultar ${availableAttrFilters.length > 0 ? "filtros" : "precio"}`
                     : `+ ${availableAttrFilters.length > 0 ? "Filtros" : "Precio"}`}

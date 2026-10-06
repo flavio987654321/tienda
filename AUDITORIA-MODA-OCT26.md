@@ -177,8 +177,13 @@ stock se descuenta de forma atómica.
 
 - [x] ~~**5.1 Talle preseleccionado**: pedir "Elegí tu talle".~~ → Hecho (05/10): al abrir la ficha se sigue eligiendo la combinación con stock (el color mueve la foto) pero el TALLE se suelta si hay más de uno (`sinTalleElegido`); "Agregar" avisa "Elegí talle". Probado en Boho (modal) y en la ficha de Aire.
 - [x] ~~**5.2 Carrito sin lugar en el encabezado** en Boho, Urban, Chic y Aurora.~~ → Hecho (05/10): carrito con contador en el encabezado en computadora (en celular sigue el flotante: arriba no entra). Probado: abre el cajón en los 4; sin superposiciones a 1280/1024/900/768. De paso, en Aurora las zonas táctiles de los íconos se pisaban 4 px (gap 4 con margin -4): gap 8.
-- [ ] **5.3 Objetivos táctiles chicos a 360** (× de anuncios, quitar del carrito,
-  cerrar, ±, lupa de Boho, filtros del catálogo, agregar de Aire).
+- [x] ~~**5.3 Objetivos táctiles chicos a 360** (× de anuncios, quitar del carrito,
+  cerrar, ±, lupa de Boho, filtros del catálogo, agregar de Aire).~~ → Hecho
+  (05/10): medido a 360 — ± del carrito y del checkout 36×36 (y con nombre),
+  quitar 36×36, cerrar carrito/checkout 40×40, ✕ de anuncios 36×36 en Chic,
+  Aurora y Boho, rayitas 28×12 en Chic, lupa de Boho 38×38, "+" de Aire 38×38
+  en celular, filtros del catálogo con 10 px más arriba y abajo. El dibujo no
+  cambia (margen negativo) salvo el "+" de Aire, que es un recuadro.
 - [ ] **5.4 Provincias del checkout en orden ISO** (Salta primero).
 - [ ] **5.5 Carrito de Boho: "SUBTOTAL 1 pieza"** en vez del monto.
 - [ ] **5.6 Promo repetida tres veces** en las fichas de Boho y Urban.

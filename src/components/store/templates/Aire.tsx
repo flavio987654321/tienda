@@ -1433,7 +1433,7 @@ export default function Aire() {
               {!isInquiryMode && !agotado && (
                 <button onClick={e => { e.stopPropagation(); if (!agregarDirecto(product)) abrirProducto(product); }}
                   aria-label={`Agregar ${product.name} al carrito`} title="Agregar al carrito"
-                  style={{ flexShrink:0, width:32, height:32, borderRadius:9, background:BG, border:`1px solid ${LN}`, color:T, cursor:"pointer", display:"grid", placeItems:"center", transition:"background 0.18s, color 0.18s" }}
+                  style={{ flexShrink:0, width: isMobile ? 38 : 32, height: isMobile ? 38 : 32, borderRadius:9, background:BG, border:`1px solid ${LN}`, color:T, cursor:"pointer", display:"grid", placeItems:"center", transition:"background 0.18s, color 0.18s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = G; e.currentTarget.style.color = accentText; }}
                   onMouseLeave={e => { e.currentTarget.style.background = BG; e.currentTarget.style.color = T; }}>
                   <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>

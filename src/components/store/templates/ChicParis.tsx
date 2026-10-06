@@ -957,15 +957,19 @@ export default function ChicParis() {
             {announcementMessages[announcementIdx % announcementMessages.length]}
           </span>
           {announcementMessages.length > 1 && (
-            <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+            /* 28×12 con la rayita abajo, como en los otros templates (05/10/26):
+               de 5×3, cambiar de anuncio con el dedo era suerte. */
+            <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
               {announcementMessages.map((_, i) => (
-                <button key={i} onClick={() => setAnnouncementIdx(i)}
-                  style={{ width: i === announcementIdx % announcementMessages.length ? 14 : 5, height: 3, border: "none", borderRadius: 2, background: i === announcementIdx % announcementMessages.length ? "#fff" : "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
+                <button key={i} onClick={() => setAnnouncementIdx(i)} aria-label={`Anuncio ${i + 1}`}
+                  style={{ background: "none", border: "none", padding: "0 0 4px", width: 28, height: 12, display: "grid", placeItems: "end center", cursor: "pointer" }}>
+                  <span aria-hidden style={{ display: "block", width: i === announcementIdx % announcementMessages.length ? 14 : 5, height: 3, borderRadius: 2, background: i === announcementIdx % announcementMessages.length ? "#fff" : "rgba(255,255,255,0.3)", transition: "all 0.3s" }} />
+                </button>
               ))}
             </div>
           )}
-          <button onClick={() => setAnnouncementVisible(false)}
-            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.7 }}>×</button>
+          <button onClick={() => setAnnouncementVisible(false)} aria-label="Cerrar anuncio"
+            style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.7, width: 36, height: 36, display: "grid", placeItems: "center", padding: 0 }}>×</button>
         </div>
       )}
 
