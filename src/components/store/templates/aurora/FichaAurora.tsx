@@ -275,8 +275,10 @@ export function FichaAurora({
           border:`1px solid ${LINEA_FUERTE}`, borderRadius: isMobile ? "26px 26px 0 0" : 28,
           boxShadow:`0 50px 120px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.03), 0 0 90px ${luz(0.12)}`, willChange:"transform" }}>
 
+        {/* Casi opaco y con desenfoque (05/10/26): con 0.6 el precio tachado se
+            leía MEZCLADO con la ✕ al scrollear la ficha en celular. */}
         <button onClick={onCerrar} aria-label="Cerrar"
-          style={{ ...botonRedondo, position:"absolute", top:14, right:14, zIndex:10, background:"rgba(6,7,13,0.6)", opacity: panelListo ? 1 : 0, transition:"opacity .3s ease" }}>
+          style={{ ...botonRedondo, position:"absolute", top:14, right:14, zIndex:10, background:"rgba(6,7,13,0.92)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", opacity: panelListo ? 1 : 0, transition:"opacity .3s ease" }}>
           <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
 
