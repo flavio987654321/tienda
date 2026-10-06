@@ -6,6 +6,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
 import ConsultaVehiculo from "./ConsultaVehiculo";
+import { DescargasDeFicha, BloquesDeLaFicha } from "./FichaDelVehiculo";
 import { CAPAS } from "@/lib/capas-tienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 
@@ -368,6 +369,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   <ConsultaVehiculo product={product} accent={accent} precioTexto={fmtPrice(product.price, currency)}
                     whatsappNumber={whatsapp.number} whatsappEnabled={whatsapp.enabled}
                     storeId={storeId} isOwner={isOwner} isPreview={isPreview} año={año} />
+                  <DescargasDeFicha product={product} accent={accent} isPreview={isPreview} />
                   {hasServices && (
                     <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14, marginTop: 4 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>
@@ -431,6 +433,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
               </div>
             </div>
           )}
+
+          <BloquesDeLaFicha product={product} accent={accent} />
 
           {product.description && (
             <div style={{ padding: "20px 28px 28px", borderTop: "1px solid #f0f0f0" }}>

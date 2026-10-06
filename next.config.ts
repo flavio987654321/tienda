@@ -176,6 +176,13 @@ const nextConfig: NextConfig = {
          cambio de aspecto silencioso en producción, que es peor que un error. */
       "./fuentes/**",
     ],
+    /* La ficha técnica de un vehículo también es pdfkit (con las Helvetica de
+       fábrica, que justamente son esos .afm). Ver `lib/fichaVehiculoPdf`.
+       ⚠️ Los corchetes van escapados: la clave es un glob y `[id]` a secas se
+       lee como "una i o una d", que no coincide con la ruta. */
+    "/api/public/ficha-vehiculo/\\[id\\]": [
+      "./node_modules/pdfkit/js/data/**",
+    ],
   },
   async headers() {
     return [

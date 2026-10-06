@@ -42,6 +42,7 @@ import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import { CAPAS } from "@/lib/capas-tienda";
+import { esAtributoInterno } from "@/lib/fichaVehiculo";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -1183,7 +1184,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
     const attrs = modalProduct.attributes ?? [];
     const condicionAttr = attrs.find(a => a.key === "Condición");
     const serviciosAttr = attrs.find(a => a.key === "Servicios");
-    const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+    const otherAttrs = attrs.filter(a => !esAtributoInterno(a.key));
     let servicios: string[] = [];
     if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
     if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;

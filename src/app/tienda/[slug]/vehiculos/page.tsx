@@ -9,6 +9,7 @@ import { getContrastColor } from "@/contexts/EditContext";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
+import { esAtributoInterno } from "@/lib/fichaVehiculo";
 
 type RawVehicle = {
   id: string;
@@ -264,7 +265,7 @@ function VehiculosPageInner() {
         const q = search.toLowerCase();
         const inName = p.name.toLowerCase().includes(q);
         const inCat  = p.category.toLowerCase().includes(q);
-        const inAttr = p.attributes?.some(a => a.value.toLowerCase().includes(q));
+        const inAttr = p.attributes?.some(a => !esAtributoInterno(a.key) && a.value.toLowerCase().includes(q));
         if (!inName && !inCat && !inAttr) return false;
       }
       return true;

@@ -178,7 +178,8 @@ const hook     = leer("src/hooks/useStorefront.ts", "recordarAfiliado");
 // usar y delega. El carrito, el checkout y el afiliado viven acá.
 const listado  = leer("src/app/tienda/[slug]/productos/CatalogoGenerico.tsx", "useCartLogic(");
 const ficha    = leer("src/app/tienda/[slug]/producto/[id]/ProductDetailClient.tsx", "useCartLogic(");
-const autos    = leer("src/components/store/auto/AutoVehicleShared.tsx", "affiliateId");
+// La consulta de autos se mudó a su propio componente el 06/10/26.
+const autos    = leer("src/components/store/auto/ConsultaVehiculo.tsx", "affiliateId");
 
 chequear("la portada guarda el ref al entrar", /recordarAfiliado\(ref\)/.test(hook));
 chequear("y lo recupera cuando no viene en la URL", /const guardado = afiliadoDeEstaTienda\(\)/.test(hook));

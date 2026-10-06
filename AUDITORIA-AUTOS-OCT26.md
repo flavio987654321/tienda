@@ -227,7 +227,54 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
   verdad (el servidor local usa la base de producción). Verificado con la compilación, los
   chequeos y la lectura del código.
 
+## Pedido del dueño: ficha técnica del vehículo (06/10/26)
+
+Decidido: el PDF lo generamos nosotros, con un folleto propio opcional, y la ficha suma
+cuatro bloques: equipamiento, papeles y condiciones, motor y prestaciones, y medidas.
+
+- [x] ~~**Qué contiene.**~~ `lib/fichaVehiculo.ts`:
+  - **Equipamiento:** 23 ítems para autos y camionetas, 14 para motos.
+  - **Papeles y condiciones:** 12 ítems.
+  - **Motor y medidas:** datos numéricos con unidad. Los enteros guardan solo dígitos, igual que
+    los km; consumo y aceleración llevan coma.
+  - **Repuestos y accesorios no tienen ficha.**
+- [x] ~~**Dónde se guarda.**~~ Es un atributo `Ficha` con JSON adentro, como "Servicios"; no es
+  una columna nueva. El servidor local usa la base de producción, y una columna que todavía no
+  existe ahí rompe las consultas de productos. Tiene tope propio de 3.000 letras; los demás
+  atributos siguen con 500. Los filtros, el buscador de `/vehiculos` y el catálogo genérico
+  saltean esa clave (`esAtributoInterno`).
+- [x] ~~**En el formulario.**~~ La sección se llama "Ficha técnica completa" y tiene bloques
+  plegables con contador. La de antes pasó a llamarse "Datos del vehículo". "Ver el PDF" aparece
+  si el vehículo ya está guardado.
+- [x] ~~**En la tienda.**~~
+  - Debajo del botón de consultar: "Descargar ficha (PDF)" y, si se subió uno, "Folleto de la
+    concesionaria". En la previa del editor no se muestran.
+  - Después de "Características": motor, medidas, equipamiento y papeles. El tilde contrasta
+    con colores claros.
+- [x] ~~**El PDF.**~~ `/api/public/ficha-vehiculo/[id]`, con pdfkit y Helvetica.
+  - **Qué lleva:** foto, precio, chips y datos principales; motor, medidas, equipamiento y
+    papeles; y al pie el WhatsApp y el link en cada hoja.
+  - **Solo fotos nuestras:** las baja del depósito de Supabase y de los bancos de imágenes de
+    muestra, nada más. Pasan por sharp, porque pdfkit no lee webp.
+  - **Cuándo se ve:** vehículo activo de una tienda de autos activa y publicada.
+  - **Caché:** cinco minutos en el borde, nada si la tienda no está publicada.
+  - **Producción:** `next.config` suma las fuentes de pdfkit para esta ruta.
+- [x] ~~**El folleto propio.**~~ `purpose: "ficha-pdf"` en `/api/upload`: PDF de verdad, revisado
+  por sus bytes, de hasta 4 MB, al depósito público. Al mostrarlo se acepta solo un archivo de
+  nuestro depósito (`esFolletoNuestro`): un link a otro sitio se descarta.
+- **Probado:**
+  - `fichaVehiculo.check.ts`: 24 casos.
+  - Ruta y subida contra la base de prueba: 17 casos.
+  - Tienda en 360, 768 y 1280.
+  - El formulario en una página temporal en los tres anchos.
+  - El PDF mirado como imagen, con foto y sin foto.
+- **Sin probar logueado:** el guardado real desde el panel, por lo mismo de siempre.
+
 ## Encontrado en el camino
+
+- [x] ~~**El chequeo de afiliados buscaba la consulta de autos en el archivo viejo.**~~ Se mudó
+  a `ConsultaVehiculo.tsx` en el grupo 2 y `atribucion-afiliado.check.ts` seguía mirando
+  `AutoVehicleShared`. El cobro no tenía nada roto; ahora el chequeo apunta bien.
 
 - [x] ~~**Un guardado sin rubro pasaba la tienda a ROPA.**~~ El PUT de configuración guardaba
   `b.tipoTienda || "ROPA"` y `Boolean(b.tipoTiendaConfigurado)`, así que cualquier llamada que no

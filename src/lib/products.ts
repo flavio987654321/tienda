@@ -6,6 +6,7 @@ import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import sanitizeHtml from "sanitize-html";
 import { DESCRIPTION_TEXT_COLORS } from "@/lib/richTextColors";
+import { CLAVE_FICHA, LARGO_MAXIMO_FICHA } from "@/lib/fichaVehiculo";
 
 // Solo se acepta exactamente uno de los hex de la paleta cerrada del editor
 // (ver richTextColors.ts) — así un POST directo a la API (sin pasar por el
@@ -256,7 +257,10 @@ export function validateProductBody(
     const tooLong = attributes.some((a) => {
       if (!a || typeof a !== "object") return false;
       const { key, value } = a as { key?: unknown; value?: unknown };
-      return (typeof key === "string" && key.length > 200) || (typeof value === "string" && value.length > 500);
+      /* La ficha técnica de un vehículo viaja como UN atributo con todo
+         adentro en JSON (ver `lib/fichaVehiculo`): tiene su propio tope. */
+      const tope = key === CLAVE_FICHA ? LARGO_MAXIMO_FICHA : 500;
+      return (typeof key === "string" && key.length > 200) || (typeof value === "string" && value.length > tope);
     });
     if (tooLong) {
       return { error: NextResponse.json({ error: "El nombre o valor de un atributo es demasiado largo" }, { status: 400 }) };

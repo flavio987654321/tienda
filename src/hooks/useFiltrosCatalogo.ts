@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import { resolveProductPromo } from "@/lib/promoDisplay";
+import { esAtributoInterno } from "@/lib/fichaVehiculo";
 
 /* ══════════════════════════════════════════════════════════════════════════
    EL CEREBRO DEL CATÁLOGO
@@ -85,7 +86,8 @@ export function useFiltrosCatalogo({
     const map: Record<string, Set<string>> = {};
     productsInCategory.forEach(p => {
       p.attributes.forEach(({ key, value }) => {
-        if (!key || !value) return;
+        // La ficha técnica y los servicios van en JSON: no son un filtro.
+        if (!key || !value || esAtributoInterno(key)) return;
         if (!map[key]) map[key] = new Set();
         map[key].add(value);
       });

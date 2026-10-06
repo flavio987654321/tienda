@@ -92,6 +92,24 @@ export async function POST(req: NextRequest) {
     const isDocument = purpose === "affiliate-doc";
     const isVideo = ALLOWED_VIDEO_TYPES.has(file?.type);
     if (!file) return NextResponse.json({ error: "No se recibio archivo" }, { status: 400 });
+    /* El folleto propio de un vehículo (06/10/26): sólo PDF, al depósito
+       PÚBLICO —se descarga desde la tienda, sin sesión— y mirando los bytes,
+       no el nombre ni el tipo que dice el navegador. Ver `lib/fichaVehiculo`. */
+    if (purpose === "ficha-pdf") {
+      if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+        return NextResponse.json({ error: `El PDF no puede superar ${MAX_DOCUMENT_SIZE_MB} MB` }, { status: 413 });
+      }
+      const bytes = await file.arrayBuffer();
+      const detectado = await fileTypeFromBuffer(Buffer.from(bytes));
+      if (detectado?.mime !== "application/pdf") {
+        return NextResponse.json({ error: "El archivo tiene que ser un PDF" }, { status: 400 });
+      }
+      const url = configDeImagenes()
+        ? await guardarImagen(bytes, { extension: "pdf", tipo: "application/pdf", carpeta: "fichas" })
+        : process.env.NODE_ENV === "production" ? null : await guardarImagenEnDisco(bytes, "pdf");
+      if (!url) return NextResponse.json({ error: "Falta configurar Supabase Storage en Vercel para subir archivos." }, { status: 500 });
+      return NextResponse.json({ url });
+    }
     if (isDocument) {
       if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) {
         return NextResponse.json({ error: "Solo se permiten PDF, Word, Excel, PowerPoint, TXT o imagenes" }, { status: 400 });

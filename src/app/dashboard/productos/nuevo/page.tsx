@@ -25,6 +25,8 @@ import { NombreOpcion } from "@/components/dashboard/NombreOpcion";
 import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/store/OfferBadge";
 import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
 import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
+import FichaTecnicaForm from "./FichaTecnicaForm";
+import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, type FichaVehiculo } from "@/lib/fichaVehiculo";
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -489,6 +491,8 @@ function ProductoFormPage() {
   const [showReelUrlInput, setShowReelUrlInput] = useState(false);
   const [previewReelIdx, setPreviewReelIdx] = useState<number | null>(null);
   const [services, setServices] = useState<Record<string, boolean>>({});
+  /** Equipamiento, papeles, motor, medidas y folleto de un vehículo. Ver `lib/fichaVehiculo`. */
+  const [ficha, setFicha] = useState<FichaVehiculo>(FICHA_VACIA);
   type VehicleExpenseItem = { id: string; concepto: string; monto: number; fecha: string | null };
   const [gastos, setGastos] = useState<VehicleExpenseItem[]>([]);
   const [gastoConcepto, setGastoConcepto] = useState(GASTO_CONCEPTOS[0]);
@@ -680,7 +684,8 @@ function ProductoFormPage() {
         if (condAttr) setCondicion(condAttr.value);
         const svcAttr = allAttrs.find((a) => a.key === "Servicios");
         if (svcAttr) { try { setServices(JSON.parse(svcAttr.value)); } catch {} }
-        setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios"));
+        setFicha(leerFicha(allAttrs));
+        setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios" && a.key !== CLAVE_FICHA));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
         try {
@@ -1204,9 +1209,12 @@ function ProductoFormPage() {
     const svcList = storeTypeConfig.hideVariants && Object.keys(services).length > 0
       ? [{ key: "Servicios", value: JSON.stringify(services) }]
       : [];
+    /* La ficha sólo para vehículos: si pasó a "repuestos", se va con el cambio. */
+    const fichaAttr = storeTypeConfig.id === "AUTOS" && tipoDeFicha(category) ? fichaComoAtributo(ficha) : null;
+    const fichaList = fichaAttr ? [fichaAttr] : [];
     const finalAttrs = storeTypeConfig.supportsCondicion
-      ? [{ key: "Condición", value: condicion }, ...baseAttrs, ...svcList]
-      : [...baseAttrs, ...svcList];
+      ? [{ key: "Condición", value: condicion }, ...baseAttrs, ...svcList, ...fichaList]
+      : [...baseAttrs, ...svcList, ...fichaList];
 
     const res = await fetch(isEditing ? `/api/productos/${editingId}` : "/api/productos", {
       method: isEditing ? "PATCH" : "POST",
@@ -2728,7 +2736,7 @@ function ProductoFormPage() {
                 <div>
                   <div className="flex items-center gap-1">
                     <h2 className="font-semibold text-gray-900 panel-oscuro:text-gray-100">
-                      {storeTypeConfig.hideVariants ? "Ficha técnica" : activeExtraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
+                      {storeTypeConfig.hideVariants ? "Datos del vehículo" : activeExtraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
                     </h2>
                     <Tip align="left" text={extraFieldsTip(store.tipoTienda || "ROPA")} />
                   </div>
@@ -2850,6 +2858,16 @@ function ProductoFormPage() {
                   </div>
                 ))}
             </div>
+
+            {/* Ficha técnica completa — sólo vehículos (no repuestos ni accesorios) */}
+            {storeTypeConfig.id === "AUTOS" && tipoDeFicha(form.category) && (
+              <FichaTecnicaForm
+                ficha={ficha}
+                tipo={tipoDeFicha(form.category)!}
+                onChange={(f) => { setFicha(f); markDirty(); }}
+                productoGuardadoId={isEditing ? editingId : null}
+              />
+            )}
 
             {/* ── Optimización para Google ──────────────────────────────────
                 Plegada y opcional. Si no se toca, el título y la descripción se
