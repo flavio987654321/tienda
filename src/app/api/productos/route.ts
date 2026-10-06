@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { validateProductBody, checkCupoDeProductos, checkRitmoDeCreacion, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, precioDeVariante } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 import { RUBROS_CON_AFILIADOS } from "@/lib/storeTypes";
+import { despues } from "@/lib/despues";
+import { revisarBusquedas } from "@/lib/busquedasServidor";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -140,6 +142,12 @@ export async function POST(req: NextRequest) {
         }))
       );
     }).catch((err) => console.error("[notify] new product affiliate notification failed:", err));
+  }
+
+  /* "Avisame si entra" (06/10/26): un vehículo nuevo o editado puede ser lo
+     que alguien dejó buscando. En segundo plano: el guardado no espera. */
+  if (store.tipoTienda === "AUTOS" && product.isActive) {
+    despues(() => revisarBusquedas(store.id), "vehículo nuevo: búsquedas guardadas");
   }
 
   return NextResponse.json({ product });

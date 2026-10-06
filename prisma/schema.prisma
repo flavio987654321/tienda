@@ -365,6 +365,7 @@ model Store {
   affiliateGoals      AffiliateGoal[]
   leads               Lead[]
   tasaciones          Tasacion[]
+  busquedas           BusquedaGuardada[]
   publicReviews       PublicReview[]
   verificationRequest VerificationRequest?
   storeReports        StoreReport[]
@@ -2163,6 +2164,35 @@ model Tasacion {
   updatedAt     DateTime  @updatedAt
 
   @@index([storeId, createdAt(sort: Desc)])
+  @@index([storeId, status])
+}
+
+// "Avisame si entra" (06/10/26): alguien deja en la tienda de autos qué busca
+// (marca, modelo, año desde, precio hasta) y su teléfono; cuando entra un
+// vehículo que coincide, la concesionaria se entera y le avisa por WhatsApp.
+// Ver `lib/busquedas`. Tabla nueva: no toca nada de lo que ya existe.
+model BusquedaGuardada {
+  id            String    @id @default(cuid())
+  storeId       String
+  store         Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  nombre        String
+  telefono      String
+  // autos | motos | camionetas (null = cualquiera)
+  categoria     String?
+  marca         String?
+  modelo        String?
+  anioDesde     Int?
+  precioHasta   Float?
+  comentario    String?
+  // ACTIVA | CERRADA (la cierra la dueña, o sola a los 90 días)
+  status        String    @default("ACTIVA")
+  // Vehículos por los que YA se le avisó a la dueña (para no repetir el aviso)
+  notificadoIds String[]  @default([])
+  // Vehículos por los que la dueña ya le avisó al comprador
+  avisadoIds    String[]  @default([])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   @@index([storeId, status])
 }
 

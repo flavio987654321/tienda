@@ -11,6 +11,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
 import { esAtributoInterno } from "@/lib/fichaVehiculo";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
+import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
 
 type RawVehicle = {
   id: string;
@@ -205,8 +206,9 @@ function VehiculosPageInner() {
   const [activeMarca,    setActiveMarca] = useState("Todas");
   const [activeCiudad,   setActiveCiudad]= useState("Todas");
   const [sortBy,         setSortBy]      = useState("newest");
-  // "Tasá tu usado" sin un vehículo elegido todavía (06/10/26). Ver lib/tasaciones.
-  const [tasar,          setTasar]       = useState(false);
+  // "Tasá tu usado" (ver lib/tasaciones) y "Avisame si entra" (ver lib/busquedas),
+  // en la misma ventana (06/10/26).
+  const [dialogo,        setDialogo]     = useState<null | "tasar" | "avisame">(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -372,7 +374,12 @@ function VehiculosPageInner() {
             </p>
           </div>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
-            <button type="button" onClick={() => setTasar(true)}
+            <button type="button" onClick={() => setDialogo("avisame")}
+              style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12,
+                fontWeight:700, cursor:"pointer", borderRadius:4, fontFamily:"inherit" }}>
+              Avisame si entra
+            </button>
+            <button type="button" onClick={() => setDialogo("tasar")}
               style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12,
                 fontWeight:700, cursor:"pointer", borderRadius:4, fontFamily:"inherit" }}>
               Tasá tu usado
@@ -566,6 +573,12 @@ function VehiculosPageInner() {
             borderRadius:8, border:`1px solid ${borderFaint}` }}>
             <p style={{ fontSize:22, fontWeight:700, color:T, marginBottom:8 }}>Sin resultados</p>
             <p style={{ fontSize:13, color:MID }}>Probá con otra búsqueda o marca</p>
+            {/* El mejor momento para "Avisame si entra": buscó y no estaba. */}
+            <button type="button" onClick={() => setDialogo("avisame")}
+              style={{ marginTop:16, background:accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border:"none",
+                padding:"12px 18px", minHeight:44, fontSize:13, fontWeight:700, cursor:"pointer", borderRadius:6, fontFamily:"inherit" }}>
+              {search.trim() ? `Avisame si entra un ${search.trim()}` : "Avisame si entra lo que busco"}
+            </button>
           </div>
         ) : (
           <div className="av-grid">
@@ -606,17 +619,19 @@ function VehiculosPageInner() {
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
-      {tasar && (
-        <div role="dialog" aria-modal="true" aria-label="Tasá tu usado" onClick={() => setTasar(false)}
-          onKeyDown={e => { if (e.key === "Escape") setTasar(false); }}
+      {dialogo && (
+        <div role="dialog" aria-modal="true" aria-label={dialogo === "tasar" ? "Tasá tu usado" : "Avisame si entra"} onClick={() => setDialogo(null)}
+          onKeyDown={e => { if (e.key === "Escape") setDialogo(null); }}
           style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:CAPAS.critico, display:"flex",
             alignItems:"flex-start", justifyContent:"center", padding:"20px 16px", overflowY:"auto" }}>
           <div onClick={e => e.stopPropagation()}
             style={{ background:"#fff", borderRadius:8, width:"100%", maxWidth:480, margin:"auto 0", padding:16, position:"relative" }}>
-            <button type="button" onClick={() => setTasar(false)} aria-label="Cerrar"
+            <button type="button" onClick={() => setDialogo(null)} aria-label="Cerrar"
               style={{ position:"absolute", top:10, right:10, width:32, height:32, borderRadius:"50%", border:"none",
                 background:"#f5f5f5", color:"#666", fontSize:18, cursor:"pointer", zIndex:1 }}>×</button>
-            <TasacionVehiculo storeId={storeId} accent={accent} isOwner={isOwner} abiertoDeEntrada />
+            {dialogo === "tasar"
+              ? <TasacionVehiculo storeId={storeId} accent={accent} isOwner={isOwner} abiertoDeEntrada />
+              : <BusquedaVehiculo storeId={storeId} accent={accent} isOwner={isOwner} marcaInicial={search.trim()} />}
           </div>
         </div>
       )}

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { validateProductBody, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, getOwnerStore, precioDeVariante } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 import { RUBROS_CON_AFILIADOS } from "@/lib/storeTypes";
+import { despues } from "@/lib/despues";
+import { revisarBusquedas } from "@/lib/busquedasServidor";
 import {
   recordStockMovement,
   crossedThresholdDownward,
@@ -313,6 +315,12 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         link: "/dashboard/productos",
       }]);
     }
+  }
+
+  /* "Avisame si entra" (06/10/26): un vehículo nuevo o editado puede ser lo
+     que alguien dejó buscando. En segundo plano: el guardado no espera. */
+  if (ownerStore?.tipoTienda === "AUTOS" && product.isActive) {
+    despues(() => revisarBusquedas(auth.storeId), "vehículo editado: búsquedas guardadas");
   }
 
   return NextResponse.json({ product });

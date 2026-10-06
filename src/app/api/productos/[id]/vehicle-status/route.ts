@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOwnerStore } from "@/lib/products";
+import { despues } from "@/lib/despues";
+import { revisarBusquedas } from "@/lib/busquedasServidor";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -70,6 +72,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       soldPrice: true, soldBuyerName: true, soldBuyerPhone: true, soldNotes: true, isActive: true,
     },
   });
+
+  // Un vendido que vuelve a estar disponible puede ser lo que alguien buscaba.
+  if (updated.isActive) despues(() => revisarBusquedas(auth.storeId), "vehículo disponible: búsquedas guardadas");
 
   return NextResponse.json({ product: updated });
 }

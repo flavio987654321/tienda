@@ -366,7 +366,38 @@ y en el servidor local esas pantallas fallan hasta subir.
     - "$104.000.000" no entraba en la tarjeta a 360 px.
     - Las pérdidas salían "$-500.000".
     - Los números de consultas y visitas no decían qué eran.
-- [ ] 4. "Avisame si entra".
+- [x] ~~**4. "Avisame si entra".**~~
+  - **En `/vehiculos`:**
+    - el botón "Avisame si entra" arriba;
+    - cuando la búsqueda no encuentra nada, "Avisame si entra un hilux", con lo escrito ya
+      cargado;
+    - el comprador deja tipo, marca, modelo, año desde y precio hasta (alcanza con uno), nombre y
+      teléfono. La búsqueda queda guardada 90 días.
+  - **Avisa la dueña, no nosotros:** no hay permiso de WhatsApp de Meta para mensajes
+    automáticos, y el comprador no tiene cuenta.
+  - **Cuándo se revisan las coincidencias:**
+    - al guardar un vehículo (alta, edición o cambio de estado), en segundo plano;
+    - en el cron diario, que levanta lo importado y lo programado.
+
+    Cada vehículo se avisa una sola vez por búsqueda (`notificadoIds`), y las búsquedas de más de
+    90 días se cierran solas.
+  - **El aviso a la dueña:** "Juan buscaba algo como el VW Gol Trend", en la campanita y el
+    teléfono.
+  - **Panel "Búsquedas"** (menú solo para autos, con contador de coincidencias sin avisar):
+    - "Lo que más te piden", con "tenés N" o "no tenés", para decidir qué comprar;
+    - cada búsqueda con lo que hoy coincide y "Avisarle", que abre WhatsApp con el mensaje y el
+      link al auto y lo deja marcado;
+    - "Cerrar búsqueda" y "Reabrir"; reabrir renueva los 90 días.
+  - **Cómo compara:** sin mayúsculas ni acentos, con apodos de marca ("vw" → Volkswagen), y
+    también lee el nombre del vehículo. El modelo tiene que coincidir en palabras enteras: el
+    chequeo atrapó que "Gol" encontraba un "Golf".
+  - **Datos:** tabla `BusquedaGuardada` (migración `20261006140000`, solo agrega). El reset de
+    rubro las borra.
+  - **Probado:**
+    - `busquedas.check.ts`: 29 casos.
+    - Rutas, coincidencias, aviso único, cron y vencimiento contra la base de prueba: 22 casos.
+    - Tienda y panel en 360, 768 y 1280, sin errores de hidratación.
+    - Las pruebas de productos, consultas, tasaciones, stock y ficha siguen pasando.
 
 ## Encontrado en el camino
 

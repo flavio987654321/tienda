@@ -1,5 +1,6 @@
 import { vencerPedidosImpagos } from "@/lib/pedidosImpagos";
 import { avisarAgendaDelDia } from "@/lib/agendaDiaria";
+import { revisarTodasLasBusquedas } from "@/lib/busquedasServidor";
 import { PROVEEDORES_MP } from "@/lib/proveedoresPago";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -109,6 +110,13 @@ export async function GET(req: NextRequest) {
     result.agendaDelDia = await avisarAgendaDelDia(now);
   } catch (e) {
     console.error("[cron] agenda del día:", e);
+  }
+  // "Avisame si entra": lo que entró por caminos sin aviso (importación,
+  // publicación programada) y el cierre de búsquedas vencidas. Ver lib/busquedas.
+  try {
+    result.busquedas = await revisarTodasLasBusquedas(now);
+  } catch (e) {
+    console.error("[cron] búsquedas guardadas:", e);
   }
 
   // ── 2. CARRITOS ABANDONADOS ────────────────────────────────────────────────

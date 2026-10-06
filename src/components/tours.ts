@@ -1,7 +1,7 @@
 import {
   TrendingUp, ShoppingBag, MessageCircle, Package, Tag, BadgePercent, ShoppingCart,
   Users, Star, Bell, Store, Settings, LayoutGrid, Wallet, BarChart2, CreditCard,
-  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink, Repeat, Warehouse,
+  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink, Repeat, Warehouse, Target,
 } from "lucide-react";
 
 export type Texto = { title: string; body: string };
@@ -49,6 +49,11 @@ export const GUION_PANEL: Guion = {
     icon: Repeat,
     title: "Tasaciones de usados",
     body: "Cuando alguien quiere entregar su auto en parte de pago, te deja los datos desde la tienda y llega acá. Cargás cuánto se lo tomás y se lo mandás por WhatsApp.",
+  },
+  busquedas: {
+    icon: Target,
+    title: "Búsquedas de compradores",
+    body: "Cuando alguien busca algo que no tenés, deja qué busca y su teléfono. Si entra un vehículo que coincide te avisamos, y le escribís con un toque. Acá ves también qué es lo que más te piden.",
   },
   productos: {
     icon: Package,
