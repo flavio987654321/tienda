@@ -10,6 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { configPublica, configPublicaTexto } from "./configPublica";
+import { mediosHabilitados } from "./mediosDePago";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -31,7 +32,17 @@ for (const dato of ["0000003100000000000001", "ana.mp", "27-12345678-9", "Ana", 
 chequear("sí sale qué medios están activos", pub.includes('"transferencia":{"enabled":true}') && pub.includes('"efectivo":{"enabled":false}'), pub);
 chequear("el resto del diseño queda igual", (configPublica(completo) as { template: string }).template === "aire");
 chequear("sin paymentInfo no rompe", JSON.stringify(configPublica({ template: "x" })) === '{"template":"x"}');
-chequear("texto roto → {}", configPublicaTexto("{no es json") === "{}");
+/* El carrito decide los botones con la versión PÚBLICA y el servidor acepta con
+   la COMPLETA: las dos tienen que dar los mismos medios. Un `paymentInfo: {}`
+   recortado a "los dos apagados" dejaba el carrito sin medios. */
+for (const pi of [undefined, {}, { transferencia: { enabled: true, cbu: "1" } }, { efectivo: { enabled: false } }, completo.paymentInfo]) {
+  for (const hasMercadoPago of [false, true]) {
+    const servidor = mediosHabilitados({ paymentInfo: pi, hasMercadoPago });
+    const carrito = mediosHabilitados({ paymentInfo: (configPublica({ paymentInfo: pi }) as { paymentInfo?: typeof pi }).paymentInfo, hasMercadoPago });
+    chequear(`mismos medios ${JSON.stringify(pi)} mp=${hasMercadoPago}`, JSON.stringify(servidor) === JSON.stringify(carrito), { servidor, carrito });
+  }
+}
+chequear("texto roto → {}",configPublicaTexto("{no es json") === "{}");
 chequear("texto vacío → igual", configPublicaTexto("") === "" && configPublicaTexto(null) === null);
 
 const raiz = process.cwd();

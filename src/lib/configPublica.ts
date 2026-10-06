@@ -22,13 +22,13 @@ type Medio = { enabled?: unknown };
 export function configPublica<T extends Record<string, unknown>>(cfg: T): T {
   const pi = cfg.paymentInfo as { transferencia?: Medio; efectivo?: Medio } | undefined;
   if (!pi || typeof pi !== "object") return cfg;
-  return {
-    ...cfg,
-    paymentInfo: {
-      transferencia: { enabled: Boolean(pi.transferencia?.enabled) },
-      efectivo: { enabled: Boolean(pi.efectivo?.enabled) },
-    },
-  };
+  /* Sólo las claves que existen: `mediosHabilitados` trata una tienda sin
+     ninguna como "nunca configuró Pagos" y le ofrece los dos. Inventarlas
+     apagadas dejaba al carrito sin medios mientras el servidor sí aceptaba. */
+  const publica: { transferencia?: Medio; efectivo?: Medio } = {};
+  if (pi.transferencia != null) publica.transferencia = { enabled: Boolean(pi.transferencia.enabled) };
+  if (pi.efectivo != null) publica.efectivo = { enabled: Boolean(pi.efectivo.enabled) };
+  return { ...cfg, paymentInfo: publica };
 }
 
 /** Lo mismo, para el `storeConfig` todavía en texto (como sale de la base). */

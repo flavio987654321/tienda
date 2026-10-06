@@ -119,7 +119,8 @@ console.log("\n6) La consulta se sigue guardando, sólo que sin comisión");
 const leads = leer("src/app/api/leads/route.ts");
 chequear(
   "el corte es sobre a quién se le atribuye, no sobre crear la consulta",
-  /if \(affiliateId && soportaAfiliados\(store\.tipoTienda\)\)/.test(leads)
+  // El `typeof` se sumó el 05/10/26 (un id que no es texto no se busca); la regla es la misma.
+  /if \((typeof affiliateId === "string" && )?affiliateId && soportaAfiliados\(store\.tipoTienda\)\)/.test(leads)
 );
 chequear(
   "y no se corta la creación entera con un return",
