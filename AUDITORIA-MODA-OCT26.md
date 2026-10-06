@@ -155,8 +155,10 @@ stock se descuenta de forma atómica.
   debajo de 1024 (`navCompacta`), sin cambiar el resto del diseño. Medido en
   portada y ficha a 768/900/1024/1280: ningún elemento superpuesto, sin scroll
   horizontal; el menú abierto en tablet se ve bien.
-- [ ] **4.3 Boho 360: galería de la ficha más ancha que el modal** (flecha
-  intocable).
+- [x] ~~**4.3 Boho 360: galería de la ficha más ancha que el modal** (flecha
+  intocable).~~ → Hecho (05/10): `minmax(0,1fr)` en la grilla del modal (y en dos
+  secciones de Boho con el mismo patrón). Verificado a 360: la foto entra y la
+  flecha queda adentro.
 - [ ] **4.4 Chic 360: hamburguesa medio afuera; marca debajo del tilde.**
 - [ ] **4.5 Catálogo genérico 360: cartel de promo tapa el chip de categoría.**
 - [ ] **4.6 Barras de anuncio con texto pisado** (Aire ficha, Aurora 360, Boho 360).

@@ -1683,7 +1683,7 @@ export default function BohoTerra() {
           </div>
         </div>
         {/* texto + stats */}
-        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "72px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: isMobile ? 32 : 80, alignItems:"start" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "72px 40px", display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1.2fr) minmax(0,1fr)", gap: isMobile ? 32 : 80, alignItems:"start" }}>
           <div>
             <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:16 }}><EditableZone field="aboutKicker" label="Etiqueta 'Nosotros'">Nuestra historia</EditableZone></p>
             <p style={{ fontSize:15, color:nosotrosText, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
@@ -1723,7 +1723,7 @@ export default function BohoTerra() {
           // color solo alcanza contra un farol encendido al lado de una sombra.
           const sombra = tinta ? sombraSobreFoto(tinta) : undefined;
           return (
-        <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "80px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 0 : 80, alignItems:"center", minHeight: isMobile ? "auto" : 500 }}>
+        <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "80px 40px", display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)", gap: isMobile ? 0 : 80, alignItems:"center", minHeight: isMobile ? "auto" : 500 }}>
           {/* izq — texto e info */}
           <div style={{ textShadow: sombra }}>
             <p style={{ fontSize:10, letterSpacing:5, color:cA, textTransform:"uppercase", marginBottom:20 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Escribinos</EditableZone></p>
@@ -1942,7 +1942,7 @@ export default function BohoTerra() {
             {/* El ref es el que `openModal` manda arriba al abrir otra ficha: los
                 "productos similares" están al final, así que el que toca uno está
                 siempre abajo de todo. */}
-            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
+            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)" }}>
             {/* El aire de la columna de la foto lo pone la COLUMNA, no cada bloque:
                 así la foto, las miniaturas y los videos arrancan todos en la misma
                 vertical. Antes la foto iba pegada al borde del modal y la tira de
