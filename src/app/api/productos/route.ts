@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { validateProductBody, checkCupoDeProductos, checkRitmoDeCreacion, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, precioDeVariante } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
+import { RUBROS_CON_AFILIADOS } from "@/lib/storeTypes";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -124,7 +125,8 @@ export async function POST(req: NextRequest) {
   // Notificar a afiliados activos sobre el nuevo producto (fire-and-forget)
   if (store.affiliatesEnabled) {
     prisma.affiliate.findMany({
-      where: { storeId: store.id, isActive: true },
+      // Sólo en rubros con afiliados: en autos el programa está en pausa (06/10/26).
+      where: { storeId: store.id, isActive: true, store: { tipoTienda: { in: RUBROS_CON_AFILIADOS } } },
       select: { userId: true },
     }).then((affiliates) => {
       if (affiliates.length === 0) return;

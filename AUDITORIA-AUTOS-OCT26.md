@@ -148,15 +148,35 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 
 ## 4. Panel de consultas
 
-- [ ] **4.1 Confirmar o rechazar no avisa cuando falla** (409, sin red).
-- [ ] **4.2 Trae 50 y cuenta sobre esas 50.** Los números no coinciden con el numerito del menú,
-  y no hay paginación.
-- [ ] **4.3 Textos de otro rubro.** Plantillas de "unidades" y "envío a todo el país", estado vacío
-  "desde un link de afiliado", tarjeta de comisiones siempre en $0, REJECTED en inglés en el inicio.
-- [ ] **4.4 Restos de afiliados en autos.** Ítem del menú, tarjeta del inicio y avisos de precio y
-  stock a afiliados.
-- [ ] **4.5 Jerarquía.** Primero la persona y el teléfono, después la unidad (foto y link), después
-  el estado. Que "Vendido" ofrezca marcar la unidad vendida.
+- [x] ~~**4.1 Confirmar o rechazar no avisa cuando falla** (409, sin red).~~ → Hecho (06/10):
+  error en la misma fila. Con un 409 dice "ya se había marcado" y recarga la lista.
+- [x] ~~**4.2 Trae 50 y cuenta sobre esas 50.**~~ → Hecho (06/10):
+  - `lib/consultasPanel` cuenta en la base y pagina de a 20, con "Ver más consultas".
+  - La pantalla y `GET /api/leads` usan la misma pieza.
+  - El filtro pide al servidor y un estado inventado se ignora.
+  - Probado con 55 consultas: totales 30, 20 y 5; 3 páginas; el numerito del menú da lo mismo.
+- [x] ~~**4.3 Textos de otro rubro.**~~ → Hecho (06/10):
+  - Los estados, en `lib/consultas`, son "Nueva", "Vendida" y "Descartada", también en el inicio,
+    donde salía "REJECTED" crudo. "Sin nombre" pasó a "Consultó por WhatsApp".
+  - Las respuestas rápidas son de concesionaria: saludo, visita y prueba, financiación, permuta.
+  - El estado vacío ya no habla de afiliados.
+  - La tarjeta de comisiones solo aparece donde una consulta genera comisión; si no, muestra
+    "Últimos 7 días".
+- [x] ~~**4.4 Restos de afiliados en autos.**~~ → Hecho (06/10):
+  - El ítem del menú se resolvió con el pedido del cambio de rubro.
+  - En el inicio, la tarjeta de afiliados pasó a ser "Consultas (7 días)".
+  - Los avisos de producto nuevo, precio y stock solo van a afiliados de rubros con afiliados.
+- [x] ~~**4.5 Jerarquía.**~~ → Hecho (06/10): cada fila arranca por la persona, con WhatsApp
+  (número armado con `numeroWhatsApp`) y Llamar a la vista. Después va el mensaje, el vehículo
+  (foto, precio, estado, "Ver") y las acciones "Se vendió" y "Descartar". "Se vendió" ofrece
+  "¿Marcamos el … como vendido?" y lo marca con el nombre y el teléfono del comprador. Visto a 360,
+  768 y 1280 con una ruta temporal (ya borrada) y datos inventados.
+- [x] ~~**Encontrado: una concesionaria no podía publicar desde el panel.**~~ El botón de publicar
+  exigía "un método de cobro (MercadoPago, transferencia o efectivo)", que en autos no existe. El
+  servidor ya lo exceptuaba; el botón no.
+- [x] ~~**Encontrado: la guía de configuración del inicio no pedía el WhatsApp en autos.**~~ Ahora
+  que viene apagado de fábrica, en autos hay un paso "Cargá el WhatsApp de la concesionaria", y
+  la carga dice "vehículos".
 
 ## 5. Templates y `/vehiculos`
 

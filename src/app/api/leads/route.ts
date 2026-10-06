@@ -7,6 +7,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { createNotification } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { despues } from "@/lib/despues";
+import { consultasDelPanel } from "@/lib/consultasPanel";
 
 /* La dueña se entera de una consulta nueva (06/10/26): campanita y teléfono,
    como con un pedido. Sólo si trae datos (vino del formulario): el toque de
@@ -168,30 +169,18 @@ export async function GET(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const url = new URL(req.url);
-  const status = url.searchParams.get("status") || undefined;
+  // Sólo los estados que existen: otro valor se ignora (antes iba crudo al where).
+  const pedido = url.searchParams.get("status");
+  const status = pedido && ["PENDING", "CONFIRMED", "REJECTED"].includes(pedido) ? pedido : undefined;
   const countOnly = url.searchParams.get("count") === "1";
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1") || 1);
-  const take = 20;
-
-  const where = { storeId: store.id, ...(status ? { status } : {}) };
 
   if (countOnly) {
-    const count = await prisma.lead.count({ where });
+    const count = await prisma.lead.count({ where: { storeId: store.id, ...(status ? { status } : {}) } });
     return NextResponse.json({ count });
   }
 
-  const [leads, total] = await Promise.all([
-    prisma.lead.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * take,
-      take,
-      include: {
-        affiliate: { select: { id: true, user: { select: { name: true, email: true } } } },
-      },
-    }),
-    prisma.lead.count({ where }),
-  ]);
-
-  return NextResponse.json({ leads, total, page, pages: Math.ceil(total / take) });
+  // La misma pieza que la pantalla de Consultas (con el vehículo de cada una).
+  const { consultas, total, paginas } = await consultasDelPanel(store.id, { status, page });
+  return NextResponse.json({ leads: consultas, total, page, pages: paginas });
 }

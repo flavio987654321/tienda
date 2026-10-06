@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateProductBody, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES, getOwnerStore, precioDeVariante } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
+import { RUBROS_CON_AFILIADOS } from "@/lib/storeTypes";
 import {
   recordStockMovement,
   crossedThresholdDownward,
@@ -263,7 +264,9 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
 
   if (priceChanged || wentOutOfStock || wentBackInStock) {
     const activeAffiliates = await prisma.affiliate.findMany({
-      where: { storeId: auth.storeId, isActive: true },
+      // Sólo en rubros con afiliados: en autos el programa está en pausa, y las
+      // afiliadas que quedaron de antes recibían avisos de cada auto (06/10/26).
+      where: { storeId: auth.storeId, isActive: true, store: { tipoTienda: { in: RUBROS_CON_AFILIADOS } } },
       select: { userId: true },
     });
 

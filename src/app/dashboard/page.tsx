@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { estadoConsulta, quienConsulto } from "@/lib/consultas";
+import { numeroWhatsApp } from "@/lib/whatsappTienda";
 import ShareStoreButton from "@/components/ShareStoreButton";
 import PublishToggle from "@/components/PublishToggle";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -10,6 +12,7 @@ import {
   ShoppingBag, Package, Users, TrendingUp,
   Store, Star, BadgeCheck, CheckCircle2,
   Eye,
+  MessageCircle,
 } from "lucide-react";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import { condicionesTienda } from "@/lib/avisos-tienda";
@@ -154,6 +157,9 @@ export default async function DashboardPage() {
   const pendingLeadsCount = isAutos ? await prisma.lead.count({
     where: { storeId: store.id, status: "PENDING" },
   }) : 0;
+  const leadsSemana = isAutos ? await prisma.lead.count({
+    where: { storeId: store.id, createdAt: { gte: new Date(Date.now() - 7 * 864e5) } },
+  }) : 0;
   const soldVehiclesCount = isAutos ? await prisma.product.count({
     where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" },
   }) : 0;
@@ -179,6 +185,13 @@ export default async function DashboardPage() {
   const hasPaymentData = condiciones.tieneDatosDeCobro;
   const hasDescription = condiciones.tieneDescripcion;
 
+  const tieneWhatsapp = (() => {
+    try {
+      const wa = (JSON.parse(storeExtra?.storeConfig || "{}") as { whatsapp?: { enabled?: boolean; number?: string } }).whatsapp;
+      return !!wa?.enabled && !!numeroWhatsApp(wa.number);
+    } catch { return false; }
+  })();
+
   const onboardingSteps = [
     {
       done: !!storeExtra?.logo,
@@ -194,10 +207,19 @@ export default async function DashboardPage() {
     },
     {
       done: store._count.products > 0,
-      label: "Agregá tus primeros productos",
+      label: isAutos ? "Cargá tus primeros vehículos" : "Agregá tus primeros productos",
       href: "/dashboard/productos/nuevo",
-      tip: "Con al menos un producto ya podés compartir tu tienda.",
+      tip: isAutos ? "Con fotos, precio, año y kilómetros: es lo primero que mira quien busca." : "Con al menos un producto ya podés compartir tu tienda.",
     },
+    /* Autos: el WhatsApp es el botón con el que te consultan (06/10/26). Viene
+       apagado de fábrica —el número de muestra abría un chat con nadie—, así
+       que si no se carga, la tienda sólo recibe consultas por formulario. */
+    ...(isAutos ? [{
+      done: tieneWhatsapp,
+      label: "Cargá el WhatsApp de la concesionaria",
+      href: "/dashboard/ajustes",
+      tip: "Es el botón principal de cada vehículo: por ahí te consultan.",
+    }] : []),
     ...(!isAutos ? [
       {
         done: !!storeExtra?.mpConnectedAt,
@@ -324,7 +346,9 @@ export default async function DashboardPage() {
               <PublishToggle
                 initialPublished={store.isPublished}
                 hasProducts={store._count.products > 0}
-                hasPayment={hasPaymentData || !!storeExtra?.mpConnectedAt}
+                // En autos no se cobra por la tienda: el servidor ya no pide medio de
+                // cobro para publicar, y este botón sí lo pedía (06/10/26).
+                hasPayment={isAutos || hasPaymentData || !!storeExtra?.mpConnectedAt}
                 hasTemplate={hasTemplate}
               />
             </div>
@@ -355,12 +379,14 @@ export default async function DashboardPage() {
               color: "text-green-600 panel-oscuro:text-green-400 bg-green-50 panel-oscuro:bg-green-500/10",
               href: "/dashboard/metricas",
             },
+            /* En autos los afiliados están en pausa: esta tarjeta mostraba siempre 0
+               y llevaba a una pantalla que no se puede usar (06/10/26). */
             {
-              label: "Afiliados",
-              value: store?._count.affiliates ?? 0,
-              icon: Users,
+              label: "Consultas (7 días)",
+              value: leadsSemana,
+              icon: MessageCircle,
               color: "text-purple-600 panel-oscuro:text-purple-400 bg-purple-50 panel-oscuro:bg-purple-500/10",
-              href: "/dashboard/vendedoras",
+              href: "/dashboard/consultas",
             },
           ] : [
             {
@@ -468,16 +494,13 @@ export default async function DashboardPage() {
                 {recentLeads.map((lead) => (
                   <div key={lead.id} className="flex items-center justify-between py-3 border-b border-gray-50 panel-oscuro:border-gray-800 last:border-0">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 panel-oscuro:text-gray-100 text-sm truncate">{lead.customerName || "Sin nombre"}</p>
+                      <p className="font-medium text-gray-900 panel-oscuro:text-gray-100 text-sm truncate">{quienConsulto(lead.customerName)}</p>
                       {lead.productName && <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 truncate">{lead.productName}</p>}
                     </div>
                     <div className="text-right shrink-0 ml-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        lead.status === "CONFIRMED" ? "bg-green-100 panel-oscuro:bg-green-500/15 text-green-700 panel-oscuro:text-green-300" :
-                        lead.status === "PENDING"   ? "bg-yellow-100 panel-oscuro:bg-yellow-500/15 text-yellow-700 panel-oscuro:text-yellow-300" :
-                        "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-500 panel-oscuro:text-gray-400"
-                      }`}>
-                        {lead.status === "PENDING" ? "Pendiente" : lead.status === "CONFIRMED" ? "Confirmado" : lead.status}
+                      {/* Los mismos nombres que la pantalla de Consultas (`lib/consultas`). */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estadoConsulta(lead.status).cls}`}>
+                        {estadoConsulta(lead.status).label}
                       </span>
                     </div>
                   </div>
