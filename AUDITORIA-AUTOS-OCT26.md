@@ -335,7 +335,37 @@ y en el servidor local esas pantallas fallan hasta subir.
     - Ruta, agenda y resumen contra la base de prueba: 19 casos.
     - Panel en 360, 768 y 1280.
     - Las pruebas viejas de consultas siguen pasando.
-- [ ] 3. Rentabilidad y días en stock.
+- [x] ~~**3. Rentabilidad y días en stock.**~~ Pantalla nueva "Stock y ganancia" (menú solo para
+  autos, junto a Vehículos).
+  - **Arriba:**
+    - invertido en stock (solo lo que tiene costo);
+    - valor publicado;
+    - ganancia esperada al precio publicado;
+    - días promedio.
+  - **Avisos:**
+    - autos estancados: 60 días o más, o 30 días sin ninguna consulta en el último mes; los
+      reservados no cuentan;
+    - vehículos sin gastos cargados.
+  - **Cada unidad en stock:** días, costo, precio, ganancia y %, consultas y visitas. Se ordena
+    por más días, menos margen o menos consultas. "Sin costo: cargá los gastos" lleva a
+    editarla.
+  - **Vendidos de los últimos 12 meses:** cuánto tardó cada uno, precio de venta, costo y
+    ganancia, con el total y el promedio de días.
+  - **Reglas:**
+    - Sin gastos no hay margen: nunca un 100 % falso, la misma regla que Estadísticas.
+    - Los días cuentan desde el gasto "Compra" si tiene fecha; si no, desde el alta. Un vendido
+      cuenta hasta el día de la venta.
+    - Repuestos y accesorios quedan afuera.
+  - **Sin cambios en la base:** usa gastos, precio de venta, consultas y visitas que ya
+    existían, así que anda en tu servidor local.
+  - **Probado:**
+    - `rentabilidadAutos.check.ts`: 24 casos.
+    - Consulta contra la base de prueba: 9 casos.
+    - Pantalla en 360, 768 y 1280.
+  - **Encontrado probando:**
+    - "$104.000.000" no entraba en la tarjeta a 360 px.
+    - Las pérdidas salían "$-500.000".
+    - Los números de consultas y visitas no decían qué eran.
 - [ ] 4. "Avisame si entra".
 
 ## Encontrado en el camino

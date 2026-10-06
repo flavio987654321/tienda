@@ -1,7 +1,7 @@
 import {
   TrendingUp, ShoppingBag, MessageCircle, Package, Tag, BadgePercent, ShoppingCart,
   Users, Star, Bell, Store, Settings, LayoutGrid, Wallet, BarChart2, CreditCard,
-  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink, Repeat,
+  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink, Repeat, Warehouse,
 } from "lucide-react";
 
 export type Texto = { title: string; body: string };
@@ -60,6 +60,11 @@ export const GUION_PANEL: Guion = {
         body: "Cargá autos, motos o camionetas con fotos, precio, ficha técnica y estado: Disponible, Reservado o Vendido.",
       },
     },
+  },
+  stock: {
+    icon: Warehouse,
+    title: "Stock y ganancia",
+    body: "Cuánto tenés invertido, cuánto deja cada auto al precio publicado y cuáles llevan mucho tiempo parados. Para verlo, cargá los gastos de cada vehículo, empezando por la compra.",
   },
   cupones: {
     icon: Tag,

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
-  BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight, Repeat,
+  BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight, Repeat, Warehouse,
   CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
@@ -80,6 +80,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES, tourId: "consultas" },
       { href: "/dashboard/tasaciones", label: "Tasaciones", icon: Repeat,        onlyFor: LEADS_STORE_TYPES, tourId: "tasaciones" },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
+      { href: "/dashboard/stock",      label: "Stock y ganancia", icon: Warehouse, onlyFor: LEADS_STORE_TYPES, tourId: "stock" },
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/promociones",    label: "Promociones",    icon: BadgePercent, tourId: "promociones", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/carritos-abandonados", label: "Carritos abandonados", icon: ShoppingCart, tourId: "carritos-abandonados", hiddenFor: LEADS_STORE_TYPES },
