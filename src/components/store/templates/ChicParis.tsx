@@ -1,4 +1,5 @@
 "use client";
+import { avisoUltimas } from "@/lib/textoStock";
 import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
@@ -2601,7 +2602,7 @@ export default function ChicParis() {
                 <p style={{ fontSize:12, color:"#888", fontWeight:600, margin:"0 0 12px" }}>Sin stock en esta combinación</p>
               )}
               {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-                <p style={{ fontSize:12, color:"#ef4444", fontWeight:700, margin:"0 0 12px" }}>¡Últimas {selectedVariantStock} unidades!</p>
+                <p style={{ fontSize:12, color:"#ef4444", fontWeight:700, margin:"0 0 12px" }}>{avisoUltimas(selectedVariantStock)}</p>
               )}
               {/* El botón ya NO lleva línea propia arriba: está adentro del bloque
                   de compra, y una línea acá lo separaba justo de los controles a

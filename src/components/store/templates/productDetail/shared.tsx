@@ -1,4 +1,5 @@
 "use client";
+import { avisoUltimas } from "@/lib/textoStock";
 import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -796,7 +797,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             <p style={{ fontSize: 12.5, color: "#dc2626", fontWeight: 600, margin: "0 0 12px" }}>Sin stock en esta combinación</p>
           )}
           {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-            <p style={{ fontSize: 12.5, color: "#d97706", fontWeight: 600, margin: "0 0 12px" }}>¡Últimas {selectedVariantStock} unidades!</p>
+            <p style={{ fontSize: 12.5, color: "#d97706", fontWeight: 600, margin: "0 0 12px" }}>{avisoUltimas(selectedVariantStock)}</p>
           )}
 
           {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}

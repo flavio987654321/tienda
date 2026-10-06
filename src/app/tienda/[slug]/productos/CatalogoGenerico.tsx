@@ -1,5 +1,6 @@
 "use client";
 
+import { avisoUltimas } from "@/lib/textoStock";
 import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment } from "react";
@@ -2718,7 +2719,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                 <p style={{ fontSize:12, color:"#f87171", fontWeight:600, margin:0 }}>Sin stock en esta combinación</p>
               )}
               {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-                <p style={{ fontSize:12, color:"#fb923c", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
+                <p style={{ fontSize:12, color:"#fb923c", fontWeight:600, margin:0 }}>{avisoUltimas(selectedVariantStock)}</p>
               )}
 
               {/* El botón más importante del modal iba pintado con el acento CRUDO.

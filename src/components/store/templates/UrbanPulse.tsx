@@ -1,4 +1,5 @@
 "use client";
+import { avisoUltimas } from "@/lib/textoStock";
 import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
@@ -3193,7 +3194,7 @@ export default function UrbanPulse() {
                   <p style={{ fontSize:12, color:"#888", fontWeight:700, margin:0 }}>Sin stock en esta combinación</p>
                 )}
                 {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-                  <p style={{ fontSize:12, color:"#ef4444", fontWeight:900, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
+                  <p style={{ fontSize:12, color:"#ef4444", fontWeight:900, margin:0 }}>{avisoUltimas(selectedVariantStock)}</p>
                 )}
                 {!isMobile && (
                   <div style={{ borderTop:`2px solid ${DARK}`, marginTop:4, paddingTop:16 }}>

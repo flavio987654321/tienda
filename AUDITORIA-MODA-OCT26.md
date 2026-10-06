@@ -160,7 +160,7 @@ stock se descuenta de forma atómica.
 - [ ] **4.7 Aurora 360: precio tachado debajo de la ✕ de la ficha.**
 - [ ] **4.8 Escape no cierra** el checkout, el zoom de Aire ni el menú de Aire,
   Boho y Aurora.
-- [ ] **4.9 "¡Últimas 1 unidades!".**
+- [x] ~~**4.9 "¡Últimas 1 unidades!".**~~ → Hecho (05/10): `avisoUltimas` en las 5 pantallas ("¡Última unidad!" con stock 1). Aurora ya lo decía bien.
 - [ ] **4.10 Aire 1280: botón de volver sobre la barra de anuncios y el logo.**
 
 ## 5. Usabilidad — para vender más

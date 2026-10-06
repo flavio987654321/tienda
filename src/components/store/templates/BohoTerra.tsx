@@ -1,4 +1,5 @@
 ﻿"use client";
+import { avisoUltimas } from "@/lib/textoStock";
 import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
@@ -2109,7 +2110,7 @@ export default function BohoTerra() {
                 <p style={{ fontSize:12, color:"#888", fontWeight:500, margin:0 }}>Sin stock en esta combinación</p>
               )}
               {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-                <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
+                <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>{avisoUltimas(selectedVariantStock)}</p>
               )}
               {!isMobile && (
                 /* Pegado al fondo de la columna (05/10/26). La columna se recorta
