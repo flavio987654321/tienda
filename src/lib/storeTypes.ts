@@ -583,6 +583,22 @@ export function soportaAfiliados(tipoTienda: string | null | undefined): boolean
 }
 
 /**
+ * Si una CONSULTA (Lead) puede generar comisión en este rubro (06/10/26).
+ *
+ * Una consulta no cobra nada por la plataforma: en un pedido, la comisión la
+ * respalda el fee de MercadoPago, pero en una consulta la pagaría la plataforma
+ * de su bolsillo. Y como el precio lo carga la dueña, una cuenta de afiliada
+ * propia bastaba para acreditarse lo que quisiera. Por eso sólo cuenta en un
+ * rubro que vende POR consulta (el único donde ése es el camino de la venta) y
+ * que además tenga afiliados habilitados. Hoy no hay ninguno: autos y motos
+ * tienen los afiliados en pausa hasta definir el modelo.
+ */
+export function consultaGeneraComision(tipoTienda: string | null | undefined): boolean {
+  const t = getStoreType(tipoTienda ?? "ROPA");
+  return t.checkoutMode === "inquiry" && t.supportsAffiliates;
+}
+
+/**
  * Los rubros que sí lo tienen, para filtrar en la base.
  *
  * Sale de la misma definición que `soportaAfiliados` en vez de ser una lista

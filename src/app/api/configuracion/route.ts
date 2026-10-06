@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { soportaAfiliados, MOTIVO_SIN_AFILIADOS } from "@/lib/storeTypes";
+import { soportaAfiliados, MOTIVO_SIN_AFILIADOS, STORE_TYPES } from "@/lib/storeTypes";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl, isSafeExternalUrl } from "@/lib/url-utils";
@@ -239,13 +239,25 @@ export async function PUT(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true, mpAccessToken: true, tipoTienda: true },
+    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true, mpAccessToken: true, tipoTienda: true, tipoTiendaConfigurado: true },
   });
+
+  /* El rubro con el que QUEDA la tienda (06/10/26). Antes se guardaba
+     `b.tipoTienda` crudo, sin validar, y el chequeo de afiliados de abajo miraba
+     el rubro ANTERIOR: una concesionaria se pasaba a ROPA, prendía afiliados y
+     volvía a AUTOS con los afiliados prendidos. Además esquivaba el cambio de
+     rubro oficial (`/api/store/reset`), que limpia productos, consultas y
+     afiliados. Ahora: una vez elegido, el rubro sólo cambia por el reset; la
+     primera vez, sólo se acepta uno que exista. */
+  const rubroElegido = !!prevStore?.tipoTiendaConfigurado;
+  const rubroPedido = typeof b.tipoTienda === "string" && STORE_TYPES.some((t) => t.id === b.tipoTienda) ? b.tipoTienda : null;
+  const tipoTienda = rubroElegido ? (prevStore?.tipoTienda ?? "ROPA") : (rubroPedido ?? prevStore?.tipoTienda ?? "ROPA");
+  const tipoTiendaConfigurado = rubroElegido || Boolean(b.tipoTiendaConfigurado);
 
   // Rubros donde el programa todavía no está habilitado (hoy: autos y motos).
   // Va antes que el chequeo de MercadoPago porque es más de fondo: aunque
   // tuviera MercadoPago conectado, en un rubro de consulta no se cobra online.
-  if (b.affiliatesEnabled && !soportaAfiliados(prevStore?.tipoTienda)) {
+  if (b.affiliatesEnabled && !soportaAfiliados(tipoTienda)) {
     return NextResponse.json({ error: MOTIVO_SIN_AFILIADOS }, { status: 400 });
   }
 
@@ -295,8 +307,8 @@ export async function PUT(req: NextRequest) {
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
       pageBlocks:         sanitizePageBlocks(b.pageBlocks || "[]"),
       navLinks:           sanitizeNavLinks(b.navLinks || "[]"),
-      tipoTienda:           b.tipoTienda || "ROPA",
-      tipoTiendaConfigurado: Boolean(b.tipoTiendaConfigurado),
+      tipoTienda,
+      tipoTiendaConfigurado,
       tieneVentaMayorista:  Boolean(b.tieneVentaMayorista),
       // Mismo tope que `/api/pagos`. Acá no había ninguno: los mismos campos se
       // guardaban con dos reglas distintas según por qué pantalla se pasara.

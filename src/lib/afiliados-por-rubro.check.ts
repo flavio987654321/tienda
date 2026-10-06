@@ -32,7 +32,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { soportaAfiliados, RUBROS_CON_AFILIADOS, STORE_TYPES, MOTIVO_SIN_AFILIADOS } from "./storeTypes";
+import { soportaAfiliados, consultaGeneraComision, RUBROS_CON_AFILIADOS, STORE_TYPES, MOTIVO_SIN_AFILIADOS } from "./storeTypes";
 
 const raiz = join(__dirname, "..", "..");
 const leer = (p: string) => readFileSync(join(raiz, p), "utf8");
@@ -79,12 +79,15 @@ const archivos: [string, string][] = [
   ["el interruptor del dueño (pantalla)", "src/app/dashboard/vendedoras/AffiliateToggle.tsx"],
   ["guardar el interruptor (API)",        "src/app/api/configuracion/route.ts"],
   ["postularse a una tienda",             "src/app/api/vendedoras/route.ts"],
+  // Las consultas preguntan por `consultaGeneraComision`, que es más estricta:
+  // además de `supportsAffiliates` exige un rubro que venda por consulta (06/10/26).
   ["la consulta que crea la comisión",    "src/app/api/leads/route.ts"],
+  ["la consulta que acredita la comisión", "src/app/api/leads/[id]/route.ts"],
 ];
 
 for (const [nombre, ruta] of archivos) {
   const src = leer(ruta);
-  chequear(`${nombre}: pregunta por soportaAfiliados`, /soportaAfiliados\(/.test(src));
+  chequear(`${nombre}: pregunta por el rubro`, /soportaAfiliados\(|consultaGeneraComision\(/.test(src));
 }
 
 const listado = leer("src/app/api/vendedoras/route.ts");
@@ -119,12 +122,24 @@ console.log("\n6) La consulta se sigue guardando, sólo que sin comisión");
 const leads = leer("src/app/api/leads/route.ts");
 chequear(
   "el corte es sobre a quién se le atribuye, no sobre crear la consulta",
-  // El `typeof` se sumó el 05/10/26 (un id que no es texto no se busca); la regla es la misma.
-  /if \((typeof affiliateId === "string" && )?affiliateId && soportaAfiliados\(store\.tipoTienda\)\)/.test(leads)
+  /if \(typeof affiliateId === "string" && affiliateId && consultaGeneraComision\(store\.tipoTienda\)\)/.test(leads)
 );
 chequear(
   "y no se corta la creación entera con un return",
-  !/soportaAfiliados\(store\.tipoTienda\)\)\s*\{?\s*return NextResponse/.test(leads)
+  !/consultaGeneraComision\(store\.tipoTienda\)\)\s*\{?\s*return NextResponse/.test(leads)
+);
+
+console.log("\n6 bis) Una consulta no genera comisión en ningún rubro de hoy (06/10/26)");
+/* Una consulta no cobra nada por la plataforma: la comisión la pagaría la
+   plataforma de su bolsillo, y la dueña puede inflar el precio y tener una
+   cuenta de afiliada propia. Sólo cuenta en un rubro que vende POR consulta y
+   tiene afiliados; hoy no hay ninguno. Si esto falla, alguien prendió los
+   afiliados de autos: tiene que ser a propósito y con el modelo definido. */
+chequear("ningún rubro de hoy cobra comisión por consulta", STORE_TYPES.every((t) => !consultaGeneraComision(t.id)));
+chequear("ropa tampoco (vende por carrito)", !consultaGeneraComision("ROPA"));
+chequear(
+  "al CONFIRMAR se vuelve a mirar el rubro antes de acreditar",
+  /lead\.commissionRate && consultaGeneraComision\(store\.tipoTienda\)/.test(leer("src/app/api/leads/[id]/route.ts"))
 );
 
 console.log("\n7) El motivo se le explica a la persona");

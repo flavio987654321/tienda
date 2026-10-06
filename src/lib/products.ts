@@ -261,6 +261,31 @@ export function validateProductBody(
     if (tooLong) {
       return { error: NextResponse.json({ error: "El nombre o valor de un atributo es demasiado largo" }, { status: 400 }) };
     }
+    /* La forma, además del largo (06/10/26): `{ key: texto, value: texto o número }`.
+       Un `key` que no era texto se guardaba igual y rompía la ficha de autos
+       (`attr()` hace `key.toLowerCase()`) y el buscador de /vehiculos. */
+    const malFormado = attributes.some((a) => {
+      if (!a || typeof a !== "object") return true;
+      const { key, value } = a as { key?: unknown; value?: unknown };
+      return typeof key !== "string" || (value != null && typeof value !== "string" && typeof value !== "number");
+    });
+    if (malFormado) {
+      return { error: NextResponse.json({ error: "Hay un atributo mal cargado. Revisá las especificaciones y probá de nuevo." }, { status: 400 }) };
+    }
+  }
+  /* Las fotos: texto o `{ url }`, y la url `https://` o una ruta propia (06/10/26).
+     Antes se guardaba cualquier cosa; un `<img>` no ejecuta código, pero una
+     foto de cualquier servidor se le cargaba a cada visitante. Todas las de
+     producción ya cumplían (revisado ese día). */
+  const { images } = body as { images?: unknown };
+  if (Array.isArray(images)) {
+    const fotoMala = images.some((i) => {
+      const url = typeof i === "string" ? i : (i && typeof i === "object" ? (i as { url?: unknown }).url : null);
+      return typeof url !== "string" || url.length > 2000 || !(/^https:\/\//i.test(url) || /^\/(?!\/)/.test(url));
+    });
+    if (fotoMala) {
+      return { error: NextResponse.json({ error: "Una de las fotos no tiene una dirección válida. Volvé a subirla." }, { status: 400 }) };
+    }
   }
 
   const parsedPrice = parseFloat(price as string);

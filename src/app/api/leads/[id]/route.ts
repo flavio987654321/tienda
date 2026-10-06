@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
 import { sendAdminAlertEmail } from "@/lib/email";
 import { despues } from "@/lib/despues";
+import { consultaGeneraComision } from "@/lib/storeTypes";
 
 // PATCH /api/leads/[id] — el dueño confirma o rechaza una consulta
 export async function PATCH(
@@ -22,7 +23,7 @@ export async function PATCH(
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, name: true },
+    select: { id: true, name: true, tipoTienda: true },
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
@@ -46,7 +47,11 @@ export async function PATCH(
   // Si se confirma y hay afiliado, acreditar comisión en wallet
   // Nota: para tiendas de consulta (AUTOS/INMOB) no hay Order — la comisión
   // se rastrea a través del Lead.commissionAmount + Wallet, no del modelo Commission.
-  if (status === "CONFIRMED" && lead.affiliateId && lead.commissionRate) {
+  /* El rubro se vuelve a mirar ACÁ, al acreditar (06/10/26): una consulta vieja
+     con afiliado —de antes de la pausa, o de una tienda que cambió de rubro— no
+     puede pagar una comisión que hoy no corresponde. Se confirma igual, sin plata
+     (rama de abajo). Ver `consultaGeneraComision`. */
+  if (status === "CONFIRMED" && lead.affiliateId && lead.commissionRate && consultaGeneraComision(store.tipoTienda)) {
     const commissionAmount = Math.floor((lead.productPrice * lead.commissionRate) / 100);
     const affiliateId = lead.affiliateId;
 

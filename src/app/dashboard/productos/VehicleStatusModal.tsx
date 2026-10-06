@@ -166,7 +166,9 @@ export default function VehicleStatusModal({ productId, productName, currentStat
                 <input
                   value={soldPrice}
                   onChange={e => {
-                    const v = e.target.value.replace(/[^0-9.]/g, "");
+                    // Sólo dígitos: el punto acá es de miles, y "12.500.000"
+                    // con `parseFloat` se guardaba como 12,5 (06/10/26).
+                    const v = e.target.value.replace(/\D/g, "");
                     setSoldPrice(v);
                   }}
                   placeholder="Ej: 12500000"
