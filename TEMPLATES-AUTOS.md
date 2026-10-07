@@ -65,7 +65,7 @@ Reglas que valen para todos (de la memoria):
       "Avisame si entra" en la portada (ventana compartida `auto/VentanaAuto`), números
       reales, "Cómo comprar" en pasos. Los campos editables de antes conservan su nombre.
       **Falta que el dueño lo vea y diga.**
-- [ ] Auto Drive (claro marketplace).
+- [x] Auto Drive (claro marketplace) — rehecho el 07/10/26 (carpeta templates/drive/).
 - [ ] En los dos: bloques para tasación, "Avisame si entra", ficha / PDF, reservado,
       financiación, y la portada con "Tasá tu usado" y "Avisame si entra".
 
@@ -81,7 +81,8 @@ Reglas que valen para todos (de la memoria):
       pasos con barra de avance, tarjetas, escala de estado y tilde animado.
 - [x] ~~Bloques de videos y preguntas frecuentes.~~ En Auto Motor (videos de los
       vehículos; preguntas de autos en `armarPreguntasAutos`). Falta en Auto Drive.
-- [ ] Auto Drive: "le faltan muchas cosas" — rehacerlo con lenguaje propio y estos bloques.
+- [x] Auto Drive: "le faltan muchas cosas" — rehecho: buscador con pestañas (Comprar / Vender mi usado / Encargar) que cuenta antes de buscar, tipos con dibujito, recién ingresados con pestañas por tipo, "¿Cuánto querés gastar?" con tramos de los precios reales, tasación, videos como lista de reproducción, preguntas con tarjeta de "otra duda". Falta que el usuario lo vea.
+- [x] Preguntas de Auto Motor: la columna izquierda ya no queda vacía (foto editable + "¿Te quedó otra duda?").
 
 ## Fase 3 — Templates nuevos (de a uno, mostrándolo antes del siguiente)
 

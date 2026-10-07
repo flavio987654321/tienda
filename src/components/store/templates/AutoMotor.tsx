@@ -299,7 +299,9 @@ export default function AutoMotor() {
         @media(min-width:760px){ .sm-grilla { grid-template-columns:1fr 1fr } }
         .am-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) }
         .am-faq { grid-template-columns:1fr }
-        @media(min-width:960px){ .am-faq { grid-template-columns:minmax(0,0.8fr) minmax(0,1.4fr); align-items:start } }
+        .am-faq-foto { max-width:520px }
+        @media(min-width:960px){ .am-faq { grid-template-columns:minmax(0,0.8fr) minmax(0,1.4fr); align-items:start } .am-faq-lado { position:sticky; top:96px } }
+        @media(max-width:959px){ .am-faq-foto { aspect-ratio:16/10 !important } }
         .am-link:hover { color:${accent} !important }
         @keyframes am-spin { to { transform:rotate(360deg) } }
         @keyframes am-sube { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
@@ -718,9 +720,33 @@ export default function AutoMotor() {
       <SectionBlock id="am-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="preguntas" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
         <div className="am-faq" style={{ maxWidth:1280, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,72px)" }}>
-          <Encabezado acento={accent} tinta="#f4f4f5"
-            kicker={<EditableZone field="faqKicker" label="Etiqueta de preguntas">Preguntas</EditableZone>}
-            titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
+          {/* La columna de la izquierda no queda vacía: foto (editable) y una salida para la duda que no está. */}
+          <div className="am-faq-lado">
+            <Encabezado acento={accent} tinta="#f4f4f5"
+              kicker={<EditableZone field="faqKicker" label="Etiqueta de preguntas">Preguntas</EditableZone>}
+              titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
+            <div className="am-faq-foto" style={{ position:"relative", overflow:"hidden", aspectRatio:"4/3", borderRadius:4, border:`1px solid ${LINEA}` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
+              <img src={iovr["faqImage"]?.url ?? "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=900&q=80"} alt=""
+                style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <span aria-hidden="true" style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(11,12,14,0.95) 0%, rgba(11,12,14,0.35) 55%, rgba(11,12,14,0.1) 100%)" }} />
+              <div style={{ position:"absolute", left:0, right:0, bottom:0, padding:"clamp(18px,3vw,28px)" }}>
+                <p style={{ margin:"0 0 6px", fontSize:"clamp(18px,2vw,22px)", fontWeight:800, color:"#fff", letterSpacing:-0.4, lineHeight:1.2 }}>
+                  <EditableZone field="faqOtraTitulo" label="Título de la tarjeta de preguntas">¿Te quedó otra duda?</EditableZone>
+                </p>
+                <p style={{ margin:"0 0 16px", fontSize:14, color:"rgba(255,255,255,0.72)", lineHeight:1.55 }}>
+                  <EditableZone field="faqOtraTexto" label="Texto de la tarjeta de preguntas">Preguntanos lo que quieras: te contesta una persona, no un robot.</EditableZone>
+                </p>
+                <a href={waLink ?? "#contacto"} {...(waLink ? { target:"_blank", rel:"noopener noreferrer" } : {})}
+                  onClick={isPreview ? (e) => e.preventDefault() : undefined}
+                  style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"12px 18px", borderRadius:2, background:accent, color:sobreAcento,
+                    fontSize:13, fontWeight:800, letterSpacing:0.4, textDecoration:"none" }}>
+                  {waLink ? <><WaIcon size={16} /> Escribinos</> : "Contactanos →"}
+                </a>
+              </div>
+              <EditableImageButton field="faqImage" label="Foto de preguntas" />
+            </div>
+          </div>
           <PreguntasMotor acento={accent} preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })} />
         </div>
       </section>
