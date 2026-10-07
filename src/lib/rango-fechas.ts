@@ -101,10 +101,13 @@ export function esDiaValido(dia: string | undefined | null): dia is string {
 
 /** Días entre dos "YYYY-MM-DD", contando los dos extremos. */
 export function diasDelRango(desde: string, hasta: string): number {
-  const a = Date.UTC(...(desde.split("-").map(Number) as [number, number, number]));
-  const b = Date.UTC(...(hasta.split("-").map(Number) as [number, number, number]));
+  const utc = (dia: string) => { const [y, m, d] = dia.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  const a = utc(desde);
+  const b = utc(hasta);
   // Se arma con Date.UTC sobre las partes ya separadas y no con `new Date(str)`,
-  // que es medianoche UTC y en Argentina vuelve como el día anterior.
+  // que es medianoche UTC y en Argentina vuelve como el día anterior. El mes de
+  // Date.UTC va de 0 a 11: pasándole "09" tal cual, septiembre era octubre y
+  // todo rango que cruzaba de mes contaba mal (los "30 días" daban 31).
   return Math.round((b - a) / 86_400_000) + 1;
 }
 

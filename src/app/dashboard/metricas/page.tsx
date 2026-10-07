@@ -636,23 +636,26 @@ export default async function MetricasPage({
 
   // ── Queries AUTOS ──
   let leadsPeriodRaw: { createdAt: Date }[] = [];
-  let leadsTotal = 0, leadsConfirmedTotal = 0, leadsPrevCount = 0;
-  let leadsConfirmedCurrent = 0, leadsConfirmedPrev = 0;
+  let leadsTotal = 0, leadsPrevCount = 0;
+  let vendidosPrev = 0;
   let vehiculosDisponibles = 0, vehiculosVendidos = 0, vehiculosReservados = 0;
-  let soldPriceAvg: { _avg: { soldPrice: number | null } } = { _avg: { soldPrice: null } };
+  let preciosVendidos: { soldPrice: number | null; attributes: string }[] = [];
+
+  /* Sólo unidades: un repuesto o un accesorio no es parte de la flota. Y un
+     vehículo sin estado es uno disponible — así lo muestra el resto del panel;
+     contando sólo "AVAILABLE", una tienda con autos publicados decía 0. */
+  const unidades = { storeId: store.id, deletedAt: null, NOT: { category: { in: ["repuestos", "accesorios"] } } };
 
   if (isAutos) {
     [
       leadsPeriodRaw,
       leadsTotal,
-      leadsConfirmedTotal,
       leadsPrevCount,
-      leadsConfirmedCurrent,
-      leadsConfirmedPrev,
+      vendidosPrev,
       vehiculosDisponibles,
       vehiculosVendidos,
       vehiculosReservados,
-      soldPriceAvg,
+      preciosVendidos,
     ] = await Promise.all([
       prisma.lead.findMany({
         where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive } },
@@ -660,21 +663,18 @@ export default async function MetricasPage({
         orderBy: { createdAt: "asc" },
       }),
       prisma.lead.count({ where: { storeId: store.id } }),
-      prisma.lead.count({ where: { storeId: store.id, status: "CONFIRMED" } }),
       prisma.lead.count({
         where: { storeId: store.id, createdAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive } },
       }),
-      // "Confirmada" = se marcó como venta confirmada dentro del período (no cuándo se creó la consulta)
-      prisma.lead.count({
-        where: { storeId: store.id, confirmedAt: { gte: periodStart, lt: periodEndExclusive } },
-      }),
-      prisma.lead.count({
-        where: { storeId: store.id, confirmedAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive } },
-      }),
-      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "AVAILABLE" } }),
-      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" } }),
-      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "RESERVED" } }),
-      prisma.product.aggregate({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" }, _avg: { soldPrice: true } }),
+      /* Las ventas son los autos marcados como Vendido (con su fecha), no las
+         consultas marcadas como venta: son dos cosas sueltas en el panel y se
+         contaba la que casi nadie toca. Salía "Ventas confirmadas" 0 al lado
+         de "Vendidos" 3. */
+      prisma.product.count({ where: { ...unidades, vehicleStatus: "SOLD", soldAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive } } }),
+      prisma.product.count({ where: { ...unidades, OR: [{ vehicleStatus: "AVAILABLE" }, { vehicleStatus: null }] } }),
+      prisma.product.count({ where: { ...unidades, vehicleStatus: "SOLD" } }),
+      prisma.product.count({ where: { ...unidades, vehicleStatus: "RESERVED" } }),
+      prisma.product.findMany({ where: { ...unidades, vehicleStatus: "SOLD", soldPrice: { not: null } }, select: { soldPrice: true, attributes: true } }),
     ]);
   }
 
@@ -1405,16 +1405,30 @@ export default async function MetricasPage({
   // ── Métricas calculadas — AUTOS ──
   const totalLeadsPeriod = leadsPeriodRaw.length;
   const leadsDiff = pctDiff(totalLeadsPeriod, leadsPrevCount);
-  const leadsConfirmedDiff = pctDiff(leadsConfirmedCurrent, leadsConfirmedPrev);
-  const leadsConversionRate =
-    leadsTotal > 0 ? Math.round((leadsConfirmedTotal / leadsTotal) * 100) : null;
-  const avgSoldPrice = soldPriceAvg._avg.soldPrice ?? 0;
+  const vendidosPeriodo = soldVehiclesPeriod.length;
+  const vendidosDiff = pctDiff(vendidosPeriodo, vendidosPrev);
+  /* El promedio, por moneda: los usados en dólares y los 0 km en pesos no se
+     pueden promediar juntos sin un tipo de cambio — salía un número en pesos
+     que mezclaba las dos. Igual que la ganancia: "USD 18.000 + $25.000.000". */
+  const preciosPorMoneda = new Map<string, number[]>();
+  for (const v of preciosVendidos) {
+    const m = monedaDe(v, monedaPrincipal);
+    preciosPorMoneda.set(m, [...(preciosPorMoneda.get(m) ?? []), v.soldPrice ?? 0]);
+  }
+  const avgSoldPrice = [...preciosPorMoneda.keys()]
+    .sort((a, b) => (a === b ? 0 : a === "ARS" ? -1 : 1))
+    .map((m) => { const l = preciosPorMoneda.get(m)!; return precioEn(Math.round(l.reduce((a, x) => a + x, 0) / l.length), m); })
+    .join(" + ");
 
   // ── Render ──
   return (
     <DashboardLayout userName={user.name} userId={user.id}>
-      {/* Las métricas salen de los pedidos: una venta nueva las recalcula sola */}
-      <AutoRefresh tables={["Order"]} />
+      {/* Las métricas salen de los pedidos: una venta nueva las recalcula sola.
+          En autos no hay pedidos: cada consulta o tasación le deja un aviso a la
+          dueña, y esa tabla sí se escucha (Lead no está en tiempo real). */}
+      {isAutos
+        ? <AutoRefresh tables={["Notification"]} filtro={`userId=eq.${user.id}`} />
+        : <AutoRefresh tables={["Order"]} />}
       <div className="mx-auto w-full max-w-6xl space-y-6">
 
         {/* Header */}
@@ -1466,13 +1480,13 @@ export default async function MetricasPage({
               />
               <ShareStatsButton
                 storeName={store.name}
-                periodo={rango.preset !== null ? `Últimos  días` : rango.etiqueta}
+                periodo={rango.preset !== null ? `Últimos ${rangeDays} días` : rango.etiqueta}
                 revenue={totalRevenuePeriod}
                 orders={totalOrdersPeriod}
                 visits={totalViewsPeriod}
                 isAutos={isAutos}
                 leads={totalLeadsPeriod}
-                confirmedSales={leadsConfirmedCurrent}
+                confirmedSales={vendidosPeriodo}
               />
             </div>
           </div>
@@ -1569,17 +1583,17 @@ export default async function MetricasPage({
               iconBg="bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-600 panel-oscuro:text-indigo-400"
             />
             <KPICard
-              label={`Ventas confirmadas (${rango.etiqueta})`}
-              value={leadsConfirmedCurrent}
-              sub={leadsConversionRate !== null ? `${leadsConversionRate}% de conversión histórica` : "Sin datos"}
-              trend={leadsConfirmedDiff}
+              label={`Autos vendidos (${rango.etiqueta})`}
+              value={vendidosPeriodo}
+              sub={`${vehiculosVendidos} vendido${vehiculosVendidos !== 1 ? "s" : ""} en total`}
+              trend={vendidosDiff}
               icon={TrendingUp}
               iconBg="bg-green-50 panel-oscuro:bg-green-500/10 text-green-600 panel-oscuro:text-green-400"
             />
             <KPICard
               label="Precio prom. de venta"
-              value={avgSoldPrice > 0 ? money(avgSoldPrice) : "—"}
-              sub={vehiculosVendidos > 0 ? `${vehiculosVendidos} vehículo${vehiculosVendidos !== 1 ? "s" : ""} vendido${vehiculosVendidos !== 1 ? "s" : ""} en total` : "Sin ventas aún"}
+              value={avgSoldPrice || "—"}
+              sub={preciosVendidos.length > 0 ? `De ${preciosVendidos.length} vehículo${preciosVendidos.length !== 1 ? "s" : ""} con precio de venta` : "Sin ventas aún"}
               icon={ShoppingBag}
               iconBg="bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-600 panel-oscuro:text-amber-400"
             />
@@ -2744,12 +2758,20 @@ export default async function MetricasPage({
           </h2>
           <dl className="mt-3 space-y-2.5 text-xs leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
             <div>
-              <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">Venta confirmada. </dt>
-              <dd className="inline">
-                Sólo los pedidos en estado Confirmado, Enviado o Entregado. Los pendientes
-                de pago no suman a los ingresos ni a la ganancia: es plata que puede no
-                llegar nunca.
-              </dd>
+              <dt className="inline font-semibold text-gray-800 panel-oscuro:text-gray-200">{isAutos ? "Auto vendido. " : "Venta confirmada. "}</dt>
+              {isAutos ? (
+                <dd className="inline">
+                  Los vehículos marcados como Vendido, en la fecha en que se marcaron. La
+                  ganancia es el precio de venta menos los gastos cargados, cada auto en su
+                  moneda y sin tipo de cambio.
+                </dd>
+              ) : (
+                <dd className="inline">
+                  Sólo los pedidos en estado Confirmado, Enviado o Entregado. Los pendientes
+                  de pago no suman a los ingresos ni a la ganancia: es plata que puede no
+                  llegar nunca.
+                </dd>
+              )}
             </div>
             {!isAutos && (
               <div>

@@ -13,8 +13,11 @@ const DEFAULT_TABLES = ["Affiliate", "Order"];
  * Solo sirve para tablas publicadas en `supabase_realtime` (hoy: Affiliate,
  * Notification, Order, Store, StoreActivityEvent, StoreMilestone, Subscription,
  * Testimonial, User). Con una tabla que no esté publicada, no llega ningún evento.
+ *
+ * `filtro` ("userId=eq.abc") limita los eventos a esas filas: con Notification,
+ * sin él, se rearmaría la pantalla con el aviso de cualquier otra cuenta.
  */
-export default function AutoRefresh({ tables = DEFAULT_TABLES }: { tables?: string[] }) {
+export default function AutoRefresh({ tables = DEFAULT_TABLES, filtro }: { tables?: string[]; filtro?: string }) {
   const router = useRouter();
   const instanceId = useId();
   // Comparamos por contenido y no por identidad del array, así un caller que pase
@@ -31,7 +34,7 @@ export default function AutoRefresh({ tables = DEFAULT_TABLES }: { tables?: stri
     for (const table of tablesKey.split(",")) {
       channel.on(
         "postgres_changes" as Parameters<typeof channel.on>[0],
-        { event: "*", schema: "public", table },
+        { event: "*", schema: "public", table, ...(filtro ? { filter: filtro } : {}) },
         () => {
           if (document.hidden) {
             missedWhileHiddenRef.current = true;
@@ -44,7 +47,7 @@ export default function AutoRefresh({ tables = DEFAULT_TABLES }: { tables?: stri
 
     channel.subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [router, tablesKey, instanceId]);
+  }, [router, tablesKey, instanceId, filtro]);
 
   useEffect(() => {
     function applyPendingRefresh() {

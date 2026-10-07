@@ -132,6 +132,11 @@ console.log("\n5) Contar dias");
 chequear("el mismo dia es 1", diasDelRango("2026-08-09", "2026-08-09") === 1);
 chequear("cruza el fin de mes", diasDelRango("2026-07-31", "2026-08-01") === 2);
 chequear("cruza el año", diasDelRango("2025-12-31", "2026-01-01") === 2);
+// Los de arriba pasaban aunque la cuenta corría los meses uno (septiembre era
+// octubre): entre dos meses del mismo largo el error no se nota. Estos sí.
+chequear("de un mes de 31 a uno de 30", diasDelRango("2026-09-08", "2026-10-07") === 30);
+chequear("atraviesa febrero", diasDelRango("2026-02-01", "2026-03-01") === 29);
+chequear("los 30 dias que terminan el 7 de octubre son 30", resolverRango({}, "2026-10-07").actual.dias === 30 && resolverRango({}, "2026-10-07").anterior.dias === 30);
 chequear("febrero de un bisiesto tiene 29", diasDelRango("2028-02-01", "2028-02-29") === 29);
 // Argentina no tiene horario de verano desde 2009, pero si alguna vez vuelve,
 // una cuenta hecha con horas locales se saltearia o repetiria un dia. Esta va

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { aggregateProfitability, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
+import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
+import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { parseOrderPromoSummary } from "@/lib/email";
 import { resumirCarritos, resumirCupones, resumirPromos, compararCompra, resumirJuego, elegirCampanas } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, name: true, slug: true, tipoTienda: true },
+    select: { id: true, name: true, slug: true, tipoTienda: true, storeConfig: true },
   });
   if (!store) return NextResponse.json({ error: "Sin tienda" }, { status: 404 });
   const isAutos = store.tipoTienda === "AUTOS";
@@ -103,6 +104,68 @@ export async function GET(req: NextRequest) {
   const prevEndDate = rango.incluyeHoy
     ? new Date(prevStartDate.getTime() + (now.getTime() - startDate.getTime()))
     : inicioDiaArgentino(sumarDiasCalendario(rango.anterior.hasta, 1));
+
+  /* Autos vende por consulta: no hay pedidos ni ingresos de carrito, y el
+     archivo de las tiendas con carrito salía con todo en cero (08/10/26). El
+     suyo cuenta lo mismo que su pantalla: consultas, autos vendidos y visitas.
+     Los montos van en la moneda de cada vehículo, sin tipo de cambio. */
+  if (isAutos) {
+    const principal = monedaDeTienda(store.storeConfig);
+    const [leads, leadsPrev, vendidos, vendidosPrev, vistas] = await Promise.all([
+      prisma.lead.findMany({ where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate } }, select: { createdAt: true } }),
+      prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: prevStartDate, lt: prevEndDate } } }),
+      prisma.product.findMany({
+        where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: startDate, lt: endDate } },
+        select: { name: true, soldAt: true, soldPrice: true, attributes: true, expenses: { select: { monto: true } } },
+        orderBy: { soldAt: "asc" },
+      }),
+      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: prevStartDate, lt: prevEndDate } } }),
+      prisma.storeView.findMany({
+        where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
+        select: { date: true, count: true },
+      }).catch(() => [] as { date: string; count: number }[]),
+    ]);
+    const porDia = new Map(days.map((d) => [d.dateStr, { consultas: 0, vendidos: 0, visitas: 0 }]));
+    for (const l of leads) { const d = porDia.get(diaArgentino(l.createdAt)); if (d) d.consultas++; }
+    for (const v of vendidos) { const d = v.soldAt && porDia.get(diaArgentino(v.soldAt)); if (d) d.vendidos++; }
+    for (const v of vistas) { const d = porDia.get(v.date); if (d) d.visitas += v.count; }
+    const totalVistas = vistas.reduce((a, v) => a + v.count, 0);
+    const safe = store.name.replace(/[\r\n]/g, " ").trim();
+    const lineas = [
+      `# Métricas de ${safe} — ${fechaLarga(rango.actual.desde)} a ${fechaLarga(rango.actual.hasta)} (${range} ${range === 1 ? "dia" : "dias"})`,
+      `# Comparado contra ${csv(etiquetaComparacion(rango))}: ${fechaLarga(rango.anterior.desde)} a ${fechaLarga(rango.anterior.hasta)}`,
+      `# Exportado el ${new Date().toLocaleDateString("es-AR")}`,
+      `# ${AVISO_RETENCION}`,
+      ...(rango.aviso ? [`# OJO: ${rango.aviso}`] : []),
+      ``,
+      `# NÚMEROS`,
+      `Consultas,${leads.length}`,
+      `Consultas periodo anterior,${leadsPrev}`,
+      `Autos vendidos,${vendidos.length}`,
+      `Autos vendidos periodo anterior,${vendidosPrev}`,
+      `Visitas,${totalVistas}`,
+      ``,
+      ...(vendidos.length > 0 ? [
+        `# AUTOS VENDIDOS`,
+        `# Ganancia = precio de venta menos los gastos cargados. Vacia = no tiene gastos cargados (no es cero)`,
+        `Vehiculo,Fecha,Moneda,Precio de venta,Ganancia`,
+        ...vendidos.map((v) => {
+          const g = v.expenses.length > 0 ? calcVehicleProfit(v.soldPrice, v.expenses) : null;
+          return `${csv(v.name)},${v.soldAt ? diaArgentino(v.soldAt) : ""},${monedaDe(v, principal)},${montoOVacio(v.soldPrice)},${montoOVacio(g)}`;
+        }),
+        ``,
+      ] : []),
+      `# DETALLE DIARIO`,
+      `Fecha,Consultas,Autos vendidos,Visitas`,
+      ...days.map((d) => { const x = porDia.get(d.dateStr)!; return `${d.dateStr},${x.consultas},${x.vendidos},${x.visitas}`; }),
+    ];
+    return new NextResponse(lineas.join("\n"), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="metricas-${store.slug}-${range}d.csv"`,
+      },
+    });
+  }
 
   // Ver `DIAS_SIN_DESPACHAR` en la pantalla de Métricas: el mismo umbral.
   const sinDespacharDesde = inicioDiaArgentino(sumarDiasCalendario(hoyDia, -5));

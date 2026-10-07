@@ -34,7 +34,7 @@ export default function ShareStatsButton({
   const stats = isAutos
     ? [
         { label: "Consultas", value: String(leads ?? 0) },
-        { label: "Ventas confirmadas", value: String(confirmedSales ?? 0) },
+        { label: "Autos vendidos", value: String(confirmedSales ?? 0) },
         { label: "Visitas", value: visits.toLocaleString("es-AR") },
       ]
     : [
