@@ -77,6 +77,11 @@ Reglas que valen para todos (de la memoria):
       (`/tienda/<slug>/producto/<id>`, `productDetail/VehiculoDetail`, oscura en Auto
       Motor y clara en el resto). La ventana (`VehicleModal`) se borró. Los links viejos
       con `?producto=` redirigen en el servidor; el panel y el PDF ya apuntan a la página.
+- [x] ~~"La tasación está hecha así nomás, le falta amor, efectos."~~ Paso a paso de 4
+      pasos con barra de avance, tarjetas, escala de estado y tilde animado.
+- [x] ~~Bloques de videos y preguntas frecuentes.~~ En Auto Motor (videos de los
+      vehículos; preguntas de autos en `armarPreguntasAutos`). Falta en Auto Drive.
+- [ ] Auto Drive: "le faltan muchas cosas" — rehacerlo con lenguaje propio y estos bloques.
 
 ## Fase 3 — Templates nuevos (de a uno, mostrándolo antes del siguiente)
 
