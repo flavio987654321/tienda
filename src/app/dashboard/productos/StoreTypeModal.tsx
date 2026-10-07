@@ -1,10 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { STORE_TYPES } from "@/lib/storeTypes";
-import { Loader2, X, Check, AlertTriangle, Trash2, Download } from "lucide-react";
+import { STORE_TYPES, type StoreTypeConfig } from "@/lib/storeTypes";
+import {
+  Loader2, X, Check, AlertTriangle, Trash2, Download, ArrowLeft, ArrowRight,
+  ShoppingBag, Shirt, Tag, Users, MessageCircle, Repeat, Target, FileText, ShieldCheck,
+} from "lucide-react";
 import { TOUR_PANEL_KEY } from "@/components/tours";
+
+/* ── Elegir o cambiar el rubro, en pasos (07/10/26) ─────────────────────────
+   Antes era una grilla de emojis y un botón rojo: para algo que borra la
+   tienda entera, poco. Ahora:
+     1. Elegí      — tarjetas con una foto de cómo queda una tienda de ese rubro.
+     2. Conocelo   — qué trae: cómo compra el cliente, qué se carga, qué tiene de propio.
+     3. Tus datos  — qué se borra y qué se queda, y los respaldos (sólo al CAMBIAR).
+     4. Confirmá   — escribir el nombre del rubro para habilitar el botón (sólo al CAMBIAR).
+   La primera vez (cuenta nueva) no hay nada que borrar: pasos 1 y 2.
+   La lógica de guardar/borrar es la de siempre; cambió la presentación. */
+
+type Paso = "elegir" | "conocer" | "datos" | "confirmar";
+
+type Presentacion = {
+  frase: string;
+  imagenes: string[];
+  /** Palabra a escribir para confirmar el cambio (sin tildes, da igual mayúsculas). */
+  palabra: string;
+  puntos: { icono: ReactNode; titulo: string; texto: string }[];
+};
+
+const ICONO = "h-4 w-4";
+const PRESENTACION: Record<string, Presentacion> = {
+  ROPA: {
+    frase: "Carrito, talles y pago online",
+    imagenes: ["/marketing/rubro-ropa-1.png", "/marketing/rubro-ropa-2.png", "/marketing/rubro-ropa-3.png"],
+    palabra: "MODA",
+    puntos: [
+      { icono: <ShoppingBag className={ICONO} />, titulo: "Carrito y pago online", texto: "Tus clientes eligen, pagan con Mercado Pago y te llega el pedido. Sin ida y vuelta por chat." },
+      { icono: <Shirt className={ICONO} />, titulo: "Talles y colores", texto: "Cada prenda con sus variantes y el stock de cada una." },
+      { icono: <Tag className={ICONO} />, titulo: "Cupones, promociones y ruleta", texto: "Para empujar ventas y recuperar carritos abandonados." },
+      { icono: <Users className={ICONO} />, titulo: "Afiliados", texto: "Gente que recomienda tu tienda y cobra una comisión por venta." },
+    ],
+  },
+  AUTOS: {
+    frase: "Consultas, tasaciones y fichas",
+    imagenes: ["/marketing/rubro-autos-1.png"],
+    palabra: "AUTOS",
+    puntos: [
+      { icono: <MessageCircle className={ICONO} />, titulo: "Consultas, no carrito", texto: "Cada unidad tiene su botón para escribirte por WhatsApp o dejarte sus datos." },
+      { icono: <Repeat className={ICONO} />, titulo: "Tasaciones y permutas", texto: "El cliente carga su usado desde la tienda y te llega listo para cotizar." },
+      { icono: <Target className={ICONO} />, titulo: "Búsquedas", texto: "Si no tenés lo que busca, lo anota; cuando entra algo así, te avisamos." },
+      { icono: <FileText className={ICONO} />, titulo: "Ficha en PDF y stock", texto: "Ficha descargable de cada unidad, y cuánto ganás con cada una." },
+    ],
+  },
+};
+
+function presentacion(t: StoreTypeConfig): Presentacion {
+  return PRESENTACION[t.id] ?? { frase: t.description, imagenes: [], palabra: t.label.split(" ")[0].toUpperCase(), puntos: [] };
+}
+
+const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toUpperCase();
+
+const SE_BORRA = [
+  "Productos publicados",
+  "Pedidos y consultas recibidos",
+  "Cupones, promociones y carritos abandonados",
+  "Reseñas de productos",
+  "Historial de ventas de tus afiliados",
+  "Plantilla y diseño de la tienda",
+];
+const SE_QUEDA = [
+  "Logo y colores",
+  "Redes sociales",
+  "Conexión con Mercado Pago",
+  "Tus afiliados (sin su historial)",
+  "Copia interna de tus ventas, para descargar desde Configuración",
+];
+
+const BLOCK_LINKS: Record<string, { href: string; label: string }> = {
+  UNRESOLVED_ORDERS: { href: "/dashboard/pedidos", label: "Ver pedidos pendientes" },
+  UNCLAIMED_PRIZES: { href: "/dashboard/cupones", label: "Ver cupones y premios" },
+  PENDING_COMMISSIONS: { href: "/dashboard/pagos", label: "Ver pagos a afiliados" },
+  LIVE_COUPONS: { href: "/dashboard/cupones", label: "Ver mis cupones vigentes" },
+  LIVE_PROMOTIONS: { href: "/dashboard/promociones", label: "Ver mis promociones" },
+};
 
 export default function StoreTypeModal({
   isEditing = false,
@@ -16,27 +96,50 @@ export default function StoreTypeModal({
   onClose?: () => void;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<string | null>(currentType ?? null);
+  const [paso, setPaso] = useState<Paso>("elegir");
+  const [selected, setSelected] = useState<string | null>(null);
   const [wholesale, setWholesale] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   // Cambio de rubro terminado: la pantalla de carga muestra "Listo" antes de ir al panel.
   const [listo, setListo] = useState(false);
-  // confirm step: solo cuando isEditing y cambia de tipo
-  const [confirmStep, setConfirmStep] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   // CTA para desbloquearse cuando el server devuelve 409 (pedidos sin resolver, etc.)
   const [errorLink, setErrorLink] = useState<{ href: string; label: string } | null>(null);
-  const [ackIrreversible, setAckIrreversible] = useState(false);
+  const [escrito, setEscrito] = useState("");
 
-  const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
+  const elegido = STORE_TYPES.find((t) => t.id === selected) ?? null;
+  const actual = STORE_TYPES.find((t) => t.id === currentType) ?? null;
   const isChangingType = isEditing && selected !== null && selected !== currentType;
+  const pasos: Paso[] = isEditing ? ["elegir", "conocer", "datos", "confirmar"] : ["elegir", "conocer"];
+  const nroPaso = pasos.indexOf(paso) + 1;
 
   function handleClose() {
+    if (saving) return;
     if (isEditing) onClose?.();
     else router.back();
+  }
+
+  // Escape cierra (sólo al cambiar: la primera vez el rubro es obligatorio).
+  useEffect(() => {
+    if (!isEditing) return;
+    const f = (e: KeyboardEvent) => { if (e.key === "Escape" && !saving) onClose?.(); };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [isEditing, saving, onClose]);
+
+  function ir(p: Paso) {
+    setError("");
+    setErrorLink(null);
+    setPaso(p);
+  }
+
+  function elegir(id: string) {
+    setSelected(id);
+    setWholesale(false);
+    setEscrito("");
+    ir("conocer");
   }
 
   async function downloadCsv(tipo: "productos" | "pedidos" | "cupones" | "promociones") {
@@ -44,7 +147,7 @@ export default function StoreTypeModal({
     setDownloading(tipo);
     setError("");
     try {
-      const res = await fetch(`/api/store/export-csv?tipo=${tipo}`);
+      const res = await fetch(`/api/store/export-csv?tipo=${tipo}`, { signal: AbortSignal.timeout(60_000) });
       // Sin esto, un 500/401 descarga el JSON de error como .csv y lo marca
       // con tilde verde: el dueño confirma el borrado creyendo que tiene respaldo
       if (!res.ok || !res.headers.get("Content-Type")?.includes("text/csv")) {
@@ -65,29 +168,14 @@ export default function StoreTypeModal({
     }
   }
 
-  async function handleConfirmButton() {
-    if (!selected) return;
-    // Si es edición y cambia de tipo → mostrar advertencia primero
-    if (isChangingType) {
-      setAckIrreversible(false);
-      setConfirmStep(true);
-      return;
-    }
-    await save();
-  }
-
-  const BLOCK_LINKS: Record<string, { href: string; label: string }> = {
-    UNRESOLVED_ORDERS: { href: "/dashboard/pedidos", label: "Ver pedidos pendientes" },
-    UNCLAIMED_PRIZES: { href: "/dashboard/cupones", label: "Ver cupones y premios" },
-    PENDING_COMMISSIONS: { href: "/dashboard/pagos", label: "Ver pagos a afiliados" },
-    LIVE_COUPONS: { href: "/dashboard/cupones", label: "Ver mis cupones vigentes" },
-    LIVE_PROMOTIONS: { href: "/dashboard/promociones", label: "Ver mis promociones" },
-  };
-
   async function save() {
     // Guard síncrono anti doble-click: el disabled del botón depende del
     // re-render de React y dos clicks rápidos dispararían dos resets
     if (!selected || saving) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setError("Sin conexión a internet. Conectate y probá de nuevo.");
+      return;
+    }
     setSaving(true);
     setError("");
     setErrorLink(null);
@@ -99,6 +187,8 @@ export default function StoreTypeModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ newType: selected }),
+          // Borra mucho: tope largo, pero tope. Si se corta, puede que igual se haya hecho.
+          signal: AbortSignal.timeout(90_000),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -109,7 +199,8 @@ export default function StoreTypeModal({
         localStorage.removeItem(TOUR_PANEL_KEY);
       } else {
         // Primera configuración o mismo tipo
-        const configRes = await fetch("/api/configuracion");
+        const configRes = await fetch("/api/configuracion", { signal: AbortSignal.timeout(20_000) });
+        if (!configRes.ok) throw new Error("No se pudo guardar el tipo de tienda. Probá de nuevo.");
         const { store: current } = await configRes.json();
         const res = await fetch("/api/configuracion", {
           method: "PUT",
@@ -121,6 +212,7 @@ export default function StoreTypeModal({
             tipoTiendaConfigurado: true,
             tieneVentaMayorista: isEditing ? (current.tieneVentaMayorista ?? false) : wholesale,
           }),
+          signal: AbortSignal.timeout(20_000),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -129,23 +221,21 @@ export default function StoreTypeModal({
       }
     } catch (err) {
       setSaving(false);
-      // El error se muestra en la pantalla de confirmación (donde está parado
-      // el usuario), con el CTA de desbloqueo si el server mandó un code
-      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      const tope = err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError");
+      setError(tope
+        ? (isChangingType
+          ? "Tardó más de lo normal. Recargá la página: puede que el cambio ya se haya hecho."
+          : "Tardó demasiado en contestar. Revisá tu conexión y probá de nuevo.")
+        : err instanceof Error ? err.message : "Ocurrió un error inesperado.");
       return;
     }
 
     window.dispatchEvent(new CustomEvent("store-type-changed", { detail: { newType: selected } }));
 
     /* ── Cambio de rubro: "Listo" y el panel de cero (06/10/26) ───────────────
-       Antes, al terminar de borrar, el modal volvía 0,7 s a la pantalla de
-       elegir rubro (con la tarjeta parpadeando) y recién ahí se cerraba con un
-       refresco a medias: la dueña quedaba en Productos, con el estado que el
-       panel ya tenía cargado (contadores, lo que pidió al montar), y la guía —que se reinicia al cambiar—
-       no arrancaba en ese momento porque el panel ya tenía el rubro "elegido":
-       aparecía más tarde, en cualquier recarga y en cualquier pantalla.
-       Ahora: la pantalla de carga pasa a "Listo" y se carga el panel de inicio
-       entero. Todo lo que se ve es del rubro nuevo, y la guía arranca ahí. */
+       Al terminar de borrar, la pantalla de carga pasa a "Listo" y se carga el
+       panel de inicio entero: todo lo que se ve es del rubro nuevo, y la guía
+       —que se reinicia al cambiar— arranca ahí. */
     if (isChangingType) {
       setListo(true);
       await new Promise((r) => setTimeout(r, 1100));
@@ -153,322 +243,315 @@ export default function StoreTypeModal({
       return;
     }
 
-    setSaving(false);
-    setConfirmStep(false);
-    setSaved(true);
+    setListo(true);
     await new Promise((r) => setTimeout(r, 700));
     router.refresh();
     if (isEditing) onClose?.();
   }
 
-  // ── Overlay de carga mientras borra ──
-  if (saving) {
-    const toConfig = STORE_TYPES.find((t) => t.id === selected);
+  // ── Overlay de carga mientras guarda / borra ──
+  if (saving && elegido) {
     if (listo) {
       return (
-        <div role="status" className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-5 px-6 text-center">
-          <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center animate-pop-in">
+        <div role="status" className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-md gap-5 px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center animate-pop-in">
             <Check className="h-10 w-10 text-white" />
           </div>
           <div>
-            <p className="text-white text-xl font-bold">Listo: tu tienda ahora es de {toConfig?.label} {toConfig?.emoji}</p>
-            <p className="text-white/70 text-sm mt-1.5">Te llevamos al panel para que cargues tus primeros {toConfig?.id === "AUTOS" ? "vehículos" : "productos"}…</p>
+            <p className="text-white text-xl font-bold">Listo: tu tienda ahora es de {elegido.label}</p>
+            <p className="text-white/70 text-sm mt-1.5">Te llevamos al panel para que cargues tus primeros {elegido.id === "AUTOS" ? "vehículos" : "productos"}…</p>
           </div>
         </div>
       );
     }
     return (
-      <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-6 animate-fade-slide">
-        <div className="relative flex items-center justify-center">
-          <div className="w-24 h-24 rounded-full border-4 border-white/10 panel-oscuro:border-gray-900 border-t-white animate-spin" />
-          <span className="absolute text-4xl">{toConfig?.emoji}</span>
-        </div>
+      <div role="status" className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-md gap-6 px-6 animate-fade-slide">
+        <Loader2 className="h-12 w-12 text-white animate-spin" />
         <div className="text-center">
           <p className="text-white text-xl font-bold">
-            {isChangingType ? `Cambiando a ${toConfig?.label}...` : `Configurando tu tienda como ${toConfig?.label}...`}
+            {isChangingType ? `Cambiando a ${elegido.label}…` : `Preparando tu tienda de ${elegido.label}…`}
           </p>
-          {isChangingType && <p className="text-white/60 text-sm mt-1">Limpiando datos anteriores</p>}
+          {isChangingType && <p className="text-white/60 text-sm mt-1">Limpiando los datos anteriores. No cierres esta ventana.</p>}
         </div>
       </div>
     );
   }
 
-  // ── Pantalla de confirmación de reset ──
-  if (confirmStep) {
-    const fromConfig = STORE_TYPES.find((t) => t.id === currentType);
-    const toConfig   = STORE_TYPES.find((t) => t.id === selected);
-    return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="bg-white panel-oscuro:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-fade-slide">
-          <div className="bg-red-50 panel-oscuro:bg-red-500/10 rounded-t-3xl px-7 py-6 border-b border-red-100 panel-oscuro:border-red-500/30 shrink-0">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="p-2 bg-red-100 panel-oscuro:bg-red-500/15 rounded-xl">
-                <AlertTriangle className="h-5 w-5 text-red-600 panel-oscuro:text-red-400" />
-              </div>
-              <h2 className="text-lg font-bold text-red-700 panel-oscuro:text-red-300">¿Estás seguro?</h2>
-            </div>
-            <p className="text-sm text-red-600 panel-oscuro:text-red-400 mt-1">
-              Estás por cambiar de <strong>{fromConfig?.emoji} {fromConfig?.label}</strong> a <strong>{toConfig?.emoji} {toConfig?.label}</strong>
+  const titulo =
+    paso === "elegir" ? (isEditing ? "Cambiar de rubro" : "¿Qué vendés?")
+    : paso === "conocer" ? `Así funciona una tienda de ${elegido?.label ?? ""}`
+    : paso === "datos" ? "Qué pasa con tus datos"
+    : "Confirmá el cambio";
+  const bajada =
+    paso === "elegir" ? (isEditing ? "Elegí el rubro nuevo. Antes de cambiar nada te mostramos qué trae y qué pasa con tus datos." : "Esto define los campos de tus productos, las categorías, las plantillas y cómo te compran.")
+    : paso === "conocer" ? presentacion(elegido!).frase
+    : paso === "datos" ? `Pasar de ${actual?.label ?? "tu rubro"} a ${elegido?.label ?? ""} empieza la tienda de cero.`
+    : "Este paso no se puede deshacer.";
+
+  const pres = elegido ? presentacion(elegido) : null;
+  const confirmado = !!pres && sinTildes(escrito) === sinTildes(pres.palabra);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm sm:p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="rubro-titulo"
+        className="bg-white panel-oscuro:bg-gray-900 w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] border border-slate-200/70 panel-oscuro:border-gray-800">
+
+        {/* Encabezado: paso, título y progreso */}
+        <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-slate-100 panel-oscuro:border-gray-800 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 panel-oscuro:text-indigo-400">
+              Paso {nroPaso} de {pasos.length}
             </p>
+            {isEditing && (
+              <button type="button" onClick={handleClose} aria-label="Cerrar"
+                className="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 panel-oscuro:hover:bg-gray-800">
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
+          <div className="mt-2 flex gap-1.5" aria-hidden="true">
+            {pasos.map((p, i) => (
+              <span key={p} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i < nroPaso ? (paso === "confirmar" ? "bg-red-500" : "bg-indigo-500") : "bg-slate-100 panel-oscuro:bg-gray-800"}`} />
+            ))}
+          </div>
+          <h2 id="rubro-titulo" className="mt-4 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 panel-oscuro:text-gray-100">{titulo}</h2>
+          <p className="mt-1 text-sm text-slate-500 panel-oscuro:text-gray-400">{bajada}</p>
+        </div>
 
-          <div className="px-7 py-5 space-y-4 overflow-y-auto">
-            <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium">Esto va a eliminar permanentemente:</p>
-            <ul className="space-y-2">
-              {[
-                "Todos tus productos publicados",
-                "Todos los pedidos recibidos",
-                "Todas las consultas (leads)",
-                "Todos los cupones de descuento",
-                "Todas las promociones de la tienda",
-                "Los carritos abandonados",
-                "Las reseñas de productos",
-                "El historial de ventas y estadísticas de tus afiliados",
-                "La plantilla y configuración del diseño",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600 panel-oscuro:text-gray-400">
-                  <Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <div className="bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-xl px-4 py-3 text-xs text-amber-700 panel-oscuro:text-amber-300 font-medium space-y-1.5">
-              <p>Esta acción no se puede deshacer desde el panel. Se conservan: logo, colores, redes sociales, conexión Mercado Pago y tus afiliados (sin su historial de ventas). La ruleta queda desactivada hasta que la configures con premios nuevos.</p>
-              <p><strong>Antes de cambiar tenés que dar de baja las promociones y los cupones que estén vigentes.</strong> Si un cliente tiene uno en la mano, al cambiar de rubro deja de funcionar pero te lo va a reclamar igual — así que la baja la decidís vos, no el sistema por atrás.</p>
-              <p>Tu tienda va a quedar <strong>offline</strong> hasta que configures y publiques el catálogo del nuevo rubro.</p>
-              <p>TiendaApps guarda una copia interna de tus ventas como respaldo contable — podés descargarla después desde Configuración.</p>
-            </div>
+        {/* Cuerpo */}
+        <div key={paso} className="px-5 sm:px-7 py-5 overflow-y-auto animate-fade-slide">
 
-            {/* Exportar antes de borrar */}
-            <div className="space-y-2">
-              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 font-medium">Guardá una copia antes de continuar:</p>
-              {([
-                ["productos", "Mis productos"],
-                ["pedidos", "Mis pedidos (incluye pagos y comisiones)"],
-                ["cupones", "Mis cupones"],
-                ["promociones", "Mis promociones"],
-              ] as const).map(([tipo, label]) => (
-                <button
-                  key={tipo}
-                  onClick={() => downloadCsv(tipo)}
-                  disabled={downloading !== null}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-medium text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
-                >
-                  {downloading === tipo ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Descargando...</>
-                  ) : downloaded[tipo] ? (
-                    <><Check className="h-4 w-4 text-green-500" /> {label} — descargado</>
-                  ) : (
-                    <><Download className="h-4 w-4" /> {label} (CSV)</>
-                  )}
-                </button>
-              ))}
-            </div>
+          {/* ── 1. Elegir ── */}
+          {paso === "elegir" && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {STORE_TYPES.filter((t) => !t.comingSoon).map((t) => {
+                  const p = presentacion(t);
+                  const esActual = isEditing && t.id === currentType;
+                  return (
+                    <button key={t.id} type="button" disabled={esActual} onClick={() => elegir(t.id)}
+                      className={`group relative overflow-hidden rounded-2xl border text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
+                        esActual
+                          ? "border-slate-200 panel-oscuro:border-gray-800 cursor-default"
+                          : "border-slate-200 panel-oscuro:border-gray-700 hover:border-indigo-400 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-0.5"
+                      }`}>
+                      <div className="relative aspect-[16/8] bg-slate-100 panel-oscuro:bg-gray-800 overflow-hidden">
+                        {p.imagenes[0] && (
+                          <Image src={p.imagenes[0]} alt="" fill sizes="(max-width: 640px) 100vw, 320px"
+                            className={`object-cover object-left-top transition-transform duration-500 ${esActual ? "opacity-60" : "group-hover:scale-[1.03]"}`} />
+                        )}
+                        {esActual && (
+                          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">Tu rubro hoy</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 px-4 py-3.5">
+                        <div className="min-w-0 flex-1">
+                          <p className={`font-semibold ${esActual ? "text-slate-400 panel-oscuro:text-gray-500" : "text-slate-900 panel-oscuro:text-gray-100"}`}>{t.label}</p>
+                          <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mt-0.5">{p.frase}</p>
+                        </div>
+                        {!esActual && (
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 panel-oscuro:bg-gray-800 text-slate-500 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+                            <ArrowRight className="h-4 w-4" />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {STORE_TYPES.some((t) => t.comingSoon) && (
+                <p className="mt-4 text-xs text-slate-400 panel-oscuro:text-gray-500">
+                  Próximamente: {STORE_TYPES.filter((t) => t.comingSoon).map((t) => t.label).join(" · ")}
+                </p>
+              )}
+            </>
+          )}
 
-            {error && (
-              <div className="flex items-start gap-2.5 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-2xl px-4 py-3 text-sm text-red-700 panel-oscuro:text-red-300 animate-fade-slide">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          {/* ── 2. Conocer el rubro ── */}
+          {paso === "conocer" && elegido && pres && (
+            <div className="space-y-5">
+              {pres.imagenes[0] && (
                 <div className="space-y-2">
-                  <p>{error}</p>
-                  {errorLink && (
-                    <a
-                      href={errorLink.href}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 panel-oscuro:text-red-300 underline underline-offset-2 hover:text-red-800 panel-oscuro:hover:text-red-300"
-                    >
-                      {errorLink.label} →
-                    </a>
+                  <div className="relative aspect-[16/7] overflow-hidden rounded-xl bg-slate-100 panel-oscuro:bg-gray-800 border border-slate-200/70 panel-oscuro:border-gray-800">
+                    <Image src={pres.imagenes[0]} alt={`Ejemplo de una tienda de ${elegido.label}`} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover object-left-top" />
+                  </div>
+                  {/* Otras plantillas del rubro: en el celular no entran, y la principal alcanza. */}
+                  {pres.imagenes.length > 1 && (
+                    <div className="hidden sm:grid grid-cols-2 gap-2">
+                      {pres.imagenes.slice(1, 3).map((src) => (
+                        <div key={src} className="relative aspect-[16/6] overflow-hidden rounded-xl bg-slate-100 panel-oscuro:bg-gray-800 border border-slate-200/70 panel-oscuro:border-gray-800">
+                          <Image src={src} alt="" fill sizes="320px" className="object-cover object-left-top" />
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
+              )}
+
+              {pres.puntos.length > 0 ? (
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {pres.puntos.map((pt) => (
+                    <li key={pt.titulo} className="flex gap-3 rounded-2xl border border-slate-100 panel-oscuro:border-gray-800 bg-slate-50/70 panel-oscuro:bg-gray-800/40 p-3.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 panel-oscuro:bg-indigo-500/15 text-indigo-600 panel-oscuro:text-indigo-300">{pt.icono}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">{pt.titulo}</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-slate-500 panel-oscuro:text-gray-400">{pt.texto}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-600 panel-oscuro:text-gray-300">{elegido.description}</p>
+              )}
+
+              <div>
+                <p className="text-xs font-medium text-slate-400 panel-oscuro:text-gray-500 mb-2">Categorías que vas a poder usar</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {elegido.categorias.slice(0, 8).map((c) => (
+                    <span key={c} className="rounded-full border border-slate-200 panel-oscuro:border-gray-700 px-2.5 py-1 text-xs capitalize text-slate-600 panel-oscuro:text-gray-300">{c}</span>
+                  ))}
+                </div>
               </div>
-            )}
 
-            <label className="flex items-start gap-2.5 px-1 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={ackIrreversible}
-                onChange={(e) => setAckIrreversible(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 panel-oscuro:border-gray-600 accent-red-600"
-              />
-              <span className="text-xs text-gray-600 panel-oscuro:text-gray-400">
-                Entiendo que esta acción es irreversible y ya descargué los respaldos que necesito.
-              </span>
-            </label>
-          </div>
-
-          <div className="px-7 pb-6 flex gap-3 shrink-0">
-            <button
-              onClick={() => setConfirmStep(false)}
-              disabled={saving}
-              className="flex-1 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-semibold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50 transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={save}
-              disabled={saving || saved || downloading !== null || !ackIrreversible}
-              className={`flex-1 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
-                saved ? "bg-green-500" : "bg-red-600 hover:bg-red-700 disabled:opacity-50"
-              }`}
-            >
-              {saved   ? <><Check className="h-4 w-4" /> ¡Listo!</> :
-               saving  ? <><Loader2 className="h-4 w-4 animate-spin" /> Borrando...</> :
-               "Sí, cambiar y borrar todo"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Pantalla principal de selección ──
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white panel-oscuro:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-
-        {/* Header */}
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative shrink-0">
-          {isEditing && (
-            <button
-              onClick={handleClose}
-              title="Cerrar"
-              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 panel-oscuro:hover:bg-gray-900/20 transition-colors"
-            >
-              <X className="h-4 w-4 text-white/80" />
-            </button>
+              {!isEditing && elegido.supportsWholesale && (
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 panel-oscuro:border-gray-700 px-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">¿Vendés también por mayor?</p>
+                    <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mt-0.5">Suma el precio mayorista en tus productos. Se puede cambiar después.</p>
+                  </div>
+                  <button type="button" role="switch" aria-checked={wholesale} aria-label="Venta por mayor" onClick={() => setWholesale((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${wholesale ? "bg-indigo-600" : "bg-slate-200 panel-oscuro:bg-gray-700"}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${wholesale ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+              )}
+            </div>
           )}
-          <h2 className="text-2xl font-bold mb-1">
-            {isEditing ? "¿Qué vendés?" : "Antes de empezar, ¿qué vendés?"}
-          </h2>
-          <p className="text-indigo-200 text-sm">
-            {isEditing
-              ? "Cambiar el tipo de tienda reinicia el catálogo, los pedidos y la plantilla. Se conservan tu logo, colores, redes y la conexión de Mercado Pago."
-              : "Esto define los campos de tus productos, las categorías, el diseño sugerido y la experiencia de compra de tus clientes."}
-          </p>
-        </div>
 
-        <div className="p-6 space-y-4 overflow-y-auto">
+          {/* ── 3. Tus datos ── */}
+          {paso === "datos" && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-red-100 panel-oscuro:border-red-500/25 bg-red-50/60 panel-oscuro:bg-red-500/10 p-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-red-700 panel-oscuro:text-red-300"><Trash2 className="h-4 w-4" /> Se borra</p>
+                  <ul className="mt-2.5 space-y-1.5">
+                    {SE_BORRA.map((x) => <li key={x} className="text-xs leading-relaxed text-red-900/80 panel-oscuro:text-red-200/80">• {x}</li>)}
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-emerald-100 panel-oscuro:border-emerald-500/25 bg-emerald-50/60 panel-oscuro:bg-emerald-500/10 p-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700 panel-oscuro:text-emerald-300"><ShieldCheck className="h-4 w-4" /> Se queda</p>
+                  <ul className="mt-2.5 space-y-1.5">
+                    {SE_QUEDA.map((x) => <li key={x} className="text-xs leading-relaxed text-emerald-900/80 panel-oscuro:text-emerald-200/80">• {x}</li>)}
+                  </ul>
+                </div>
+              </div>
 
-          {/* Tipos */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {STORE_TYPES.map((t) => {
-              const active = selected === t.id;
-              const isCurrent = t.id === currentType;
-              if (t.comingSoon) {
-                return (
-                  <div
-                    key={t.id}
-                    title="Próximamente disponible"
-                    className="relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-gray-100 panel-oscuro:border-gray-800 bg-gray-50 panel-oscuro:bg-gray-800/50 opacity-50 cursor-not-allowed select-none"
-                  >
-                    <span className="text-2xl leading-none grayscale">{t.emoji}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-tight text-gray-400 panel-oscuro:text-gray-500">{t.label}</p>
-                    </div>
-                    <span className="absolute top-1.5 right-2 text-[10px] font-bold text-gray-400 panel-oscuro:text-gray-500 bg-gray-200 panel-oscuro:bg-gray-700 px-1.5 py-0.5 rounded-full leading-tight">
-                      Próximamente
-                    </span>
-                  </div>
-                );
-              }
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => { setSelected(t.id); setWholesale(false); }}
-                  className={`relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all duration-200 ${
-                    active && saved
-                      ? "border-green-500 bg-green-50 panel-oscuro:bg-green-500/10 shadow-md scale-[1.03] animate-success-flash"
-                      : active
-                      ? "border-indigo-500 bg-indigo-50 panel-oscuro:bg-indigo-500/10 shadow-md scale-[1.03]"
-                      : "border-gray-100 panel-oscuro:border-gray-800 hover:border-gray-300 panel-oscuro:hover:border-gray-600 bg-gray-50 panel-oscuro:bg-gray-800/50 hover:scale-[1.01]"
-                  }`}
-                >
-                  <span className="text-2xl leading-none">{t.emoji}</span>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold leading-tight ${active ? "text-indigo-700 panel-oscuro:text-indigo-300" : "text-gray-800 panel-oscuro:text-gray-200"}`}>
-                      {t.label}
-                    </p>
-                    {isCurrent && isEditing && (
-                      <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">actual</p>
-                    )}
-                  </div>
-                  {active && (
-                    <span key={t.id} className="absolute top-2 right-2 animate-pop-in">
-                      <Check className="h-3.5 w-3.5 text-white bg-indigo-500 rounded-full p-0.5" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+              <div className="rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-800 panel-oscuro:text-amber-200 space-y-1">
+                <p><strong>Antes, dá de baja los cupones y promociones vigentes.</strong> Si un cliente tiene uno, deja de funcionar pero te lo va a reclamar igual.</p>
+                <p>La tienda queda <strong>sin publicar</strong> hasta que cargues el catálogo nuevo. La ruleta se apaga hasta que le pongas premios nuevos.</p>
+              </div>
 
-          {/* Info del tipo seleccionado */}
-          {selectedConfig && (
-            <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 panel-oscuro:bg-indigo-500/10 rounded-2xl px-4 py-3 text-sm text-indigo-700 panel-oscuro:text-indigo-300 space-y-1.5">
-              <p className="font-medium">{selectedConfig.description}</p>
-              <p className="text-indigo-500 text-xs">
-                Ejemplos de categorías: {selectedConfig.categorias.slice(0, 4).join(", ")}...
+              <div>
+                <p className="text-sm font-semibold text-slate-800 panel-oscuro:text-gray-200">Guardá una copia antes de seguir</p>
+                <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 mt-0.5 mb-2.5">Planillas que se abren con Excel o Google Sheets.</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {([
+                    ["productos", "Productos"],
+                    ["pedidos", "Pedidos, pagos y comisiones"],
+                    ["cupones", "Cupones"],
+                    ["promociones", "Promociones"],
+                  ] as const).map(([tipo, label]) => (
+                    <button key={tipo} type="button" onClick={() => downloadCsv(tipo)} disabled={downloading !== null}
+                      className={`flex min-h-11 items-center gap-2.5 rounded-xl border px-3.5 text-left text-sm font-medium transition-colors disabled:opacity-60 ${
+                        downloaded[tipo]
+                          ? "border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50/60 panel-oscuro:bg-emerald-500/10 text-emerald-800 panel-oscuro:text-emerald-200"
+                          : "border-slate-200 panel-oscuro:border-gray-700 text-slate-700 panel-oscuro:text-gray-300 hover:bg-slate-50 panel-oscuro:hover:bg-gray-800/50"
+                      }`}>
+                      {downloading === tipo ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                        : downloaded[tipo] ? <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                        : <Download className="h-4 w-4 shrink-0 text-slate-400" />}
+                      <span className="min-w-0 flex-1">{label}</span>
+                      <span className="text-[11px] text-slate-400">{downloading === tipo ? "Bajando…" : downloaded[tipo] ? "Listo" : "CSV"}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── 4. Confirmar ── */}
+          {paso === "confirmar" && elegido && pres && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 panel-oscuro:border-gray-700 p-4">
+                <span className="text-sm text-slate-500 panel-oscuro:text-gray-400 line-through decoration-red-400">{actual?.label}</span>
+                <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+                <span className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">{elegido.label}</span>
+              </div>
+              <label className="block">
+                <span className="text-sm text-slate-700 panel-oscuro:text-gray-300">
+                  Para confirmar, escribí <strong className="font-bold tracking-wider text-slate-900 panel-oscuro:text-gray-100">{pres.palabra}</strong>
+                </span>
+                <input value={escrito} onChange={(e) => setEscrito(e.target.value)} autoFocus autoComplete="off" autoCapitalize="characters" spellCheck={false}
+                  onKeyDown={(e) => { if (e.key === "Enter" && confirmado) void save(); }}
+                  className="mt-2 w-full rounded-xl border border-slate-300 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-4 py-3 text-base font-semibold uppercase tracking-wider text-slate-900 panel-oscuro:text-gray-100 outline-none focus:border-red-400 focus:ring-4 focus:ring-red-500/10"
+                  placeholder={pres.palabra} />
+              </label>
+              <p className="text-xs text-slate-500 panel-oscuro:text-gray-400">
+                {Object.keys(downloaded).length === 0
+                  ? "No bajaste ningún respaldo. Si lo necesitás, volvé al paso anterior."
+                  : `Bajaste ${Object.keys(downloaded).length} respaldo${Object.keys(downloaded).length > 1 ? "s" : ""}.`}
               </p>
             </div>
           )}
 
           {error && (
-            <div className="flex items-start gap-2.5 bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/30 rounded-2xl px-4 py-3 text-sm text-red-700 panel-oscuro:text-red-300 animate-fade-slide">
+            <div role="alert" className="mt-4 flex items-start gap-2.5 rounded-2xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-4 py-3 text-sm text-red-700 panel-oscuro:text-red-300">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Aviso de reset cuando cambia de tipo */}
-          {isChangingType && (
-            <div className="flex items-start gap-2.5 bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 rounded-2xl px-4 py-3 text-sm text-amber-700 panel-oscuro:text-amber-300 animate-fade-slide">
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>Al confirmar se van a eliminar todos tus productos, pedidos y consultas actuales.</span>
-            </div>
-          )}
-
-          {/* Toggle mayorista — solo primera vez */}
-          {!isEditing && selectedConfig?.supportsWholesale && (
-            <div className="flex items-center justify-between bg-gray-50 panel-oscuro:bg-gray-800/50 rounded-2xl px-4 py-3.5 border border-gray-100 panel-oscuro:border-gray-800">
-              <div>
-                <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-200">Venta por mayor</p>
-                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Activa campos de precio mayorista en tus productos</p>
+              <div className="space-y-2">
+                <p>{error}</p>
+                {errorLink && (
+                  <a href={errorLink.href} className="inline-flex items-center gap-1 text-xs font-semibold underline underline-offset-2">
+                    {errorLink.label} →
+                  </a>
+                )}
               </div>
-              <button
-                onClick={() => setWholesale((v) => !v)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  wholesale ? "bg-indigo-600" : "bg-gray-200 panel-oscuro:bg-gray-700"
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  wholesale ? "translate-x-6" : "translate-x-1"
-                }`} />
-              </button>
             </div>
           )}
-
-          {/* Confirmar */}
-          <button
-            onClick={handleConfirmButton}
-            disabled={!selected || saving || saved || selected === currentType}
-            className={`w-full py-3.5 rounded-2xl font-semibold disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2 ${
-              saved
-                ? "bg-green-500 text-white scale-[1.02] shadow-lg"
-                : isChangingType
-                ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-40"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40"
-            }`}
-          >
-            {saved ? (
-              <><Check className="h-4 w-4" /> ¡Guardado!</>
-            ) : saving ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
-            ) : isChangingType ? (
-              "Cambiar tipo de tienda →"
-            ) : (
-              "Confirmar y continuar →"
-            )}
-          </button>
         </div>
+
+        {/* Pie: volver y seguir */}
+        {paso !== "elegir" && (
+          <div className="flex items-center gap-3 border-t border-slate-100 panel-oscuro:border-gray-800 px-5 sm:px-7 py-4 shrink-0">
+            <button type="button" onClick={() => ir(pasos[nroPaso - 2])} disabled={downloading !== null}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-slate-600 panel-oscuro:text-gray-300 hover:bg-slate-100 panel-oscuro:hover:bg-gray-800 disabled:opacity-50">
+              <ArrowLeft className="h-4 w-4" /> Volver
+            </button>
+            <div className="flex-1" />
+            {paso === "conocer" && (isEditing ? (
+              <button type="button" onClick={() => ir("datos")}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                Quiero este rubro <ArrowRight className="h-4 w-4" />
+              </button>
+            ) : (
+              <button type="button" onClick={() => void save()}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                Empezar con {elegido?.label} <ArrowRight className="h-4 w-4" />
+              </button>
+            ))}
+            {paso === "datos" && (
+              <button type="button" onClick={() => ir("confirmar")} disabled={downloading !== null}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 panel-oscuro:bg-white px-5 text-sm font-semibold text-white panel-oscuro:text-slate-900 hover:bg-slate-800 disabled:opacity-50">
+                Entendido, seguir <ArrowRight className="h-4 w-4" />
+              </button>
+            )}
+            {paso === "confirmar" && (
+              <button type="button" onClick={() => void save()} disabled={!confirmado || saving}
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40">
+                Cambiar y borrar todo
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
