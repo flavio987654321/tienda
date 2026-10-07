@@ -803,7 +803,7 @@ function VehiculosPageInner() {
           product={selected} accent={accent} currency={currency}
           whatsapp={whatsapp} products={filtered}
           onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
-          storeId={storeId} isOwner={isOwner} />
+          storeId={storeId} isOwner={isOwner} nombreTienda={storeName} />
       )}
     </div>
   );

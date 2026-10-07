@@ -6,9 +6,10 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
 import ConsultaVehiculo from "./ConsultaVehiculo";
-import { DescargasDeFicha, BloquesDeLaFicha } from "./FichaDelVehiculo";
+import { DescargasDeFicha, HojaDeFicha } from "./FichaDelVehiculo";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import TasacionVehiculo from "./TasacionVehiculo";
-import { tipoDeFicha } from "@/lib/fichaVehiculo";
+import { tipoDeFicha, NOMBRE_TIPO, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
 import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -122,7 +123,9 @@ export const AM_MODAL_CSS = `
   }
 `;
 
-export function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect, isFavorite, onToggleFavorite, storeId, isOwner, isPreview }: {
+export function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect, isFavorite, onToggleFavorite, storeId, isOwner, isPreview, nombreTienda }: {
+  /** Para el encabezado de la ficha. En los templates sale del contexto de la tienda. */
+  nombreTienda?: string;
   product: StorefrontProduct; accent: string; currency: string;
   whatsapp: { enabled: boolean; number: string };
   products: StorefrontProduct[];
@@ -134,6 +137,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   isOwner?: boolean;
   isPreview?: boolean;
 }) {
+  const configTienda = useStoreConfig();
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string|null>(null);
@@ -249,7 +253,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
               </span>
             )}
             {product.category && (
-              <span style={{ fontSize: 12, color: "#bbb" }}>{product.category}</span>
+              <span style={{ fontSize: 12, color: "#8a93a3", textTransform: "capitalize" }}>{NOMBRE_TIPO[product.category.toLowerCase() as CategoriaVehiculo]?.uno ?? product.category}</span>
             )}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
@@ -438,7 +442,9 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
             </div>
           </div>
 
-          {specs.length > 0 && (
+          {/* En un vehículo, los datos van adentro de la hoja de la ficha (abajo);
+              esta lista queda para lo que no lleva ficha (repuestos, accesorios). */}
+          {specs.length > 0 && !tipoDeFicha(product.category) && (
             <div style={{ padding: "24px 28px", borderTop: "1px solid #f0f0f0" }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, margin:"0 0 16px" }}>
                 <div style={{ width:4, height:18, borderRadius:2, background:accent, flexShrink:0 }}/>
@@ -468,7 +474,9 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
             </div>
           )}
 
-          <BloquesDeLaFicha product={product} accent={accent} />
+          <HojaDeFicha product={product} accent={accent} isPreview={isPreview}
+            datos={specs.map(s => ({ label: s.label, valor: s.value }))}
+            nombreTienda={nombreTienda ?? configTienda?.storeName} />
 
           {product.description && (
             <div style={{ padding: "20px 28px 28px", borderTop: "1px solid #f0f0f0" }}>
