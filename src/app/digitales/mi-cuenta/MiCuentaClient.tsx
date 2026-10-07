@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import { useIsPwa } from "@/hooks/useIsPwa";
 import {
   CheckCircle, Clock, AlertTriangle, ArrowRight, Sparkles, Rocket, Crown,
-  Loader2, Star, Percent, ShieldCheck, X, Mail, KeyRound, Phone, UserRound, CalendarDays, Gauge,
+  Loader2, Star, Percent, ShieldCheck, X, Mail, KeyRound, UserRound, CalendarDays, Gauge,
 } from "lucide-react";
 import { PRECIOS_DIGITALES, COMISION_DIGITAL, DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { COPY_DIGITAL, featuresDigital, type TierDigital } from "@/lib/planes-digitales";
-import { validarTelefono, LARGO_MAXIMO as TELEFONO_MAXIMO } from "@/lib/telefono";
+import { validarTelefono } from "@/lib/telefono";
 import { pesoLegible, type UsoDeLaCuenta } from "@/lib/uso-digital";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import { cuandoVuelven } from "@/lib/cupo-ia-texto";
@@ -720,24 +721,13 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
               <label htmlFor="telefono" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
                 Celular de contacto
               </label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
-                <input
-                  id="telefono"
-                  type="tel"
-                  inputMode="tel"
-                  value={telefono}
-                  maxLength={TELEFONO_MAXIMO}
-                  aria-invalid={problemaTelefono !== null}
-                  aria-describedby={problemaTelefono ? "error-telefono" : "ayuda-telefono"}
-                  onChange={(e) => { setTelefono(e.target.value); setGuardado(false); }}
-                  className={`w-full pl-11 pr-4 py-3 rounded-2xl border text-sm text-gray-900 panel-oscuro:text-gray-100 outline-none transition-all ${
+              <div>
+                <CampoTelefono id="telefono" value={telefono} onChange={(v) => { setTelefono(v); setGuardado(false); }} ayuda={false}
+                  claseCampo={`px-4 py-3 rounded-2xl border text-sm text-gray-900 panel-oscuro:text-gray-100 outline-none transition-all ${
                     problemaTelefono
                       ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
                       : "border-gray-200 panel-oscuro:border-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                  }`}
-                  placeholder="+54 9 11 5555 5555"
-                />
+                  }`} />
               </div>
               {problemaTelefono ? (
                 <p id="error-telefono" className="text-xs text-red-600 mt-1.5 font-medium">{problemaTelefono}</p>

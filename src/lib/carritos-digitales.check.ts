@@ -286,7 +286,8 @@ const politica = readFileSync("src/app/privacidad/page.tsx", "utf8");
    de un navegador no es una validación— y si no parece un celular se guarda
    nulo y la compra sigue. */
 check("CAR-AJ",
-  /type="tel"/.test(checkout) && !/required/.test(checkout)
+  // 08/10/26: el campo es el de toda la plataforma (CampoTelefono), sin `required`.
+  /<CampoTelefono\b/.test(checkout) && !/required/.test(checkout)
   && /telefono: celularArgentino\(telefono\) \?\? undefined/.test(checkout)
   && /const telefono = celularArgentino\(/.test(rutaComprar) && /telefonoDigital: telefono,/.test(rutaComprar),
   "el celular es opcional, se valida de los dos lados, y uno inválido no frena la compra");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { HeartHandshake, Loader2, Sparkles, ArrowLeft } from "lucide-react";
@@ -193,13 +194,8 @@ function DonarCausaContent() {
             placeholder="Nombre y apellido"
             className="w-full bg-white border border-amber-900/10 rounded-lg px-3 py-2.5 text-sm"
           />
-          <input
-            type="tel"
-            value={donorPhone}
-            onChange={(e) => setDonorPhone(e.target.value)}
-            placeholder="Teléfono"
-            className="w-full bg-white border border-amber-900/10 rounded-lg px-3 py-2.5 text-sm"
-          />
+          <CampoTelefono value={donorPhone} onChange={setDonorPhone} etiqueta="Teléfono" acento="#b45309"
+            claseCampo="bg-white border border-amber-900/10 rounded-lg px-3 py-2.5 text-sm" />
           <input
             type="email"
             value={donorEmail}

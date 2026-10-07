@@ -1,5 +1,6 @@
 "use client";
 
+import CampoTelefono from "@/components/CampoTelefono";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import CampoAuto from "@/components/CampoAuto";
@@ -484,14 +485,12 @@ export default function PerfilPage() {
 
               {/* Teléfono */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Teléfono / WhatsApp</label>
+                <label htmlFor="perfil-telefono" className="block text-sm font-medium text-gray-700 panel-oscuro:text-gray-300 mb-1.5">Teléfono / WhatsApp</label>
                 <div className="flex gap-2 items-center">
-                  <input
-                    type="text" value={form.phone}
-                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                    placeholder="5491112345678"
-                    className="flex-1 border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <div className="flex-1 min-w-0">
+                    <CampoTelefono id="perfil-telefono" value={form.phone} onChange={(v) => setForm((p) => ({ ...p, phone: v }))}
+                      claseCampo="border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  </div>
                   {verifStore && (
                     <div className="shrink-0" title={toggleDisabled && !isVerified ? "Solo disponible tras verificación" : ""}>
                       <Toggle checked={verifStore.verifiedShowPhone} onChange={(v) => handleToggle("verifiedShowPhone", v)} disabled={toggleDisabled} />

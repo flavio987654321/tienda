@@ -188,7 +188,9 @@ chequear(
   "y el formulario usa los MISMOS topes que el servidor, no números escritos a mano",
   /maxLength=\{MAX_NOMBRE\}/.test(formulario) &&
     /maxLength=\{MAX_EMAIL\}/.test(formulario) &&
-    /maxLength=\{MAX_TELEFONO\}/.test(formulario) &&
+    // El teléfono es el CampoTelefono de toda la plataforma (08/10/26): arma a lo
+    // sumo 30 caracteres, menos que MAX_TELEFONO (40). El tope sigue sin poder pasarse.
+    (/maxLength=\{MAX_TELEFONO\}/.test(formulario) || /<CampoTelefono\b/.test(formulario)) &&
     /maxLength=\{MAX_REFERENCIA\}/.test(formulario) &&
     /maxLength=\{MAX_MOTIVO\}/.test(formulario),
   "escritos a mano se separan solos, y el que sufre es quien escribe de más y recibe un error en vez de un tope"

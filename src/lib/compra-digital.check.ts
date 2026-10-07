@@ -250,7 +250,8 @@ check("PAN-D", /if \(esPrevia\)[\s\S]{0,200}disabled/.test(dibujante),
    Tampoco cuenta el campo del cupón (15/09/26): vive adentro del resumen del
    precio, no entre el botón y el pago, y quien tiene un cupón lo BUSCA; sin
    el campo, es esa persona la que se va. */
-const paraEscribir = (formulario.match(/<input\b(?![^>]*type="checkbox")(?![^>]*aria-label="C.{1,2}digo de cup.{1,2}n")/g) ?? []).length;
+// El celular es un <CampoTelefono> desde el 08/10/26 (característica + número): cuenta como una casilla.
+const paraEscribir = (formulario.match(/<input\b(?![^>]*type="checkbox")(?![^>]*aria-label="C.{1,2}digo de cup.{1,2}n")|<CampoTelefono\b/g) ?? []).length;
 /* Tres desde el 23/09/26, con el celular. Sigue habiendo UNO obligatorio —el
    mail— y los otros dos están bajo el rótulo "Opcional" con el para qué al
    lado. El número sube sólo con una decisión escrita; que este chequeo se

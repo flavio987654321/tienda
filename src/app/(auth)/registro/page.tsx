@@ -3,6 +3,8 @@
 import { useState, Suspense, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
+import CampoTelefono from "@/components/CampoTelefono";
+import { errorDeTelefono } from "@/lib/caracteristicas";
 import { useSesion } from "@/components/AuthProvider";
 import { SesionYaAbierta } from "@/components/SesionYaAbierta";
 import { BotonGoogle, SeparadorO } from "@/components/BotonGoogle";
@@ -174,9 +176,8 @@ function validate(form: { name: string; email: string; password: string; storeNa
     if (!form.storeName.trim() || form.storeName.trim().length < 3)
       return "El nombre de tu tienda debe tener al menos 3 caracteres.";
   }
-  const phoneDigits = form.phone.replace(/\D/g, "");
-  if (!form.phone.trim() || phoneDigits.length < 8 || phoneDigits.length > 15)
-    return "Ingresá un teléfono válido (mínimo 8 dígitos).";
+  const errTel = errorDeTelefono(form.phone);
+  if (errTel) return `Revisá el teléfono: ${errTel.charAt(0).toLowerCase()}${errTel.slice(1)}`;
   return null;
 }
 
@@ -895,15 +896,13 @@ function RegistroContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono</label>
-                <input
-                  type="tel" name="phone" value={form.phone} onChange={handleChange} onBlur={handleBlur}
-                  placeholder="Ej: 11 4567-8901"
-                  className={`w-full bg-white border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-400 transition-all ${fieldErrors.phone ? "border-red-400" : "border-gray-300"}`}
-                />
+                <label htmlFor="registro-telefono" className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono</label>
+                <CampoTelefono id="registro-telefono" name="phone" value={form.phone}
+                  onChange={(v) => { setForm((f) => ({ ...f, phone: v })); setFieldErrors((p) => ({ ...p, phone: "" })); }}
+                  claseCampo={`bg-white border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-400 transition-all ${fieldErrors.phone ? "border-red-400" : "border-gray-300"}`} />
                 {fieldErrors.phone
                   ? <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>
-                  : <p className="text-xs text-gray-500 mt-1">Con código de área, sin el 0. Ej: 11 4567-8901</p>
+                  : <p className="text-xs text-gray-500 mt-1">Elegí tu característica (buscala por ciudad) y escribí el número.</p>
                 }
               </div>
 

@@ -1,9 +1,10 @@
 "use client";
 
+import CampoTelefono from "@/components/CampoTelefono";
 import { useState } from "react";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { useTurnstile } from "@/components/Turnstile";
-import { MAX_EMAIL, MAX_MOTIVO, MAX_NOMBRE, MAX_REFERENCIA, MAX_TELEFONO } from "@/lib/arrepentimiento";
+import { MAX_EMAIL, MAX_MOTIVO, MAX_NOMBRE, MAX_REFERENCIA } from "@/lib/arrepentimiento";
 
 /**
  * El botón de arrepentimiento, en su versión de formulario.
@@ -139,13 +140,8 @@ export default function ArrepentimientoForm({
       </Campo>
 
       <Campo label="Teléfono" ayuda="Opcional. Por si es más rápido llamarte.">
-        <input
-          value={telefono}
-          onChange={(e) => setTelefono(e.target.value)}
-          maxLength={MAX_TELEFONO}
-          autoComplete="tel"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500"
-        />
+        <CampoTelefono value={telefono} onChange={setTelefono} etiqueta="Teléfono"
+          claseCampo="rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500" />
       </Campo>
 
       {/* Texto libre y no un número con formato: del otro lado hay alguien que

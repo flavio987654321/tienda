@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import { ArrowLeft, Send, CheckCircle, AlertTriangle, Loader2, LifeBuoy } from "lucide-react";
 import Link from "next/link";
 
@@ -105,15 +106,9 @@ export default function CanastaSoportePage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-600">Teléfono</label>
-                  <input
-                    type="tel"
-                    value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    placeholder="Tu teléfono"
-                    maxLength={40}
-                    className="w-full rounded-xl border border-amber-900/10 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
+                  <label htmlFor="soporte-telefono" className="text-xs font-semibold text-gray-600">Teléfono</label>
+                  <CampoTelefono id="soporte-telefono" value={telefono} onChange={setTelefono} acento="#b45309"
+                    claseCampo="rounded-xl border border-amber-900/10 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500" />
                 </div>
               </div>
 

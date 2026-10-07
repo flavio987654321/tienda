@@ -1,5 +1,6 @@
 "use client";
 
+import CampoTelefono from "@/components/CampoTelefono";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, HeartHandshake, Upload, Plus, Trash2 } from "lucide-react";
@@ -145,12 +146,8 @@ function CreateCausaForm() {
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Teléfono de contacto</label>
-          <input
-            type="text"
-            value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
-          />
+          <CampoTelefono value={contactPhone} onChange={setContactPhone} etiqueta="Teléfono de contacto"
+            claseCampo="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50" />
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Meta en pesos</label>
@@ -338,12 +335,8 @@ function EditCausaForm({ campaign }: { campaign: NonNullable<Campaign> }) {
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Teléfono de contacto</label>
-          <input
-            type="text"
-            value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
-          />
+          <CampoTelefono value={contactPhone} onChange={setContactPhone} etiqueta="Teléfono de contacto"
+            claseCampo="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50" />
         </div>
         <div>
           <label className="text-xs text-gray-500 mb-1 block">Meta en $ (opcional — vacío = sin techo)</label>

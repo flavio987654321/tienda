@@ -5,6 +5,7 @@ import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
 import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import CampoTelefono from "@/components/CampoTelefono";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { valoresElegidos } from "@/lib/opciones";
 import { textoSeleccion } from "@/components/store/shared/cartTypes";
@@ -139,11 +140,19 @@ export function CheckoutModal({
               </div>
 
               <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14 }}>Datos del comprador</p>
-              {([["nombre","Nombre y apellido","text"],["email","Email","email"],["telefono","Teléfono","tel"],["direccion","Dirección","text"]] as const).map(([field, ph, type]) => (
+              {([["nombre","Nombre y apellido","text"],["email","Email","email"]] as const).map(([field, ph, type]) => (
                 <input key={field} required type={type} placeholder={ph}
                   value={buyerForm[field]} onChange={e => setBuyerForm(f => ({ ...f, [field]: e.target.value }))}
                   style={inputStyle} />
               ))}
+              {/* El teléfono de toda la plataforma: característica + número (components/CampoTelefono). */}
+              <div style={{ marginBottom: inputStyle.marginBottom ?? 10 }}>
+                <CampoTelefono value={buyerForm.telefono} onChange={v => setBuyerForm(f => ({ ...f, telefono: v }))} required
+                  estiloCampo={{ ...inputStyle, marginBottom: 0 }} acento={accent} etiqueta="Teléfono" />
+              </div>
+              <input required type="text" placeholder="Dirección"
+                value={buyerForm.direccion} onChange={e => setBuyerForm(f => ({ ...f, direccion: e.target.value }))}
+                style={inputStyle} />
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
                 <input required placeholder="Ciudad"
                   value={buyerForm.ciudad} onChange={e => setBuyerForm(f => ({ ...f, ciudad: e.target.value }))}

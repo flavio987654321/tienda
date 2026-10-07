@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import { useRouter } from "next/navigation";
 import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { origenAnotado } from "@/lib/visitas-digitales";
@@ -546,20 +547,10 @@ export default function CheckoutClient(p: Props) {
                    declarado, y ese fin es ESTA compra — no una lista de
                    difusión. Lo mismo está escrito en la política y en la
                    pantalla de Carritos, para quien vende. */}
-            <label className="mt-3 block">
-              <span className="sr-only">Celular</span>
-              <input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                maxLength={30}
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                placeholder="Celular (11 5555-5555)"
-                disabled={!p.puedeCobrar}
-                className={`${campo} border py-2.5 text-sm`}
-              />
-            </label>
+            <div className="mt-3">
+              <CampoTelefono value={telefono} onChange={setTelefono} disabled={!p.puedeCobrar} etiqueta="Celular"
+                claseCampo={`${campo} border py-2.5 text-sm`} ayuda={false} />
+            </div>
             {/* ⚠️ Si escribió algo que no parece un celular, HAY QUE DECÍRSELO.
                 El número se descarta —así se guarda uno que sirva o ninguno—
                 pero descartarlo en silencio es peor que no pedirlo: la persona
@@ -568,7 +559,7 @@ export default function CheckoutClient(p: Props) {
                 es opcional y el botón de pagar sigue prendido. */}
             <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">
               {telefono.trim() && !celularArgentino(telefono)
-                ? "Revisá el número: con código de área y sin el 0 ni el 15 (por ejemplo, 11 5555-5555). Así como está no lo vamos a guardar."
+                ? "Revisá el número: elegí la característica y completá el número. Así como está no lo vamos a guardar."
                 : "Por si hay algún problema con tu compra, para que puedan escribirte por WhatsApp. No se usa para nada más."}
             </p>
           </div>

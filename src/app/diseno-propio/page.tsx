@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import Link from "next/link";
 import {
   ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Loader2, Sparkles, X,
@@ -501,20 +502,12 @@ export default function DisenoPropioPage() {
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                       />
                     </label>
-                    <label className="block">
-                      <span className="text-sm font-semibold text-gray-700 block mb-2">Teléfono o WhatsApp</span>
-                      <input
-                        type="tel"
-                        inputMode="tel"
-                        value={form.telefono}
-                        onChange={(e) => set("telefono", e.target.value)}
-                        maxLength={30}
-                        autoComplete="tel"
-                        placeholder="Ej: 11 2345 6789"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
-                      />
+                    <div>
+                      <label htmlFor="dp-telefono" className="text-sm font-semibold text-gray-700 block mb-2">Teléfono o WhatsApp</label>
+                      <CampoTelefono id="dp-telefono" value={form.telefono} onChange={(v) => set("telefono", v)} acento="#f97316"
+                        claseCampo="px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400" />
                       <span className="text-xs text-gray-400 mt-1.5 block">Para poder coordinar más rápido si hace falta.</span>
-                    </label>
+                    </div>
                     <div>
                       <span className="text-sm font-semibold text-gray-700 block mb-2">¿Ya tenés tienda en TiendaApps?</span>
                       <div className="flex gap-3">

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { getContrastColor } from "@/contexts/EditContext";
 import { ESTADOS_DEL_USADO, COMBUSTIBLES, TRANSMISIONES, anioMaximo, ANIO_MINIMO, KM_MAXIMO, validarTasacion } from "@/lib/tasaciones";
 import { conPuntos, sinPuntos } from "@/lib/monedaVehiculo";
+import CampoTelefono from "@/components/CampoTelefono";
+import { errorDeTelefono } from "@/lib/caracteristicas";
 
 /* "Tasá tu usado" (06/10/26), rehecha el 07/10/26 como paso a paso. El dueño:
    "siento que está hecho así nomás, le falta amor, efectos, más visual".
@@ -112,6 +114,8 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
     if (paso < 4) { siguiente(); return; }
     if (enviando.current) return;
     setError("");
+    const errTel = errorDeTelefono(f.telefono);
+    if (errTel) { setError(`Revisá el teléfono: ${errTel.charAt(0).toLowerCase()}${errTel.slice(1)}`); return; }
     const v = validarTasacion({ ...f, modalidad: modalidad ?? "PERMUTA" });
     if ("error" in v) { setError(v.error); return; }
     if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
@@ -332,7 +336,12 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
               <label style={etiqueta}>Tu nombre<input className="tv-campo" value={f.nombre} onChange={cambiar("nombre")} maxLength={80} autoComplete="name" style={campo} /></label>
-              <label style={etiqueta}>Teléfono<input className="tv-campo" value={f.telefono} onChange={cambiar("telefono")} maxLength={30} type="tel" inputMode="tel" autoComplete="tel" placeholder="11 5555-1234" style={campo} /></label>
+              {/* Ocupa el renglón entero: la característica y el número no entran en media columna. */}
+              <div style={{ ...etiqueta, gridColumn: "1 / -1" }}>
+                <label htmlFor={`tv-tel-${producto?.id ?? "general"}`}>Teléfono</label>
+                <CampoTelefono id={`tv-tel-${producto?.id ?? "general"}`} value={f.telefono} onChange={(v) => setF((x) => ({ ...x, telefono: v }))}
+                  estiloCampo={{ ...campo, marginTop: 0 }} claseCampo="tv-campo" acento={accent} />
+              </div>
             </div>
           </>
         )}

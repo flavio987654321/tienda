@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import { MessageCircle, Link2, Search, DollarSign, Save, Check, Loader2 } from "lucide-react";
 
 /* Las cuatro preferencias que antes vivían dentro del modal "Configuración
@@ -190,24 +191,11 @@ export function WhatsappCard({ inicial }: { inicial: Whatsapp }) {
         {wa.enabled && (
           <>
             <div>
-              <label className={labelCls}>Número</label>
-              <input
-                className={inputCls}
-                value={wa.number}
-                maxLength={25}
-                inputMode="tel"
-                placeholder="+54 9 11 0000-0000"
-                /* Se filtran las letras al escribir, pero se dejan pasar el "+",
-                   los espacios, los guiones y los paréntesis: son las formas en
-                   que la gente escribe un teléfono, y los templates las limpian
-                   solas. Filtrar de más obligaría a tipear el número corrido,
-                   que es más fácil de equivocar y de releer mal. */
-                onChange={(e) => setWa({ ...wa, number: e.target.value.replace(/[^\d+\s()-]/g, "") })}
-              />
-              {/* El formato libre es real: los templates arman el link con
-                  `number.replace(/\D/g,"")`, o sea que espacios, guiones y
-                  paréntesis se descartan solos. Lo que sí importa es el país. */}
-              <Nota>Escribilo como quieras — los espacios y guiones se ignoran. Lo que no puede faltar es el código de país: <strong className="text-slate-500 panel-oscuro:text-gray-400">+54</strong>.</Nota>
+              <label htmlFor="ajustes-whatsapp" className={labelCls}>Número</label>
+              {/* El campo de teléfono de toda la plataforma (08/10/26): característica
+                  con buscador + número, y se guarda como "+54 9 341 555-1234". */}
+              <CampoTelefono id="ajustes-whatsapp" value={wa.number} onChange={(v) => setWa({ ...wa, number: v })} claseCampo={inputCls} />
+              <Nota>Buscá tu característica por ciudad y escribí el número. Si es de otro país, elegí «Otro país» en la lista.</Nota>
             </div>
             <div>
               <label className={labelCls}>Mensaje de bienvenida</label>

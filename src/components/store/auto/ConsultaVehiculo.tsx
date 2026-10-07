@@ -3,6 +3,8 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
+import CampoTelefono from "@/components/CampoTelefono";
+import { errorDeTelefono } from "@/lib/caracteristicas";
 import { getContrastColor } from "@/contexts/EditContext";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -95,9 +97,9 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
     e.preventDefault();
     if (enviando.current) return;
     setError("");
-    const digitos = telefono.replace(/\D/g, "");
     if (!nombre.trim()) { setError("Escribí tu nombre."); return; }
-    if (digitos.length < 8 || digitos.length > 15) { setError("Revisá el teléfono: poné el número completo, con característica."); return; }
+    const errTel = errorDeTelefono(telefono);
+    if (errTel) { setError(`Revisá el teléfono: ${errTel.charAt(0).toLowerCase()}${errTel.slice(1)}`); return; }
     if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
     enviando.current = true;
     setEstado("enviando");
@@ -164,10 +166,12 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
             Nombre
             <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={80} autoComplete="name" required style={{ ...campo, marginTop: 4 }} />
           </label>
-          <label style={{ fontSize: 12, color: "#555" }}>
-            Teléfono
-            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={30} type="tel" inputMode="tel" autoComplete="tel" placeholder="Ej: 11 5555-1234" required style={{ ...campo, marginTop: 4 }} />
-          </label>
+          <div style={{ fontSize: 12, color: "#555" }}>
+            <label htmlFor={`cv-tel-${product.id}`}>Teléfono</label>
+            <div style={{ marginTop: 4 }}>
+              <CampoTelefono id={`cv-tel-${product.id}`} value={telefono} onChange={setTelefono} required estiloCampo={campo} acento={accent} />
+            </div>
+          </div>
           <label style={{ fontSize: 12, color: "#555" }}>
             Mensaje <span style={{ color: "#999" }}>(opcional)</span>
             <textarea value={mensaje} onChange={(e) => setMensaje(e.target.value)} maxLength={1000} rows={2} placeholder="Ej: ¿Aceptan permuta? ¿Tiene financiación?" style={{ ...campo, marginTop: 4, resize: "vertical" }} />

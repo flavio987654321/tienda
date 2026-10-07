@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CampoTelefono from "@/components/CampoTelefono";
 import { X, Check, Loader2, AlertTriangle } from "lucide-react";
 import { conPuntos, precioEn } from "@/lib/monedaVehiculo";
 
@@ -153,15 +154,9 @@ export default function VehicleStatusModal({ productId, productName, currentStat
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Teléfono del comprador</label>
-                <input
-                  value={buyerPhone}
-                  onChange={e => setBuyerPhone(e.target.value)}
-                  placeholder="+54 11 1234-5678"
-                  type="tel"
-                  maxLength={30}
-                  className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                />
+                <label htmlFor="vsm-tel-comprador" className="text-xs font-medium text-gray-600 panel-oscuro:text-gray-400 mb-1 block">Teléfono del comprador</label>
+                <CampoTelefono id="vsm-tel-comprador" value={buyerPhone} onChange={setBuyerPhone}
+                  claseCampo="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent" />
               </div>
 
               <div>

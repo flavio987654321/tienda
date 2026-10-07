@@ -2,6 +2,8 @@
 import { useRef, useState } from "react";
 import { getContrastColor } from "@/contexts/EditContext";
 import { CATEGORIAS_BUSQUEDA, validarBusqueda } from "@/lib/busquedas";
+import CampoTelefono from "@/components/CampoTelefono";
+import { errorDeTelefono } from "@/lib/caracteristicas";
 
 /* "Avisame si entra" (06/10/26): la persona deja qué busca y su teléfono, y
    la concesionaria le avisa cuando entra. Va en /vehiculos (botón arriba y
@@ -30,6 +32,8 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
     e.preventDefault();
     if (enviando.current) return;
     setError("");
+    const errTel = errorDeTelefono(f.telefono);
+    if (errTel) { setError(`Revisá el teléfono: ${errTel.charAt(0).toLowerCase()}${errTel.slice(1)}`); return; }
     const v = validarBusqueda({ ...f, categoria: f.categoria || null });
     if ("error" in v) { setError(v.error); return; }
     if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
@@ -86,7 +90,10 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
       </div>
       <div style={dos}>
         <label style={etiqueta}>Tu nombre<input value={f.nombre} onChange={cambiar("nombre")} maxLength={80} autoComplete="name" style={campo} /></label>
-        <label style={etiqueta}>Teléfono<input value={f.telefono} onChange={cambiar("telefono")} maxLength={30} type="tel" inputMode="tel" autoComplete="tel" placeholder="11 5555-1234" style={campo} /></label>
+        <div style={{ ...etiqueta, gridColumn: "1 / -1" }}>
+          <label htmlFor="bv-tel">Teléfono</label>
+          <CampoTelefono id="bv-tel" value={f.telefono} onChange={(v) => setF((x) => ({ ...x, telefono: v }))} estiloCampo={campo} acento={accent} />
+        </div>
       </div>
       {error && <p role="alert" style={{ margin: 0, fontSize: 12, color: "#b91c1c" }}>{error}</p>}
       <button type="submit" disabled={estado === "enviando"}
