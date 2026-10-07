@@ -43,6 +43,8 @@ import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fech
 import { granoPara, nombreGrano, serieParaGrafico, agrupar, etiquetaMes } from "@/lib/serie-grafico";
 import { AVISO_RETENCION, periodoExcedeRetencion } from "@/lib/retencion";
 import { monedaDe, monedaDeTienda, precioEn } from "@/lib/monedaVehiculo";
+import { ESTADO_TASACION, type EstadoTasacion } from "@/lib/tasaciones";
+import { demanda, DIAS_VIGENCIA } from "@/lib/busquedas";
 import { RangeSelector } from "./RangeSelector";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
@@ -486,6 +488,38 @@ function QueEsCada({ unidad }: { unidad: string }) {
 
    Gris y en letra chica a propósito: es un dato para revisar, no una alarma.
    Pintarlo de rojo trataría a un cupón recién creado como si fuera un problema. */
+/** El color de cada estado de tasación, del que espera al que ya terminó. */
+const COLOR_TASACION: Record<EstadoTasacion, string> = {
+  PENDIENTE: "bg-amber-500", OFERTADA: "bg-indigo-500", ACEPTADA: "bg-emerald-500", DESCARTADA: "bg-gray-300 panel-oscuro:bg-gray-600",
+};
+
+/* ── Un ranking de autos ─────────────────────────────────────────────────────
+   El de arriba está hecho para plata (te dejó / trajo / descontaste). Acá se
+   cuentan consultas, visitas o pedidos de búsqueda: un número y su barra. */
+function RankingAutos({ filas, color, unidad, unidades }: {
+  filas: { clave: string; titulo: string; valor: number }[];
+  color: string; unidad: string; unidades: string;
+}) {
+  const maximo = Math.max(...filas.map((f) => f.valor), 1);
+  return (
+    <div className="space-y-3">
+      {filas.map((f) => (
+        <div key={f.clave}>
+          <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 break-words font-medium text-gray-700 panel-oscuro:text-gray-300">{f.titulo}</span>
+            <span className="shrink-0 text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
+              <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{f.valor.toLocaleString("es-AR")}</span> {f.valor === 1 ? unidad : unidades}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
+            <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${Math.round((f.valor / maximo) * 100)}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SinUsar({ titulo, items, href, cta }: {
   titulo: string; items: string[]; href: string; cta: string;
 }) {
@@ -677,6 +711,60 @@ export default async function MetricasPage({
       prisma.product.findMany({ where: { ...unidades, vehicleStatus: "SOLD", soldPrice: { not: null } }, select: { soldPrice: true, attributes: true } }),
     ]);
   }
+
+  /* Lo que las tiendas de autos tienen y la pantalla no mostraba (08/10/26):
+     qué autos traen consultas, cuáles se miran, las tasaciones y lo que la gente
+     busca y no encontró. */
+  let consultasPorAuto: { clave: string; titulo: string; valor: number }[] = [];
+  let consultasGenerales = 0;
+  let masVistos: { clave: string; titulo: string; valor: number }[] = [];
+  let tasacionesPorEstado: { status: string; _count: { _all: number } }[] = [];
+  let busquedasActivas: { marca: string | null; modelo: string | null }[] = [];
+  let busquedasNuevas = 0;
+  if (isAutos) {
+    const desdeVigentes = new Date(now.getTime() - DIAS_VIGENCIA * 86_400_000);
+    const [porAuto, vistos, tasaciones, activas, nuevas] = await Promise.all([
+      prisma.lead.groupBy({
+        by: ["productId"],
+        where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive } },
+        _count: { _all: true },
+      }),
+      prisma.product.findMany({
+        where: { ...unidades, viewCount: { gt: 0 } },
+        select: { id: true, name: true, viewCount: true },
+        orderBy: { viewCount: "desc" },
+        take: TOPE_PANTALLA,
+      }),
+      prisma.tasacion.groupBy({
+        by: ["status"],
+        where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive } },
+        _count: { _all: true },
+      }),
+      // "Activa" con la misma regla que su pantalla: a los 90 días se cierra sola.
+      prisma.busquedaGuardada.findMany({
+        where: { storeId: store.id, status: "ACTIVA", createdAt: { gte: desdeVigentes } },
+        select: { marca: true, modelo: true },
+        take: 2000,
+      }),
+      prisma.busquedaGuardada.count({ where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive } } }),
+    ]);
+    consultasGenerales = porAuto.find((g) => g.productId === null)?._count._all ?? 0;
+    const conAuto = porAuto.filter((g) => g.productId !== null).sort((a, b) => b._count._all - a._count._all).slice(0, TOPE_PANTALLA);
+    // El nombre sale del vehículo; si se borró, del que quedó guardado en la consulta.
+    const ids = conAuto.map((g) => g.productId!);
+    const [vivos, guardados] = await Promise.all([
+      prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }),
+      prisma.lead.findMany({ where: { storeId: store.id, productId: { in: ids } }, select: { productId: true, productName: true }, distinct: ["productId"] }),
+    ]);
+    const nombre = new Map<string, string>([...guardados.map((g) => [g.productId!, g.productName] as const), ...vivos.map((v) => [v.id, v.name] as const)]);
+    consultasPorAuto = conAuto.map((g) => ({ clave: g.productId!, titulo: nombre.get(g.productId!) ?? "Vehículo borrado", valor: g._count._all }));
+    masVistos = vistos.map((v) => ({ clave: v.id, titulo: v.name, valor: v.viewCount }));
+    tasacionesPorEstado = tasaciones;
+    busquedasActivas = activas;
+    busquedasNuevas = nuevas;
+  }
+  const tasacionesPeriodo = tasacionesPorEstado.reduce((a, t) => a + t._count._all, 0);
+  const loQueBuscan = demanda(busquedasActivas, TOPE_PANTALLA);
 
   // ── Queries tienda normal (no AUTOS) ──
   // `couponId` y `subtotal` son para comparar el tamaño de la compra con cupón
@@ -1869,106 +1957,105 @@ export default async function MetricasPage({
             tarjeta va a estar casi vacía. Eso se dice, no se disimula: un
             desglose de tres visitas presentado como si fuera el mapa de la
             tienda hace tomar decisiones sobre nada. */}
-        {!isAutos && (
-          <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
-            <div className="flex items-center justify-between gap-3 mb-0.5">
-              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">De dónde viene la gente</h2>
-              {visitasConOrigen > 0 && (
-                <p className="shrink-0 text-xl font-black text-blue-600 panel-oscuro:text-blue-400">
-                  {visitasConOrigen.toLocaleString("es-AR")}
-                </p>
-              )}
-            </div>
-
-            {visitasConOrigen === 0 ? (
-              <>
-                <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  Todavía no hay ninguna visita con origen. Esto se empezó a medir hace poco:
-                  las visitas anteriores quedaron sin etiqueta y no se pueden recuperar.
-                </p>
-                <p className="mt-3 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
-                  Va a llenarse solo a medida que entre gente. No hay nada para configurar.
-                </p>
-              </>
-            ) : (
-              <>
-                {/* La conclusión primero. El canal más grande que se puede mover,
-                    no el más grande a secas: "directo" casi siempre gana y no se
-                    puede hacer nada con eso. */}
-                <p className="mt-1 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
-                  {canalPrincipal ? (
-                    <>
-                      Lo que más gente te trae es{" "}
-                      <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{NOMBRE_ORIGEN[canalPrincipal.origen]}</span>
-                      {": "}
-                      <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{canalPrincipal.visitas.toLocaleString("es-AR")}</span>
-                      {" "}de {visitasConOrigen.toLocaleString("es-AR")} visitas
-                      {" "}({Math.round((canalPrincipal.visitas / visitasConOrigen) * 100)}%).
-                    </>
-                  ) : (
-                    <>
-                      Toda la gente que entró llegó directo, sin pasar por ninguna red.
-                      Abajo está por qué eso casi nunca es del todo cierto.
-                    </>
-                  )}
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  {origenes.map((o) => {
-                    const pct = Math.round((o.visitas / visitasConOrigen) * 100);
-                    const bolsa = o.origen === "directo" || o.origen === "otro";
-                    return (
-                      <div key={o.origen}>
-                        <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                          <span className={bolsa ? "text-gray-500 panel-oscuro:text-gray-400" : "font-medium text-gray-700 panel-oscuro:text-gray-300"}>
-                            {NOMBRE_ORIGEN[o.origen]}
-                          </span>
-                          <span className="shrink-0 text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
-                            <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{o.visitas.toLocaleString("es-AR")}</span> · {pct}%
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
-                          <div
-                            className={`h-1.5 rounded-full ${bolsa ? "bg-gray-300 panel-oscuro:bg-gray-600" : "bg-blue-500"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Los dos avisos que cambian cómo se lee todo lo de arriba. Van
-                    siempre visibles y no en un globito: en un teléfono el hover
-                    no existe, y una aclaración que no se puede abrir no está. */}
-                <div className="mt-5 space-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-                  {totalViewsPeriod > visitasConOrigen && (
-                    <p>
-                      De las <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{totalViewsPeriod.toLocaleString("es-AR")}</span> visitas
-                      del período se sabe de dónde vinieron{" "}
-                      <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{visitasConOrigen.toLocaleString("es-AR")}</span>.
-                      Los porcentajes de arriba son sobre esas, no sobre el total.
-                    </p>
-                  )}
-                  {visitasDirectas > 0 && (
-                    <p>
-                      <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">&quot;Directo&quot; está inflado, y conviene saberlo.</span>{" "}
-                      WhatsApp abre los links en un navegador que en la mayoría de los teléfonos
-                      no dice de dónde viene, así que buena parte de esas {visitasDirectas.toLocaleString("es-AR")} visitas
-                      salieron en realidad de un WhatsApp tuyo. Para que se cuenten bien, mandá
-                      el link de tu tienda con <span className="font-mono text-gray-600 panel-oscuro:text-gray-400">?utm_source=whatsapp</span> al
-                      final. Lo mismo sirve para cualquier campaña.
-                    </p>
-                  )}
-                  <p>
-                    Esto cuenta <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">visitas, no ventas</span>.
-                    Que un canal traiga más gente no quiere decir que traiga más plata.
-                  </p>
-                </div>
-              </>
+        {/* En autos también: es la misma tabla de visitas y estaba escondida. */}
+        <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+          <div className="flex items-center justify-between gap-3 mb-0.5">
+            <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">De dónde viene la gente</h2>
+            {visitasConOrigen > 0 && (
+              <p className="shrink-0 text-xl font-black text-blue-600 panel-oscuro:text-blue-400">
+                {visitasConOrigen.toLocaleString("es-AR")}
+              </p>
             )}
           </div>
-        )}
+
+          {visitasConOrigen === 0 ? (
+            <>
+              <p className="mt-1 text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                Todavía no hay ninguna visita con origen. Esto se empezó a medir hace poco:
+                las visitas anteriores quedaron sin etiqueta y no se pueden recuperar.
+              </p>
+              <p className="mt-3 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
+                Va a llenarse solo a medida que entre gente. No hay nada para configurar.
+              </p>
+            </>
+          ) : (
+            <>
+              {/* La conclusión primero. El canal más grande que se puede mover,
+                  no el más grande a secas: "directo" casi siempre gana y no se
+                  puede hacer nada con eso. */}
+              <p className="mt-1 text-sm leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+                {canalPrincipal ? (
+                  <>
+                    Lo que más gente te trae es{" "}
+                    <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{NOMBRE_ORIGEN[canalPrincipal.origen]}</span>
+                    {": "}
+                    <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{canalPrincipal.visitas.toLocaleString("es-AR")}</span>
+                    {" "}de {visitasConOrigen.toLocaleString("es-AR")} visitas
+                    {" "}({Math.round((canalPrincipal.visitas / visitasConOrigen) * 100)}%).
+                  </>
+                ) : (
+                  <>
+                    Toda la gente que entró llegó directo, sin pasar por ninguna red.
+                    Abajo está por qué eso casi nunca es del todo cierto.
+                  </>
+                )}
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {origenes.map((o) => {
+                  const pct = Math.round((o.visitas / visitasConOrigen) * 100);
+                  const bolsa = o.origen === "directo" || o.origen === "otro";
+                  return (
+                    <div key={o.origen}>
+                      <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                        <span className={bolsa ? "text-gray-500 panel-oscuro:text-gray-400" : "font-medium text-gray-700 panel-oscuro:text-gray-300"}>
+                          {NOMBRE_ORIGEN[o.origen]}
+                        </span>
+                        <span className="shrink-0 text-xs text-gray-400 panel-oscuro:text-gray-500 tabular-nums">
+                          <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{o.visitas.toLocaleString("es-AR")}</span> · {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
+                        <div
+                          className={`h-1.5 rounded-full ${bolsa ? "bg-gray-300 panel-oscuro:bg-gray-600" : "bg-blue-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Los dos avisos que cambian cómo se lee todo lo de arriba. Van
+                  siempre visibles y no en un globito: en un teléfono el hover
+                  no existe, y una aclaración que no se puede abrir no está. */}
+              <div className="mt-5 space-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                {totalViewsPeriod > visitasConOrigen && (
+                  <p>
+                    De las <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{totalViewsPeriod.toLocaleString("es-AR")}</span> visitas
+                    del período se sabe de dónde vinieron{" "}
+                    <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">{visitasConOrigen.toLocaleString("es-AR")}</span>.
+                    Los porcentajes de arriba son sobre esas, no sobre el total.
+                  </p>
+                )}
+                {visitasDirectas > 0 && (
+                  <p>
+                    <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">&quot;Directo&quot; está inflado, y conviene saberlo.</span>{" "}
+                    WhatsApp abre los links en un navegador que en la mayoría de los teléfonos
+                    no dice de dónde viene, así que buena parte de esas {visitasDirectas.toLocaleString("es-AR")} visitas
+                    salieron en realidad de un WhatsApp tuyo. Para que se cuenten bien, mandá
+                    el link de tu tienda con <span className="font-mono text-gray-600 panel-oscuro:text-gray-400">?utm_source=whatsapp</span> al
+                    final. Lo mismo sirve para cualquier campaña.
+                  </p>
+                )}
+                <p>
+                  Esto cuenta <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">visitas, no ventas</span>.
+                  Que un canal traiga más gente no quiere decir que traiga más plata.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* ── Sección central: AUTOS = estado de flota | resto = productos + pedidos ── */}
         {isAutos ? (
@@ -2088,6 +2175,101 @@ export default async function MetricasPage({
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Lo propio de autos ── */}
+        {isAutos && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+              <div className="flex items-center justify-between gap-3 mb-0.5">
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Qué autos traen más consultas</h2>
+                <p className="shrink-0 text-xl font-black text-indigo-600 panel-oscuro:text-indigo-400">{totalLeadsPeriod}</p>
+              </div>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">{subtituloPeriodo}</p>
+              {consultasPorAuto.length === 0 ? (
+                <p className="text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">Sin consultas por un auto en estos {rangeDays} días.</p>
+              ) : (
+                <RankingAutos filas={consultasPorAuto} color="bg-indigo-500" unidad="consulta" unidades="consultas" />
+              )}
+              {consultasGenerales > 0 && (
+                <p className="mt-4 text-xs leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
+                  Y {consultasGenerales} consulta{consultasGenerales !== 1 ? "s" : ""} general{consultasGenerales !== 1 ? "es" : ""}, sin un auto en particular.
+                </p>
+              )}
+              <Link href="/dashboard/consultas" className="mt-4 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline print:hidden">Ver consultas →</Link>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+              <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Los autos más vistos</h2>
+              {/* El contador es uno por auto y nunca se reinicia: no se puede
+                  partir por período, y eso se dice en vez de disimularlo. */}
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">Desde que se publicó cada uno — no depende del período elegido</p>
+              {masVistos.length === 0 ? (
+                <p className="text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">Todavía nadie abrió la ficha de un auto. Se cuenta cada vez que alguien entra a ver uno.</p>
+              ) : (
+                <RankingAutos filas={masVistos} color="bg-blue-500" unidad="visita" unidades="visitas" />
+              )}
+              <Link href="/dashboard/stock" className="mt-4 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline print:hidden">Ver stock y rentabilidad →</Link>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6">
+              <div className="flex items-center justify-between gap-3 mb-0.5">
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Tasaciones</h2>
+                <p className="shrink-0 text-xl font-black text-amber-600 panel-oscuro:text-amber-400">{tasacionesPeriodo}</p>
+              </div>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">Pedidas en estos {rangeDays} días, y en qué quedaron</p>
+              {tasacionesPeriodo === 0 ? (
+                <p className="text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">Nadie pidió tasar su usado en estos {rangeDays} días.</p>
+              ) : (
+                <div className="space-y-3">
+                  {(["PENDIENTE", "OFERTADA", "ACEPTADA", "DESCARTADA"] as EstadoTasacion[]).map((e) => {
+                    const n = tasacionesPorEstado.find((t) => t.status === e)?._count._all ?? 0;
+                    const pct = Math.round((n / tasacionesPeriodo) * 100);
+                    const color = COLOR_TASACION[e];
+                    return (
+                      <div key={e}>
+                        <div className="mb-1 flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${color}`} />
+                            <span className="text-gray-700 panel-oscuro:text-gray-300">{ESTADO_TASACION[e].etiqueta}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900 panel-oscuro:text-gray-100">{n}</span>
+                            <span className="w-8 text-right text-xs text-gray-400 panel-oscuro:text-gray-500">{pct}%</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-gray-100 panel-oscuro:bg-gray-800">
+                          <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <Link href="/dashboard/tasaciones" className="mt-4 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline print:hidden">Ver tasaciones →</Link>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6" data-print="largo">
+              <div className="flex items-center justify-between gap-3 mb-0.5">
+                <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">Lo que te buscan</h2>
+                <p className="shrink-0 text-xl font-black text-emerald-600 panel-oscuro:text-emerald-400">{busquedasActivas.length}</p>
+              </div>
+              <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mb-4">
+                Búsquedas guardadas activas hoy · {busquedasNuevas} nueva{busquedasNuevas !== 1 ? "s" : ""} en estos {rangeDays} días
+              </p>
+              {busquedasActivas.length === 0 ? (
+                <p className="text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">Nadie dejó guardado lo que busca. Cuando alguien lo haga y entre un auto que coincida, te avisamos.</p>
+              ) : loQueBuscan.length === 0 ? (
+                <p className="text-sm leading-relaxed text-gray-500 panel-oscuro:text-gray-400">Las búsquedas activas no piden una marca ni un modelo en particular.</p>
+              ) : (
+                <RankingAutos
+                  filas={loQueBuscan.map((d) => ({ clave: d.que, titulo: d.que, valor: d.cuantas }))}
+                  color="bg-emerald-500" unidad="persona" unidades="personas"
+                />
+              )}
+              <Link href="/dashboard/busquedas" className="mt-4 inline-block text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline print:hidden">Ver búsquedas →</Link>
             </div>
           </div>
         )}

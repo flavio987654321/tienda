@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
+import { ESTADO_TASACION, esEstadoTasacion } from "@/lib/tasaciones";
+import { DIAS_VIGENCIA } from "@/lib/busquedas";
 import { parseOrderPromoSummary } from "@/lib/email";
 import { resumirCarritos, resumirCupones, resumirPromos, compararCompra, resumirJuego, elegirCampanas } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
@@ -111,8 +113,8 @@ export async function GET(req: NextRequest) {
      Los montos van en la moneda de cada vehículo, sin tipo de cambio. */
   if (isAutos) {
     const principal = monedaDeTienda(store.storeConfig);
-    const [leads, leadsPrev, vendidos, vendidosPrev, vistas] = await Promise.all([
-      prisma.lead.findMany({ where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate } }, select: { createdAt: true } }),
+    const [leads, leadsPrev, vendidos, vendidosPrev, vistas, tasaciones, busquedasActivas, busquedasNuevas] = await Promise.all([
+      prisma.lead.findMany({ where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate } }, select: { createdAt: true, productId: true, productName: true } }),
       prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: prevStartDate, lt: prevEndDate } } }),
       prisma.product.findMany({
         where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: startDate, lt: endDate } },
@@ -124,7 +126,18 @@ export async function GET(req: NextRequest) {
         where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
         select: { date: true, count: true },
       }).catch(() => [] as { date: string; count: number }[]),
+      prisma.tasacion.groupBy({ by: ["status"], where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate } }, _count: { _all: true } }),
+      prisma.busquedaGuardada.count({ where: { storeId: store.id, status: "ACTIVA", createdAt: { gte: new Date(now.getTime() - DIAS_VIGENCIA * 86_400_000) } } }),
+      prisma.busquedaGuardada.count({ where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate } } }),
     ]);
+    // Todas, no un podio: es lo que la pantalla no puede dar.
+    const porAuto = new Map<string, { nombre: string; n: number }>();
+    for (const l of leads) {
+      const clave = l.productId ?? "";
+      const e = porAuto.get(clave) ?? { nombre: l.productId ? l.productName : "(consulta general)", n: 0 };
+      e.n++;
+      porAuto.set(clave, e);
+    }
     const porDia = new Map(days.map((d) => [d.dateStr, { consultas: 0, vendidos: 0, visitas: 0 }]));
     for (const l of leads) { const d = porDia.get(diaArgentino(l.createdAt)); if (d) d.consultas++; }
     for (const v of vendidos) { const d = v.soldAt && porDia.get(diaArgentino(v.soldAt)); if (d) d.vendidos++; }
@@ -144,7 +157,17 @@ export async function GET(req: NextRequest) {
       `Autos vendidos,${vendidos.length}`,
       `Autos vendidos periodo anterior,${vendidosPrev}`,
       `Visitas,${totalVistas}`,
+      `Tasaciones pedidas,${tasaciones.reduce((a, t) => a + t._count._all, 0)}`,
+      ...tasaciones.filter((t) => esEstadoTasacion(t.status)).map((t) => `${csv("Tasaciones - " + ESTADO_TASACION[t.status as keyof typeof ESTADO_TASACION].etiqueta)},${t._count._all}`),
+      `Busquedas guardadas activas hoy,${busquedasActivas}`,
+      `Busquedas guardadas nuevas,${busquedasNuevas}`,
       ``,
+      ...(porAuto.size > 0 ? [
+        `# CONSULTAS POR AUTO`,
+        `Vehiculo,Consultas`,
+        ...[...porAuto.values()].sort((a, b) => b.n - a.n).map((a) => `${csv(a.nombre)},${a.n}`),
+        ``,
+      ] : []),
       ...(vendidos.length > 0 ? [
         `# AUTOS VENDIDOS`,
         `# Ganancia = precio de venta menos los gastos cargados. Vacia = no tiene gastos cargados (no es cero)`,
