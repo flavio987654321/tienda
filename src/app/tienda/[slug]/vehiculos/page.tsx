@@ -274,13 +274,14 @@ function VehiculosPageInner() {
         if (data.store.tipoTienda && data.store.tipoTienda !== "AUTOS") { setNoEsDeAutos(true); return; }
         setErrorCarga(false);
         setStoreName(data.store.name ?? "Tienda");
-        setContacto({ whatsapp: null, descripcion: data.store.footerDescription || data.store.description || null });
+        setContacto({ whatsapp: null, descripcion: null });
         setStoreId(data.store.id);
         setIsOwner(!!data.isOwner);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.colors?.accent)          setAccent(cfg.colors.accent);
           if (cfg.socialLinks && typeof cfg.socialLinks === "object") setRedes(cfg.socialLinks);
+          if (typeof cfg.textOverrides?.footerFrase?.text === "string") setContacto(c => ({ ...c, descripcion: cfg.textOverrides.footerFrase.text }));
           // El mismo WhatsApp que usa la ficha para las consultas.
           if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setContacto(c => ({ ...c, whatsapp: String(cfg.whatsapp.number) }));
           if (cfg.currency) {
@@ -766,8 +767,9 @@ function VehiculosPageInner() {
           devoluciones, y prometer "Política de envíos" sería mentirle al que
           compra. */}
       <PieDeAutos slug={slug} storeName={storeName} descripcion={contacto.descripcion} whatsapp={contacto.whatsapp} redes={redes}
-        legales={legales} enEditor={fromEditor} acento={accent} onReportar={isOwner ? undefined : () => setShowReport(true)}
-        tema={{ fondo: isAD ? "#f9fafb" : "#f6f8fb", tinta: T, suave: MID, linea: border }} />
+        products={products} legales={legales} enEditor={fromEditor} acento={accent} estilo={isAD ? "drive" : "motor"}
+        onReportar={isOwner ? undefined : () => setShowReport(true)}
+        colores={{ fondo: isAD ? "#111827" : "#070809", tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.1)" }} />
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 

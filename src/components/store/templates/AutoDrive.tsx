@@ -1,4 +1,5 @@
 "use client";
+import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -18,7 +19,6 @@ import { WaIcon, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { opcionesDeFiltro, linkAVehiculo, filtrarVehiculos, filtroVacio, datosDe } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
-import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
 import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
@@ -177,6 +177,7 @@ export default function AutoDrive() {
   const footerBg    = sc["bgFooter"]     ?? TINTA;
   const footerImg   = iovr["sectionbg_bgFooter"];
   const ftMid       = secMid(footerImg, footerBg);
+  const pieOscuro   = !!footerImg?.url || getContrastColor(footerBg) === "light";
 
   const navBg          = sc["navBg"] ?? "#ffffff";
   const navDark        = getContrastColor(navBg) === "light";
@@ -932,34 +933,20 @@ export default function AutoDrive() {
       </div>
 
       {/* ── PIE ── */}
-      <footer style={{ position:"relative", padding:"36px clamp(16px,3vw,28px)", ...secBg(footerImg, footerBg) }}>
+      <footer style={{ position:"relative", padding:"clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", ...secBg(footerImg, footerBg) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo del pie" nombreBloque="Pie de la tienda" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"flex", flexWrap:"wrap", gap:"14px 24px",
-          alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ minWidth:0 }}>
-            <p style={{ margin:"0 0 4px", fontWeight:900, fontSize:16, color: getContrastColor(footerBg) === "light" || footerImg?.url ? "#fff" : TINTA, letterSpacing:-0.3, overflowWrap:"anywhere" }}>{storeName}</p>
-            <p style={{ margin:0, fontSize:12, color:ftMid }}>
-              <EditableZone field="footerCopyright" label="Copyright">
-                {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
-              </EditableZone>
-            </p>
-          </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 16px" }}>
-            {linksLegales(config?.slug, config?.legales, { enEditor: isPreview, esAutos: true }).map(({ clave: tipo, label }) => (
-              <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`}
-                style={{ fontSize:12, color:ftMid, textDecoration:"none" }}>
-                {label}
-              </a>
-            ))}
-            {!isOwner && (
-              <button type="button" onClick={() => setShowReport(true)}
-                style={{ fontSize:12, color:ftMid, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit" }}>
-                Reportar tienda
-              </button>
-            )}
-          </div>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+          {/* El pie ordenado (08/10/26): ver components/store/auto/PieDeAutos. */}
+          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
+            whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="drive"
+            colores={pieOscuro
+              ? { tinta: "#ffffff", suave: ftMid, linea: "rgba(255,255,255,0.1)" }
+              : { tinta: "#111827", suave: ftMid, linea: "rgba(17,24,39,0.12)" }}
+            descripcion={<EditableZone field="footerFrase" label="Frase del pie">{FRASE_PIE}</EditableZone>}
+            copyright={<EditableZone field="footerCopyright" label="Copyright">{`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}</EditableZone>}
+            onReportar={isOwner ? undefined : () => setShowReport(true)} />
         </div>
       </footer>
 

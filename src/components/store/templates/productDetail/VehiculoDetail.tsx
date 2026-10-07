@@ -97,7 +97,7 @@ function FotoAmpliada({ fotos, inicial, nombre, onClose }: { fotos: string[]; in
 }
 
 function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Tema }) {
-  const { slug, storeName, currency, whatsapp, product: p, products, isPreview, isOwner, legales, accentOverride, storeId, socialLinks } = view;
+  const { slug, storeName, currency, whatsapp, product: p, products, isPreview, isOwner, legales, accentOverride, storeId, socialLinks, footerBg, fraseDelPie } = view;
   const c = COLORES[tema];
   const acento = accentOverride ?? (tema === "oscuro" ? "#e8a020" : "#2563eb");
   const fotos = p.images.length ? p.images : [FOTO_VACIA];
@@ -384,8 +384,12 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
         )}
       </main>
 
-      <PieDeAutos slug={slug} storeName={storeName} whatsapp={whatsapp} redes={socialLinks} legales={legales} enEditor={isPreview}
-        tema={{ fondo: c.superficie, tinta: c.tinta, suave: c.suave, linea: c.linea }} acento={acento} />
+      {/* El mismo pie que la portada, con su fondo si la dueña lo cambió. */}
+      <PieDeAutos slug={slug} storeName={storeName} descripcion={fraseDelPie} whatsapp={whatsapp} redes={socialLinks} products={products ?? []}
+        legales={legales} enEditor={isPreview} acento={acento} estilo={tema === "oscuro" ? "motor" : "drive"}
+        colores={tema === "oscuro" || footerBg
+          ? { fondo: footerBg ?? "#070809", tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.1)" }
+          : { fondo: "#111827", tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.12)" }} />
 
       {fav.aviso && (
         <div role="status" style={{ position: "fixed", left: 16, right: 16, bottom: 20, zIndex: 230, display: "flex", justifyContent: "center", pointerEvents: "none" }}>

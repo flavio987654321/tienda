@@ -147,6 +147,7 @@ export default function ProductDetailClient({
   const [isPreview] = useState(esEditor);
   const [isOwner, setIsOwner] = useState(isOwnerInicial);
   const [socialLinks, setSocialLinks] = useState<Record<string, string> | undefined>(undefined);
+  const [fraseDelPie, setFraseDelPie] = useState<string | undefined>(undefined);
   // Qué políticas legales linkea el pie: las que tienen texto y están en
   // Visible. Arrancan con lo que resolvió el servidor — si esperaran al pedido
   // del navegador, el pie saldría sin los links en el HTML inicial y
@@ -179,6 +180,7 @@ export default function ProductDetailClient({
           if (cfg.currency) setCurrency(cfg.currency);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
+          if (typeof cfg.textOverrides?.footerFrase?.text === "string") setFraseDelPie(cfg.textOverrides.footerFrase.text);
           if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
           setOcultarPrecios(!!cfg.ocultarPreciosPublico);
           if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) setEnvios(cfg.shippingMethods);
@@ -336,7 +338,7 @@ export default function ProductDetailClient({
       slug, storeId, storeName, currency, whatsapp, product, related, hasMercadoPago,
       isPreview, isOwner, socialLinks, legales, esAutos, accentOverride, footerBg, cart,
       activeImg, setActiveImg, seleccion, setOpcion,
-      canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
+      canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref, fraseDelPie,
       /* Para la barra de arriba. Ver la nota en `ProductDetailViewProps`. */
       products, promotions, ocultarPrecios, showPushBell, isVerified, verifiedInfo,
       promoBanner, navTagline,

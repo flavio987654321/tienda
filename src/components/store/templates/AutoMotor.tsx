@@ -12,6 +12,7 @@
  * (carpeta `motor/`). Los campos editables conservan sus nombres de antes, así
  * lo que un dueño ya escribió sigue apareciendo.
  */
+import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -31,7 +32,6 @@ import { WaIcon, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehi
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { opcionesDeFiltro, filtrarVehiculos, filtroVacio, linkAVehiculos, linkAVehiculo } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
-import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 import { TarjetaMotor, MOTOR_TARJETA_CSS } from "@/components/store/templates/motor/TarjetaMotor";
 import { BuscadorMotor } from "@/components/store/templates/motor/BuscadorMotor";
@@ -161,6 +161,7 @@ export default function AutoMotor() {
   const footerBg    = sc["bgFooter"]    ?? "#070809";
   const footerImg   = iovr["sectionbg_bgFooter"];
   const ftMid       = secMid(footerImg, footerBg);
+  const pieOscuro   = !!footerImg?.url || getContrastColor(footerBg) === "light";
 
   const navBg          = sc["navBg"] ?? NEGRO;
   const navDark        = getContrastColor(navBg) === "light";
@@ -791,36 +792,21 @@ export default function AutoMotor() {
       </div>
 
       {/* ── PIE ── */}
-      <footer style={{ position:"relative", padding:"40px clamp(16px,4vw,32px)",
+      <footer style={{ position:"relative", padding:"clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px",
         ...secBg(footerImg, footerBg), borderTop:`1px solid ${LINEA}` }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo del pie" nombreBloque="Pie de la tienda" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto", display:"flex", flexWrap:"wrap",
-          alignItems:"center", justifyContent:"space-between", gap:"16px 32px" }}>
-          <div>
-            <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:"#fff", letterSpacing:3.5, textTransform:"uppercase" }}>{storeName}</p>
-            <p style={{ margin:0, fontSize:12, color:ftMid }}>
-              <EditableZone field="footerCopyright" label="Copyright">
-                {`© ${new Date().getFullYear()} ${storeName}.`}
-              </EditableZone>
-            </p>
-          </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 18px" }}>
-            {linksLegales(slug, config?.legales, { enEditor: isPreview, esAutos: true }).map(({ clave: tipo, label }) => (
-              <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} className="am-link"
-                style={{ fontSize:12, color:ftMid, textDecoration:"none", minHeight:32, display:"inline-flex", alignItems:"center" }}>
-                {label}
-              </a>
-            ))}
-            {!isOwner && (
-              <button type="button" onClick={() => setShowReport(true)} className="am-link"
-                style={{ fontSize:12, color:ftMid, background:"none", border:"none", minHeight:32,
-                  cursor:"pointer", padding:0, fontFamily:"inherit" }}>
-                Reportar tienda
-              </button>
-            )}
-          </div>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+          {/* El pie ordenado (08/10/26): ver components/store/auto/PieDeAutos. */}
+          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
+            whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="motor"
+            colores={pieOscuro
+              ? { tinta: "#ffffff", suave: ftMid, linea: "rgba(255,255,255,0.1)" }
+              : { tinta: "#111827", suave: ftMid, linea: "rgba(17,24,39,0.12)" }}
+            descripcion={<EditableZone field="footerFrase" label="Frase del pie">{FRASE_PIE}</EditableZone>}
+            copyright={<EditableZone field="footerCopyright" label="Copyright">{`© ${new Date().getFullYear()} ${storeName}.`}</EditableZone>}
+            onReportar={isOwner ? undefined : () => setShowReport(true)} />
         </div>
       </footer>
 

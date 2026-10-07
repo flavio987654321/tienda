@@ -342,6 +342,8 @@ export interface ProductDetailViewProps {
   discount: number | null;
   promo: ProductPromoDisplay;
   catalogHref: string;
+  /** La frase del pie de autos, si la dueña la cambió en la portada. */
+  fraseDelPie?: string;
 
   /* ── Lo que necesita una BARRA de arriba completa ───────────────────────────
    * Todo opcional: lo llena la página suelta del producto (`ProductDetailClient`),
