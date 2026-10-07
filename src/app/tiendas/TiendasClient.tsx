@@ -24,7 +24,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
 };
 
 const ALL_TAB = { id: "TODAS", label: "Todas" };
-const tabs = [ALL_TAB, ...STORE_TYPES.map((t) => ({ id: t.id, label: t.label }))];
+const tabs = [ALL_TAB, ...STORE_TYPES.filter((t) => !t.comingSoon).map((t) => ({ id: t.id, label: t.label }))];
 
 /**
  * La tapa de la tarjeta.

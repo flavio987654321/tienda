@@ -250,7 +250,7 @@ export async function PUT(req: NextRequest) {
      afiliados. Ahora: una vez elegido, el rubro sólo cambia por el reset; la
      primera vez, sólo se acepta uno que exista. */
   const rubroElegido = !!prevStore?.tipoTiendaConfigurado;
-  const rubroPedido = typeof b.tipoTienda === "string" && STORE_TYPES.some((t) => t.id === b.tipoTienda) ? b.tipoTienda : null;
+  const rubroPedido = typeof b.tipoTienda === "string" && STORE_TYPES.some((t) => t.id === b.tipoTienda && !t.comingSoon) ? b.tipoTienda : null;
   const tipoTienda = rubroElegido ? (prevStore?.tipoTienda ?? "ROPA") : (rubroPedido ?? prevStore?.tipoTienda ?? "ROPA");
   const tipoTiendaConfigurado = rubroElegido || Boolean(b.tipoTiendaConfigurado);
 

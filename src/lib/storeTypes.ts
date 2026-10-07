@@ -5,6 +5,8 @@ import { PROVINCIAS_ARGENTINA } from "./provincias";
 // selector. ALIMENTOS pasó a llamarse GASTRONOMIA. Inmobiliarias y hotelería
 // van a entrar más adelante — hotelería, además, necesita reservas por fecha,
 // que es una feature entera y no un rubro más.
+// 07/10/26: Tecno y hogar, Gastronomía y Otros quedan en comingSoon — por ahora
+// sólo se eligen Moda y Autos. Ninguna tienda los usaba.
 export type StoreType =
   | "ROPA"
   | "AUTOS"
@@ -398,6 +400,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Tecno y hogar",
     emoji: "🏠",
     description: "Electrodomésticos, celulares, informática, audio/video, muebles y artículos para el hogar y jardín.",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: true,
     condicionOptions: ["Nuevo", "Usado", "Reacondicionado"],
@@ -585,6 +588,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Gastronomía",
     emoji: "🍽️",
     description: "Comida y bebida: rotisería, viandas, panadería, almacén, café, productos gourmet o de despensa.",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -614,6 +618,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Otros",
     emoji: "🏪",
     description: "Para cualquier otro producto que no encaje en los rubros anteriores.",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
