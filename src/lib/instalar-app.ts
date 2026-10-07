@@ -29,6 +29,24 @@ const oyentes = new Set<() => void>();
 
 const avisar = () => { for (const f of oyentes) f(); };
 
+/* ── ¿Ya la instaló en este aparato? ──────────────────────────────────────────
+   Desde la pestaña del navegador no hay forma directa de saberlo: Chrome
+   simplemente deja de ofrecer `beforeinstallprompt`, y sin el botón la
+   pantalla decía "instalala desde el menú" a alguien que ya la tenía.
+   Se anota cuando se instala (o cuando se abre adentro de la app), y se
+   borra en cuanto Chrome vuelve a ofrecer instalar: eso sólo pasa si la
+   desinstaló. En Android y en la compu la app y el navegador comparten este
+   almacenamiento; en iPhone no (Safari no se entera), y ahí la pantalla
+   igual muestra los pasos.
+   Una marca por panel (/dashboard, /digitales): son apps distintas del mismo
+   sitio, y instalar una no instala la otra. */
+const claveInstalada = () => `panel_app_instalada:${location.pathname.split("/")[1] ?? ""}`;
+function anotarInstalada(si: boolean) {
+  try { if (si) localStorage.setItem(claveInstalada(), "1"); else localStorage.removeItem(claveInstalada()); } catch { /* sin almacenamiento */ }
+  avisar();
+}
+const laInstalo = () => { try { return localStorage.getItem(claveInstalada()) === "1"; } catch { return false; } };
+
 /** Una sola vez, lo antes posible: el evento no se repite. */
 export function escucharInstalacion(): void {
   if (typeof window === "undefined" || escuchando) return;
@@ -36,12 +54,17 @@ export function escucharInstalacion(): void {
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     evento = e as EventoDeInstalacion;
-    avisar();
+    anotarInstalada(false);
   });
   window.addEventListener("appinstalled", () => {
     evento = null;
-    avisar();
+    anotarInstalada(true);
   });
+}
+
+/** Desde adentro de la app instalada: que la pestaña del navegador se entere. */
+export function anotarQueCorreInstalada(): void {
+  if (!laInstalo()) anotarInstalada(true);
 }
 
 function suscribir(f: () => void): () => void {
@@ -63,6 +86,7 @@ export async function instalarLaApp(): Promise<boolean> {
   try {
     await e.prompt();
     const { outcome } = await e.userChoice;
+    if (outcome === "accepted") anotarInstalada(true);
     return outcome === "accepted";
   } catch {
     return false;
@@ -72,4 +96,9 @@ export async function instalarLaApp(): Promise<boolean> {
 /** Si el navegador ofreció instalar y todavía no se usó. */
 export function useSePuedeInstalar(): boolean {
   return useSyncExternalStore(suscribir, sePuede, nuncaEnElServidor);
+}
+
+/** Si la instaló en este aparato y no la desinstaló (ver arriba). */
+export function useYaLaInstalo(): boolean {
+  return useSyncExternalStore(suscribir, laInstalo, nuncaEnElServidor);
 }

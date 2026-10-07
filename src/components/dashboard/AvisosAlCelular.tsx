@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { Bell, BellRing, Check, ChevronDown, Download, Loader2, Lock, Send, Share, Smartphone, SquarePlus, X } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getPushSubscription, isPushSupported } from "@/lib/push-client";
 import { esAppInstalada, esIOS } from "@/lib/pwa";
-import { useSePuedeInstalar, instalarLaApp } from "@/lib/instalar-app";
+import { useSePuedeInstalar, instalarLaApp, useYaLaInstalo, anotarQueCorreInstalada } from "@/lib/instalar-app";
 import { useRubroDelPanel } from "@/contexts/RubroDelPanel";
 
 /**
@@ -28,7 +28,7 @@ import { useRubroDelPanel } from "@/contexts/RubroDelPanel";
  * sabe, y el primer dibujo no puede mentir ("tu navegador no soporta…").
  */
 
-type Activacion = "cargando" | "activo" | "apagado" | "bloqueado" | "sin-servidor" | "error";
+type Activacion = "cargando" | "activo" | "apagado" | "bloqueado" | "sin-servidor" | "sin-conexion" | "error";
 type Prueba = { fase: "nada" } | { fase: "enviando"; demora: boolean; desde: number } | { fase: "enviado" } | { fase: "fallo"; texto: string; reactivar?: boolean };
 
 const CLAVE_OCULTA = "avisos_celular_oculto";
@@ -36,6 +36,20 @@ const CLAVE_PROBADO = "avisos_celular_probado";
 const DEMORA_S = 8;
 
 const nada = () => () => {};
+
+/* Nada se queda "cargando" para siempre: sin internet, con la red colgada, o con
+   el service worker que nunca arranca (`serviceWorker.ready` no tiene tope y
+   puede esperar eternamente), cada paso se corta y muestra qué pasó. */
+function conTope<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((ok, mal) => {
+    const t = setTimeout(() => mal(new Error("tope")), ms);
+    p.then((v) => { clearTimeout(t); ok(v); }, (e) => { clearTimeout(t); mal(e); });
+  });
+}
+const sinInternet = () => typeof navigator !== "undefined" && navigator.onLine === false;
+function leerOculta(): "no" | "incompleta" | "lista" {
+  try { const v = localStorage.getItem(CLAVE_OCULTA); return v === "lista" ? "lista" : v ? "incompleta" : "no"; } catch { return "no"; }
+}
 function leerLocal(k: string): boolean { try { return localStorage.getItem(k) === "1"; } catch { return false; } }
 function guardarLocal(k: string, v: boolean) { try { if (v) localStorage.setItem(k, "1"); else localStorage.removeItem(k); } catch { /* sin almacenamiento */ } }
 
@@ -51,6 +65,7 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
   const android = useSyncExternalStore(nada, () => /Android/i.test(navigator.userAgent), () => false);
   const bloqueado = useSyncExternalStore(nada, () => isPushSupported() && Notification.permission === "denied", () => false);
   const sePuedeInstalar = useSePuedeInstalar();
+  const yaLaInstalo = useYaLaInstalo();
   const celular = iphone || android;
   /* En la compu: la dirección del panel, para abrirlo desde el celular. */
   const direccion = useSyncExternalStore(nada, () => `${location.host}/dashboard`, () => "");
@@ -59,7 +74,12 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
   const [activacion, setActivacion] = useState<Activacion>("cargando");
   const [prueba, setPrueba] = useState<Prueba>({ fase: "nada" });
   const [probado, setProbado] = useState(false);
-  const [oculta, setOculta] = useState(false);
+  /* "incompleta": la cerró sin terminar, y no se insiste. "lista": la cerró con
+     todo andando; si después deja de andar (desinstaló la app en el iPhone,
+     bloqueó el permiso, se venció la suscripción) vuelve a aparecer. */
+  const [oculta, setOculta] = useState<"no" | "incompleta" | "lista">("no");
+  // Ya se supo, al abrir, si este aparato tiene los avisos activos.
+  const [averiguado, setAveriguado] = useState(false);
   const [instalando, setInstalando] = useState(false);
   const [verPasosIphone, setVerPasosIphone] = useState(false);
   const [ayuda, setAyuda] = useState(false);
@@ -69,16 +89,20 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
   useEffect(() => {
     /* Las marcas guardadas se leen al montar (en el servidor no existen). Un tick
        después, como pide el lint del repo para no escribir estado en el efecto. */
-    const t = setTimeout(() => { setProbado(leerLocal(CLAVE_PROBADO)); setOculta(leerLocal(CLAVE_OCULTA)); }, 0);
+    const t = setTimeout(() => { setProbado(leerLocal(CLAVE_PROBADO)); setOculta(leerOculta()); }, 0);
     return () => clearTimeout(t);
   }, []);
+
+  // Abierta como app: la pestaña del navegador se entera de que está instalada.
+  useEffect(() => { if (instalada === true) anotarQueCorreInstalada(); }, [instalada]);
 
   useEffect(() => {
     if (soporta !== true || bloqueado) return;
     let vivo = true;
-    getPushSubscription()
-      .then((s) => { if (vivo) setActivacion(s && Notification.permission === "granted" ? "activo" : "apagado"); })
-      .catch(() => { if (vivo) setActivacion("error"); });
+    conTope(getPushSubscription(), 8000)
+      .then((s) => { if (vivo) setAveriguado(true); if (vivo) setActivacion(s && Notification.permission === "granted" ? "activo" : "apagado"); })
+      // Si no contesta, se ofrece Activar: ahí, si vuelve a fallar, se explica.
+      .catch(() => { if (vivo) { setAveriguado(true); setActivacion("apagado"); } });
     return () => { vivo = false; };
   }, [soporta, bloqueado]);
 
@@ -105,15 +129,18 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
   const activar = useCallback(async () => {
     if (enVuelo.current) return;
     enVuelo.current = true;
+    if (sinInternet()) { setActivacion("sin-conexion"); enVuelo.current = false; return; }
     setActivacion("cargando");
     try {
-      const clave = await fetch("/api/push/vapid-key").then((r) => r.ok).catch(() => false);
-      if (!clave) { setActivacion("sin-servidor"); return; }
+      const r = await fetch("/api/push/vapid-key", { signal: AbortSignal.timeout(10_000) }).catch(() => null);
+      if (!r) { setActivacion("sin-conexion"); return; }
+      if (!r.ok) { setActivacion("sin-servidor"); return; }
+      // Sin tope: es el cartel del navegador, y espera a que la persona elija.
       const permiso = await Notification.requestPermission();
       if (permiso !== "granted") { setActivacion(permiso === "denied" ? "bloqueado" : "apagado"); return; }
-      setActivacion((await subscribeToPush()) ? "activo" : "error");
+      setActivacion((await conTope(subscribeToPush(), 20_000)) ? "activo" : "error");
     } catch {
-      setActivacion("error");
+      setActivacion(sinInternet() ? "sin-conexion" : "error");
     } finally {
       enVuelo.current = false;
     }
@@ -124,8 +151,8 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
     enVuelo.current = true;
     setActivacion("cargando");
     try {
-      const ok = await unsubscribeFromPush();
-      setActivacion(ok ? "apagado" : "error");
+      const ok = await conTope(unsubscribeFromPush(), 15_000).catch(() => false);
+      setActivacion(ok ? "apagado" : sinInternet() ? "sin-conexion" : "error");
       if (ok) { setProbado(false); guardarLocal(CLAVE_PROBADO, false); setPrueba({ fase: "nada" }); }
     } finally {
       enVuelo.current = false;
@@ -136,14 +163,17 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
     if (enVuelo.current) return;
     enVuelo.current = true;
     setAyuda(false);
+    if (sinInternet()) { setPrueba({ fase: "fallo", texto: "Sin conexión a internet. Conectate y probá de nuevo." }); enVuelo.current = false; return; }
     setSegundos(demora ? DEMORA_S : 0);
     setPrueba({ fase: "enviando", demora, desde: Date.now() });
     try {
-      const sub = await getPushSubscription();
+      const sub = await conTope(getPushSubscription(), 8000);
       if (!sub) { setActivacion("apagado"); setPrueba({ fase: "fallo", texto: "Este celular no tiene los avisos activos. Activalos y probá de nuevo.", reactivar: true }); return; }
       const r = await fetch("/api/push/prueba", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: sub.endpoint, demora }),
+        // El servidor espera 8 s si se pidió demora: el tope va por encima.
+        signal: AbortSignal.timeout(25_000),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; reactivar?: boolean };
       if (r.ok) setPrueba({ fase: "enviado" });
@@ -152,14 +182,18 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
         setPrueba({ fase: "fallo", texto: d.error ?? "No se pudo mandar. Probá de nuevo.", reactivar: d.reactivar });
       }
     } catch {
-      setPrueba({ fase: "fallo", texto: "Sin conexión. Probá de nuevo." });
+      setPrueba({ fase: "fallo", texto: sinInternet() ? "Sin conexión a internet. Conectate y probá de nuevo." : "Tardó demasiado en contestar. Revisá tu conexión y probá de nuevo." });
     } finally {
       enVuelo.current = false;
     }
   }, []);
 
   const confirmarQueLlego = () => { setProbado(true); guardarLocal(CLAVE_PROBADO, true); setPrueba({ fase: "nada" }); };
-  const ocultar = () => { setOculta(true); guardarLocal(CLAVE_OCULTA, true); };
+  const ocultar = () => {
+    const como = activo && probado ? "lista" : "incompleta";
+    setOculta(como);
+    try { localStorage.setItem(CLAVE_OCULTA, como); } catch { /* sin almacenamiento */ }
+  };
 
   // Todavía no se sabe nada del navegador: en el inicio no se dibuja (no salta).
   if (soporta === null || instalada === null) {
@@ -169,8 +203,13 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
   const listo = activo && probado;
 
   // ── Inicio, ya listo: una línea, que se puede cerrar ──────────────────────
-  if (donde === "inicio" && (oculta || listo)) {
-    if (oculta) return null;
+  if (donde === "inicio") {
+    if (oculta === "incompleta") return null;
+    // Mientras se averigua si sigue activa, no se dibuja: que no salte y se vaya.
+    // Sólo al abrir: si ya volvió a aparecer y toca Activar, no desaparece.
+    if (oculta === "lista" && (listo || (!averiguado && estadoActivacion === "cargando"))) return null;
+  }
+  if (donde === "inicio" && listo) {
     return (
       <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-100 panel-oscuro:border-emerald-500/25 bg-emerald-50/70 panel-oscuro:bg-emerald-500/10 px-4 py-3">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-4 w-4" strokeWidth={3} /></span>
@@ -185,7 +224,10 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
     );
   }
 
-  const paso1Hecho = instalada === true;
+  /* Instalada: o corre adentro de la app, o la instaló y Chrome no volvió a
+     ofrecer instalarla (si la desinstala, lo ofrece de nuevo y se borra). */
+  const enPestana = instalada === false && yaLaInstalo && !sePuedeInstalar && !iphone;
+  const paso1Hecho = instalada === true || enPestana;
   // En la compu instalar es opcional: no entra en la cuenta ("1 de 2") salvo que ya esté instalada.
   const paso1Opcional = !celular && !paso1Hecho;
   const total = paso1Opcional ? 2 : 3;
@@ -227,7 +269,9 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
         {/* ── 1. Instalar ── */}
         <Paso n={1} hecho={paso1Hecho} titulo="Instalá la app del panel"
           etiqueta={paso1Hecho ? "Instalada" : iphone ? "Necesario en iPhone" : celular ? "Recomendado" : "Opcional en la compu"}
-          texto={paso1Hecho
+          texto={enPestana
+            ? "Ya la tenés instalada: para recibir los avisos con su ícono, abrí el panel desde la app."
+            : paso1Hecho
             ? "Estás usando el panel como app. Así los avisos llegan con su ícono, aunque no la tengas abierta."
             : iphone
               ? "En iPhone, Apple sólo deja recibir avisos si el panel está en la pantalla de inicio."
@@ -284,11 +328,13 @@ export default function AvisosAlCelular({ donde }: { donde: "inicio" | "ajustes"
             Este navegador no puede recibir avisos. Probá desde Chrome, o instalá el panel como app.
           </li>
         )}
-        {(estadoActivacion === "error" && soporta) || estadoActivacion === "sin-servidor" ? (
+        {(estadoActivacion === "error" && soporta) || estadoActivacion === "sin-servidor" || estadoActivacion === "sin-conexion" ? (
           <li className="list-none px-5 pb-5 text-sm text-red-600 panel-oscuro:text-red-400 sm:px-6" role="alert">
             {estadoActivacion === "sin-servidor"
               ? "Los avisos no están configurados en el servidor. No es algo tuyo: escribinos."
-              : "No se pudieron activar. Probá de nuevo en un momento."}
+              : estadoActivacion === "sin-conexion"
+                ? "Sin conexión a internet. Conectate y tocá «Activar» de nuevo."
+                : "No se pudieron activar. Revisá tu conexión y probá de nuevo en un momento."}
           </li>
         ) : null}
 
