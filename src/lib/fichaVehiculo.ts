@@ -424,7 +424,18 @@ export function hayBloques(b: BloquesDeFicha): boolean {
   return b.equipamiento.length > 0 || b.papeles.length > 0 || b.motor.length > 0 || b.medidas.length > 0;
 }
 
-/** Donde se descarga la ficha generada. */
-export function urlFichaPdf(productId: string): string {
-  return `/api/public/ficha-vehiculo/${encodeURIComponent(productId)}`;
+/** Donde se ve la ficha generada; con `descargar`, el navegador la baja como archivo en vez de abrirla. */
+export function urlFichaPdf(productId: string, descargar = false): string {
+  return `/api/public/ficha-vehiculo/${encodeURIComponent(productId)}${descargar ? "?descargar=1" : ""}`;
+}
+
+export type ItemDeControl = { label: string; tiene: boolean };
+
+/** El equipamiento y los papeles como lista de control COMPLETA del tipo: lo que tiene
+    y lo que no se informó. La usan la hoja de la página y el PDF, para que digan lo mismo. */
+export function controlDeFicha(f: FichaVehiculo, tipo: TipoDeFicha): { equipamiento: ItemDeControl[]; papeles: ItemDeControl[] } {
+  return {
+    equipamiento: EQUIPAMIENTO[tipo].map((i) => ({ label: i.label, tiene: f.equipamiento.includes(i.id) })),
+    papeles: PAPELES.map((i) => ({ label: i.label, tiene: f.papeles.includes(i.id) })),
+  };
 }

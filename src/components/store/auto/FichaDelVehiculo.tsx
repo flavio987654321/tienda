@@ -1,7 +1,7 @@
 "use client";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { getContrastColor } from "@/contexts/EditContext";
-import { leerFicha, bloquesDeFicha, tipoDeFicha, urlFichaPdf, EQUIPAMIENTO, PAPELES, type FilaDeFicha } from "@/lib/fichaVehiculo";
+import { leerFicha, bloquesDeFicha, tipoDeFicha, urlFichaPdf, controlDeFicha, type FilaDeFicha } from "@/lib/fichaVehiculo";
 
 /* La ficha técnica del vehículo (06/10/26). Dos piezas:
    `DescargasDeFicha` va debajo del botón de consultar (se ve sin bajar) y
@@ -26,7 +26,9 @@ const BOTON: React.CSSProperties = {
 };
 
 /**
- * "Descargar ficha (PDF)" y, si la concesionaria subió uno, su folleto.
+ * "Descargar ficha (PDF)" y, si la concesionaria subió uno, su folleto. Descarga
+ * de verdad (el servidor la manda como archivo): antes abría otra pestaña y
+ * en el celular no quedaba guardada.
  * En la previa del editor no va: los vehículos de muestra no existen en la
  * base y el PDF daría "no encontrado".
  */
@@ -36,7 +38,7 @@ export function DescargasDeFicha({ product, accent, isPreview }: { product: Stor
   const { folleto } = leerFicha(product.attributes);
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <a href={urlFichaPdf(product.id)} target="_blank" rel="noopener" style={BOTON}>
+      <a href={urlFichaPdf(product.id, true)} download style={BOTON}>
         <IconoDoc color={accent} /> Descargar ficha (PDF)
       </a>
       {folleto && (
@@ -128,8 +130,7 @@ export function HojaDeFicha({ product, accent, datos, nombreTienda, isPreview }:
   if (!tipo) return null;
   const ficha = leerFicha(product.attributes);
   const b = bloquesDeFicha(ficha, tipo);
-  const equipamiento = EQUIPAMIENTO[tipo].map((i) => ({ label: i.label, tiene: ficha.equipamiento.includes(i.id) }));
-  const papeles = PAPELES.map((i) => ({ label: i.label, tiene: ficha.papeles.includes(i.id) }));
+  const { equipamiento, papeles } = controlDeFicha(ficha, tipo);
   const anio = datos.find((d) => d.label === "Año")?.valor;
 
   return (
@@ -173,7 +174,7 @@ export function HojaDeFicha({ product, accent, datos, nombreTienda, isPreview }:
               <a href={urlFichaPdf(product.id)} target="_blank" rel="noopener" style={BOTON}>
                 <IconoDoc color={accent} /> Ver en PDF
               </a>
-              <a href={urlFichaPdf(product.id)} download style={BOTON}>
+              <a href={urlFichaPdf(product.id, true)} download style={BOTON}>
                 <IconoDoc color={accent} /> Descargar
               </a>
             </span>

@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
-import { leerFicha, bloquesDeFicha, tipoDeFicha, type FilaDeFicha } from "@/lib/fichaVehiculo";
+import { leerFicha, bloquesDeFicha, controlDeFicha, tipoDeFicha, type FilaDeFicha } from "@/lib/fichaVehiculo";
 import { armarFichaPdf } from "@/lib/fichaVehiculoPdf";
 import { monedaDe } from "@/lib/monedaVehiculo";
 
@@ -129,7 +129,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const ubicacion = [valor("Localidad"), valor("Provincia")].filter(Boolean).join(", ") || valor("Ubicación") || valor("Ciudad");
   const tipo = tipoDeFicha(producto.category) ?? "auto";
-  const ficha = bloquesDeFicha(leerFicha(attrs), tipo);
+  const fichaCruda = leerFicha(attrs);
+  const ficha = bloquesDeFicha(fichaCruda, tipo);
 
   const wa = config.whatsapp?.enabled && numeroWhatsApp(config.whatsapp.number) ? config.whatsapp.number!.trim() : null;
   const origen = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || req.nextUrl.origin;
@@ -153,13 +154,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       principales,
     },
     ficha,
+    // La lista completa del tipo, como en la hoja de la página: lo que tiene y lo que no se informó.
+    control: controlDeFicha(fichaCruda, tipo),
     fecha: new Date(),
   });
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${nombreDeArchivo(producto.name)}"`,
+      // Con `?descargar=1` se baja como archivo (el botón "Descargar"); sin él, se abre para ver.
+      "Content-Disposition": `${req.nextUrl.searchParams.get("descargar") === "1" ? "attachment" : "inline"}; filename="${nombreDeArchivo(producto.name)}"`,
       /* Cinco minutos en el borde: el link se comparte por WhatsApp y lo abren
          muchos a la vez; un cambio de la ficha tarda eso en verse. Una tienda
          sin publicar (sólo la ve su dueño) no se guarda en ningún lado. */

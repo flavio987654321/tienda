@@ -11,7 +11,7 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = "https://abc.supabase.co";
 import {
   leerFicha, fichaComoAtributo, bloquesDeFicha, limpiarDato, tipoDeFicha, esAtributoInterno,
   esFolletoNuestro, CLAVE_FICHA, FICHA_VACIA, LARGO_MAXIMO_FICHA, EQUIPAMIENTO, PAPELES, MOTOR, MEDIDAS,
-  esVehiculo, usaHoras, CATEGORIAS_VEHICULO, NOMBRE_TIPO, type TipoDeFicha, type CampoNumerico,
+  esVehiculo, usaHoras, CATEGORIAS_VEHICULO, NOMBRE_TIPO, controlDeFicha, urlFichaPdf, type TipoDeFicha, type CampoNumerico,
 } from "./fichaVehiculo";
 
 let fallos = 0;
@@ -82,6 +82,11 @@ for (const t of Object.keys(EQUIPAMIENTO) as TipoDeFicha[]) {
 }
 const cam = bloquesDeFicha(leerFicha(attr({ equipamiento: ["retarder", "techo"], datos: { cargaUtil: "15000", ejes: "3" } })), "camion");
 ok("camión: retarder sí, techo solar no; 15.000 kg y 3 ejes", cam.equipamiento.join() === "Retarder" && cam.medidas.map((x) => x.valor).join("|") === "3|15.000 kg", cam);
+
+// La lista de control (hoja y PDF): completa, con lo que tiene marcado.
+const ctl = controlDeFicha(leerFicha(attr({ equipamiento: ["aire"], papeles: ["vtv"] })), "auto");
+ok("control: lista completa y sólo lo cargado tildado", ctl.equipamiento.length === EQUIPAMIENTO.auto.length && ctl.equipamiento.filter((i) => i.tiene).length === 1 && ctl.papeles.length === PAPELES.length && ctl.papeles.filter((i) => i.tiene).length === 1, ctl);
+ok("urlFichaPdf: ver y descargar", urlFichaPdf("a b") === "/api/public/ficha-vehiculo/a%20b" && urlFichaPdf("x", true) === "/api/public/ficha-vehiculo/x?descargar=1");
 
 console.log(fallos === 0 ? "\n✓ todo bien\n" : `\n✗ ${fallos} falla(s)\n`);
 process.exit(fallos === 0 ? 0 : 1);

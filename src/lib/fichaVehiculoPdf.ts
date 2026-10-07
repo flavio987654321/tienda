@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
 import { soloLoQueEntra } from "@/lib/ebook-pdf";
-import type { BloquesDeFicha, FilaDeFicha } from "@/lib/fichaVehiculo";
+import type { BloquesDeFicha, FilaDeFicha, ItemDeControl } from "@/lib/fichaVehiculo";
 
 /**
  * La ficha técnica de un vehículo, en PDF (06/10/26).
@@ -30,6 +30,8 @@ export type DatosDeLaFichaPdf = {
     principales: FilaDeFicha[];
   };
   ficha: BloquesDeFicha;
+  /** El equipamiento y los papeles como lista completa (✓ lo que tiene, "—" lo no informado). */
+  control?: { equipamiento: ItemDeControl[]; papeles: ItemDeControl[] };
   fecha: Date;
 };
 
@@ -196,6 +198,25 @@ export function armarFichaPdf(d: DatosDeLaFichaPdf): Promise<Buffer> {
     }
   };
 
+  /** La lista de control: ✓ lo que tiene, casillero vacío y "—" lo que no se informó (igual que la hoja de la página). */
+  const control = (items: ItemDeControl[]) => {
+    const columnas = 3;
+    const anchoCol = ANCHO / columnas;
+    for (let i = 0; i < items.length; i += columnas) {
+      lugar(20);
+      items.slice(i, i + columnas).forEach((item, j) => {
+        const x = M + j * anchoCol;
+        if (item.tiene) tilde(doc, x, y, acento);
+        else doc.save().circle(x + 6, y + 6, 5.4).lineWidth(1).stroke("#c3c9d3").restore();
+        doc.font("Helvetica").fontSize(9.5).fillColor(item.tiene ? TINTA : "#9aa3b2")
+          .text(t(item.label), x + 17, y + 1.5, { width: anchoCol - 34, height: 12, ellipsis: true });
+        if (!item.tiene) doc.fillColor("#c3c9d3").text("—", x + anchoCol - 16, y + 1.5, { width: 10, lineBreak: false });
+      });
+      y += 19;
+    }
+    y += 4;
+  };
+
   const tildados = (items: string[]) => {
     const columnas = 3;
     const anchoCol = ANCHO / columnas;
@@ -215,8 +236,9 @@ export function armarFichaPdf(d: DatosDeLaFichaPdf): Promise<Buffer> {
   if (d.vehiculo.principales.length) { titulo("Datos principales"); tabla(d.vehiculo.principales); }
   if (d.ficha.motor.length) { titulo("Motor y prestaciones"); tabla(d.ficha.motor); }
   if (d.ficha.medidas.length) { titulo("Medidas"); tabla(d.ficha.medidas); }
-  if (d.ficha.equipamiento.length) { titulo("Equipamiento"); tildados(d.ficha.equipamiento); }
-  if (d.ficha.papeles.length) { titulo("Papeles y condiciones"); tildados(d.ficha.papeles); }
+  // Si no se tildó nada, la sección no va (una lista entera de "—" no dice nada).
+  if (d.ficha.equipamiento.length) { titulo("Equipamiento"); if (d.control) control(d.control.equipamiento); else tildados(d.ficha.equipamiento); }
+  if (d.ficha.papeles.length) { titulo("Papeles y condiciones"); if (d.control) control(d.control.papeles); else tildados(d.ficha.papeles); }
 
   /* ── El pie, en cada hoja: cómo consultar y de dónde salen los datos ── */
   const fecha = d.fecha.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
@@ -230,7 +252,7 @@ export function armarFichaPdf(d: DatosDeLaFichaPdf): Promise<Buffer> {
     doc.font("Helvetica-Bold").fontSize(9.5).fillColor(TINTA).text(t(consulta), M, yp + 10, { width: ANCHO, lineBreak: false, ellipsis: true });
     doc.font("Helvetica").fontSize(8.5).fillColor(acento).text(t(d.tienda.link), M, yp + 24, { width: ANCHO, lineBreak: false, ellipsis: true, link: d.tienda.link });
     doc.font("Helvetica").fontSize(7.5).fillColor(SUAVE)
-      .text(t(`Datos cargados por ${d.tienda.nombre}. Ficha generada el ${fecha}.${rango.count > 1 ? `  ${i + 1}/${rango.count}` : ""}`), M, yp + 37, { width: ANCHO, lineBreak: false, ellipsis: true });
+      .text(t(`Datos cargados por ${d.tienda.nombre}.${d.control ? " “—”: no informado." : ""} Ficha generada el ${fecha}.${rango.count > 1 ? `  ${i + 1}/${rango.count}` : ""}`), M, yp + 37, { width: ANCHO, lineBreak: false, ellipsis: true });
   }
 
   doc.end();
