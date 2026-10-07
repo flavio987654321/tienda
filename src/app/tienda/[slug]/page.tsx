@@ -3,7 +3,7 @@ import { configPublica } from "@/lib/configPublica";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import StoreShell from "@/components/store/StoreShell";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import type { StoreConfig } from "@/types/store-config";
@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ pago?: string; orden?: string }>;
+  searchParams: Promise<{ pago?: string; orden?: string; producto?: string }>;
 };
 
 export async function generateMetadata({ params }: TiendaPageProps): Promise<Metadata> {
@@ -95,7 +95,7 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
 export default async function TiendaPage({ params, searchParams }: TiendaPageProps) {
   noStore();
   const { slug } = await params;
-  const { pago, orden } = await searchParams;
+  const { pago, orden, producto } = await searchParams;
 
   const [store, currentUser] = await Promise.all([
     prisma.store.findFirst({
@@ -165,6 +165,15 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
   ]);
 
   if (!store) notFound();
+
+  /* Autos (07/10/26): cada vehículo tiene su página. Los links viejos —el
+     mensaje de WhatsApp, el PDF, el panel, un QR— apuntan a la portada con
+     `?producto=`, que abría una ventana; ahora van a la página. Se hace acá y
+     no en el template porque una tienda sin template muestra "Próximamente" y
+     el link quedaba muerto. */
+  if (store.tipoTienda === "AUTOS" && typeof producto === "string" && /^[\w-]{1,64}$/.test(producto)) {
+    redirect(`/tienda/${slug}/producto/${encodeURIComponent(producto)}`);
+  }
 
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
 

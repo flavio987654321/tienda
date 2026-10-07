@@ -319,7 +319,7 @@ export default function LeadsClient({ inicial, totales: totalesIniciales, slug, 
                   </p>
                 </div>
                 {c.productId && c.vehiculo?.activo && (
-                  <a href={`/tienda/${slug}?producto=${encodeURIComponent(c.productId)}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`/tienda/${slug}/producto/${encodeURIComponent(c.productId)}`} target="_blank" rel="noopener noreferrer"
                     className="shrink-0 text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline">Ver</a>
                 )}
               </div>

@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
-import { VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
+import { VehicleCard, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { getContrastColor } from "@/contexts/EditContext";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
@@ -14,7 +14,7 @@ import { monedaDeTienda, precioEn, conPuntos, sinPuntos } from "@/lib/monedaVehi
 import { usaHoras } from "@/lib/fichaVehiculo";
 import {
   filtrarVehiculos, opcionesDeFiltro, filtroDesdeUrl, filtroAUrl, filtroVacio, cuantosFiltros,
-  ORDENES, type FiltroVehiculos, type OrdenVehiculos,
+  ORDENES, linkAVehiculo, type FiltroVehiculos, type OrdenVehiculos,
 } from "@/lib/filtroVehiculos";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
@@ -218,10 +218,8 @@ function VehiculosPageInner() {
   const [currency,    setCurrency]    = useState("ARS");
   const [templateId,  setTemplateId]  = useState("");
   const [navBgColor,  setNavBgColor]  = useState<string | null>(null);
-  const [whatsapp,    setWhatsapp]    = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
   const [storeId,     setStoreId]     = useState<string | undefined>(undefined);
   const [isOwner,     setIsOwner]     = useState(false);
-  const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
   const [imgErrors,    setImgErrors]    = useState<Record<string, boolean>>({});
   const [hoveredMarca, setHoveredMarca] = useState<string | null>(null);
   // Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`.
@@ -282,7 +280,6 @@ function VehiculosPageInner() {
             // El "precio hasta" arranca en la moneda principal, salvo que la dirección diga otra.
             if (!searchParams?.get("moneda")) cambiar({ moneda: monedaDeTienda(cfg) });
           }
-          if (cfg.whatsapp)                setWhatsapp(cfg.whatsapp);
           if (cfg.templateId ?? cfg.template) setTemplateId(cfg.templateId ?? cfg.template);
           if (cfg.sectionColors?.navBg)    setNavBgColor(cfg.sectionColors.navBg);
         } catch {}
@@ -745,7 +742,7 @@ function VehiculosPageInner() {
           <div className="av-grid">
             {filtered.map(p => (
               <VehicleCard key={p.id} product={p} accent={accent} currency={currency}
-                theme="light" onClick={() => setSelected(p)} />
+                theme="light" href={linkAVehiculo(slug, p.id, fromEditor)} />
             ))}
           </div>
         )}
@@ -798,13 +795,6 @@ function VehiculosPageInner() {
         </div>
       )}
 
-      {selected && (
-        <VehicleModal
-          product={selected} accent={accent} currency={currency}
-          whatsapp={whatsapp} products={filtered}
-          onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
-          storeId={storeId} isOwner={isOwner} nombreTienda={storeName} />
-      )}
     </div>
   );
 }

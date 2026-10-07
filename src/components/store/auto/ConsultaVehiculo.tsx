@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
@@ -41,6 +41,9 @@ function recordarConsulta(productId: string, id: string) {
 
 type Estado = "idle" | "enviando" | "listo";
 
+/** La dirección no cambia mientras se mira la página: nada que escuchar. */
+const sinCambios = () => () => {};
+
 export default function ConsultaVehiculo({ product, accent, precioTexto, whatsappNumber, whatsappEnabled, storeId, isOwner, isPreview, año }: {
   product: StorefrontProduct;
   accent: string;
@@ -53,12 +56,10 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
   isPreview?: boolean;
   año?: string;
 }) {
-  /* El link va a la PORTADA de la tienda, que abre este modal con `?producto=`.
-     Desde /vehiculos se le saca ese tramo: esa página no lo abre. Se arma con
-     la dirección actual para que sirva también en un dominio propio. */
-  const link = typeof window !== "undefined"
-    ? `${window.location.origin}${window.location.pathname.replace(/\/vehiculos\/?$/, "") || "/"}?producto=${encodeURIComponent(product.id)}`
-    : "";
+  /* El link va a la página del vehículo (07/10/26), que es donde está esto: la
+     dirección actual sin lo de después del "?". Se arma con la dirección real
+     para que sirva también en un dominio propio. */
+  const link = useSyncExternalStore(sinCambios, () => `${window.location.origin}${window.location.pathname}`, () => "");
   const texto = `Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""} de ${precioTexto}. ¿Está disponible?${link ? `\n${link}` : ""}`;
   const waHref = whatsappEnabled ? linkWhatsApp(whatsappNumber, texto) : null;
 

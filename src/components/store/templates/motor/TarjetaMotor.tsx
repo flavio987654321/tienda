@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, kmDe, fmtKm, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
@@ -37,11 +38,13 @@ export function usoDe(p: StorefrontProduct): string {
   return km == null ? "" : km === 0 ? "0 km" : fmtKm(km);
 }
 
-export function TarjetaMotor({ p, acento, moneda, onAbrir, favorito, onFavorito }: {
+export function TarjetaMotor({ p, acento, moneda, href, onAbrir, favorito, onFavorito }: {
+  /** La página del vehículo. Sin `href`, abre con `onAbrir`. */
+  href?: string;
   p: StorefrontProduct;
   acento: string;
   moneda: string;
-  onAbrir: () => void;
+  onAbrir?: () => void;
   favorito?: boolean;
   onFavorito?: () => void;
 }) {
@@ -98,7 +101,9 @@ export function TarjetaMotor({ p, acento, moneda, onAbrir, favorito, onFavorito 
       </div>
       <div style={{ padding: "16px 18px 18px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, lineHeight: 1.3, letterSpacing: -0.2 }}>
-          <button type="button" className="tm-abrir" onClick={onAbrir}>{p.name}</button>
+          {href
+            ? <Link href={href} className="tm-abrir">{p.name}</Link>
+            : <button type="button" className="tm-abrir" onClick={onAbrir}>{p.name}</button>}
         </h3>
         {datos.length > 0 && (
           <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.55)", display: "flex", flexWrap: "wrap", gap: "4px 10px" }}>

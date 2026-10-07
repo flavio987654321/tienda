@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, fmtPrice, esReservado, vehicleLocation, WaIcon } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
@@ -18,14 +19,15 @@ export function elegirFoco(productos: StorefrontProduct[]): StorefrontProduct | 
  * decide la consulta a la vista, la ficha en PDF y WhatsApp con el mensaje ya
  * escrito sobre ESE vehículo.
  */
-export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, onAbrir, kicker }: {
+export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, href, kicker }: {
   p: StorefrontProduct;
   acento: string;
   moneda: string;
   whatsapp: { enabled: boolean; number: string };
   /** En la previa del editor los vehículos son de muestra: no hay PDF que bajar. */
   enPrevia: boolean;
-  onAbrir: () => void;
+  /** La página del vehículo. */
+  href: string;
   kicker: React.ReactNode;
 }) {
   const tipo = NOMBRE_TIPO[(p.category ?? "").toLowerCase() as CategoriaVehiculo]?.uno;
@@ -43,8 +45,8 @@ export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, onAbrir, kick
 
   return (
     <div className="fm-grilla" style={{ display: "grid", gap: 0, background: "#141619", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
-      <button type="button" onClick={onAbrir} aria-label={`Ver ${p.name}`}
-        style={{ all: "unset", cursor: "pointer", position: "relative", display: "block", minHeight: 280, background: "#0b0c0e" }} className="fm-foto">
+      <Link href={href} aria-label={`Ver ${p.name}`}
+        style={{ position: "relative", display: "block", minHeight: 280, background: "#0b0c0e" }} className="fm-foto">
         {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
         <img src={p.images[0] ?? ""} alt="" onError={e => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         {p.images.length > 1 && (
@@ -53,7 +55,7 @@ export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, onAbrir, kick
             {p.images.length} fotos
           </span>
         )}
-      </button>
+      </Link>
       <div style={{ padding: "clamp(22px,4vw,44px)", display: "flex", flexDirection: "column", gap: 18, color: "#f4f4f5", minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: acento, fontWeight: 800 }}>
           {kicker}{tipo ? <span style={{ color: "rgba(255,255,255,0.45)" }}> · {tipo}</span> : null}
@@ -82,11 +84,11 @@ export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, onAbrir, kick
           </dl>
         )}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
-          <button type="button" onClick={onAbrir}
-            style={{ minHeight: 48, padding: "0 24px", border: "none", borderRadius: 2, background: acento, color: sobreAcento,
-              fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit" }}>
+          <Link href={href}
+            style={{ minHeight: 48, padding: "0 24px", borderRadius: 2, background: acento, color: sobreAcento, textDecoration: "none",
+              display: "inline-flex", alignItems: "center", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase" }}>
             Ver el vehículo
-          </button>
+          </Link>
           {!enPrevia && (
             <a href={urlFichaPdf(p.id)} target="_blank" rel="noopener noreferrer"
               style={{ minHeight: 48, padding: "0 20px", display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 2,

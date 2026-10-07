@@ -304,3 +304,8 @@ export function linkAVehiculos(slug: string, filtro: Partial<Record<"tipo" | "ma
   const s = sp.toString();
   return `/tienda/${slug}/vehiculos${s ? `?${s}` : ""}`;
 }
+
+/** La página de un vehículo (07/10/26: dejó de ser una ventana sobre la portada). */
+export function linkAVehiculo(slug: string, id: string, deEditor = false): string {
+  return `/tienda/${slug}/producto/${encodeURIComponent(id)}${deEditor ? "?from=editor" : ""}`;
+}

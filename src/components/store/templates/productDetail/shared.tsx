@@ -311,6 +311,8 @@ export function RotuloOpcion({ theme, children, style }: { theme: DetailTheme; c
 
 export interface ProductDetailViewProps {
   slug: string;
+  /** Para anotar consultas y tasaciones (página del vehículo). */
+  storeId?: string | null;
   storeName: string;
   currency: string;
   whatsapp: string | null;

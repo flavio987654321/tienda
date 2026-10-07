@@ -204,7 +204,7 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
                 {t.productoNombre && (
                   <p className="mt-1.5 text-xs text-gray-500 panel-oscuro:text-gray-400">
                     Le interesa: {t.productoId ? (
-                      <a href={`/tienda/${slug}?producto=${encodeURIComponent(t.productoId)}`} target="_blank" rel="noopener noreferrer"
+                      <a href={`/tienda/${slug}/producto/${encodeURIComponent(t.productoId)}`} target="_blank" rel="noopener noreferrer"
                         className="font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:underline">{t.productoNombre}</a>
                     ) : <strong>{t.productoNombre}</strong>}
                   </p>

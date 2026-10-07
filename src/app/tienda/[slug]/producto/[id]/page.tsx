@@ -2,7 +2,7 @@ import { infoVerificadaPublica } from "@/lib/infoVerificada";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { mapProduct, type RawProduct } from "@/lib/productoStorefront";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import { isDemoProductId } from "@/lib/demoProducts";
@@ -336,11 +336,10 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
     promoBanner, navTagline, storeNameOverride,
   } = await findStoreConfig(slug);
 
-  /* Autos no tiene ficha suelta (06/10/26): el vehículo se ve en su modal, que
-     abren los dos templates con `?producto=`. Esta pantalla caía en la ficha
-     genérica —cantidad, "Agregar al carrito", cuotas— en un rubro que vende por
-     consulta, y a ella mandan Google, el catálogo de Meta y Google Shopping. */
-  if (esAutos && product) redirect(`/tienda/${slug}?producto=${encodeURIComponent(product.id)}`);
+  /* Autos (07/10/26): ESTA es la página del vehículo (antes redirigía a la
+     portada con `?producto=` para abrir una ventana). La dibuja el template de
+     autos (ver productDetail/VehiculoDetail); la ficha genérica —cantidad,
+     "Agregar al carrito"— no la ve nunca un vehículo. */
 
   // ── Datos estructurados ────────────────────────────────────────────────────
   // Sólo para productos REALES: los demo del editor no existen para nadie más y

@@ -139,7 +139,7 @@ export default function BusquedasClient({ inicial, demanda, slug, tienda, moneda
                   ) : (
                     <ul className="mt-3 space-y-2">
                       {b.coincidencias.map((c) => {
-                        const link = `${origen}/tienda/${slug}?producto=${encodeURIComponent(c.id)}`;
+                        const link = `${origen}/tienda/${slug}/producto/${encodeURIComponent(c.id)}`;
                         const texto = mensajeDeAviso(b.nombre, c.nombre, precio(c.precio, c.moneda), link, tienda);
                         return (
                           <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 panel-oscuro:border-gray-800 p-2.5">

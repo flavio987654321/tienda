@@ -14,8 +14,9 @@
  */
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -26,9 +27,9 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { WaIcon, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { WaIcon, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
-import { opcionesDeFiltro, filtrarVehiculos, filtroVacio, linkAVehiculos } from "@/lib/filtroVehiculos";
+import { opcionesDeFiltro, filtrarVehiculos, filtroVacio, linkAVehiculos, linkAVehiculo } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -165,8 +166,9 @@ export default function AutoMotor() {
   const [menuOpen,         setMenuOpen]         = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const [selected,   setSelected]   = useState<StorefrontProduct | null>(null);
-  const cerrarVehiculo = useCallback(() => setSelected(null), []);
+  const router = useRouter();
+  /** Cada vehículo tiene su página (07/10/26; antes, una ventana sobre la portada). */
+  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, isPreview);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
@@ -199,9 +201,9 @@ export default function AutoMotor() {
   useEffect(() => {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- abre el modal del producto indicado en la URL al cargar la lista, no se puede calcular durante el render
-    if (id) { const p = products.find(pr => pr.id === id); if (p) setSelected(p); }
-  }, [products]);
+    // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página del vehículo.
+    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, isPreview));
+  }, [products, router, slug, isPreview]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -230,13 +232,13 @@ export default function AutoMotor() {
   useEffect(() => {
     if (!searchOpen && !favoritesOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || selected) return;
+      if (e.key !== "Escape") return;
       if (searchOpen) { setSearchOpen(false); setSearchQuery(""); }
       else setFavoritesOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, favoritesOpen, selected]);
+  }, [searchOpen, favoritesOpen]);
 
   // Recién ingresados: los más nuevos, sin el que está en foco (no se repite dos bloques seguidos).
   const recientes = products.filter(p => p.id !== foco?.id || products.length <= 4).slice(0, 8);
@@ -545,7 +547,7 @@ export default function AutoMotor() {
           ) : recientes.length > 0 ? (
             <div className="am-grid">
               {recientes.map(p => (
-                <TarjetaMotor key={p.id} p={p} acento={accent} moneda={currency} onAbrir={() => setSelected(p)}
+                <TarjetaMotor key={p.id} p={p} acento={accent} moneda={currency} href={paginaDe(p)}
                   favorito={favorites.includes(p.id)} onFavorito={() => toggleFavorite(p.id)} />
               ))}
             </div>
@@ -564,7 +566,7 @@ export default function AutoMotor() {
         <section style={{ padding:"0 clamp(16px,4vw,32px) clamp(56px,8vw,96px)", background: catalogoImg?.url ? NEGRO : catalogoBg }}>
           <div style={{ maxWidth:1280, margin:"0 auto" }}>
             <FocoMotor p={foco} acento={accent} moneda={currency} whatsapp={whatsapp} enPrevia={isPreview}
-              onAbrir={() => setSelected(foco)}
+              href={paginaDe(foco)}
               kicker={<EditableZone field="focoKicker" label="Etiqueta del vehículo en foco">En foco</EditableZone>} />
           </div>
         </section>
@@ -786,15 +788,15 @@ export default function AutoMotor() {
             <div style={{ width:"100%", maxWidth:960, padding:"24px clamp(16px,4vw,24px) 24px", overflowY:"auto", boxSizing:"border-box" }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))", gap:12 }}>
                 {searchResults.slice(0, 24).map(p => (
-                  <button key={p.id} type="button" onClick={() => { setSelected(p); setSearchOpen(false); setSearchQuery(""); }}
-                    style={{ background:"#141619", border:`1px solid ${LINEA}`, borderRadius:4, cursor:"pointer", textAlign:"left", padding:0, color:"#fff", overflow:"hidden", fontFamily:"inherit" }}>
+                  <Link key={p.id} href={paginaDe(p)}
+                    style={{ display:"block", background:"#141619", border:`1px solid ${LINEA}`, borderRadius:4, textDecoration:"none", color:"#fff", overflow:"hidden" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
                     <img src={p.images[0] ?? ""} alt="" style={{ width:"100%", aspectRatio:"16/11", objectFit:"cover", display:"block", background:NEGRO }} />
                     <div style={{ padding:"10px 12px 12px" }}>
                       <p style={{ fontSize:13, fontWeight:700, margin:"0 0 4px" }}>{p.name}</p>
                       <p style={{ fontSize:13, color:accent, fontWeight:800, margin:0 }}>{p.price > 0 ? fmtPrice(p.price, monedaDe(p, currency)) : "Consultar"}</p>
                     </div>
-                  </button>
+                  </Link>
                 ))}
               </div>
               {searchResults.length > 24 && (
@@ -833,10 +835,10 @@ export default function AutoMotor() {
                   <p style={{ fontSize:14, fontWeight:700, margin:"0 0 4px", overflowWrap:"anywhere" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:800, margin:"0 0 10px" }}>{product.price > 0 ? fmtPrice(product.price, monedaDe(product, currency)) : "Consultar"}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button type="button" onClick={() => { setFavoritesOpen(false); setSelected(product); }}
-                      style={{ background:accent, color:sobreAcento, border:"none", borderRadius:2, padding:"0 14px", minHeight:36, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                    <Link href={paginaDe(product)}
+                      style={{ background:accent, color:sobreAcento, borderRadius:2, padding:"0 14px", minHeight:36, fontSize:12, fontWeight:700, textDecoration:"none", display:"inline-flex", alignItems:"center" }}>
                       Ver
-                    </button>
+                    </Link>
                     <button type="button" onClick={() => toggleFavorite(product.id)}
                       style={{ background:"transparent", color:"rgba(255,255,255,0.7)", border:`1px solid ${LINEA}`, borderRadius:2, padding:"0 14px", minHeight:36, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
                       Quitar
@@ -848,14 +850,6 @@ export default function AutoMotor() {
           </div>
         </div>
       </div>
-
-      {selected && (
-        <VehicleModal product={selected} accent={accent} currency={currency}
-          whatsapp={whatsapp} products={products}
-          onClose={cerrarVehiculo} onSelect={p => setSelected(p)}
-          isFavorite={favorites.includes(selected.id)} onToggleFavorite={() => toggleFavorite(selected.id)}
-          storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
-      )}
 
       {!editMode && waLink && (
         <a href={waLink} aria-label="Escribinos por WhatsApp"

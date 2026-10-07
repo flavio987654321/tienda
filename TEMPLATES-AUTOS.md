@@ -69,6 +69,15 @@ Reglas que valen para todos (de la memoria):
 - [ ] En los dos: bloques para tasación, "Avisame si entra", ficha / PDF, reservado,
       financiación, y la portada con "Tasá tu usado" y "Avisame si entra".
 
+### Pedidos del dueño mirando Auto Motor (07/10/26)
+
+- [x] ~~La ficha técnica tiene que verse como un formulario real, no como pastillas.~~
+      Hoja con encabezado, casilleros y lista de control completa (`HojaDeFicha`).
+- [x] ~~"No me gusta que sean modales."~~ Cada vehículo tiene su página
+      (`/tienda/<slug>/producto/<id>`, `productDetail/VehiculoDetail`, oscura en Auto
+      Motor y clara en el resto). La ventana (`VehicleModal`) se borró. Los links viejos
+      con `?producto=` redirigen en el servidor; el panel y el PDF ya apuntan a la página.
+
 ## Fase 3 — Templates nuevos (de a uno, mostrándolo antes del siguiente)
 
 - [ ] Futurista (tipo Aurora).

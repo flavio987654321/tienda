@@ -24,6 +24,7 @@ import CasaClaraDetail from "@/components/store/templates/productDetail/CasaClar
 import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerraDetail";
 import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPulseDetail";
 import AireDetail from "@/components/store/templates/productDetail/AireDetail";
+import { VehiculoDetailOscuro, VehiculoDetailClaro } from "@/components/store/templates/productDetail/VehiculoDetail";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
@@ -37,6 +38,9 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   "boho-terra": BohoTerraDetail,
   "urban-pulse": UrbanPulseDetail,
   "aire": AireDetail,
+  // Autos (07/10/26): cada vehículo en su página, no en una ventana sobre la portada.
+  "auto-motor": VehiculoDetailOscuro,
+  "auto-drive": VehiculoDetailClaro,
   // El id viejo de Aire: hay tiendas cuyo JSON todavia lo dice.
   "fashion-noir": AireDetail,
 };
@@ -322,10 +326,14 @@ export default function ProductDetailClient({
   const detailPromo = resolveProductPromo({ id: product.id, price: displayPrice, category: product.category }, promotions);
   const catalogHref = `/tienda/${slug}/productos${isPreview ? "?from=editor" : ""}`;
 
-  const ThemedDetail = template ? THEMED_DETAIL[template] : undefined;
+  // Un vehículo SIEMPRE va a su página de autos, aunque la tienda no haya
+  // elegido template (la de fábrica es de ropa): oscura con Auto Motor, clara si no.
+  const ThemedDetail = esAutos
+    ? (template === "auto-motor" ? VehiculoDetailOscuro : VehiculoDetailClaro)
+    : template ? THEMED_DETAIL[template] : undefined;
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {
-      slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
+      slug, storeId, storeName, currency, whatsapp, product, related, hasMercadoPago,
       isPreview, isOwner, socialLinks, legales, esAutos, accentOverride, footerBg, cart,
       activeImg, setActiveImg, seleccion, setOpcion,
       canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,

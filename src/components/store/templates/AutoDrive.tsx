@@ -3,6 +3,7 @@ import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -13,9 +14,9 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { WaIcon, VehicleCard, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
-import { opcionesDeFiltro, linkAVehiculos, filtrarVehiculos, filtroVacio } from "@/lib/filtroVehiculos";
+import { opcionesDeFiltro, linkAVehiculos, linkAVehiculo, filtrarVehiculos, filtroVacio } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -140,7 +141,9 @@ export default function AutoDrive() {
   const [menuOpen,         setMenuOpen]         = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const [selected,   setSelected]   = useState<StorefrontProduct | null>(null);
+  const router = useRouter();
+  /** Cada vehículo tiene su página (07/10/26; antes, una ventana sobre la portada). */
+  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(config?.slug ?? "", p.id, isPreview);
   const [scrolled,   setScrolled]   = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
@@ -182,9 +185,9 @@ export default function AutoDrive() {
   useEffect(() => {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- abre el modal del producto indicado en la URL al cargar la lista, no se puede calcular durante el render
-    if (id) { const p = products.find(pr => pr.id === id); if (p) setSelected(p); }
-  }, [products]);
+    // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página del vehículo.
+    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(config?.slug ?? "", id, isPreview));
+  }, [products, router, config?.slug, isPreview]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -213,13 +216,13 @@ export default function AutoDrive() {
   useEffect(() => {
     if (!searchOpen && !favoritesOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || selected) return;
+      if (e.key !== "Escape") return;
       if (searchOpen) { setSearchOpen(false); setSearchQuery(""); }
       else setFavoritesOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, favoritesOpen, selected]);
+  }, [searchOpen, favoritesOpen]);
 
   const showcased = products.slice(0, 8);
   const hasMore   = products.length > 8;
@@ -635,7 +638,7 @@ export default function AutoDrive() {
               {showcased.map(p => (
                 <div key={p.id} className="ad-carousel-item" style={{ scrollSnapAlign:"start", flexShrink:0 }}>
                   <VehicleCard product={p} accent={accent} currency={currency}
-                    theme={catTheme} onClick={() => setSelected(p)}
+                    theme={catTheme} href={paginaDe(p)}
                     isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                 </div>
               ))}
@@ -1000,14 +1003,14 @@ export default function AutoDrive() {
             <div style={{ width:"100%", maxWidth:880, padding:"24px 24px 0", overflowY:"auto", maxHeight:"calc(100vh - 260px)" }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:16 }}>
                 {searchResults.map(p => (
-                  <button key={p.id} onClick={() => { setSelected(p); setSearchOpen(false); setSearchQuery(""); }}
-                    style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:6, cursor:"pointer", textAlign:"left", padding:0, color:"#111", overflow:"hidden" }}>
+                  <Link key={p.id} href={paginaDe(p)}
+                    style={{ display:"block", background:"none", border:"1px solid #e0e0e0", borderRadius:6, textDecoration:"none", color:"#111", overflow:"hidden" }}>
                     <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", background:"#f5f5f5" }} />
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontSize:13, fontWeight:600, margin:"0 0 4px" }}>{p.name}</p>
                       <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmtPrice(p.price, monedaDe(p, currency))}</p>
                     </div>
-                  </button>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -1039,10 +1042,10 @@ export default function AutoDrive() {
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, monedaDe(product, currency))}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={() => { setFavoritesOpen(false); setSelected(product); }}
-                      style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                    <Link href={paginaDe(product)}
+                      style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", borderRadius:4, padding:"0 14px", minHeight:36, display:"inline-flex", alignItems:"center", fontSize:11, fontWeight:600, textDecoration:"none" }}>
                       Ver
-                    </button>
+                    </Link>
                     <button onClick={() => toggleFavorite(product.id)}
                       style={{ background:"transparent", color:"#888", border:"1px solid #ddd", borderRadius:4, padding:"7px 14px", fontSize:11, cursor:"pointer" }}>
                       Quitar
@@ -1054,14 +1057,6 @@ export default function AutoDrive() {
           </div>
         </div>
       </div>
-
-      {selected && (
-        <VehicleModal product={selected} accent={accent} currency={currency}
-          whatsapp={whatsapp} products={products}
-          onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
-          isFavorite={favorites.includes(selected.id)} onToggleFavorite={() => toggleFavorite(selected.id)}
-          storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
-      )}
 
       {!editMode && waLink && (
         <a href={waLink}

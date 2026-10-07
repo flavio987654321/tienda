@@ -133,7 +133,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const wa = config.whatsapp?.enabled && numeroWhatsApp(config.whatsapp.number) ? config.whatsapp.number!.trim() : null;
   const origen = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || req.nextUrl.origin;
-  const link = `${origen}/tienda/${store.slug}?producto=${encodeURIComponent(producto.id)}`;
+  const link = `${origen}/tienda/${store.slug}/producto/${encodeURIComponent(producto.id)}`;
 
   const [foto, logo] = await Promise.all([
     imagenJpeg(primeraFoto(producto.images), 1400),

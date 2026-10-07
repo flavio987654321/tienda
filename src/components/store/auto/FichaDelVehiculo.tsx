@@ -3,9 +3,9 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { getContrastColor } from "@/contexts/EditContext";
 import { leerFicha, bloquesDeFicha, tipoDeFicha, urlFichaPdf, EQUIPAMIENTO, PAPELES, type FilaDeFicha } from "@/lib/fichaVehiculo";
 
-/* La ficha técnica en el modal del vehículo (06/10/26). Dos piezas:
+/* La ficha técnica del vehículo (06/10/26). Dos piezas:
    `DescargasDeFicha` va debajo del botón de consultar (se ve sin bajar) y
-   `HojaDeFicha` es la ficha como hoja, más abajo en el modal.
+   `HojaDeFicha` es la ficha como hoja, en la página del vehículo.
    Los datos y el porqué de cómo se guardan están en `lib/fichaVehiculo`. */
 
 function IconoDoc({ color }: { color: string }) {
@@ -114,8 +114,8 @@ function Control({ items, accent }: { items: { label: string; tiene: boolean }[]
 }
 
 /**
- * La ficha técnica como hoja. `datos` son los datos principales que ya arma el
- * modal (marca, modelo, año, km…), así no se pierde ningún atributo propio.
+ * La ficha técnica como hoja. `datos` son los datos principales que arma la
+ * página del vehículo (marca, modelo, año, km…), así no se pierde ningún atributo propio.
  */
 export function HojaDeFicha({ product, accent, datos, nombreTienda, isPreview }: {
   product: StorefrontProduct;
@@ -133,7 +133,7 @@ export function HojaDeFicha({ product, accent, datos, nombreTienda, isPreview }:
   const anio = datos.find((d) => d.label === "Año")?.valor;
 
   return (
-    <div style={{ padding: "24px clamp(12px,3vw,28px)", borderTop: "1px solid #f0f0f0" }}>
+    <div>
       <style>{`
         .hf-casilleros { grid-template-columns: repeat(2,minmax(0,1fr)) }
         @media (min-width: 640px) { .hf-casilleros { grid-template-columns: repeat(3,minmax(0,1fr)) } }
