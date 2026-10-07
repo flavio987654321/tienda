@@ -1,5 +1,6 @@
 "use client";
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
+import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -81,10 +82,10 @@ const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-presupuesto", "ad-tasar
 /** El título de cada bloque: etiqueta en pastilla y título grande. */
 function Titulo({ acento, tinta = TINTA, kicker, titulo, derecha, centrado }: { acento: string; tinta?: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode; centrado?: boolean }) {
   return (
-    <div style={{ display:"flex", alignItems:"flex-end", justifyContent: centrado ? "center" : "space-between", textAlign: centrado ? "center" : undefined,
+    <div data-ef="titulo" style={{ display:"flex", alignItems:"flex-end", justifyContent: centrado ? "center" : "space-between", textAlign: centrado ? "center" : undefined,
       gap:16, marginBottom:28, flexWrap:"wrap" }}>
       <div style={{ minWidth:0 }}>
-        <p style={{ margin:"0 0 12px", display:"inline-flex", alignItems:"center", gap:8, fontSize:12, fontWeight:800, color:acento,
+        <p className="ef-etiqueta" style={{ margin:"0 0 12px", display:"inline-flex", alignItems:"center", gap:8, fontSize:12, fontWeight:800, color:acento,
           background:`${acento}14`, padding:"6px 12px", borderRadius:999 }}>
           {kicker}
         </p>
@@ -110,6 +111,8 @@ export default function AutoDrive() {
   const menuAncho = [["Vehículos","catálogo","ad-catalogo"],["Vendé tu usado","tasar","ad-tasar"],["Preguntas","preguntas","ad-preguntas"],["Contacto","contacto","ad-contacto"]].filter(([, , b]) => !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview    = !!config?.previewFill;
+  // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
+  useEfectosAlBajar(!isPreview);
   /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
    *  pública de `/plantillas/[id]` necesita lo primero y no lo segundo. */
   const enEditor     = isPreview && !config?.demoPublica;
@@ -331,6 +334,28 @@ export default function AutoDrive() {
         .ad-svc-card { transition:box-shadow .25s, transform .25s }
         .ad-svc-card:hover { box-shadow:0 14px 34px rgba(15,23,42,.08) !important; transform:translateY(-2px) }
         .ad-link-nav:hover { color: ${navText} !important }
+        /* Efectos al bajar (08/10/26), ver shared/efectosAutos: suaves, de portal. */
+        @keyframes ad-ef-aparece { from { opacity:0; transform:translateY(14px) scale(.985) } to { opacity:1; transform:none } }
+        @keyframes ad-ef-pop { 0% { opacity:0; transform:scale(.8) } 70% { opacity:1; transform:scale(1.06) } 100% { opacity:1; transform:none } }
+        .ef-listo [data-ef="sube"]:not(.ef-in) > *, .ef-listo [data-ef="grilla"]:not(.ef-in) > * { opacity:0 }
+        .ef-listo [data-ef="sube"].ef-in > * { animation: ad-ef-aparece .6s cubic-bezier(.2,.7,.2,1) backwards }
+        .ef-listo [data-ef="grilla"].ef-in > * { animation: ad-ef-aparece .55s cubic-bezier(.2,.7,.2,1) backwards }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(2) { animation-delay:0.06s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(3) { animation-delay:0.12s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(4) { animation-delay:0.18s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(5) { animation-delay:0.24s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(6) { animation-delay:0.30s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(7) { animation-delay:0.36s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(8) { animation-delay:0.42s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(2) { animation-delay:0.08s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(3) { animation-delay:0.16s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(4) { animation-delay:0.24s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(5) { animation-delay:0.32s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(6) { animation-delay:0.40s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(7) { animation-delay:0.48s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(8) { animation-delay:0.56s }
+        .ef-listo [data-ef="titulo"]:not(.ef-in) .ef-etiqueta { opacity:0 }
+        .ef-listo [data-ef="titulo"].ef-in .ef-etiqueta { animation: ad-ef-pop .55s .15s cubic-bezier(.2,.7,.2,1) backwards }
         @media (prefers-reduced-motion: reduce) { .ad-entra, .ad-esqueleto { animation:none } .ad-svc-card:hover { transform:none } }
       `}</style>
 
@@ -367,7 +392,7 @@ export default function AutoDrive() {
         borderBottom: `1px solid ${scrolled ? navBorderColor : "transparent"}`,
         boxShadow: scrolled ? (navDark ? "0 2px 16px rgba(0,0,0,0.25)" : "0 4px 20px rgba(15,23,42,0.06)") : "none",
         transition: "box-shadow .3s, border-color .3s", padding:"0 clamp(16px,3vw,28px)" }}>
-        <div style={{ maxWidth:1240, margin:"0 auto", height:NAV_H, gap:12,
+        <div style={{ maxWidth:1240, margin:"0 auto", height: scrolled && !isPreview ? NAV_H - 12 : NAV_H, transition:"height .3s cubic-bezier(.2,.7,.2,1)", gap:12,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0,
             fontWeight:900, fontSize:"clamp(16px,2vw,19px)", color:navText, letterSpacing:-0.5 }}>
@@ -571,7 +596,7 @@ export default function AutoDrive() {
         <BgDragHandle imgKey="sectionbg_bgCategorias" />
         <SectionOverlay ov={catsImg} />
         <EditableSectionBg field="bgCategorias" label="Fondo de los tipos" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
           <Titulo acento={accent} tinta={catsText}
             kicker={<EditableZone field="tiposKicker" label="Etiqueta de los tipos">{opciones.tipos.length > 1 ? "Por tipo" : "Por marca"}</EditableZone>}
             titulo={<EditableZone field="tiposHeading" label="Título de los tipos">¿Qué estás buscando?</EditableZone>} />
@@ -587,7 +612,7 @@ export default function AutoDrive() {
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
         <SectionOverlay ov={catalogoImg} />
         <EditableSectionBg field="bgCatalogo" label="Fondo de los vehículos" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
           <Titulo acento={accent} tinta={catText}
             kicker={<EditableZone field="catalogKicker" label="Etiqueta de los vehículos">Recién ingresados</EditableZone>}
             titulo={<EditableZone field="catalogHeading" label="Título de los vehículos">Lo último que entró</EditableZone>}
@@ -622,7 +647,7 @@ export default function AutoDrive() {
               ))}
             </div>
           ) : showcased.length > 0 ? (
-            <ul className="ad-grilla" style={{ listStyle:"none", margin:0, padding:0 }}>
+            <ul className="ad-grilla" data-ef="grilla" style={{ listStyle:"none", margin:0, padding:0 }}>
               {showcased.map(p => (
                 <li key={p.id}>
                   <TarjetaDrive p={p} acento={accent} moneda={currency} href={paginaDe(p)}
@@ -652,7 +677,7 @@ export default function AutoDrive() {
       <SectionBlock id="ad-presupuesto" label="Por presupuesto" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       {(hayTramos || enEditor) ? (
       <section style={{ padding:"clamp(44px,6vw,72px) clamp(16px,3vw,28px)", background:"#fff" }}>
-        <div style={{ maxWidth:1240, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
           <Titulo acento={accent}
             kicker={<EditableZone field="presupuestoKicker" label="Etiqueta de presupuesto">Por presupuesto</EditableZone>}
             titulo={<EditableZone field="presupuestoHeading" label="Título de presupuesto">¿Cuánto querés gastar?</EditableZone>} />
@@ -667,7 +692,7 @@ export default function AutoDrive() {
       {/* ── VENDÉ TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="ad-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section id="tasar" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", background:FONDO }}>
-        <div style={{ maxWidth:1240, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
           <Titulo acento={accent}
             kicker={<EditableZone field="tasarKicker" label="Etiqueta de tasación">Vendé o permutá</EditableZone>}
             titulo={<EditableZone field="tasarHeading" label="Título de tasación">Tu usado vale</EditableZone>} />
@@ -687,7 +712,7 @@ export default function AutoDrive() {
       <SectionBlock id="ad-videos" label="Videos" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       {(videos.length > 0 || enEditor) ? (
       <section style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", background:"#fff" }}>
-        <div style={{ maxWidth:1240, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
           <Titulo acento={accent}
             kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
             titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos antes de venir</EditableZone>} />
@@ -704,11 +729,11 @@ export default function AutoDrive() {
         <BgDragHandle imgKey="sectionbg_bgServicios" />
         <SectionOverlay ov={serviciosImg} />
         <EditableSectionBg field="bgServicios" label="Fondo de por qué elegirnos" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
           <Titulo acento={accent} tinta={svcText} centrado
             kicker={<EditableZone field="serviciosKicker" label="Etiqueta de por qué elegirnos">Por qué elegirnos</EditableZone>}
             titulo={<EditableZone field="serviciosHeading" label="Título de por qué elegirnos">Comprá con confianza</EditableZone>} />
-          <div className="ad-svc" style={{ display:"grid", gap:14 }}>
+          <div className="ad-svc" data-ef="grilla" style={{ display:"grid", gap:14 }}>
             {[
               { fv:"svc1Title", fl:"svc1Desc", fi:"svc1Icon", icon:"📋", t:"Ficha técnica completa", d:"Equipamiento, motor y medidas de cada vehículo, y la ficha en PDF para descargar o compartir." },
               { fv:"svc2Title", fl:"svc2Desc", fi:"svc2Icon", icon:"🔁", t:"Tasá tu usado", d:"Mandanos los datos de tu vehículo y te respondemos con una oferta." },
@@ -759,10 +784,10 @@ export default function AutoDrive() {
         <BgDragHandle imgKey="sectionbg_bgStats" />
         <SectionOverlay ov={statsImg} />
         <EditableSectionBg field="bgStats" label="Fondo de los números" />
-        <div className="ad-stats" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+        <div className="ad-stats" data-ef="grilla" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
           {stats.map((s,i) => (
             <div key={s.fv} style={{ padding:"24px 22px", borderRadius:20, background: statsText === "#ffffff" ? "rgba(255,255,255,0.08)" : FONDO }}>
-              <p style={{ margin:0, fontSize:"clamp(32px,4vw,48px)", fontWeight:900, color:statsText, letterSpacing:-1.6, lineHeight:1 }}>
+              <p data-ef-contar style={{ margin:0, fontSize:"clamp(32px,4vw,48px)", fontWeight:900, color:statsText, letterSpacing:-1.6, lineHeight:1, fontVariantNumeric:"tabular-nums" }}>
                 <EditableZone field={s.fv} label={`Número ${i+1}`}>{s.n}</EditableZone>
               </p>
               <p style={{ margin:"8px 0 0", fontSize:14, fontWeight:600, color:statsMid }}>
@@ -781,7 +806,7 @@ export default function AutoDrive() {
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={nosotrosImg2} />
         <EditableSectionBg field="bgNosotros" label="Fondo de nosotros" />
-        <div className="ad-about" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:"40px clamp(32px,5vw,72px)", alignItems:"center" }}>
+        <div data-ef="sube" className="ad-about" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:"40px clamp(32px,5vw,72px)", alignItems:"center" }}>
           <div style={{ position:"relative" }}>
             <div style={{ borderRadius:28, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
@@ -849,7 +874,7 @@ export default function AutoDrive() {
       {/* ── PREGUNTAS FRECUENTES ── contestadas con lo que la tienda tiene (lib/preguntasFrecuentes). */}
       <SectionBlock id="ad-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section id="preguntas" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", background:FONDO }}>
-        <div className="ad-faq" style={{ maxWidth:1240, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,64px)" }}>
+        <div data-ef="sube" className="ad-faq" style={{ maxWidth:1240, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,64px)" }}>
           {/* Del lado izquierdo, una foto y una salida para la duda que no está: que no quede un hueco. */}
           <div className="ad-faq-lado">
             <Titulo acento={accent}
@@ -888,7 +913,7 @@ export default function AutoDrive() {
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <SectionOverlay ov={contactoImg} />
         <EditableSectionBg field="bgContacto" label="Fondo de contacto" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", borderRadius:32, overflow:"hidden", background:TINTA,
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", borderRadius:32, overflow:"hidden", background:TINTA,
           padding:"clamp(36px,6vw,72px) clamp(22px,5vw,64px)", textAlign:"center" }}>
           <span aria-hidden="true" style={{ position:"absolute", width:420, height:420, borderRadius:"50%", top:-200, right:-120, background:accent, opacity:0.25, filter:"blur(30px)" }} />
           <span aria-hidden="true" style={{ position:"absolute", width:300, height:300, borderRadius:"50%", bottom:-180, left:-80, background:accent, opacity:0.15, filter:"blur(30px)" }} />

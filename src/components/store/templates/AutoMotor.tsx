@@ -13,6 +13,7 @@
  * lo que un dueño ya escribió sigue apareciendo.
  */
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
+import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -78,11 +79,11 @@ const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-videos", "am-t
 /** El título de cada bloque: rayita del acento, etiqueta chica y título grande. */
 function Encabezado({ acento, tinta, kicker, titulo, derecha }: { acento: string; tinta: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 32, flexWrap: "wrap" }}>
+    <div data-ef="titulo" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 32, flexWrap: "wrap" }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: "0 0 12px", display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: acento,
           textTransform: "uppercase", letterSpacing: 3.5, fontWeight: 800 }}>
-          <span aria-hidden="true" style={{ width: 28, height: 2, background: acento }} />
+          <span aria-hidden="true" className="ef-raya" style={{ width: 28, height: 2, background: acento }} />
           {kicker}
         </p>
         <h2 style={{ margin: 0, fontSize: "clamp(28px,4.6vw,52px)", fontWeight: 800, color: tinta, letterSpacing: -1.6, lineHeight: 0.98 }}>
@@ -107,6 +108,8 @@ export default function AutoMotor() {
   const menuAncho = [["Vehículos","catálogo","am-catalogo"],["Tasá tu usado","tasar","am-tasar"],["Nosotros","nosotros","am-nosotros"],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview     = !!config?.previewFill;
+  // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
+  useEfectosAlBajar(!isPreview);
   /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
    *  pública de `/plantillas/[id]` necesita lo primero y no lo segundo. */
   const enEditor      = isPreview && !config?.demoPublica;
@@ -307,6 +310,27 @@ export default function AutoMotor() {
         @keyframes am-spin { to { transform:rotate(360deg) } }
         @keyframes am-sube { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
         .am-entra { animation: am-sube .9s cubic-bezier(.2,.7,.2,1) both }
+        /* Efectos al bajar (08/10/26), ver shared/efectosAutos: entran con fuerza, uno tras otro. */
+        @keyframes am-ef-sube { from { opacity:0; transform:translateY(36px) } to { opacity:1; transform:none } }
+        .ef-listo [data-ef="sube"]:not(.ef-in) > *, .ef-listo [data-ef="grilla"]:not(.ef-in) > * { opacity:0 }
+        .ef-listo [data-ef="sube"].ef-in > * { animation: am-ef-sube .9s cubic-bezier(.16,.84,.3,1) backwards }
+        .ef-listo [data-ef="grilla"].ef-in > * { animation: am-ef-sube .8s cubic-bezier(.16,.84,.3,1) backwards }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(2) { animation-delay:0.08s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(3) { animation-delay:0.16s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(4) { animation-delay:0.24s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(5) { animation-delay:0.32s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(6) { animation-delay:0.40s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(7) { animation-delay:0.48s }
+        .ef-listo [data-ef="sube"].ef-in > :nth-child(8) { animation-delay:0.56s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(2) { animation-delay:0.08s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(3) { animation-delay:0.16s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(4) { animation-delay:0.24s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(5) { animation-delay:0.32s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(6) { animation-delay:0.40s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(7) { animation-delay:0.48s }
+        .ef-listo [data-ef="grilla"].ef-in > :nth-child(8) { animation-delay:0.56s }
+        .ef-listo [data-ef="titulo"] .ef-raya { transform-origin:left; transition: transform .9s .2s cubic-bezier(.16,.84,.3,1) }
+        .ef-listo [data-ef="titulo"]:not(.ef-in) .ef-raya { transform:scaleX(0) }
         @media (prefers-reduced-motion: reduce) { .am-entra, .tp-foto { animation:none; transition:none } }
       `}</style>
 
@@ -525,7 +549,7 @@ export default function AutoMotor() {
       <SectionBlock id="am-tipos" label="Explorá por tipo" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {(opciones.tipos.length > 1 || opciones.marcas.length > 1) ? (
         <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px) 0", background: NEGRO }}>
-          <div style={{ maxWidth:1280, margin:"0 auto" }}>
+          <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
             <TiposMotor productos={products} opciones={opciones} moneda={currency} slug={slug} enEditor={isPreview}
               titulo={<EditableZone field="tiposHeading" label="Título de los tipos">{opciones.tipos.length > 1 ? "Explorá por tipo" : "Explorá por marca"}</EditableZone>} />
           </div>
@@ -540,7 +564,7 @@ export default function AutoMotor() {
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
         <SectionOverlay ov={catalogoImg} />
         <EditableSectionBg field="bgCatalogo" label="Fondo de recién ingresados" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
           <Encabezado acento={accent} tinta={catText}
             kicker={<EditableZone field="catalogKicker" label="Etiqueta del catálogo">Stock</EditableZone>}
             titulo={<EditableZone field="catalogHeading" label="Título del catálogo">Recién ingresados</EditableZone>}
@@ -557,7 +581,7 @@ export default function AutoMotor() {
                 animation:"am-spin 0.8s linear infinite", margin:"0 auto" }} />
             </div>
           ) : recientes.length > 0 ? (
-            <div className="am-grid">
+            <div className="am-grid" data-ef="grilla">
               {recientes.map(p => (
                 <TarjetaMotor key={p.id} p={p} acento={accent} moneda={currency} href={paginaDe(p)}
                   favorito={favorites.includes(p.id)} onFavorito={() => toggleFavorite(p.id)} />
@@ -576,7 +600,7 @@ export default function AutoMotor() {
       <SectionBlock id="am-foco" label="Vehículo en foco" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {foco ? (
         <section style={{ padding:"0 clamp(16px,4vw,32px) clamp(56px,8vw,96px)", background: catalogoImg?.url ? NEGRO : catalogoBg }}>
-          <div style={{ maxWidth:1280, margin:"0 auto" }}>
+          <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
             <FocoMotor p={foco} acento={accent} moneda={currency} whatsapp={whatsapp} enPrevia={isPreview}
               href={paginaDe(foco)}
               kicker={<EditableZone field="focoKicker" label="Etiqueta del vehículo en foco">En foco</EditableZone>} />
@@ -589,7 +613,7 @@ export default function AutoMotor() {
       <SectionBlock id="am-videos" label="Videos" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {(videos.length > 0 || enEditor) ? (
         <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
-          <div style={{ maxWidth:1280, margin:"0 auto" }}>
+          <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
             <Encabezado acento={accent} tinta="#f4f4f5"
               kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
               titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos andar</EditableZone>} />
@@ -605,7 +629,7 @@ export default function AutoMotor() {
       {/* ── TASÁ TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="am-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="tasar" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: SUPERFICIE, borderTop:`1px solid ${LINEA}` }}>
-        <div style={{ maxWidth:1280, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
           <Encabezado acento={accent} tinta="#f4f4f5"
             kicker={<EditableZone field="tasarKicker" label="Etiqueta de tasación">Antes de comprar</EditableZone>}
             titulo={<EditableZone field="tasarHeading" label="Título de tasación">Te ayudamos a dar el paso</EditableZone>} />
@@ -624,10 +648,10 @@ export default function AutoMotor() {
       <SectionBlock id="am-stats" label="Números" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {stats.length > 0 ? (
         <div style={{ background: NEGRO, borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, padding:"0 clamp(16px,4vw,32px)" }}>
-          <div className="am-stats" style={{ maxWidth:1280, margin:"0 auto" }}>
+          <div className="am-stats" data-ef="grilla" style={{ maxWidth:1280, margin:"0 auto" }}>
             {stats.map((s, i) => (
               <div key={s.fv} style={{ padding:"clamp(28px,4vw,44px) 16px", borderLeft: i > 0 ? `1px solid ${LINEA}` : "none" }}>
-                <p style={{ margin:0, fontSize:"clamp(34px,5vw,60px)", fontWeight:900, color:"#fff", letterSpacing:-2, lineHeight:1 }}>
+                <p data-ef-contar style={{ margin:0, fontSize:"clamp(34px,5vw,60px)", fontWeight:900, color:"#fff", letterSpacing:-2, lineHeight:1, fontVariantNumeric:"tabular-nums" }}>
                   <EditableZone field={s.fv} label={`Número ${i+1}`}>{s.n}</EditableZone>
                 </p>
                 <p style={{ margin:"10px 0 0", fontSize:11, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:2.5 }}>
@@ -647,7 +671,7 @@ export default function AutoMotor() {
         <BgDragHandle imgKey="sectionbg_bgServicios" />
         <SectionOverlay ov={serviciosImg} />
         <EditableSectionBg field="bgServicios" label="Fondo de cómo comprar" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
           <Encabezado acento={accent} tinta={svcText}
             kicker={<EditableZone field="serviciosKicker" label="Etiqueta de cómo comprar">Cómo comprar</EditableZone>}
             titulo={<EditableZone field="serviciosHeading" label="Título de cómo comprar">Cuatro pasos y es tuyo</EditableZone>} />
@@ -720,7 +744,7 @@ export default function AutoMotor() {
       {/* ── PREGUNTAS FRECUENTES ── contestadas con lo que la tienda tiene (lib/preguntasFrecuentes). */}
       <SectionBlock id="am-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="preguntas" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
-        <div className="am-faq" style={{ maxWidth:1280, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,72px)" }}>
+        <div data-ef="sube" className="am-faq" style={{ maxWidth:1280, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,72px)" }}>
           {/* La columna de la izquierda no queda vacía: foto (editable) y una salida para la duda que no está. */}
           <div className="am-faq-lado">
             <Encabezado acento={accent} tinta="#f4f4f5"

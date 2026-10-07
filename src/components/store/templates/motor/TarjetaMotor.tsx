@@ -20,11 +20,16 @@ export const MOTOR_TARJETA_CSS = `
   .tm-card:hover { transform: translateY(-4px) }
   .tm-card:hover .tm-foto img { transform: scale(1.045) }
   .tm-foto img { transition: transform .8s cubic-bezier(.2,.7,.2,1) }
+  /* El reflejo (08/10/26): cruza la foto una vez al pasar el mouse. */
+  .tm-foto::after { content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+    background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.28) 48%, rgba(255,255,255,.08) 55%, transparent 70%);
+    transform:translateX(-130%); transition:transform 1s cubic-bezier(.2,.7,.2,1) }
+  .tm-card:hover .tm-foto::after { transform:translateX(130%) }
   .tm-abrir { all:unset; cursor:pointer; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
   .tm-abrir::after { content:""; position:absolute; inset:0; z-index:1 }
   .tm-card:has(.tm-abrir:focus-visible) { outline:2px solid var(--tm-acento); outline-offset:3px }
   .tm-fav { z-index:2 }
-  @media (prefers-reduced-motion: reduce) { .tm-card, .tm-foto img { transition:none } .tm-card:hover { transform:none } }
+  @media (prefers-reduced-motion: reduce) { .tm-card, .tm-foto img, .tm-foto::after { transition:none } .tm-card:hover { transform:none } .tm-foto::after { display:none } }
 `;
 
 const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75";
