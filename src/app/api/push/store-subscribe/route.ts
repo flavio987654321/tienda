@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+// Sólo los servicios de avisos reales: el servidor le pega a esta url en cada aviso (ver lib/suscripcionPush).
+import { endpointDePushValido } from "@/lib/suscripcionPush";
 
 // Límites de tamaño para evitar payloads gigantes
 const MAX_ENDPOINT_LEN = 512;
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (
     typeof storeId !== "string" || storeId.length === 0 || storeId.length > 128 ||
     typeof endpoint !== "string" || endpoint.length === 0 || endpoint.length > MAX_ENDPOINT_LEN ||
-    !isValidHttpsUrl(endpoint) ||
+    !isValidHttpsUrl(endpoint) || !endpointDePushValido(endpoint) ||
     typeof keys !== "object" || keys === null ||
     typeof (keys as Record<string, unknown>).auth !== "string" || (keys as Record<string, string>).auth.length > MAX_KEY_LEN ||
     typeof (keys as Record<string, unknown>).p256dh !== "string" || (keys as Record<string, string>).p256dh.length > MAX_KEY_LEN

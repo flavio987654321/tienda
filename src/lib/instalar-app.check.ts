@@ -39,10 +39,17 @@ async function main() {
      cartel automático de Chrome, y /dashboard y /afiliados no tienen botón
      propio: dependen de ese cartel. Silenciárselo a todos (como quedó en el
      primer commit) los dejaba sin forma de instalar. */
-  check("INST-G", !/botonDeInstalar/.test(layoutDashboard) && !/botonDeInstalar/.test(layoutAfiliados)
+  /* 08/10/26: el panel de tiendas también tiene su botón (la tarjeta "Recibí
+     los avisos en tu celular"), así que también lo silencia; sólo en el panel
+     de la dueña con sesión, que es donde se dibuja la tarjeta. Afiliados sigue
+     sin botón y con el cartel de Chrome. */
+  const tarjeta = readFileSync("src/components/dashboard/AvisosAlCelular.tsx", "utf8");
+  check("INST-G", !/botonDeInstalar/.test(layoutAfiliados)
     && /<PWAManager[^>]*scope="\/digitales" botonDeInstalar \/>/.test(layoutDigitales)
-    && (layoutDigitales.match(/botonDeInstalar/g) ?? []).length >= 2,
-    "sólo el panel que tiene el botón silencia el cartel del navegador; tiendas y afiliados siguen con el de Chrome");
+    && (layoutDigitales.match(/<PWAManager[^>]*botonDeInstalar/g) ?? []).length >= 1
+    && (layoutDashboard.match(/<PWAManager[^>]*botonDeInstalar/g) ?? []).length === 1
+    && /useSePuedeInstalar\(\)/.test(tarjeta) && /instalarLaApp\(\)/.test(tarjeta),
+    "silencian el cartel del navegador sólo los paneles con botón propio (digitales y tiendas); afiliados sigue con el de Chrome");
   check("INST-F", /useEffect\(\(\) => \{ if \(botonDeInstalar\) escucharInstalacion\(\); \}, \[botonDeInstalar\]\);/.test(pwa)
     && /useSePuedeInstalar\(\)/.test(avisos) && /Instalar la app/.test(avisos) && /!instalada && sePuedeInstalar/.test(avisos) && /Agregar a inicio/.test(avisos),
     "el layout guarda el evento, y la sección de avisos muestra el botón sólo si el navegador lo ofreció y no está instalada; en iPhone, las instrucciones");

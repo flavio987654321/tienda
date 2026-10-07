@@ -178,7 +178,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           primer dibujo; el componente se ocupa del resto de la visita. */}
       {OSCURO_TIENDAS_LISTO && <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_TIENDAS }} />}
       {OSCURO_TIENDAS_LISTO && <TemaDelPanelTiendas />}
-      <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" scope="/dashboard" />
+      {/* Sin el cartel automático de "activá las notificaciones": lo reemplaza la
+          tarjeta "Recibí los avisos en tu celular" del inicio y de Configuración
+          (components/dashboard/AvisosAlCelular), que además instala y prueba.
+          `botonDeInstalar`: guarda el "se puede instalar" para su botón. */}
+      <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" scope="/dashboard" disableNotifPrompt botonDeInstalar />
       <PanelSplash nombre="TiendaApps Panel" />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>

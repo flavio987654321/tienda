@@ -18,6 +18,7 @@ import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import { condicionesTienda } from "@/lib/avisos-tienda";
 import { statusLabel, statusClass } from "@/lib/orders";
 import AvisoDelPanel from "@/components/AvisoDelPanel";
+import AvisosAlCelular from "@/components/dashboard/AvisosAlCelular";
 import { avisosParaElPanel } from "@/lib/avisos-admin-servidor";
 
 export default async function DashboardPage() {
@@ -303,6 +304,9 @@ export default async function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Avisos al celular (08/10/26): arriba hasta que quede listo; después, una línea. */}
+        <AvisosAlCelular donde="inicio" />
 
         {/* ── Store link & publish toggle ── */}
         {store && (

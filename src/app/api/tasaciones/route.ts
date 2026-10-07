@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       body: `${v.datos.nombre.split(/\s+/)[0]} quiere ${v.datos.modalidad === "PERMUTA" ? "entregar" : "vender"} su ${resumenDelUsado(v.datos)}.`,
     };
     despues(() => createNotification({ userId: store.ownerId, type: "NEW_TASACION", ...aviso, link: "/dashboard/tasaciones" }), "tasación: campanita a la dueña");
-    despues(() => sendPushToUser(store.ownerId, { ...aviso, url: "/dashboard/tasaciones" }), "tasación: push a la dueña");
+    despues(() => sendPushToUser(store.ownerId, { ...aviso, url: "/dashboard/tasaciones", tag: `tasacion-${t.id}` }, "alta"), "tasación: push a la dueña");
     /* Y por correo (08/10/26), con todo lo que cargó, para pasarle un número sin entrar al panel. */
     const email = store.owner?.email;
     const d = v.datos;

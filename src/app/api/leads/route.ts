@@ -27,7 +27,7 @@ function avisarConsultaNueva(store: TiendaQueAvisa, vehiculo: string, d: DatosDe
     body: `${nombre.split(/\s+/)[0]} consultó por ${vehiculo}. Te dejó su teléfono para que lo contactes.`,
   };
   despues(() => createNotification({ userId: ownerId, type: "NEW_LEAD", ...aviso, link: "/dashboard/consultas" }), "consulta: campanita a la dueña");
-  despues(() => sendPushToUser(ownerId, { ...aviso, url: "/dashboard/consultas" }), "consulta: push a la dueña");
+  despues(() => sendPushToUser(ownerId, { ...aviso, url: "/dashboard/consultas", tag: `consulta-${Date.now()}` }, "alta"), "consulta: push a la dueña");
   /* Y por correo (08/10/26): el teléfono sólo suena si activó las notificaciones,
      y una consulta es una posible venta. */
   const email = store.owner?.email;

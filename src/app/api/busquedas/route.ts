@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const que = resumenDeBusqueda(d, monedaDeTienda(store.storeConfig)) || "un vehículo";
     const aviso = { title: "Nueva búsqueda", body: `${d.nombre.split(/\s+/)[0]} busca ${que}. Te avisamos si entra algo así.` };
     despues(() => createNotification({ userId: store.ownerId, type: "NEW_BUSQUEDA", ...aviso, link: "/dashboard/busquedas" }), "búsqueda: campanita a la dueña");
-    despues(() => sendPushToUser(store.ownerId, { ...aviso, url: "/dashboard/busquedas" }), "búsqueda: push a la dueña");
+    despues(() => sendPushToUser(store.ownerId, { ...aviso, url: "/dashboard/busquedas", tag: `busqueda-${b.id}` }, "alta"), "búsqueda: push a la dueña");
     const email = store.owner?.email;
     if (email) despues(() => sendAvisoConcesionariaEmail(email, {
       tienda: store.name, titulo: "Nueva búsqueda", resumen: `${d.nombre} busca ${que}.`,

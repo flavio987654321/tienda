@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2, Sparkles, AlignLeft, Save, Loader2 } from "lucide-react";
-import PushNotificationToggle from "@/components/PushNotificationToggle";
+import AvisosAlCelular from "@/components/dashboard/AvisosAlCelular";
 import Link from "next/link";
 
 /* Cada ajuste es su propia tarjeta exportada, y no un bloque adentro de un
@@ -278,24 +278,10 @@ export function FlyerCard({ isPremium }: { isPremium: boolean }) {
 }
 
 /* ── Notificaciones push ───────────────────────────────────── */
-export function PushCard({ tipoTienda }: { tipoTienda?: string }) {
-  const isAutos = tipoTienda === "AUTOS";
-  return (
-    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 panel-oscuro:border-gray-800">
-        <Info className="h-4 w-4 text-slate-400 panel-oscuro:text-gray-500 shrink-0" />
-        <h2 className="text-sm font-semibold text-slate-900 panel-oscuro:text-gray-100">Notificaciones push</h2>
-      </div>
-      <div className="px-5 py-4 space-y-3">
-        <p className="text-sm text-slate-500 panel-oscuro:text-gray-400">
-          {isAutos
-            ? "Recibí alertas en este dispositivo cuando llegue una nueva consulta o solicitud de afiliado, incluso con el panel cerrado."
-            : "Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliado, incluso con el panel cerrado."}
-        </p>
-        <PushNotificationToggle />
-      </div>
-    </div>
-  );
+/* Es la misma tarjeta del inicio (08/10/26): instalar, activar y probar, cada
+   paso con su estado real. Antes era un botón "Activar" suelto. */
+export function PushCard(_props: { tipoTienda?: string }) {
+  return <AvisosAlCelular donde="ajustes" />;
 }
 
 /* ── Piezas compartidas ────────────────────────────────────── */

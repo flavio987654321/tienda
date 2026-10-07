@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { endpointDePushValido } from "@/lib/suscripcionPush";
 
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -21,6 +22,11 @@ export function pushConfigurado(): boolean {
   return !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
 }
 
+/** Opciones de entrega. `alta`: lo que la dueña tiene que ver ya (una consulta);
+    Android lo entrega aunque el celular esté ahorrando batería. */
+export type Urgencia = "normal" | "alta";
+const opciones = (u: Urgencia = "normal") => ({ TTL: 60 * 60 * 24, urgency: u === "alta" ? ("high" as const) : ("normal" as const) });
+
 export interface PushPayload {
   title: string;
   body: string;
@@ -31,20 +37,23 @@ export interface PushPayload {
 }
 
 // Envía push a todos los suscriptores de usuario (dashboard)
-export async function sendPushToUser(userId: string, payload: PushPayload) {
+export async function sendPushToUser(userId: string, payload: PushPayload, urgencia: Urgencia = "normal") {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
 
   const { prisma } = await import("@/lib/prisma");
-  const subscriptions = await prisma.pushSubscription.findMany({
+  /* Sólo a direcciones de servicios de avisos reales (lib/suscripcionPush):
+     una fila vieja con una url cualquiera no recibe nada. */
+  const subscriptions = (await prisma.pushSubscription.findMany({
     where: { userId },
     select: { id: true, endpoint: true, auth: true, p256dh: true },
-  });
+  })).filter((s) => endpointDePushValido(s.endpoint));
 
   const results = await Promise.allSettled(
     subscriptions.map((sub) =>
       webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
-        JSON.stringify(payload)
+        JSON.stringify(payload),
+        opciones(urgencia)
       )
     )
   );
@@ -79,10 +88,10 @@ export async function sendPushToStore(storeId: string, payload: PushPayload): Pr
 
   // Obtener los endpoints push de esos usuarios
   const subscriptions = followerIds.length > 0
-    ? await prisma.storeSubscription.findMany({
+    ? (await prisma.storeSubscription.findMany({
         where: { storeId, userId: { in: followerIds } },
         select: { id: true, endpoint: true, auth: true, p256dh: true },
-      })
+      })).filter((s) => endpointDePushValido(s.endpoint))
     : [];
 
   if (subscriptions.length === 0) return 0;
@@ -116,4 +125,26 @@ export async function sendPushToStore(storeId: string, payload: PushPayload): Pr
   }
 
   return sent;
+}
+
+/** El aviso de prueba del panel: a UN celular de este usuario, no a todos.
+    "ok" llegó al servicio de avisos; "vencida" esa dirección ya no existe
+    (se borra y hay que volver a activar); "no-esta" este celular no está anotado. */
+export async function sendPushDePrueba(userId: string, endpoint: string, payload: PushPayload): Promise<"ok" | "vencida" | "no-esta" | "error"> {
+  if (!pushConfigurado()) return "error";
+  const { prisma } = await import("@/lib/prisma");
+  const sub = await prisma.pushSubscription.findFirst({ where: { userId, endpoint }, select: { id: true, endpoint: true, auth: true, p256dh: true } });
+  if (!sub || !endpointDePushValido(sub.endpoint)) return "no-esta";
+  try {
+    await webpush.sendNotification({ endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } }, JSON.stringify(payload), opciones("alta"));
+    return "ok";
+  } catch (e) {
+    const code = (e as { statusCode?: number }).statusCode;
+    if (code === 410 || code === 404) {
+      await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+      return "vencida";
+    }
+    console.error("[push] prueba:", e);
+    return "error";
+  }
 }
