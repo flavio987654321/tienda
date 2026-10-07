@@ -206,7 +206,7 @@ const DEMO_PRODUCTS_AUTOS: StorefrontProduct[] = [
     attrs: { "Condición": "Usado", "Marca": "Mercedes-Benz", "Modelo": "Atego", "Versión": "1726", "Año": "2019", "Kilómetros": "310000", "Motor": "7.2 TD", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "4x2", "Carrocería": "Caja seca", "Color": "Blanco", "Provincia": "Santa Fe", "Localidad": "Rosario" } }),
   demoVehiculo({ id: "auto-4", createdAt: "2026-08-14T12:00:00.000Z", name: "Yamaha MT-07", price: 8500000, category: "motos",
     description: "Naked deportiva 689cc. Motor CP2 de 73 HP. Ideal para ciudad y ruta.",
-    fotos: ["photo-1558981852-426c372de4a0", "photo-1558981403-c5f9899a28bc"],
+    fotos: ["photo-1558981403-c5f9899a28bc", "photo-1568772585407-9361f9bf3a87"],
     attrs: { "Condición": "Usado", "Marca": "Yamaha", "Modelo": "MT-07", "Año": "2023", "Kilómetros": "4500", "Motor": "689cc", "Transmisión": "Manual", "Combustible": "Nafta", "Carrocería": "Naked", "Color": "Negro", "Provincia": "Buenos Aires", "Localidad": "La Plata" } }),
   demoVehiculo({ id: "auto-5", createdAt: "2026-08-12T12:00:00.000Z", name: "Renault Kangoo Furgón 1.6", price: 21500000, category: "utilitarios", subcategory: "furgón",
     description: "Furgón con puerta lateral corrediza y mampara. Ideal para reparto.",

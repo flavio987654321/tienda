@@ -59,7 +59,12 @@ Reglas que valen para todos (de la memoria):
 
 ## Fase 2 — Rehacer Auto Motor y Auto Drive
 
-- [ ] Auto Motor (oscuro premium).
+- [x] ~~Auto Motor (oscuro premium).~~ Rehecho el 06/10/26, con bloques propios en
+      `templates/motor/`: buscador en la portada, "Explorá por tipo", recién ingresados
+      (tarjeta propia), vehículo en foco con ficha en PDF y WhatsApp, "Tasá tu usado" +
+      "Avisame si entra" en la portada (ventana compartida `auto/VentanaAuto`), números
+      reales, "Cómo comprar" en pasos. Los campos editables de antes conservan su nombre.
+      **Falta que el dueño lo vea y diga.**
 - [ ] Auto Drive (claro marketplace).
 - [ ] En los dos: bloques para tasación, "Avisame si entra", ficha / PDF, reservado,
       financiación, y la portada con "Tasá tu usado" y "Avisame si entra".

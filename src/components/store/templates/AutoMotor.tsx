@@ -1,7 +1,20 @@
 "use client";
+/**
+ * AUTO MOTOR — rehecho el 06/10/26 (fase 2 de TEMPLATES-AUTOS.md).
+ *
+ * Concesionaria premium en oscuro. La foto manda, la tipografía es grande y
+ * apretada, y cada bloque está pensado para vender vehículos, no ropa:
+ * buscador en la portada, "explorá por tipo", recién ingresados, un vehículo en
+ * foco con su ficha en PDF, tasación del usado y "Avisame si entra".
+ *
+ * Se comparte la LÓGICA con el resto de los templates de autos (filtros,
+ * favoritos, ventana del vehículo, tasación, búsquedas); el aspecto es propio
+ * (carpeta `motor/`). Los campos editables conservan sus nombres de antes, así
+ * lo que un dueño ya escribió sigue apareciendo.
+ */
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -13,12 +26,17 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
-import { monedaDe } from "@/lib/monedaVehiculo";
-import { opcionesDeFiltro, filtrarVehiculos, filtroVacio } from "@/lib/filtroVehiculos";
+import { WaIcon, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
+import { opcionesDeFiltro, filtrarVehiculos, filtroVacio, linkAVehiculos } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { TarjetaMotor, MOTOR_TARJETA_CSS } from "@/components/store/templates/motor/TarjetaMotor";
+import { BuscadorMotor } from "@/components/store/templates/motor/BuscadorMotor";
+import { TiposMotor } from "@/components/store/templates/motor/TiposMotor";
+import { FocoMotor, elegirFoco } from "@/components/store/templates/motor/FocoMotor";
+import { ServiciosMotor } from "@/components/store/templates/motor/ServiciosMotor";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -28,12 +46,12 @@ function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProper
   return { background: fallback };
 }
 function secText(ov: ImageOverride | undefined, bg: string): string {
-  if (ov?.url) return ov.overlayType === "light" ? "#111111" : "#ffffff";
-  return getContrastColor(bg) === "light" ? "#ffffff" : "#111111";
+  if (ov?.url) return ov.overlayType === "light" ? "#111111" : "#f4f4f5";
+  return getContrastColor(bg) === "light" ? "#f4f4f5" : "#111111";
 }
 function secMid(ov: ImageOverride | undefined, bg: string): string {
-  if (ov?.url) return ov.overlayType === "light" ? "#555555" : "rgba(255,255,255,0.65)";
-  return getContrastColor(bg) === "light" ? "rgba(255,255,255,0.65)" : "#777777";
+  if (ov?.url) return ov.overlayType === "light" ? "#555555" : "rgba(255,255,255,0.62)";
+  return getContrastColor(bg) === "light" ? "rgba(255,255,255,0.62)" : "#666666";
 }
 function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || ov.overlayType === "none") return null;
@@ -45,10 +63,31 @@ function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   );
 }
 
-const NAVY = "#1b3f6e";
-const NAVY_DARK = "#0d1f3c";
+/** La paleta: casi negro, superficies apenas más claras, y el acento del dueño. */
+const NEGRO = "#0b0c0e";
+const SUPERFICIE = "#101114";
+const LINEA = "rgba(255,255,255,0.08)";
 
-const AM_SECTION_IDS = ["am-stats", "am-catalogo", "am-servicios", "am-nosotros", "am-contacto"];
+const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-tasar", "am-stats", "am-servicios", "am-nosotros", "am-contacto"];
+
+/** El título de cada bloque: rayita del acento, etiqueta chica y título grande. */
+function Encabezado({ acento, tinta, kicker, titulo, derecha }: { acento: string; tinta: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 32, flexWrap: "wrap" }}>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ margin: "0 0 12px", display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: acento,
+          textTransform: "uppercase", letterSpacing: 3.5, fontWeight: 800 }}>
+          <span aria-hidden="true" style={{ width: 28, height: 2, background: acento }} />
+          {kicker}
+        </p>
+        <h2 style={{ margin: 0, fontSize: "clamp(28px,4.6vw,52px)", fontWeight: 800, color: tinta, letterSpacing: -1.6, lineHeight: 0.98 }}>
+          {titulo}
+        </h2>
+      </div>
+      {derecha}
+    </div>
+  );
+}
 
 export default function AutoMotor() {
   const config        = useStoreConfig();
@@ -60,7 +99,7 @@ export default function AutoMotor() {
      dueño ocultó sólo en el celular. */
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Catálogo","catálogo","am-catalogo"],["Servicios","servicios","am-servicios"],["Nosotros","nosotros","am-nosotros"],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
+  const menuAncho = [["Vehículos","catálogo","am-catalogo"],["Tasá tu usado","tasar","am-tasar"],["Nosotros","nosotros","am-nosotros"],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview     = !!config?.previewFill;
   /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
@@ -68,9 +107,13 @@ export default function AutoMotor() {
   const enEditor      = isPreview && !config?.demoPublica;
   const isOwner       = !!config?.isOwner;
   const accent        = config?.colors.accent ?? "#e8a020";
+  const sobreAcento   = getContrastColor(accent) === "dark" ? "#111" : "#fff";
   const currency      = config?.currency ?? "ARS";
-  // Las marcas de verdad, sin distinguir mayúsculas (ver lib/filtroVehiculos).
-  const cuantasMarcas = useMemo(() => opcionesDeFiltro(products, currency).marcas.length, [products, currency]);
+  const principal     = monedaDeTienda({ currency });
+  const slug          = config?.slug ?? "";
+  // Lo que la tienda tiene, para el buscador, los tipos y las estadísticas (ver lib/filtroVehiculos).
+  const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
+  const foco = useMemo(() => elegirFoco(products), [products]);
   const storeName     = config?.storeName ?? "AUTO MOTOR";
   const whatsapp      = config?.whatsapp ?? { enabled: false, number: "", message: "" };
   /* El link armado con `linkWhatsApp` (06/10/26): saca el 0 y el 15, pone el
@@ -83,51 +126,47 @@ export default function AutoMotor() {
   const heroOv          = iovr["heroBackground"];
   const heroBgUrl       = heroOv?.url ?? "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1920&q=80";
   const heroOverlayType = heroOv?.overlayType ?? "dark";
-  const heroOverlayOp   = heroOv?.overlayOpacity ?? 0.68;
-  const heroIsLight     = heroOverlayType === "light";
-  const heroText        = heroIsLight ? "#111111" : "#ffffff";
-  const heroMid         = heroIsLight ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.75)";
-  const heroNavBorder   = heroIsLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.35)";
+  const heroOverlayOp   = heroOv?.overlayOpacity ?? 0.55;
 
   const nosotrosUrl  = iovr["nosotrosImage"]?.url
     ?? "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=900&q=80";
 
-  const catalogoBg  = sc["bgCatalogo"]  ?? "#ffffff";
+  const catalogoBg  = sc["bgCatalogo"]  ?? NEGRO;
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
-  const catTheme    = catText === "#ffffff" ? "dark" as const : "light" as const;
 
-  const serviciosBg = sc["bgServicios"] ?? NAVY;
+  const serviciosBg = sc["bgServicios"] ?? SUPERFICIE;
   const serviciosImg= iovr["sectionbg_bgServicios"];
   const svcText     = secText(serviciosImg, serviciosBg);
   const svcMid      = secMid(serviciosImg, serviciosBg);
 
-  const nosotrosBg  = sc["bgNosotros"]  ?? "#ffffff";
+  const nosotrosBg  = sc["bgNosotros"]  ?? NEGRO;
   const nosotrosImg = iovr["sectionbg_bgNosotros"];
   const nosText     = secText(nosotrosImg, nosotrosBg);
   const nosMid      = secMid(nosotrosImg, nosotrosBg);
 
-  const contactoBg  = sc["bgContacto"]  ?? NAVY;
+  const contactoBg  = sc["bgContacto"]  ?? SUPERFICIE;
   const contactoImg = iovr["sectionbg_bgContacto"];
   const conText     = secText(contactoImg, contactoBg);
   const conMid      = secMid(contactoImg, contactoBg);
 
-  const footerBg    = sc["bgFooter"]    ?? NAVY_DARK;
+  const footerBg    = sc["bgFooter"]    ?? "#070809";
   const footerImg   = iovr["sectionbg_bgFooter"];
   const ftMid       = secMid(footerImg, footerBg);
 
-  const navBg          = sc["navBg"] ?? NAVY;
+  const navBg          = sc["navBg"] ?? NEGRO;
   const navDark        = getContrastColor(navBg) === "light";
   const navText        = navDark ? "#ffffff" : "#111111";
-  const navTextMid     = navDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)";
-  const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
+  const navTextMid     = navDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.5)";
+  const navBorderColor = navDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.12)";
 
   const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const [menuOpen,         setMenuOpen]         = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const [selected,   setSelected]   = useState<StorefrontProduct | null>(null);
+  const cerrarVehiculo = useCallback(() => setSelected(null), []);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
@@ -138,14 +177,14 @@ export default function AutoMotor() {
   // Lo que se ve si el dueño no escribió su barra: sólo lo que la tienda HACE
   // (ficha, tasación, búsquedas). Antes prometía financiación, inspección y
   // envío a todo el país en nombre de agencias que no los ofrecen (5.2).
-  const DEFAULTS = ["📋 Ficha técnica de cada vehículo", "🔁 Tasá tu usado online", "🔔 Te avisamos si entra lo que buscás"];
+  const DEFAULTS = ["Ficha técnica de cada vehículo", "Tasá tu usado online", "Te avisamos si entra lo que buscás"];
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
   const annMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
     : DEFAULTS;
   const showAnn = promoBannerEnabled && annVisible;
-  const PROMO_H = 36;
-  const NAV_H   = 64;
+  const PROMO_H = 34;
+  const NAV_H   = 68;
 
   /* Cada cuanto rota el MENSAJE de la barra de promocion. Lo elige la duena;
      antes eran 3,5 segundos escritos a mano en los nueve templates que la
@@ -199,113 +238,133 @@ export default function AutoMotor() {
     return () => window.removeEventListener("keydown", onKey);
   }, [searchOpen, favoritesOpen, selected]);
 
-  const visible = products.slice(0, 8);
-  const hasMore = products.length > 8;
+  // Recién ingresados: los más nuevos, sin el que está en foco (no se repite dos bloques seguidos).
+  const recientes = products.filter(p => p.id !== foco?.id || products.length <= 4).slice(0, 8);
+  const todos = linkAVehiculos(slug, {}, isPreview);
+
+  /* Estadísticas: lo que se cuenta sale de los datos; lo que es del negocio
+     (años, clientes) se ve sólo si el dueño lo escribió (en el editor, siempre,
+     para que lo pueda completar). Antes decía "200+", "98%" de fábrica (5.2). */
+  const stats = [
+    { fv:"stat1", fl:"statLabel1", n:String(products.length), l:"Vehículos disponibles", propio:false },
+    { fv:"stat4", fl:"statLabel4", n:String(opciones.marcas.length), l:"Marcas", propio:false },
+    { fv:"stat2", fl:"statLabel2", n:"15", l:"Años en el mercado", propio:true },
+    { fv:"stat3", fl:"statLabel3", n:"98%", l:"Clientes satisfechos", propio:true },
+  ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0"));
 
   return (
-    <div style={{ background: "#ffffff", color: "#1a2744",
+    <div style={{ background: NEGRO, color: "#f4f4f5",
       fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh" }}>
       <style>{`
         ${AM_MODAL_CSS}
-        .am-grid { display:grid; gap:16px; grid-template-columns:1fr }
-        @media(min-width:480px){ .am-grid { grid-template-columns:repeat(2,1fr) } }
-        @media(min-width:900px){ .am-grid { grid-template-columns:repeat(4,1fr) } }
+        ${MOTOR_TARJETA_CSS}
+        .am-grid { display:grid; gap:12px; grid-template-columns:1fr }
+        @media(min-width:560px){ .am-grid { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+        @media(min-width:1000px){ .am-grid { grid-template-columns:repeat(4,minmax(0,1fr)) } }
         .am-nav-links { display:none }
-        @media(min-width:768px){ .am-nav-links { display:flex } .am-burger { display:none } }
+        .am-marca { font-size:12px; letter-spacing:1px }
+        @media(min-width:640px){ .am-marca { font-size:16px; letter-spacing:3.5px } }
+        .am-solo-ancho { display:none }
+        @media(min-width:900px){ .am-nav-links { display:flex } .am-burger { display:none !important } .am-solo-ancho { display:inline-flex } }
         .am-about { grid-template-columns:1fr }
-        @media(min-width:768px){ .am-about { grid-template-columns:1fr 1fr } }
-        .am-svc { grid-template-columns:1fr }
-        @media(min-width:560px){ .am-svc { grid-template-columns:repeat(2,1fr) } }
-        @media(min-width:900px){ .am-svc { grid-template-columns:repeat(4,1fr) } }
+        @media(min-width:860px){ .am-about { grid-template-columns:1.05fr 1fr } }
+        .am-pasos { grid-template-columns:1fr }
+        @media(min-width:640px){ .am-pasos { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+        @media(min-width:1000px){ .am-pasos { grid-template-columns:repeat(4,minmax(0,1fr)) } }
+        .bm-grilla { grid-template-columns:1fr }
+        @media(min-width:700px){ .bm-grilla { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) } }
+        .tp-grilla { grid-template-columns:repeat(2,minmax(0,1fr)) }
+        .tp-item { grid-column: span var(--tp-celu,1) }
+        @media(min-width:900px){ .tp-grilla { grid-template-columns:repeat(var(--tp-cols,4),minmax(0,1fr)) } .tp-item { grid-column: span var(--tp-compu,1) } .tp-grande { grid-row: span 2 } }
+        .tp-item { min-height:150px }
+        @media(min-width:900px){ .tp-item { min-height:190px } }
+        .tp-foto { transition: transform .8s cubic-bezier(.2,.7,.2,1) }
+        .tp-item:hover .tp-foto { transform: scale(1.05) }
+        .tp-item:focus-visible { outline:2px solid ${accent}; outline-offset:3px }
+        .fm-grilla { grid-template-columns:1fr }
+        @media(min-width:900px){ .fm-grilla { grid-template-columns:1.25fr 1fr } }
+        .fm-foto { aspect-ratio: 16/11 }
+        @media(min-width:900px){ .fm-foto { aspect-ratio:auto } }
+        .fm-datos { grid-template-columns:repeat(2,minmax(0,1fr)) }
+        .sm-grilla { grid-template-columns:1fr }
+        @media(min-width:760px){ .sm-grilla { grid-template-columns:1fr 1fr } }
+        .am-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) }
+        .am-link:hover { color:${accent} !important }
         @keyframes am-spin { to { transform:rotate(360deg) } }
-        .am-svc-card { transition: border-bottom-color 0.2s, background 0.2s, transform 0.2s }
-        .am-svc-card:hover { transform: translateY(-2px) }
+        @keyframes am-sube { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
+        .am-entra { animation: am-sube .9s cubic-bezier(.2,.7,.2,1) both }
+        @media (prefers-reduced-motion: reduce) { .am-entra, .tp-foto { animation:none; transition:none } }
       `}</style>
 
-      {/* ── PROMO BAR ── */}
+      {/* ── BARRA DE AVISOS ── */}
       {showAnn && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
           left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
           zIndex: isPreview ? CAPAS.previaNavAlto : 110, height: PROMO_H,
-          background: NAVY_DARK, borderBottom: `1px solid rgba(255,255,255,0.1)`,
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize:11, fontWeight:600, color:"#ffffff", letterSpacing:2 }}>
+          background: accent, color: sobreAcento,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "0 44px" }}>
+          <span style={{ fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase",
+            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {annMessages[annIdx]}
           </span>
-          {annMessages.length > 1 && (
-            <div style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4 }}>
-              {annMessages.map((_, i) => (
-                <button key={i} type="button" onClick={() => setAnnIdx(i)} aria-label={`Ver el aviso ${i + 1}`}
-                  style={{ width: i===annIdx ? 14 : 5, height:3, border:"none", borderRadius:2,
-                    background: i===annIdx ? accent : "rgba(255,255,255,0.25)", cursor:"pointer", padding:0, transition:"all 0.3s" }} />
-              ))}
-            </div>
-          )}
           <button type="button" onClick={() => setAnnVisible(false)} aria-label="Cerrar la barra de avisos"
-            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
-              background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:16, opacity:0.6 }}>×</button>
+            style={{ position:"absolute", right:4, top:"50%", transform:"translateY(-50%)", width:34, height:34,
+              background:"none", border:"none", color:"inherit", cursor:"pointer", fontSize:18, opacity:0.7 }}>×</button>
         </div>
       )}
 
       {/* ── NAV ── */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed",
+      <nav aria-label="Principal" style={{ position: isPreview ? "sticky" : "fixed",
         top: showAnn ? PROMO_H : 0,
         left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
         zIndex: isPreview ? CAPAS.previaNav : 100,
-        background: navBg,
-        boxShadow: navDark ? "0 2px 16px rgba(13,31,60,0.35)" : "0 2px 12px rgba(0,0,0,0.08)",
-        padding: "0 28px" }}>
-        <div style={{ maxWidth:1200, margin:"0 auto", height:NAV_H,
-          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6,
-            fontWeight:900, fontSize:15, letterSpacing:4, textTransform:"uppercase", color: navText }}>
-            <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+        background: navDark ? `${navBg}e6` : navBg, backdropFilter: "blur(14px)",
+        borderBottom: `1px solid ${navBorderColor}`,
+        padding: "0 clamp(16px,4vw,32px)" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", height:NAV_H,
+          display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0,
+            fontWeight:900, textTransform:"uppercase", color: navText }}>
+            {/* En el celular se parte en dos renglones antes que cortarse ("RODRÍ…"). */}
+            <span className="am-marca" style={{ overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", lineHeight:1.1 }}>
+              <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+            </span>
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
-          <div className="am-nav-links" style={{ gap:32, alignItems:"center" }}>
+          <div className="am-nav-links" style={{ gap:28, alignItems:"center" }}>
             {menuAncho.map(([lbl,id]) => (
-              <button key={id} onClick={() => smoothScrollTo(id)}
-                style={{ background:"none", border:"none", cursor:"pointer", fontSize:11,
-                  fontWeight:600, letterSpacing:2, textTransform:"uppercase", transition:"color 0.15s",
-                  color: navTextMid }}
-                onMouseEnter={e => (e.currentTarget.style.color=navText)}
-                onMouseLeave={e => (e.currentTarget.style.color=navTextMid)}>
+              <button key={id} type="button" onClick={() => smoothScrollTo(id)} className="am-link"
+                style={{ background:"none", border:"none", cursor:"pointer", fontSize:12, minHeight:44,
+                  fontWeight:600, letterSpacing:1.5, textTransform:"uppercase", transition:"color 0.15s",
+                  color: navTextMid, fontFamily:"inherit" }}>
                 {lbl}
               </button>
             ))}
-            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-              style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
-                textDecoration:"none", padding:"8px 22px",
-                fontSize:11, fontWeight:800, letterSpacing:1.5, textTransform:"uppercase" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="0.85"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
-              Ver todos
-            </Link>
           </div>
           {/* Grupo derecho — búsqueda + favoritos + campanita + usuario + menú mobile */}
-          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setSearchOpen(true)} aria-label="Buscar"
-              style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
-              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Abrir el buscador"
+              style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button onClick={() => setFavoritesOpen(true)} aria-label="Favoritos"
-              style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
-              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favorites.length ? ` (${favorites.length})` : ""}`}
+              style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {favorites.length > 0 && <span aria-hidden="true" style={{ position:"absolute", top:2, right:2, background:accent, color:sobreAcento, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
             </button>
             {pushBell && config?.showPushBell && !isPreview && (
-              <StoreFollowButton storeSlug={config?.slug ?? ""} color={navTextMid} size={20} />
+              <StoreFollowButton storeSlug={slug} color={navTextMid} size={20} />
             )}
             {pushBell && config?.showPushBell && !isPreview && (
-              <button onClick={pushBell.openDrawer} aria-label="Novedades de la tienda"
-                style={{ position:"relative", background:"none", border:"none", cursor:"pointer", padding:4,
-                  display:"flex", alignItems:"center", color:navTextMid }}>
-                <svg width={20} height={20} viewBox="0 0 24 24"
+              <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda"
+                style={{ position:"relative", background:"none", border:"none", cursor:"pointer", width:40, height:40,
+                  display:"flex", alignItems:"center", justifyContent:"center", color:navTextMid }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" aria-hidden="true"
                   fill={pushBell.followState==="following"?"currentColor":"none"}
                   stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
-                {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10,
+                {pushBell.hasNew && <span style={{ position:"absolute", top:6, right:6, width:10, height:10,
                   background:"#ef4444", borderRadius:"50%", border:`2px solid ${navBg}` }} />}
               </button>
             )}
@@ -313,316 +372,288 @@ export default function AutoMotor() {
                 /plantillas no hay tienda que configurar. */}
             {enEditor && (config?.showPushBell ? (
               <>
-                <button title="Los clientes pueden seguir tu tienda desde acá"
-                  style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"default", opacity:0.85 }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                <button type="button" title="Los clientes pueden seguir tu tienda desde acá"
+                  style={{ width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", color:navTextMid, background:"none", border:"none", cursor:"default", opacity:0.85 }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
                 </button>
-                <button onClick={config.onPreviewBellClick}
-                  style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <button type="button" onClick={config.onPreviewBellClick} aria-label="Novedades de la tienda"
+                  style={{ width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", color:navTextMid, background:"none", border:"none", cursor:"pointer" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 </button>
               </>
             ) : (
               <>
-                <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
-                  style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-                  <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                <button type="button" onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
+                  style={{ position:"relative", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                  <span style={{ position:"absolute", top:4, right:4, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
                 </button>
-                <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
-                  style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                <button type="button" onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
+                  style={{ position:"relative", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <span style={{ position:"absolute", top:4, right:4, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
                 </button>
               </>
             ))}
-          {/* User icon */}
-          <div ref={userDropdownRef} style={{ position:"relative" }}>
-            <button type="button" onClick={() => setUserDropdownOpen(o => !o)} aria-label="Mi cuenta" aria-expanded={userDropdownOpen}
-              style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
-              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {/* Cuenta */}
+            <div ref={userDropdownRef} style={{ position:"relative" }}>
+              <button type="button" onClick={() => setUserDropdownOpen(o => !o)} aria-label="Mi cuenta" aria-expanded={userDropdownOpen}
+                style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </button>
+              {userDropdownOpen && (
+                <div style={{ position:"absolute", top:"calc(100% + 12px)", right:0, background:"#141619", border:`1px solid ${LINEA}`, minWidth:200, zIndex:CAPAS.flotante, boxShadow:"0 18px 40px rgba(0,0,0,0.5)", overflow:"hidden", borderRadius:4 }}>
+                  {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
+                    <>
+                      <p style={{ padding:"12px 16px 4px", fontSize:11, color:"rgba(255,255,255,0.5)", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {nombreMostrado}
+                      </p>
+                      <a href={panelHref} onClick={() => setUserDropdownOpen(false)} className="am-link"
+                        style={{ display:"block", padding:"12px 16px", fontSize:13, color:"#fff", textDecoration:"none", borderBottom:`1px solid ${LINEA}` }}>{panelLabel}</a>
+                      <button type="button" onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
+                        style={{ display:"block", width:"100%", padding:"12px 16px", fontSize:13, color:"#f87171", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1, fontFamily:"inherit" }}>Cerrar sesión</button>
+                    </>
+                  ) : (
+                    <>
+                      <a href={isPreview ? undefined : `/login?redirect=/tienda/${slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)} className="am-link"
+                        style={{ display:"block", padding:"13px 16px", fontSize:13, color:"#fff", textDecoration:"none", borderBottom:`1px solid ${LINEA}`, cursor: isPreview ? "default" : "pointer" }}>Iniciar sesión</a>
+                      <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)} className="am-link"
+                        style={{ display:"block", padding:"13px 16px", fontSize:13, color:"#fff", textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}>Registrarse</a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <Link href={todos} className="am-solo-ancho"
+              style={{ marginLeft:8, background:accent, color:sobreAcento, textDecoration:"none", padding:"0 18px", minHeight:40,
+                alignItems:"center", fontSize:11, fontWeight:800, letterSpacing:1.5, textTransform:"uppercase", borderRadius:2 }}>
+              Ver vehículos
+            </Link>
+            <button className="am-burger" type="button" onClick={() => setMenuOpen(m => !m)} aria-label={menuOpen ? "Cerrar el menú" : "Abrir el menú"} aria-expanded={menuOpen}
+              style={{ background:"none", border:`1px solid ${navBorderColor}`, borderRadius:2,
+                color:navText, width:40, height:40, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", marginLeft:4 }}>
+              {menuOpen ? "×" : "☰"}
             </button>
-            {userDropdownOpen && (
-              <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:CAPAS.flotante, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
-                {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
-                  <>
-                    <p style={{ padding:"10px 16px 4px", fontSize:11, color:navTextMid, margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                      {nombreMostrado}
-                    </p>
-                    <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"10px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>{panelLabel}</a>
-                    <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
-                      style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#f87171", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1 }}
-                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
-                      onMouseLeave={e => (e.currentTarget.style.opacity= isPreview ? "0.45" : "1")}>Cerrar sesión</button>
-                  </>
-                ) : (
-                  <>
-                    <a href={isPreview ? undefined : `/login?redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}`, cursor: isPreview ? "default" : "pointer" }}
-                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Iniciar sesión</a>
-                    <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}
-                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Registrarse</a>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          <button className="am-burger" type="button" onClick={() => setMenuOpen(m => !m)} aria-label={menuOpen ? "Cerrar el menú" : "Abrir el menú"} aria-expanded={menuOpen}
-            style={{ background:"none", border:`1px solid ${navBorderColor}`,
-              color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
-            {menuOpen ? "×" : "☰"}
-          </button>
           </div>
         </div>
         {menuOpen && (
-          <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px 28px 20px" }}>
+          <div style={{ borderTop:`1px solid ${navBorderColor}`, padding:"6px 0 18px" }}>
             {menuCelu.map(([lbl,id]) => (
-              <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
+              <button key={id} type="button" onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
-                  color:navTextMid, cursor:"pointer", textAlign:"left",
-                  padding:"12px 0", fontSize:11, fontWeight:700, textTransform:"uppercase",
-                  letterSpacing:2, borderBottom:`1px solid ${navBorderColor}` }}>
+                  color:navText, cursor:"pointer", textAlign:"left", minHeight:48,
+                  fontSize:13, fontWeight:700, textTransform:"uppercase", fontFamily:"inherit",
+                  letterSpacing:1.5, borderBottom:`1px solid ${navBorderColor}` }}>
                 {lbl}
               </button>
             ))}
-            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-              style={{ display:"block", color:accent, padding:"14px 0",
-                fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:2, textDecoration:"none" }}
+            <Link href={todos}
+              style={{ display:"flex", alignItems:"center", color:accent, minHeight:48,
+                fontSize:13, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, textDecoration:"none" }}
               onClick={() => setMenuOpen(false)}>
-              Ver todos los vehículos
+              Ver todos los vehículos →
             </Link>
           </div>
         )}
       </nav>
 
-      {/* ── HERO ── */}
-      <section style={{ position:"relative", minHeight:"100svh",
+      {/* ── PORTADA ── la foto, el título y el buscador: lo primero que se hace en una agencia es buscar. */}
+      <section aria-label="Portada" style={{ position:"relative", minHeight:"min(100svh, 920px)",
         display:"flex", flexDirection:"column", justifyContent:"flex-end",
-        paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), overflow:"hidden" }}>
-        <div style={{ position:"absolute", inset:0,
+        paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), overflow:"hidden", background: NEGRO }}>
+        <div aria-hidden="true" style={{ position:"absolute", inset:0,
           backgroundImage: `url(${heroBgUrl})`,
-          backgroundSize:"cover", backgroundPosition:`${heroOv?.posX ?? 50}% ${heroOv?.posY ?? 40}%` }}>
-          {heroOverlayType !== "none" && (
-            <div style={{ position:"absolute", inset:0,
-              background: heroIsLight
-                ? `rgba(255,255,255,${heroOverlayOp})`
-                : `linear-gradient(to top, rgba(13,31,60,${heroOverlayOp + 0.15}) 0%, rgba(13,31,60,${heroOverlayOp * 0.7}) 100%)` }} />
-          )}
-        </div>
-        <EditableImageButton field="heroBackground" label="Imagen de fondo del hero" />
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:4, background:accent, zIndex:2 }} />
+          backgroundSize:"cover", backgroundPosition:`${heroOv?.posX ?? 50}% ${heroOv?.posY ?? 50}%` }} />
+        {heroOverlayType !== "none" && (
+          <div aria-hidden="true" style={{ position:"absolute", inset:0,
+            background: heroOverlayType === "light"
+              ? `rgba(255,255,255,${heroOverlayOp})`
+              : `linear-gradient(to top, ${NEGRO} 0%, rgba(11,12,14,${Math.min(1, heroOverlayOp + 0.2)}) 30%, rgba(11,12,14,${heroOverlayOp * 0.55}) 70%, rgba(11,12,14,${heroOverlayOp * 0.35}) 100%)` }} />
+        )}
+        <EditableImageButton field="heroBackground" label="Imagen de fondo de la portada" />
 
-        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto",
-          width:"100%", padding:"60px 28px 80px" }}>
-          <p style={{ margin:"0 0 10px", fontSize:11, color:accent, letterSpacing:5, fontWeight:700, textTransform:"uppercase" }}>
-            <EditableZone field="heroKicker" label="Etiqueta hero">Bienvenido a {storeName}</EditableZone>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto",
+          width:"100%", boxSizing:"border-box", padding:"clamp(48px,10vh,120px) clamp(16px,4vw,32px) clamp(28px,5vw,56px)" }}>
+          <p className="am-entra" style={{ margin:"0 0 18px", display:"flex", alignItems:"center", gap:12, fontSize:11, color:accent, letterSpacing:4, fontWeight:800, textTransform:"uppercase" }}>
+            <span aria-hidden="true" style={{ width:32, height:2, background:accent }} />
+            <EditableZone field="heroKicker" label="Etiqueta de la portada">{storeName}</EditableZone>
           </p>
-          <h1 style={{ margin:"0 0 20px", fontSize:"clamp(36px,7vw,88px)", fontWeight:900,
-            color:heroText, letterSpacing:-3, lineHeight:0.9, textTransform:"uppercase" }}>
-            <EditableZone field="heroHeading" label="Título hero">Encontrá tu próximo vehículo</EditableZone>
+          <h1 className="am-entra" style={{ margin:"0 0 20px", fontSize:"clamp(40px,8.5vw,112px)", fontWeight:900,
+            color:"#fff", letterSpacing:"-0.045em", lineHeight:0.88, maxWidth:"11ch", animationDelay:".08s" }}>
+            <EditableZone field="heroHeading" label="Título de la portada">Tu próximo vehículo está acá</EditableZone>
           </h1>
-          <p style={{ margin:"0 0 44px", fontSize:"clamp(14px,1.8vw,17px)",
-            color:heroMid, fontWeight:300, maxWidth:480, lineHeight:1.75 }}>
-            <EditableZone field="heroSubtext" label="Subtítulo hero">Autos, motos, camionetas y más, con la ficha técnica completa y el precio a la vista.</EditableZone>
+          <p className="am-entra" style={{ margin:"0 0 36px", fontSize:"clamp(15px,1.7vw,18px)",
+            color:"rgba(255,255,255,0.72)", maxWidth:520, lineHeight:1.65, animationDelay:".16s" }}>
+            <EditableZone field="heroSubtext" label="Subtítulo de la portada">Autos, camionetas, motos y más, con la ficha técnica completa y el precio a la vista.</EditableZone>
           </p>
-          <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
-            <button onClick={() => smoothScrollTo("catálogo")}
-              style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
-                border:"none", padding:"15px 40px", fontWeight:800, fontSize:12,
-                letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
-              Ver catálogo
-            </button>
+          <div className="am-entra" style={{ animationDelay:".24s", maxWidth:960 }}>
+            <BuscadorMotor slug={slug} opciones={opciones} principal={principal} acento={accent} enEditor={isPreview} />
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:"10px 24px", flexWrap:"wrap", marginTop:22 }}>
+            {!loadingProducts && products.length > 0 && (
+              <Link href={todos} className="am-link" style={{ color:"rgba(255,255,255,0.8)", fontSize:13, fontWeight:600, textDecoration:"none", minHeight:44, display:"inline-flex", alignItems:"center" }}>
+                Ver los {products.length} vehículo{products.length !== 1 ? "s" : ""} →
+              </Link>
+            )}
             {waLink && (
-              <a href={waLink}
-                target="_blank" rel="noopener noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:8,
-                  background:"rgba(255,255,255,0.12)", backdropFilter:"blur(8px)",
-                  border:`1px solid ${heroNavBorder}`, color:heroText, textDecoration:"none",
-                  padding:"15px 28px", fontWeight:600, fontSize:12, letterSpacing:0.5 }}>
-                <WaIcon size={15} /> WhatsApp
+              <a href={waLink} target="_blank" rel="noopener noreferrer" className="am-link"
+                style={{ display:"inline-flex", alignItems:"center", gap:8, minHeight:44, color:"rgba(255,255,255,0.8)", textDecoration:"none", fontSize:13, fontWeight:600 }}>
+                <WaIcon size={16} /> Hablar con un asesor
               </a>
             )}
           </div>
-          {!loadingProducts && (
-            <p style={{ margin:"28px 0 0", fontSize:11, color:accent, fontWeight:600, letterSpacing:1.5 }}>
-              {products.length} vehículo{products.length!==1?"s":""} disponible{products.length!==1?"s":""}
-            </p>
-          )}
         </div>
       </section>
 
       <div style={{ display:"flex", flexDirection:"column" }}>
-      {/* ── STATS STRIP — white bg, accent numbers ── */}
-      <SectionBlock id="am-stats" label="Estadísticas" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <div style={{ background:"#ffffff", borderTop:`4px solid ${accent}`,
-        borderBottom:"1px solid rgba(0,0,0,0.06)", padding:"0 28px" }}>
-        <div style={{ maxWidth:1200, margin:"0 auto",
-          display:"flex", flexWrap:"wrap", justifyContent:"center" }}>
-          {/* Antes decía "200+ vehículos", "98% clientes satisfechos" de fábrica (5.2).
-              Vehículos y marcas se cuentan de verdad; años y clientes son del
-              negocio: se ven sólo si el dueño los escribió (en el editor, siempre,
-              para que los pueda completar). */}
-          {[
-            { fv:"stat1", fl:"statLabel1", n:String(products.length), l:"Vehículos", propio:false },
-            { fv:"stat2", fl:"statLabel2", n:"15",   l:"Años en el mercado", propio:true },
-            { fv:"stat3", fl:"statLabel3", n:"98%",  l:"Clientes satisfechos", propio:true },
-            { fv:"stat4", fl:"statLabel4", n:String(cuantasMarcas), l:"Marcas disponibles", propio:false },
-          ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0")).map((s,i,lista) => (
-            <div key={s.fv} style={{ textAlign:"center", padding:"28px clamp(20px,4vw,40px)",
-              borderRight: i<lista.length-1 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
-              <p style={{ margin:0, fontSize:"clamp(22px,3.5vw,34px)", fontWeight:900, color:accent, letterSpacing:-1 }}>
-                <EditableZone field={s.fv} label={`Número stat ${i+1}`}>{s.n}</EditableZone>
-              </p>
-              <p style={{ margin:"3px 0 0", fontSize:10, color:"#999",
-                textTransform:"uppercase", letterSpacing:2 }}>
-                <EditableZone field={s.fl} label={`Etiqueta stat ${i+1}`}>{s.l}</EditableZone>
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+
+      {/* ── EXPLORÁ POR TIPO ── */}
+      <SectionBlock id="am-tipos" label="Explorá por tipo" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      {(opciones.tipos.length > 1 || opciones.marcas.length > 1) ? (
+        <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px) 0", background: NEGRO }}>
+          <div style={{ maxWidth:1280, margin:"0 auto" }}>
+            <TiposMotor productos={products} opciones={opciones} moneda={currency} slug={slug} enEditor={isPreview}
+              titulo={<EditableZone field="tiposHeading" label="Título de los tipos">{opciones.tipos.length > 1 ? "Explorá por tipo" : "Explorá por marca"}</EditableZone>} />
+          </div>
+        </section>
+      ) : null}
       </SectionBlock>
 
-      {/* ── CATÁLOGO — sin filtros ── */}
-      <SectionBlock id="am-catalogo" label="Catálogo" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section id="catálogo" style={{ padding:"72px 28px", position:"relative",
+      {/* ── RECIÉN INGRESADOS ── */}
+      <SectionBlock id="am-catalogo" label="Recién ingresados" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      <section id="catálogo" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", position:"relative",
         ...secBg(catalogoImg, catalogoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
         <SectionOverlay ov={catalogoImg} />
-        <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto" }}>
-          <div style={{ marginBottom:40 }}>
-            <p style={{ margin:"0 0 8px", fontSize:10, color:accent,
-              textTransform:"uppercase", letterSpacing:4, fontWeight:700 }}>
-              <EditableZone field="catalogKicker" label="Kicker catálogo">Nuestros vehículos</EditableZone>
-            </p>
-            <h2 style={{ margin:0, fontSize:"clamp(24px,4vw,42px)", fontWeight:900,
-              color:catText, letterSpacing:-1, textTransform:"uppercase" }}>
-              <EditableZone field="catalogHeading" label="Título catálogo">Catálogo</EditableZone>
-            </h2>
-          </div>
+        <EditableSectionBg field="bgCatalogo" label="Fondo de recién ingresados" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+          <Encabezado acento={accent} tinta={catText}
+            kicker={<EditableZone field="catalogKicker" label="Etiqueta del catálogo">Stock</EditableZone>}
+            titulo={<EditableZone field="catalogHeading" label="Título del catálogo">Recién ingresados</EditableZone>}
+            derecha={products.length > recientes.length ? (
+              <Link href={todos} className="am-link" style={{ color:catMid, fontSize:13, fontWeight:700, textDecoration:"none", minHeight:44, display:"inline-flex", alignItems:"center", letterSpacing:0.5 }}>
+                Ver todos ({products.length}) →
+              </Link>
+            ) : undefined} />
 
           {loadingProducts ? (
-            <div style={{ textAlign:"center", padding:"60px 0" }}>
-              <div style={{ width:40, height:40, border:`3px solid ${accent}`,
+            <div role="status" aria-label="Cargando vehículos" style={{ textAlign:"center", padding:"60px 0" }}>
+              <div style={{ width:36, height:36, border:`3px solid ${accent}`,
                 borderTopColor:"transparent", borderRadius:"50%",
                 animation:"am-spin 0.8s linear infinite", margin:"0 auto" }} />
             </div>
-          ) : visible.length > 0 ? (
+          ) : recientes.length > 0 ? (
             <div className="am-grid">
-              {visible.map(p => (
-                <VehicleCard key={p.id} product={p} accent={accent} currency={currency}
-                  theme={catTheme} onClick={() => setSelected(p)}
-                  isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
+              {recientes.map(p => (
+                <TarjetaMotor key={p.id} p={p} acento={accent} moneda={currency} onAbrir={() => setSelected(p)}
+                  favorito={favorites.includes(p.id)} onFavorito={() => toggleFavorite(p.id)} />
               ))}
             </div>
           ) : (
-            <div style={{ textAlign:"center", padding:"60px 0",
-              border:`1px dashed ${catText==="#ffffff" ? "#3a5a8a" : "#c8d8e8"}` }}>
-              <p style={{ margin:0, color:catMid, fontSize:14 }}>Aún no hay vehículos publicados.</p>
-            </div>
-          )}
-
-          {hasMore && (
-            <div style={{ textAlign:"center", marginTop:44 }}>
-              <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-                style={{ display:"inline-flex", alignItems:"center", gap:10,
-                  background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
-                  textDecoration:"none", padding:"16px 52px",
-                  fontWeight:800, fontSize:12, letterSpacing:2, textTransform:"uppercase" }}>
-                Ver todo
-              </Link>
+            <div style={{ textAlign:"center", padding:"56px 16px", border:`1px dashed ${LINEA}` }}>
+              <p style={{ margin:0, color:catMid, fontSize:14 }}>Todavía no hay vehículos publicados.</p>
             </div>
           )}
         </div>
       </section>
       </SectionBlock>
 
-      {/* ── SERVICIOS — navy bg ── */}
-      <SectionBlock id="am-servicios" label="Servicios" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section id="servicios" style={{ padding:"80px 28px", position:"relative",
-        ...secBg(serviciosImg, serviciosBg) }}>
-        <BgDragHandle imgKey="sectionbg_bgServicios" />
-        <SectionOverlay ov={serviciosImg} />
-        <EditableSectionBg field="bgServicios" label="Fondo servicios" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:52 }}>
-            <div style={{ width:36, height:3, background:accent, flexShrink:0 }} />
-            <h2 style={{ margin:0, fontSize:"clamp(22px,4vw,38px)", fontWeight:900,
-              color:svcText, letterSpacing:-0.5, textTransform:"uppercase" }}>
-              <EditableZone field="serviciosHeading" label="Título servicios">Por qué elegirnos</EditableZone>
-            </h2>
+      {/* ── VEHÍCULO EN FOCO ── */}
+      <SectionBlock id="am-foco" label="Vehículo en foco" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      {foco ? (
+        <section style={{ padding:"0 clamp(16px,4vw,32px) clamp(56px,8vw,96px)", background: catalogoImg?.url ? NEGRO : catalogoBg }}>
+          <div style={{ maxWidth:1280, margin:"0 auto" }}>
+            <FocoMotor p={foco} acento={accent} moneda={currency} whatsapp={whatsapp} enPrevia={isPreview}
+              onAbrir={() => setSelected(foco)}
+              kicker={<EditableZone field="focoKicker" label="Etiqueta del vehículo en foco">En foco</EditableZone>} />
           </div>
-          <div className="am-svc" style={{ display:"grid", gap:3 }}>
-            {[
-              { fv:"svc1Title", fl:"svc1Desc", n:"01", t:"Ficha técnica completa", d:"Equipamiento, motor y medidas de cada vehículo, y la ficha en PDF para descargar o compartir." },
-              { fv:"svc2Title", fl:"svc2Desc", n:"02", t:"Tasá tu usado", d:"Mandanos los datos de tu vehículo y te respondemos con una oferta." },
-              { fv:"svc3Title", fl:"svc3Desc", n:"03", t:"Avisame si entra", d:"¿No está lo que buscás? Dejanos marca, modelo y presupuesto y te avisamos cuando entre." },
-              { fv:"svc4Title", fl:"svc4Desc", n:"04", t:"Consultá por WhatsApp", d:"Escribinos desde cualquier vehículo y te respondemos con todos los detalles." },
-            ].map((s,i) => (
-              <div key={i} className="am-svc-card"
-                style={{ padding:"36px 28px",
-                  background: svcText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#f4f8ff",
-                  border:`1px solid ${svcText==="#ffffff" ? "rgba(255,255,255,0.1)" : "rgba(27,63,110,0.12)"}`,
-                  borderBottom:`3px solid transparent` }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.borderBottomColor = accent;
-                  (e.currentTarget as HTMLDivElement).style.background = svcText==="#ffffff" ? "rgba(255,255,255,0.13)" : "#eaf0fa";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.borderBottomColor = "transparent";
-                  (e.currentTarget as HTMLDivElement).style.background = svcText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#f4f8ff";
-                }}>
-                <p style={{ margin:"0 0 14px", fontSize:42, fontWeight:900, color:accent,
-                  lineHeight:1, letterSpacing:-2 }}>{s.n}</p>
-                <p style={{ margin:"0 0 8px", fontSize:15, fontWeight:800, color:svcText }}>
-                  <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
+        </section>
+      ) : null}
+      </SectionBlock>
+
+      {/* ── TASÁ TU USADO / AVISAME SI ENTRA ── */}
+      <SectionBlock id="am-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      <section id="tasar" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: SUPERFICIE, borderTop:`1px solid ${LINEA}` }}>
+        <div style={{ maxWidth:1280, margin:"0 auto" }}>
+          <Encabezado acento={accent} tinta="#f4f4f5"
+            kicker={<EditableZone field="tasarKicker" label="Etiqueta de tasación">Antes de comprar</EditableZone>}
+            titulo={<EditableZone field="tasarHeading" label="Título de tasación">Te ayudamos a dar el paso</EditableZone>} />
+          <ServiciosMotor storeId={config?.storeId} acento={accent} isOwner={isOwner} isPreview={isPreview}
+            textos={{
+              tasarTitulo: <EditableZone field="tasarTitulo" label="Tasá tu usado — título">¿Tenés un usado?</EditableZone>,
+              tasarTexto: <EditableZone field="tasarTexto" label="Tasá tu usado — texto">Contanos qué tenés y te respondemos con una oferta, para tomarlo en parte de pago o comprártelo.</EditableZone>,
+              avisameTitulo: <EditableZone field="avisameTitulo" label="Avisame si entra — título">¿No está lo que buscás?</EditableZone>,
+              avisameTexto: <EditableZone field="avisameTexto" label="Avisame si entra — texto">Dejanos marca, modelo y hasta cuánto querés gastar. Cuando entre, te escribimos primero.</EditableZone>,
+            }} />
+        </div>
+      </section>
+      </SectionBlock>
+
+      {/* ── NÚMEROS ── */}
+      <SectionBlock id="am-stats" label="Números" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      {stats.length > 0 ? (
+        <div style={{ background: NEGRO, borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, padding:"0 clamp(16px,4vw,32px)" }}>
+          <div className="am-stats" style={{ maxWidth:1280, margin:"0 auto" }}>
+            {stats.map((s, i) => (
+              <div key={s.fv} style={{ padding:"clamp(28px,4vw,44px) 16px", borderLeft: i > 0 ? `1px solid ${LINEA}` : "none" }}>
+                <p style={{ margin:0, fontSize:"clamp(34px,5vw,60px)", fontWeight:900, color:"#fff", letterSpacing:-2, lineHeight:1 }}>
+                  <EditableZone field={s.fv} label={`Número ${i+1}`}>{s.n}</EditableZone>
                 </p>
-                <p style={{ margin:0, fontSize:13, color:svcMid, lineHeight:1.75 }}>
-                  <EditableZone field={s.fl} label={`Servicio ${i+1} — Descripción`}>{s.d}</EditableZone>
+                <p style={{ margin:"10px 0 0", fontSize:11, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:2.5 }}>
+                  <EditableZone field={s.fl} label={`Texto del número ${i+1}`}>{s.l}</EditableZone>
                 </p>
               </div>
             ))}
           </div>
         </div>
+      ) : null}
+      </SectionBlock>
+
+      {/* ── CÓMO COMPRAR ── pasos, no promesas: lo que hace el comprador acá. */}
+      <SectionBlock id="am-servicios" label="Cómo comprar" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      <section id="servicios" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", position:"relative",
+        ...secBg(serviciosImg, serviciosBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgServicios" />
+        <SectionOverlay ov={serviciosImg} />
+        <EditableSectionBg field="bgServicios" label="Fondo de cómo comprar" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+          <Encabezado acento={accent} tinta={svcText}
+            kicker={<EditableZone field="serviciosKicker" label="Etiqueta de cómo comprar">Cómo comprar</EditableZone>}
+            titulo={<EditableZone field="serviciosHeading" label="Título de cómo comprar">Cuatro pasos y es tuyo</EditableZone>} />
+          <ol className="am-pasos" style={{ listStyle:"none", margin:0, padding:0, display:"grid", gap:1, background: svcText === "#111111" ? "rgba(0,0,0,0.08)" : LINEA }}>
+            {[
+              { fv:"svc1Title", fl:"svc1Desc", t:"Elegí", d:"Filtrá por tipo, marca, año y precio, y guardá los que te gusten." },
+              { fv:"svc2Title", fl:"svc2Desc", t:"Mirá la ficha", d:"Equipamiento, motor y medidas de cada vehículo, con la ficha en PDF para compartir." },
+              { fv:"svc3Title", fl:"svc3Desc", t:"Consultá", d:"Escribinos desde el vehículo: el mensaje ya sale con cuál es." },
+              { fv:"svc4Title", fl:"svc4Desc", t:"Coordiná la visita", d:"Acordamos día y hora para que lo veas en persona." },
+            ].map((s, i) => (
+              <li key={s.fv} style={{ padding:"clamp(24px,3vw,36px) clamp(20px,2.4vw,28px)", background: serviciosImg?.url ? "rgba(11,12,14,0.55)" : serviciosBg }}>
+                <p aria-hidden="true" style={{ margin:"0 0 22px", fontSize:13, fontWeight:800, color:accent, letterSpacing:2 }}>0{i + 1}</p>
+                <h3 style={{ margin:"0 0 10px", fontSize:20, fontWeight:800, color:svcText, letterSpacing:-0.4 }}>
+                  <EditableZone field={s.fv} label={`Paso ${i+1} — título`}>{s.t}</EditableZone>
+                </h3>
+                <p style={{ margin:0, fontSize:14, color:svcMid, lineHeight:1.7 }}>
+                  <EditableZone field={s.fl} label={`Paso ${i+1} — texto`}>{s.d}</EditableZone>
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
       </SectionBlock>
 
       {/* ── NOSOTROS ── */}
-      <SectionBlock id="am-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section id="nosotros" style={{ padding:"80px 28px", position:"relative",
+      <SectionBlock id="am-nosotros" label="Nosotros" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      <section id="nosotros" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", position:"relative",
         ...secBg(nosotrosImg, nosotrosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={nosotrosImg} />
-        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
-        <div className="am-about" style={{ position:"relative", zIndex:1, maxWidth:1200,
-          margin:"0 auto", display:"grid", gap:60, alignItems:"center" }}>
-          <div>
-            <p style={{ margin:"0 0 10px", fontSize:10, color:accent,
-              textTransform:"uppercase", letterSpacing:4, fontWeight:700 }}>
-              <EditableZone field="nosotrosKicker" label="Kicker nosotros">Quiénes somos</EditableZone>
-            </p>
-            <h2 style={{ margin:"0 0 22px", fontSize:"clamp(24px,4vw,46px)", fontWeight:900,
-              color:nosText, letterSpacing:-1.5, lineHeight:1.0, textTransform:"uppercase" }}>
-              <EditableZone field="nosotrosHeading" label="Título nosotros">Más de 15 años en el mercado automotor</EditableZone>
-            </h2>
-            <p style={{ margin:"0 0 14px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
-              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos especialistas en compra y venta de vehículos usados y a estrenar. Trabajamos con transparencia y seriedad para que tu experiencia sea única.</EditableZone>
-            </p>
-            <p style={{ margin:"0 0 32px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
-              <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo tiene fotos reales, su ficha técnica y el precio a la vista. Escribinos por cualquiera y te contamos todo.</EditableZone>
-            </p>
-            <div style={{ width:48, height:4, background:accent }} />
-          </div>
-          <div style={{ position:"relative", overflow:"hidden", aspectRatio:"4/3",
-            boxShadow:"0 20px 60px rgba(13,31,60,0.15)" }}>
-            <img src={nosotrosUrl} alt="Nosotros"
+        <EditableSectionBg field="bgNosotros" label="Fondo de nosotros" />
+        <div className="am-about" style={{ position:"relative", zIndex:1, maxWidth:1280,
+          margin:"0 auto", display:"grid", gap:"clamp(32px,5vw,72px)", alignItems:"center" }}>
+          <div style={{ position:"relative", overflow:"hidden", aspectRatio:"5/4", borderRadius:4 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
+            <img src={nosotrosUrl} alt=""
               style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
             {(() => {
               const ov = iovr["nosotrosImage"];
@@ -632,7 +663,24 @@ export default function AutoMotor() {
                   ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
                   : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
             })()}
-            <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
+            <EditableImageButton field="nosotrosImage" label="Foto de nosotros" />
+          </div>
+          <div>
+            <p style={{ margin:"0 0 12px", display:"flex", alignItems:"center", gap:12, fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:3.5, fontWeight:800 }}>
+              <span aria-hidden="true" style={{ width:28, height:2, background:accent }} />
+              <EditableZone field="nosotrosKicker" label="Etiqueta de nosotros">Quiénes somos</EditableZone>
+            </p>
+            <h2 style={{ margin:"0 0 22px", fontSize:"clamp(28px,4.4vw,50px)", fontWeight:800,
+              color:nosText, letterSpacing:-1.6, lineHeight:1.0 }}>
+              <EditableZone field="nosotrosHeading" label="Título de nosotros">Vehículos elegidos uno por uno</EditableZone>
+            </h2>
+            <p style={{ margin:"0 0 14px", fontSize:16, color:nosMid, lineHeight:1.8 }}>
+              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos especialistas en compra y venta de vehículos usados y a estrenar. Trabajamos con transparencia y seriedad para que tu experiencia sea única.</EditableZone>
+            </p>
+            <p style={{ margin:0, fontSize:16, color:nosMid, lineHeight:1.8 }}>
+              <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo tiene fotos reales, su ficha técnica y el precio a la vista. Escribinos por cualquiera y te contamos todo.</EditableZone>
+            </p>
           </div>
         </div>
       </section>
@@ -640,66 +688,69 @@ export default function AutoMotor() {
 
       {/* ── CONTACTO ── */}
       <SectionBlock id="am-contacto" label="Contacto" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section id="contacto" style={{ padding:"80px 28px", position:"relative",
-        ...secBg(contactoImg, contactoBg), borderTop:`4px solid ${accent}` }}>
+      <section id="contacto" style={{ padding:"clamp(64px,10vw,120px) clamp(16px,4vw,32px)", position:"relative", overflow:"hidden",
+        ...secBg(contactoImg, contactoBg), borderTop:`1px solid ${LINEA}` }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <SectionOverlay ov={contactoImg} />
-        <EditableSectionBg field="bgContacto" label="Fondo contacto" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:640, margin:"0 auto", textAlign:"center" }}>
-          <p style={{ margin:"0 0 10px", fontSize:10, color:accent,
-            textTransform:"uppercase", letterSpacing:4, fontWeight:700 }}>Contacto</p>
-          <h2 style={{ margin:"0 0 18px", fontSize:"clamp(28px,5vw,54px)", fontWeight:900,
-            color:conText, letterSpacing:-2, textTransform:"uppercase", lineHeight:1.0 }}>
-            <EditableZone field="contactHeading" label="Título contacto">¿Encontraste tu vehículo?</EditableZone>
+        <EditableSectionBg field="bgContacto" label="Fondo de contacto" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:880, margin:"0 auto", textAlign:"center" }}>
+          <h2 style={{ margin:"0 0 18px", fontSize:"clamp(34px,6.4vw,80px)", fontWeight:900,
+            color:conText, letterSpacing:"-0.04em", lineHeight:0.95 }}>
+            <EditableZone field="contactHeading" label="Título de contacto">¿Encontraste el tuyo?</EditableZone>
           </h2>
-          <p style={{ margin:"0 0 44px", fontSize:15, color:conMid, lineHeight:1.9, fontWeight:300,
-            maxWidth:420, marginInline:"auto" }}>
-            <EditableZone field="contactSubtext" label="Subtítulo contacto">Escribinos y un asesor te responde en minutos para coordinar una visita sin compromiso.</EditableZone>
+          <p style={{ margin:"0 auto 36px", fontSize:16, color:conMid, lineHeight:1.7, maxWidth:480 }}>
+            <EditableZone field="contactSubtext" label="Texto de contacto">Escribinos y coordinamos para que lo veas, sin compromiso.</EditableZone>
           </p>
-          {waLink && (
-            <a href={waLink}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display:"inline-flex", alignItems:"center", gap:12, background:"#25d366",
-                color:"white", textDecoration:"none", padding:"18px 48px",
-                fontWeight:900, fontSize:15, boxShadow:"0 12px 40px rgba(37,211,102,0.3)" }}>
-              <WaIcon size={22} />
-              <EditableZone field="contactWhatsApp" label="Texto botón WhatsApp">Escribinos por WhatsApp</EditableZone>
-            </a>
-          )}
+          <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+            {waLink && (
+              <a href={waLink}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display:"inline-flex", alignItems:"center", gap:10, background:"#25d366",
+                  color:"white", textDecoration:"none", padding:"0 28px", minHeight:52, borderRadius:2,
+                  fontWeight:800, fontSize:14 }}>
+                <WaIcon size={20} />
+                <EditableZone field="contactWhatsApp" label="Texto del botón de WhatsApp">Escribinos por WhatsApp</EditableZone>
+              </a>
+            )}
+            <Link href={todos}
+              style={{ display:"inline-flex", alignItems:"center", padding:"0 28px", minHeight:52, borderRadius:2,
+                border:`1px solid ${conText === "#111111" ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)"}`, color:conText,
+                textDecoration:"none", fontWeight:700, fontSize:14 }}>
+              Ver todos los vehículos
+            </Link>
+          </div>
         </div>
       </section>
       </SectionBlock>
       </div>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ position:"relative", padding:"32px 28px", textAlign:"center",
-        ...secBg(footerImg, footerBg), borderTop:"1px solid rgba(255,255,255,0.07)" }}>
+      {/* ── PIE ── */}
+      <footer style={{ position:"relative", padding:"40px clamp(16px,4vw,32px)",
+        ...secBg(footerImg, footerBg), borderTop:`1px solid ${LINEA}` }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
-        <div style={{ position:"relative", zIndex:1 }}>
-          <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:12,
-            color:accent, letterSpacing:5, textTransform:"uppercase" }}>{storeName}</p>
-          <p style={{ margin:"0 0 14px", fontSize:11, color:ftMid, letterSpacing:0.5 }}>
-            <EditableZone field="footerCopyright" label="Copyright">
-              {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
-            </EditableZone>
-          </p>
-          <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-            {linksLegales(config?.slug, config?.legales, { enEditor: isPreview, esAutos: true }).map(({ clave: tipo, label }) => (
-              <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`}
-                style={{ fontSize:10, color:ftMid, opacity:0.45, textDecoration:"none", letterSpacing:0.5 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="0.45"; }}>
+        <EditableSectionBg field="bgFooter" label="Fondo del pie" nombreBloque="Pie de la tienda" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto", display:"flex", flexWrap:"wrap",
+          alignItems:"center", justifyContent:"space-between", gap:"16px 32px" }}>
+          <div>
+            <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:"#fff", letterSpacing:3.5, textTransform:"uppercase" }}>{storeName}</p>
+            <p style={{ margin:0, fontSize:12, color:ftMid }}>
+              <EditableZone field="footerCopyright" label="Copyright">
+                {`© ${new Date().getFullYear()} ${storeName}.`}
+              </EditableZone>
+            </p>
+          </div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 18px" }}>
+            {linksLegales(slug, config?.legales, { enEditor: isPreview, esAutos: true }).map(({ clave: tipo, label }) => (
+              <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} className="am-link"
+                style={{ fontSize:12, color:ftMid, textDecoration:"none", minHeight:32, display:"inline-flex", alignItems:"center" }}>
                 {label}
               </a>
             ))}
             {!isOwner && (
-              <button onClick={() => setShowReport(true)}
-                style={{ fontSize:10, color:ftMid, opacity:0.45, background:"none", border:"none",
-                  cursor:"pointer", padding:0, letterSpacing:0.5 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="0.45"; }}>
+              <button type="button" onClick={() => setShowReport(true)} className="am-link"
+                style={{ fontSize:12, color:ftMid, background:"none", border:"none", minHeight:32,
+                  cursor:"pointer", padding:0, fontFamily:"inherit" }}>
                 Reportar tienda
               </button>
             )}
@@ -707,89 +758,87 @@ export default function AutoMotor() {
         </div>
       </footer>
 
-      {showReport && <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />}
+      {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
       {/* El aviso de favoritos (guardado en este dispositivo / no se pudo guardar). */}
       {fav.aviso && (
         <div role="status" style={{ position:"fixed", left:16, right:16, bottom:20, zIndex: isPreview ? CAPAS.previaModal : 230, display:"flex", justifyContent:"center", pointerEvents:"none" }}>
-          <div style={{ pointerEvents:"auto", display:"flex", alignItems:"center", gap:12, maxWidth:440, background:NAVY_DARK, color:"#fff", borderRadius:12, padding:"12px 12px 12px 16px", boxShadow:"0 10px 30px rgba(0,0,0,0.25)", fontSize:13, lineHeight:1.45 }}>
+          <div style={{ pointerEvents:"auto", display:"flex", alignItems:"center", gap:12, maxWidth:440, background:"#1b1d21", border:`1px solid ${LINEA}`, color:"#fff", borderRadius:4, padding:"12px 12px 12px 16px", boxShadow:"0 14px 40px rgba(0,0,0,0.5)", fontSize:13, lineHeight:1.45 }}>
             <span style={{ flex:1, overflowWrap:"anywhere" }}>{fav.aviso}</span>
-            <button type="button" onClick={fav.cerrarAviso} aria-label="Cerrar aviso" style={{ flexShrink:0, width:32, height:32, borderRadius:8, border:"none", background:"rgba(255,255,255,0.12)", color:"#fff", fontSize:18, cursor:"pointer" }}>×</button>
+            <button type="button" onClick={fav.cerrarAviso} aria-label="Cerrar aviso" style={{ flexShrink:0, width:32, height:32, borderRadius:2, border:"none", background:"rgba(255,255,255,0.1)", color:"#fff", fontSize:18, cursor:"pointer" }}>×</button>
           </div>
         </div>
       )}
 
-      {/* ── SEARCH OVERLAY ── */}
-      {/* El buscador va a SU capa, no a la de la barra.
-
-          Estaban las dos en `CAPAS.nav`, y al empatar gana la que se dibuja
-          ultima — que es la barra. O sea que la barra le quedaba ENCIMA al
-          buscador, y como la × del buscador va arriba a la derecha, terminaba
-          justo abajo del boton del carrito: se la tocaba y el clic se lo comia
-          la barra. Medido con el navegador: el clic sobre la × no llegaba nunca.
-          `CAPAS.buscador` existe para esto exactamente y no la usaba nadie.
-
-          Y ahora cierra tocando afuera. Antes no, asi que con la × tapada la
-          unica salida era Escape — que nadie adivina. Se compara `target` con
-          `currentTarget` para que tocar el campo o un resultado no cuente como
-          "afuera". */}
+      {/* ── BUSCADOR ──
+          Va a SU capa (`CAPAS.buscador`), no a la de la barra: empatadas, la
+          barra quedaba encima y se comía el clic de la ×. Cierra tocando afuera
+          (comparando target con currentTarget) y con Escape. */}
       {searchOpen && (
-        <div role="dialog" aria-modal="true" aria-label="Buscar vehículos" onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }} style={{ position:"fixed", inset:0, zIndex:CAPAS.buscador, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
-          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
-            style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
-          <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
+        <div role="dialog" aria-modal="true" aria-label="Buscar vehículos" onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }} style={{ position:"fixed", inset:0, zIndex:CAPAS.buscador, background:"rgba(11,12,14,0.96)", backdropFilter:"blur(10px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:"clamp(72px,14vh,128px)" }}>
+          <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
+            style={{ position:"absolute", top:16, right:16, width:44, height:44, background:"none", border:"none", color:"#fff", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
+          <div style={{ width:"100%", maxWidth:720, padding:"0 clamp(16px,4vw,24px)", boxSizing:"border-box" }}>
             <input autoFocus type="search" aria-label="Buscar vehículos" maxLength={80} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Buscar vehículos..."
-              style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${accent}`, color:"#111", fontSize:24, padding:"12px 0", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+              placeholder="Marca, modelo, año…"
+              style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${accent}`, color:"#fff", fontSize:"clamp(22px,4vw,34px)", fontWeight:700, padding:"12px 0", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
           </div>
           {searchResults.length > 0 && (
-            <div style={{ width:"100%", maxWidth:880, padding:"24px 24px 0", overflowY:"auto", maxHeight:"calc(100vh - 260px)" }}>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:16 }}>
-                {searchResults.map(p => (
-                  <button key={p.id} onClick={() => { setSelected(p); setSearchOpen(false); setSearchQuery(""); }}
-                    style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:6, cursor:"pointer", textAlign:"left", padding:0, color:"#111", overflow:"hidden" }}>
-                    <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", background:"#f5f5f5" }} />
-                    <div style={{ padding:"10px 12px" }}>
-                      <p style={{ fontSize:13, fontWeight:600, margin:"0 0 4px" }}>{p.name}</p>
-                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmtPrice(p.price, monedaDe(p, currency))}</p>
+            <div style={{ width:"100%", maxWidth:960, padding:"24px clamp(16px,4vw,24px) 24px", overflowY:"auto", boxSizing:"border-box" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))", gap:12 }}>
+                {searchResults.slice(0, 24).map(p => (
+                  <button key={p.id} type="button" onClick={() => { setSelected(p); setSearchOpen(false); setSearchQuery(""); }}
+                    style={{ background:"#141619", border:`1px solid ${LINEA}`, borderRadius:4, cursor:"pointer", textAlign:"left", padding:0, color:"#fff", overflow:"hidden", fontFamily:"inherit" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
+                    <img src={p.images[0] ?? ""} alt="" style={{ width:"100%", aspectRatio:"16/11", objectFit:"cover", display:"block", background:NEGRO }} />
+                    <div style={{ padding:"10px 12px 12px" }}>
+                      <p style={{ fontSize:13, fontWeight:700, margin:"0 0 4px" }}>{p.name}</p>
+                      <p style={{ fontSize:13, color:accent, fontWeight:800, margin:0 }}>{p.price > 0 ? fmtPrice(p.price, monedaDe(p, currency)) : "Consultar"}</p>
                     </div>
                   </button>
                 ))}
               </div>
+              {searchResults.length > 24 && (
+                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview)} style={{ display:"block", textAlign:"center", marginTop:18, color:accent, fontWeight:700, fontSize:14, textDecoration:"none" }}>
+                  Ver los {searchResults.length} resultados →
+                </Link>
+              )}
             </div>
           )}
           {searchQuery.trim().length > 0 && searchResults.length === 0 && (
-            <p style={{ color:"#888", marginTop:32, fontSize:14 }}>Sin resultados para &ldquo;{searchQuery}&rdquo;</p>
+            <p style={{ color:"rgba(255,255,255,0.55)", marginTop:32, fontSize:14, padding:"0 16px", textAlign:"center", overflowWrap:"anywhere" }}>
+              Nada con &ldquo;{searchQuery}&rdquo;. Probá con otra marca o modelo.
+            </p>
           )}
         </div>
       )}
 
-      {/* ── FAVORITOS DRAWER ── */}
+      {/* ── FAVORITOS ── */}
       <div role="dialog" aria-modal="true" aria-label="Favoritos" inert={!favoritesOpen} aria-hidden={!favoritesOpen} style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
-        <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:"1px solid #e5e5e5" }}>
-          <div style={{ padding:"20px 24px 14px", borderBottom:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <p style={{ fontWeight:700, fontSize:16, margin:0, color:"#111" }}>Favoritos <span style={{ fontWeight:400, fontSize:13, color:"#888" }}>({favorites.length})</span></p>
-            <button type="button" onClick={() => setFavoritesOpen(false)} aria-label="Cerrar favoritos" style={{ background:"none", border:"none", color:"#111", fontSize:22, cursor:"pointer", width:44, height:44, marginRight:-12 }}>×</button>
+        <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, maxWidth:"100vw", background:"#111215", color:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid ${LINEA}` }}>
+          <div style={{ padding:"16px 20px", borderBottom:`1px solid ${LINEA}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <p style={{ fontWeight:800, fontSize:16, margin:0, letterSpacing:-0.2 }}>Favoritos <span style={{ fontWeight:500, fontSize:13, color:"rgba(255,255,255,0.5)" }}>({favorites.length})</span></p>
+            <button type="button" onClick={() => setFavoritesOpen(false)} aria-label="Cerrar favoritos" style={{ background:"none", border:"none", color:"#fff", fontSize:24, cursor:"pointer", width:44, height:44, marginRight:-10 }}>×</button>
           </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"14px 24px" }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px" }}>
             {favoriteProducts.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"52px 0", color:"#888" }}>
-                <p style={{ fontSize:32, marginBottom:12 }}>♡</p>
-                <p style={{ fontSize:13, lineHeight:1.8 }}>No tenés favoritos aún.<br/>Explorá el catálogo.</p>
+              <div style={{ textAlign:"center", padding:"52px 0", color:"rgba(255,255,255,0.55)" }}>
+                <p style={{ fontSize:13, lineHeight:1.8, margin:0 }}>Todavía no guardaste ninguno.<br/>Tocá el corazón de un vehículo para tenerlo acá.</p>
               </div>
             ) : favoriteProducts.map(product => (
-              <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5f5" }}>
-                <img src={product.images[0] ?? ""} alt={product.name} style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
-                <div style={{ flex:1 }}>
-                  <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
-                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, monedaDe(product, currency))}</p>
+              <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:`1px solid ${LINEA}` }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
+                <img src={product.images[0] ?? ""} alt="" style={{ width:96, height:68, objectFit:"cover", borderRadius:2, flexShrink:0, background:NEGRO }} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ fontSize:14, fontWeight:700, margin:"0 0 4px", overflowWrap:"anywhere" }}>{product.name}</p>
+                  <p style={{ fontSize:13, color:accent, fontWeight:800, margin:"0 0 10px" }}>{product.price > 0 ? fmtPrice(product.price, monedaDe(product, currency)) : "Consultar"}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={() => { setFavoritesOpen(false); setSelected(product); }}
-                      style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                    <button type="button" onClick={() => { setFavoritesOpen(false); setSelected(product); }}
+                      style={{ background:accent, color:sobreAcento, border:"none", borderRadius:2, padding:"0 14px", minHeight:36, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                       Ver
                     </button>
-                    <button onClick={() => toggleFavorite(product.id)}
-                      style={{ background:"transparent", color:"#888", border:"1px solid #ddd", borderRadius:4, padding:"7px 14px", fontSize:11, cursor:"pointer" }}>
+                    <button type="button" onClick={() => toggleFavorite(product.id)}
+                      style={{ background:"transparent", color:"rgba(255,255,255,0.7)", border:`1px solid ${LINEA}`, borderRadius:2, padding:"0 14px", minHeight:36, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
                       Quitar
                     </button>
                   </div>
@@ -803,18 +852,18 @@ export default function AutoMotor() {
       {selected && (
         <VehicleModal product={selected} accent={accent} currency={currency}
           whatsapp={whatsapp} products={products}
-          onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
+          onClose={cerrarVehiculo} onSelect={p => setSelected(p)}
           isFavorite={favorites.includes(selected.id)} onToggleFavorite={() => toggleFavorite(selected.id)}
           storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
       )}
 
       {!editMode && waLink && (
-        <a href={waLink}
+        <a href={waLink} aria-label="Escribinos por WhatsApp"
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel,
             background:"#25d366", color:"white", width:56, height:56,
             borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:"0 4px 24px rgba(37,211,102,0.45)", textDecoration:"none" }}>
+            boxShadow:"0 6px 24px rgba(37,211,102,0.4)", textDecoration:"none" }}>
           <WaIcon size={24} />
         </a>
       )}

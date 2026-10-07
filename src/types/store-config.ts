@@ -431,7 +431,7 @@ export type StoreConfig = {
 export const TEMPLATE_NAV_BG: Partial<Record<TemplateId, string>> = {
   "aire":          "#ffffff", // la barra de Aire es blanca, como el resto del template
   "aurora":        "#06070d", // el fondo de la escena, casi negro
-  "auto-motor":    "#1b3f6e", // NAVY
+  "auto-motor":    "#0b0c0e", // casi negro (rehecho el 06/10/26)
   "auto-drive":    "#ffffff",
   "casa-clara":    "#ffffff",
   "electro-prime": "#ffffff",
