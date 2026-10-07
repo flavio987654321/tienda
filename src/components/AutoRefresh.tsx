@@ -16,8 +16,10 @@ const DEFAULT_TABLES = ["Affiliate", "Order"];
  *
  * `filtro` ("userId=eq.abc") limita los eventos a esas filas: con Notification,
  * sin él, se rearmaría la pantalla con el aviso de cualquier otra cuenta.
+ * `soloNuevas` escucha sólo las filas que se agregan: marcar un aviso como
+ * leído también cambia la tabla, y eso no mueve ningún número.
  */
-export default function AutoRefresh({ tables = DEFAULT_TABLES, filtro }: { tables?: string[]; filtro?: string }) {
+export default function AutoRefresh({ tables = DEFAULT_TABLES, filtro, soloNuevas = false }: { tables?: string[]; filtro?: string; soloNuevas?: boolean }) {
   const router = useRouter();
   const instanceId = useId();
   // Comparamos por contenido y no por identidad del array, así un caller que pase
@@ -34,7 +36,7 @@ export default function AutoRefresh({ tables = DEFAULT_TABLES, filtro }: { table
     for (const table of tablesKey.split(",")) {
       channel.on(
         "postgres_changes" as Parameters<typeof channel.on>[0],
-        { event: "*", schema: "public", table, ...(filtro ? { filter: filtro } : {}) },
+        { event: soloNuevas ? "INSERT" : "*", schema: "public", table, ...(filtro ? { filter: filtro } : {}) },
         () => {
           if (document.hidden) {
             missedWhileHiddenRef.current = true;
@@ -47,7 +49,7 @@ export default function AutoRefresh({ tables = DEFAULT_TABLES, filtro }: { table
 
     channel.subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [router, tablesKey, instanceId, filtro]);
+  }, [router, tablesKey, instanceId, filtro, soloNuevas]);
 
   useEffect(() => {
     function applyPendingRefresh() {

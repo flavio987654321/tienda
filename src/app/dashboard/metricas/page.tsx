@@ -1110,7 +1110,7 @@ export default async function MetricasPage({
   let soldVehiclesPeriod: { id: string; soldPrice: number | null; attributes: string; expenses: { monto: number }[] }[] = [];
   if (isAutos) {
     soldVehiclesPeriod = await prisma.product.findMany({
-      where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: periodStart, lt: periodEndExclusive } },
+      where: { ...unidades, vehicleStatus: "SOLD", soldAt: { gte: periodStart, lt: periodEndExclusive } },
       select: { id: true, soldPrice: true, attributes: true, expenses: { select: { monto: true } } },
     });
   }
@@ -1515,7 +1515,7 @@ export default async function MetricasPage({
           En autos no hay pedidos: cada consulta o tasación le deja un aviso a la
           dueña, y esa tabla sí se escucha (Lead no está en tiempo real). */}
       {isAutos
-        ? <AutoRefresh tables={["Notification"]} filtro={`userId=eq.${user.id}`} />
+        ? <AutoRefresh tables={["Notification"]} filtro={`userId=eq.${user.id}`} soloNuevas />
         : <AutoRefresh tables={["Order"]} />}
       <div className="mx-auto w-full max-w-6xl space-y-6">
 

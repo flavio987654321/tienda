@@ -113,15 +113,17 @@ export async function GET(req: NextRequest) {
      Los montos van en la moneda de cada vehículo, sin tipo de cambio. */
   if (isAutos) {
     const principal = monedaDeTienda(store.storeConfig);
+    // Lo mismo que su pantalla: los repuestos y accesorios no son unidades.
+    const unidades = { storeId: store.id, deletedAt: null, NOT: { category: { in: ["repuestos", "accesorios"] } } };
     const [leads, leadsPrev, vendidos, vendidosPrev, vistas, tasaciones, busquedasActivas, busquedasNuevas] = await Promise.all([
       prisma.lead.findMany({ where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate } }, select: { createdAt: true, productId: true, productName: true } }),
       prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: prevStartDate, lt: prevEndDate } } }),
       prisma.product.findMany({
-        where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: startDate, lt: endDate } },
+        where: { ...unidades, vehicleStatus: "SOLD", soldAt: { gte: startDate, lt: endDate } },
         select: { name: true, soldAt: true, soldPrice: true, attributes: true, expenses: { select: { monto: true } } },
         orderBy: { soldAt: "asc" },
       }),
-      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: prevStartDate, lt: prevEndDate } } }),
+      prisma.product.count({ where: { ...unidades, vehicleStatus: "SOLD", soldAt: { gte: prevStartDate, lt: prevEndDate } } }),
       prisma.storeView.findMany({
         where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
         select: { date: true, count: true },
