@@ -330,6 +330,7 @@ export default function AutoMotor() {
         .ef-listo [data-ef="grilla"].ef-in > :nth-child(7) { animation-delay:0.48s }
         .ef-listo [data-ef="grilla"].ef-in > :nth-child(8) { animation-delay:0.56s }
         .ef-listo [data-ef="titulo"] .ef-raya { transform-origin:left; transition: transform .9s .2s cubic-bezier(.16,.84,.3,1) }
+        .ef-listo [data-ef].ef-ya > *, .ef-listo [data-ef].ef-ya .ef-raya { animation:none !important; transition:none !important }
         .ef-listo [data-ef="titulo"]:not(.ef-in) .ef-raya { transform:scaleX(0) }
         @media (prefers-reduced-motion: reduce) { .am-entra, .tp-foto { animation:none; transition:none } }
       `}</style>

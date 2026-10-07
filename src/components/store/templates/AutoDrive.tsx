@@ -356,6 +356,7 @@ export default function AutoDrive() {
         .ef-listo [data-ef="grilla"].ef-in > :nth-child(8) { animation-delay:0.56s }
         .ef-listo [data-ef="titulo"]:not(.ef-in) .ef-etiqueta { opacity:0 }
         .ef-listo [data-ef="titulo"].ef-in .ef-etiqueta { animation: ad-ef-pop .55s .15s cubic-bezier(.2,.7,.2,1) backwards }
+        .ef-listo [data-ef].ef-ya > *, .ef-listo [data-ef].ef-ya .ef-etiqueta { animation:none !important }
         @media (prefers-reduced-motion: reduce) { .ad-entra, .ad-esqueleto { animation:none } .ad-svc-card:hover { transform:none } }
       `}</style>
 

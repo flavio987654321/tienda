@@ -46,6 +46,13 @@ export function useEfectosAlBajar(activo: boolean) {
   useEffect(() => {
     if (!activo || typeof IntersectionObserver === "undefined" || window.matchMedia(REDUCIR).matches) return;
     const html = document.documentElement;
+    /* Lo que ya está a la vista al abrir queda quieto (`ef-ya`): si no, se
+       escondía un instante y volvía a entrar animado, un parpadeo. Sólo se
+       anima lo que aparece al bajar. */
+    document.querySelectorAll<HTMLElement>("[data-ef]").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0 && r.top < window.innerHeight && r.bottom > 0) el.classList.add("ef-in", "ef-ya");
+    });
     html.classList.add("ef-listo");
     const obs = new IntersectionObserver((entradas) => {
       for (const e of entradas) {
