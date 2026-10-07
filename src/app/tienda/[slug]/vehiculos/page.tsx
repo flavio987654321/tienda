@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { VehicleCard, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { getContrastColor } from "@/contexts/EditContext";
-import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
+import type { ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
 import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/filtroVehiculos";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
+import PieDeAutos from "@/components/store/auto/PieDeAutos";
 
 type RawVehicle = {
   id: string;
@@ -214,6 +215,9 @@ function VehiculosPageInner() {
   const [products,    setProducts]    = useState<StorefrontProduct[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [storeName,   setStoreName]   = useState("Tienda");
+  // Para el pie: cómo escribirle a la concesionaria sin volver a la portada.
+  const [contacto, setContacto] = useState<{ whatsapp: string | null; descripcion: string | null }>({ whatsapp: null, descripcion: null });
+  const [redes, setRedes] = useState<Record<string, string>>({});
   const [accent,      setAccent]      = useState("#c9a227");
   const [currency,    setCurrency]    = useState("ARS");
   const [templateId,  setTemplateId]  = useState("");
@@ -270,11 +274,15 @@ function VehiculosPageInner() {
         if (data.store.tipoTienda && data.store.tipoTienda !== "AUTOS") { setNoEsDeAutos(true); return; }
         setErrorCarga(false);
         setStoreName(data.store.name ?? "Tienda");
+        setContacto({ whatsapp: null, descripcion: data.store.footerDescription || data.store.description || null });
         setStoreId(data.store.id);
         setIsOwner(!!data.isOwner);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.colors?.accent)          setAccent(cfg.colors.accent);
+          if (cfg.socialLinks && typeof cfg.socialLinks === "object") setRedes(cfg.socialLinks);
+          // El mismo WhatsApp que usa la ficha para las consultas.
+          if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setContacto(c => ({ ...c, whatsapp: String(cfg.whatsapp.number) }));
           if (cfg.currency) {
             setCurrency(cfg.currency);
             // El "precio hasta" arranca en la moneda principal, salvo que la dirección diga otra.
@@ -757,23 +765,9 @@ function VehiculosPageInner() {
           pantalla existe solo para tiendas de vehículos, que no envían ni aceptan
           devoluciones, y prometer "Política de envíos" sería mentirle al que
           compra. */}
-      <footer style={{ borderTop:`1px solid ${borderFaint}`, background:S,
-        padding:"28px clamp(16px,4vw,32px)", marginTop:8 }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", flexWrap:"wrap",
-          justifyContent:"center", alignItems:"center", gap:"8px 18px" }}>
-          {linksLegales(slug, legales, { esAutos: true, enEditor: fromEditor }).map(({ clave, label, href }) => (
-            <a key={clave} href={href}
-              style={{ fontSize:11, color:MID, textDecoration:"none", letterSpacing:0.3 }}>
-              {label}
-            </a>
-          ))}
-          <button onClick={() => setShowReport(true)}
-            style={{ fontSize:11, color:MID, background:"none", border:"none",
-              cursor:"pointer", padding:0, textDecoration:"underline", letterSpacing:0.3 }}>
-            Reportar tienda
-          </button>
-        </div>
-      </footer>
+      <PieDeAutos slug={slug} storeName={storeName} descripcion={contacto.descripcion} whatsapp={contacto.whatsapp} redes={redes}
+        legales={legales} enEditor={fromEditor} acento={accent} onReportar={isOwner ? undefined : () => setShowReport(true)}
+        tema={{ fondo: isAD ? "#f9fafb" : "#f6f8fb", tinta: T, suave: MID, linea: border }} />
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 

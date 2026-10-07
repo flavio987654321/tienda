@@ -9,7 +9,7 @@
  * (`tema`): oscura en Auto Motor, clara en Auto Drive. Las piezas de adentro
  * son las de siempre (consulta, ficha, tasación; ver components/store/auto).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { ProductDetailViewProps } from "./shared";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
@@ -26,8 +26,8 @@ import { monedaDe } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
 import { linkAVehiculo, linkAVehiculos } from "@/lib/filtroVehiculos";
 import { descripcionLegible } from "@/lib/descripcionLegible";
-import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import PieDeAutos from "@/components/store/auto/PieDeAutos";
 
 type Tema = "oscuro" | "claro";
 
@@ -35,6 +35,11 @@ const COLORES: Record<Tema, { fondo: string; superficie: string; linea: string; 
   oscuro: { fondo: "#0b0c0e", superficie: "#141619", linea: "rgba(255,255,255,0.09)", tinta: "#f4f4f5", suave: "rgba(255,255,255,0.6)", barra: "rgba(11,12,14,0.9)" },
   claro: { fondo: "#f5f6f8", superficie: "#ffffff", linea: "#e5e7eb", tinta: "#111827", suave: "#6b7280", barra: "rgba(255,255,255,0.92)" },
 };
+
+/* La lupa sólo con mouse: en un celular no hay "pasar por arriba", y el
+   primer toque abriría la lupa en vez de la foto grande. */
+const CON_MOUSE = "(hover: hover) and (pointer: fine)";
+const escucharMouse = (f: () => void) => { const m = window.matchMedia(CON_MOUSE); m.addEventListener("change", f); return () => m.removeEventListener("change", f); };
 
 const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=80";
 
@@ -92,16 +97,33 @@ function FotoAmpliada({ fotos, inicial, nombre, onClose }: { fotos: string[]; in
 }
 
 function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Tema }) {
-  const { slug, storeName, currency, whatsapp, product: p, products, isPreview, isOwner, legales, accentOverride, storeId } = view;
+  const { slug, storeName, currency, whatsapp, product: p, products, isPreview, isOwner, legales, accentOverride, storeId, socialLinks } = view;
   const c = COLORES[tema];
   const acento = accentOverride ?? (tema === "oscuro" ? "#e8a020" : "#2563eb");
   const fotos = p.images.length ? p.images : [FOTO_VACIA];
   const [foto, setFoto] = useState(0);
   const [ampliada, setAmpliada] = useState(false);
+  /* La lupa (08/10/26): con el mouse arriba, la foto se agranda en el lugar y
+     sigue al puntero. La tenía la ventana vieja del vehículo y se perdió al
+     pasar a página. Un clic sigue abriendo la foto grande. */
+  const conMouse = useSyncExternalStore(escucharMouse, () => window.matchMedia(CON_MOUSE).matches, () => false);
+  const [lupa, setLupa] = useState<{ x: number; y: number } | null>(null);
+  const miniaturas = useRef<HTMLDivElement>(null);
   const cerrarAmpliada = useCallback(() => setAmpliada(false), []);
   // Otro vehículo (desde "parecidos"): vuelve a la primera foto.
   const [mostrado, setMostrado] = useState(p.id);
-  if (mostrado !== p.id) { setMostrado(p.id); setFoto(0); setAmpliada(false); }
+  if (mostrado !== p.id) { setMostrado(p.id); setFoto(0); setAmpliada(false); setLupa(null); }
+  // La miniatura de la foto que se ve, siempre a la vista (en el celular las miniaturas se deslizan).
+  useEffect(() => {
+    const fila = miniaturas.current;
+    const m = fila?.children[foto] as HTMLElement | undefined;
+    if (!fila || !m || fila.scrollWidth <= fila.clientWidth) return;
+    const izq = m.offsetLeft - fila.offsetLeft;
+    if (izq < fila.scrollLeft || izq + m.offsetWidth > fila.scrollLeft + fila.clientWidth) {
+      fila.scrollTo({ left: izq - (fila.clientWidth - m.offsetWidth) / 2, behavior: "smooth" });
+    }
+  }, [foto]);
+  const pasarFoto = (n: number) => { setFoto(n); setLupa(null); };
   const swipe = useTouchSwipe(() => setFoto(i => (i + 1) % fotos.length), () => setFoto(i => (i - 1 + fotos.length) % fotos.length));
   const fav = useFavoritosVehiculos(isPreview);
   const [copiado, setCopiado] = useState(false);
@@ -145,10 +167,21 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
       <style>{`
         ${AM_MODAL_CSS}
         ${MOTOR_TARJETA_CSS}
-        .vd-grilla { display:grid; grid-template-columns:minmax(0,1fr); gap:24px }
-        @media(min-width:980px){ .vd-grilla { grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:40px } .vd-compra { position:sticky; top:84px } }
-        .vd-miniaturas { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px }
+        /* Debajo de las fotos va lo que se lee (descripción, services, tasación):
+           antes la columna de la consulta era más alta que la galería y quedaba
+           un hueco blanco al lado. En el celular, eso va después del precio. */
+        .vd-grilla { display:grid; grid-template-columns:minmax(0,1fr); grid-template-areas:"galeria" "compra" "extra"; gap:24px }
+        .vd-galeria { grid-area:galeria } .vd-compra { grid-area:compra } .vd-extra { grid-area:extra; min-width:0 }
+        @media(min-width:980px){
+          .vd-grilla { grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); grid-template-rows:auto 1fr; grid-template-areas:"galeria compra" "extra compra"; gap:0 40px }
+          .vd-extra { padding-top:8px }
+          .vd-compra { position:sticky; top:84px }
+        }
+        .vd-extra > section:first-child { margin-top:16px !important }
+        .vd-miniaturas { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px; scroll-behavior:smooth }
         .vd-miniaturas::-webkit-scrollbar { display:none }
+        /* En la compu, todas las miniaturas a la vista: bajan de renglón en vez de esconderse. */
+        @media(min-width:980px){ .vd-miniaturas { flex-wrap:wrap; overflow:visible } }
         .vd-similares { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)) }
         @media(min-width:900px){ .vd-similares { grid-template-columns:repeat(4,minmax(0,1fr)) } }
         @media(max-width:559px){ .vd-similares { grid-template-columns:minmax(0,1fr) } }
@@ -190,13 +223,24 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
 
         <div className="vd-grilla">
           {/* ── Galería ── */}
-          <section aria-label="Fotos">
+          <section aria-label="Fotos" className="vd-galeria" style={{ minWidth: 0 }}>
             <div {...swipe} style={{ position: "relative", aspectRatio: "16/10", background: tema === "oscuro" ? "#000" : "#e9ebef", borderRadius: 4, overflow: "hidden" }}>
-              <button type="button" onClick={() => setAmpliada(true)} aria-label={`Ampliar foto ${foto + 1} de ${fotos.length}`}
+              <button type="button" onClick={() => { setLupa(null); setAmpliada(true); }} aria-label={`Ampliar foto ${foto + 1} de ${fotos.length}`}
+                onMouseMove={e => {
+                  if (!conMouse) return;
+                  const r = e.currentTarget.getBoundingClientRect();
+                  setLupa({ x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) });
+                }}
+                onMouseLeave={() => setLupa(null)}
                 style={{ all: "unset", cursor: "zoom-in", position: "absolute", inset: 0 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
                 <img src={fotos[foto]} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                   onError={e => { (e.currentTarget as HTMLImageElement).src = FOTO_VACIA; }} />
+                {lupa && (
+                  <span aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundColor: tema === "oscuro" ? "#000" : "#e9ebef",
+                    backgroundImage: `url("${fotos[foto].replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundSize: "250%",
+                    backgroundPosition: `${lupa.x * 100}% ${lupa.y * 100}%` }} />
+                )}
               </button>
               {esReservado(p) && (
                 <span style={{ position: "absolute", top: 14, left: 14, background: "#f59e0b", color: "#111", fontSize: 11, fontWeight: 800,
@@ -206,7 +250,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
                 <>
                   {(["izq", "der"] as const).map(lado => (
                     <button key={lado} type="button" aria-label={lado === "izq" ? "Foto anterior" : "Foto siguiente"}
-                      onClick={() => setFoto(i => lado === "izq" ? (i - 1 + fotos.length) % fotos.length : (i + 1) % fotos.length)}
+                      onClick={() => pasarFoto(lado === "izq" ? (foto - 1 + fotos.length) % fotos.length : (foto + 1) % fotos.length)}
                       style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [lado === "izq" ? "left" : "right"]: 10,
                         width: 44, height: 44, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.5)", color: "#fff",
                         fontSize: 22, cursor: "pointer", backdropFilter: "blur(6px)" }}>
@@ -219,9 +263,9 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
               )}
             </div>
             {fotos.length > 1 && (
-              <div className="vd-miniaturas" style={{ marginTop: 10 }}>
+              <div ref={miniaturas} className="vd-miniaturas" style={{ marginTop: 10 }}>
                 {fotos.map((f, i) => (
-                  <button key={i} type="button" onClick={() => setFoto(i)} aria-label={`Ver foto ${i + 1}`} aria-current={i === foto}
+                  <button key={i} type="button" onClick={() => pasarFoto(i)} aria-label={`Ver foto ${i + 1}`} aria-current={i === foto}
                     style={{ flexShrink: 0, width: 92, height: 62, padding: 0, borderRadius: 3, overflow: "hidden", cursor: "pointer",
                       border: "none", outline: i === foto ? `2px solid ${acento}` : `1px solid ${c.linea}`, outlineOffset: i === foto ? 1 : 0,
                       opacity: i === foto ? 1 : 0.6, background: c.superficie }}>
@@ -272,6 +316,45 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
               {lugar && <p style={{ margin: 0, fontSize: 12, color: "#7a8494" }}>Ubicación: {lugar}</p>}
             </div>
           </aside>
+
+          {/* ── Debajo de las fotos: lo que se lee ── */}
+          <div className="vd-extra">
+            {hayServices && (
+              <section style={{ marginTop: 32 }}>
+                {tituloBloque("Historial de servicios")}
+                <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "10px 18px", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", maxWidth: 760 }}>
+                  {AUTO_SERVICES.map(svc => (
+                    <li key={svc.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: services[svc.key] ? c.tinta : c.suave }}>
+                      <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: 800, background: services[svc.key] ? "#22c55e" : c.linea, color: services[svc.key] ? "#fff" : c.suave }}>
+                        {services[svc.key] ? "✓" : "–"}
+                      </span>
+                      {svc.label}
+                      <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{services[svc.key] ? ": hecho" : ": no informado"}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {p.description && (
+              <section style={{ marginTop: 32 }}>
+                {tituloBloque("Descripción")}
+                <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(p.description, c.fondo) }}
+                  style={{ fontSize: 15, lineHeight: 1.85, color: c.suave, maxWidth: 760, overflowWrap: "anywhere" }} />
+              </section>
+            )}
+
+            {/* La tasación, pensada para ESTE vehículo: "lo pago con mi usado". */}
+            <section style={{ marginTop: 40, maxWidth: 760 }}>
+              {tituloBloque("¿Lo pagás con tu usado?")}
+              <div>
+                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }}
+                  isOwner={isOwner} isPreview={isPreview} />
+              </div>
+            </section>
+
+          </div>
         </div>
 
         {/* ── La ficha técnica, como hoja ── */}
@@ -280,47 +363,12 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
             datos={datos.map(d => ({ label: d.label, valor: d.value }))} />
         </div>
 
-        {hayServices && (
-          <section style={{ marginTop: 32 }}>
-            {tituloBloque("Historial de servicios")}
-            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "10px 18px", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", maxWidth: 760 }}>
-              {AUTO_SERVICES.map(svc => (
-                <li key={svc.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: services[svc.key] ? c.tinta : c.suave }}>
-                  <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, fontWeight: 800, background: services[svc.key] ? "#22c55e" : c.linea, color: services[svc.key] ? "#fff" : c.suave }}>
-                    {services[svc.key] ? "✓" : "–"}
-                  </span>
-                  {svc.label}
-                  <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{services[svc.key] ? ": hecho" : ": no informado"}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {p.description && (
-          <section style={{ marginTop: 32 }}>
-            {tituloBloque("Descripción")}
-            <div className="product-rte" dangerouslySetInnerHTML={{ __html: descripcionLegible(p.description, c.fondo) }}
-              style={{ fontSize: 15, lineHeight: 1.85, color: c.suave, maxWidth: 760, overflowWrap: "anywhere" }} />
-          </section>
-        )}
-
         {p.reelUrls && p.reelUrls.length > 0 && (
           <section style={{ marginTop: 40 }}>
             {tituloBloque("Videos")}
             <StoreProductReels reelUrls={p.reelUrls} theme={{ accent: acento, text: c.suave, border: c.linea, radius: 6 }} />
           </section>
         )}
-
-        {/* La tasación, pensada para ESTE vehículo: "lo pago con mi usado". */}
-        <section style={{ marginTop: 40, maxWidth: 640 }}>
-          {tituloBloque("¿Lo pagás con tu usado?")}
-          <div>
-            <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }}
-              isOwner={isOwner} isPreview={isPreview} />
-          </div>
-        </section>
 
         {similares.length > 0 && (
           <section style={{ marginTop: 56 }}>
@@ -336,13 +384,8 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
         )}
       </main>
 
-      <footer style={{ borderTop: `1px solid ${c.linea}`, padding: "28px clamp(12px,4vw,32px)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: "6px 18px", justifyContent: "center" }}>
-          {linksLegales(slug, legales, { esAutos: true, enEditor: isPreview }).map(({ clave, label, href }) => (
-            <a key={clave} href={href} className="vd-link" style={{ fontSize: 12, color: c.suave, textDecoration: "none", minHeight: 32, display: "inline-flex", alignItems: "center" }}>{label}</a>
-          ))}
-        </div>
-      </footer>
+      <PieDeAutos slug={slug} storeName={storeName} whatsapp={whatsapp} redes={socialLinks} legales={legales} enEditor={isPreview}
+        tema={{ fondo: c.superficie, tinta: c.tinta, suave: c.suave, linea: c.linea }} acento={acento} />
 
       {fav.aviso && (
         <div role="status" style={{ position: "fixed", left: 16, right: 16, bottom: 20, zIndex: 230, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
