@@ -3,6 +3,7 @@ import { RUBROS, ESTETICAS, PALETAS, FOTOS, CATALOGO, LOGO } from "@/lib/designB
 import { siteUrl } from "@/lib/site";
 import { crearFirmaResena } from "@/lib/firmaResena";
 import { correoAvisoAutos, type AvisoParaConcesionaria } from "@/lib/correoAvisoAutos";
+import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
 
 function escapeHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -136,6 +137,12 @@ export async function sendContactFormEmail({
 /** Consulta, tasación o búsqueda nueva: el correo a la concesionaria (ver lib/correoAvisoAutos). */
 export async function sendAvisoConcesionariaEmail(ownerEmail: string, aviso: AvisoParaConcesionaria) {
   if (!process.env.RESEND_API_KEY || !ownerEmail) return;
+  /* Tope propio de correos: 30 por hora por casilla. Los formularios dejan
+     pasar más (200 consultas por hora por tienda), y sin esto alguien podía
+     llenarle la casilla a una concesionaria y gastar el cupo de envíos de
+     todas. Pasado el tope siguen la campanita y el celular; el correo no. */
+  const { permitido } = await checkRateLimitConRespaldo(`correo-aviso:${ownerEmail.toLowerCase()}`, 30, 60 * 60_000, { limiteFallback: 30, limiteFallbackGlobal: 3000 });
+  if (!permitido) return;
   const { asunto, html } = correoAvisoAutos(aviso);
   await transporter.sendMail({ from: `"${aviso.tienda.replace(/["<>]/g, "")}" <${FROM_ADDRESS}>`, to: ownerEmail, subject: asunto, html });
 }
