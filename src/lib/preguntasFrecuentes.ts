@@ -80,3 +80,33 @@ export function armarPreguntas({ envios, mercadoPago, pagos, legales, fmt, conWh
 
 /** La dirección de una política de la tienda. */
 export const rutaPolitica = (slug: string | undefined, tipo: string) => `/tienda/${slug ?? ""}/politicas?tipo=${tipo}`;
+
+/* ── Autos (07/10/26) ──────────────────────────────────────────────────────
+   Las preguntas de una agencia, con la misma regla: se contesta con lo que la
+   tienda TIENE (tasación, "Avisame si entra", moneda de cada vehículo,
+   WhatsApp), sin prometer financiación, garantía ni prueba de manejo que nadie
+   cargó. Mismos campos editables (`faqP1`…), así lo que la dueña escribió la
+   sigue si cambia de template. */
+
+export type PreguntaDeAutos = { p: string; r: string };
+
+export function armarPreguntasAutos({ monedas, conWhatsapp }: {
+  /** Las monedas en que la tienda publica (ver lib/monedaVehiculo). */
+  monedas: ("ARS" | "USD")[];
+  conWhatsapp: boolean;
+}): PreguntaDeAutos[] {
+  const rMoneda = monedas.includes("USD") && monedas.includes("ARS")
+    ? "Cada vehículo muestra su moneda: algunos están publicados en pesos y otros en dólares. El precio que ves es el de ese vehículo."
+    : monedas.includes("USD")
+      ? "Los precios están en dólares. Si querés pagar en pesos, consultanos la cotización del día."
+      : "Los precios están en pesos argentinos.";
+  const comoEscribir = conWhatsapp ? "por WhatsApp, desde el botón de cada vehículo," : "desde el formulario de consulta de cada vehículo,";
+  return [
+    { p: "¿Puedo entregar mi usado?", r: "Sí: tasalo desde \"Tasá tu usado\". Nos contás qué tenés y cómo está, y te pasamos una oferta para tomarlo en parte de pago o comprártelo." },
+    { p: "¿Los precios están en pesos o en dólares?", r: rMoneda },
+    { p: "¿Puedo verlo en persona?", r: `Sí. Escribinos ${comoEscribir} y coordinamos día y hora para que lo veas.` },
+    { p: "¿Cómo reservo un vehículo?", r: `Escribinos ${comoEscribir} y te contamos cómo se hace la reserva. Mientras está reservado lo vas a ver marcado así en la tienda.` },
+    { p: "¿Y si no tienen el que busco?", r: "Dejanos tu búsqueda en \"Avisame si entra\": marca, modelo y hasta cuánto querés gastar. Cuando entre uno así, te escribimos primero." },
+    { p: "¿Qué información tiene cada vehículo?", r: "Fotos reales, la ficha técnica completa (equipamiento, motor y medidas) y la ficha en PDF para descargar o compartir." },
+  ];
+}

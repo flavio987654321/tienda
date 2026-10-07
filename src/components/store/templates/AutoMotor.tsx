@@ -38,6 +38,10 @@ import { BuscadorMotor } from "@/components/store/templates/motor/BuscadorMotor"
 import { TiposMotor } from "@/components/store/templates/motor/TiposMotor";
 import { FocoMotor, elegirFoco } from "@/components/store/templates/motor/FocoMotor";
 import { ServiciosMotor } from "@/components/store/templates/motor/ServiciosMotor";
+import { VideosMotor, VIDEOS_MOTOR_CSS } from "@/components/store/templates/motor/VideosMotor";
+import { PreguntasMotor } from "@/components/store/templates/motor/PreguntasMotor";
+import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
+import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -69,7 +73,7 @@ const NEGRO = "#0b0c0e";
 const SUPERFICIE = "#101114";
 const LINEA = "rgba(255,255,255,0.08)";
 
-const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-tasar", "am-stats", "am-servicios", "am-nosotros", "am-contacto"];
+const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-videos", "am-tasar", "am-stats", "am-servicios", "am-nosotros", "am-preguntas", "am-contacto"];
 
 /** El título de cada bloque: rayita del acento, etiqueta chica y título grande. */
 function Encabezado({ acento, tinta, kicker, titulo, derecha }: { acento: string; tinta: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode }) {
@@ -115,6 +119,8 @@ export default function AutoMotor() {
   // Lo que la tienda tiene, para el buscador, los tipos y las estadísticas (ver lib/filtroVehiculos).
   const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
   const foco = useMemo(() => elegirFoco(products), [products]);
+  // Los videos que ya están en cada vehículo (no se sube nada aparte).
+  const videos = useMemo(() => videosDeVehiculos(products), [products]);
   const storeName     = config?.storeName ?? "AUTO MOTOR";
   const whatsapp      = config?.whatsapp ?? { enabled: false, number: "", message: "" };
   /* El link armado con `linkWhatsApp` (06/10/26): saca el 0 y el 15, pone el
@@ -260,6 +266,7 @@ export default function AutoMotor() {
       <style>{`
         ${AM_MODAL_CSS}
         ${MOTOR_TARJETA_CSS}
+        ${VIDEOS_MOTOR_CSS}
         .am-grid { display:grid; gap:12px; grid-template-columns:1fr }
         @media(min-width:560px){ .am-grid { grid-template-columns:repeat(2,minmax(0,1fr)) } }
         @media(min-width:1000px){ .am-grid { grid-template-columns:repeat(4,minmax(0,1fr)) } }
@@ -291,6 +298,8 @@ export default function AutoMotor() {
         .sm-grilla { grid-template-columns:1fr }
         @media(min-width:760px){ .sm-grilla { grid-template-columns:1fr 1fr } }
         .am-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) }
+        .am-faq { grid-template-columns:1fr }
+        @media(min-width:960px){ .am-faq { grid-template-columns:minmax(0,0.8fr) minmax(0,1.4fr); align-items:start } }
         .am-link:hover { color:${accent} !important }
         @keyframes am-spin { to { transform:rotate(360deg) } }
         @keyframes am-sube { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
@@ -573,6 +582,23 @@ export default function AutoMotor() {
       ) : null}
       </SectionBlock>
 
+      {/* ── VIDEOS ── los que la agencia subió en sus vehículos. */}
+      <SectionBlock id="am-videos" label="Videos" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      {(videos.length > 0 || enEditor) ? (
+        <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
+          <div style={{ maxWidth:1280, margin:"0 auto" }}>
+            <Encabezado acento={accent} tinta="#f4f4f5"
+              kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
+              titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos andar</EditableZone>} />
+            <VideosMotor videos={videos} acento={accent} moneda={currency} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
+              vacio={<p style={{ margin:0, padding:"28px 20px", border:`1px dashed ${LINEA}`, borderRadius:4, color:"rgba(255,255,255,0.6)", fontSize:14, lineHeight:1.6 }}>
+                Acá aparecen los videos que subas en cada vehículo (en Productos → el vehículo → Videos). Cada uno lleva a su vehículo. Mientras no haya ninguno, este bloque no se muestra en la tienda.
+              </p>} />
+          </div>
+        </section>
+      ) : null}
+      </SectionBlock>
+
       {/* ── TASÁ TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="am-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="tasar" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: SUPERFICIE, borderTop:`1px solid ${LINEA}` }}>
@@ -684,6 +710,18 @@ export default function AutoMotor() {
               <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo tiene fotos reales, su ficha técnica y el precio a la vista. Escribinos por cualquiera y te contamos todo.</EditableZone>
             </p>
           </div>
+        </div>
+      </section>
+      </SectionBlock>
+
+      {/* ── PREGUNTAS FRECUENTES ── contestadas con lo que la tienda tiene (lib/preguntasFrecuentes). */}
+      <SectionBlock id="am-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      <section id="preguntas" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
+        <div className="am-faq" style={{ maxWidth:1280, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,72px)" }}>
+          <Encabezado acento={accent} tinta="#f4f4f5"
+            kicker={<EditableZone field="faqKicker" label="Etiqueta de preguntas">Preguntas</EditableZone>}
+            titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
+          <PreguntasMotor acento={accent} preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })} />
         </div>
       </section>
       </SectionBlock>
