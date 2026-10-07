@@ -43,8 +43,8 @@ export function VentanaAuto({ titulo, onClose, panel, children }: {
       onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) onClose(); tocoElFondo.current = false; }}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: CAPAS.critico, display: "flex",
         alignItems: "flex-start", justifyContent: "center", padding: "20px 16px", overflowY: "auto" }}>
-      <div style={{ background: "#fff", color: "#1a2744", borderRadius: 10, width: "100%", maxWidth: 480, margin: "auto 0",
-        padding: 16, position: "relative", ...panel }}>
+      <div style={{ background: "#fff", color: "#1a2744", borderRadius: 14, width: "100%", maxWidth: 520, margin: "auto 0",
+        padding: "52px 12px 12px", position: "relative", ...panel }}>
         <button type="button" onClick={onClose} aria-label="Cerrar"
           style={{ position: "absolute", top: 10, right: 10, width: 36, height: 36, borderRadius: "50%", border: "none",
             background: "rgba(0,0,0,0.06)", color: "inherit", fontSize: 20, cursor: "pointer", zIndex: 1 }}>×</button>

@@ -316,7 +316,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
         {/* La tasación, pensada para ESTE vehículo: "lo pago con mi usado". */}
         <section style={{ marginTop: 40, maxWidth: 640 }}>
           {tituloBloque("¿Lo pagás con tu usado?")}
-          <div style={{ background: "#fff", borderRadius: 6, padding: 4, border: tema === "claro" ? `1px solid ${c.linea}` : "none" }}>
+          <div>
             <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }}
               isOwner={isOwner} isPreview={isPreview} />
           </div>
