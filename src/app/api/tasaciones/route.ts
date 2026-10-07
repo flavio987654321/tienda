@@ -6,6 +6,8 @@ import { getClientIp } from "@/lib/request-ip";
 import { createNotification } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { despues } from "@/lib/despues";
+import { sendAvisoConcesionariaEmail } from "@/lib/email";
+import { siteUrl } from "@/lib/site";
 import { validarTasacion, resumenDelUsado, esEstadoTasacion } from "@/lib/tasaciones";
 import { tasacionesDelPanel } from "@/lib/tasacionesPanel";
 
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const store = await prisma.store.findUnique({
       where: { id: storeId },
-      select: { id: true, ownerId: true, tipoTienda: true, isActive: true, isPublished: true, closedAt: true, owner: { select: { banned: true } } },
+      select: { id: true, name: true, ownerId: true, tipoTienda: true, isActive: true, isPublished: true, closedAt: true, owner: { select: { banned: true, email: true } } },
     });
     if (!store || store.tipoTienda !== "AUTOS" || !store.isActive || !store.isPublished || store.closedAt || store.owner?.banned) {
       return NextResponse.json({ error: "Esta tienda no está disponible" }, { status: 404 });
@@ -68,6 +70,22 @@ export async function POST(req: NextRequest) {
     };
     despues(() => createNotification({ userId: store.ownerId, type: "NEW_TASACION", ...aviso, link: "/dashboard/tasaciones" }), "tasación: campanita a la dueña");
     despues(() => sendPushToUser(store.ownerId, { ...aviso, url: "/dashboard/tasaciones" }), "tasación: push a la dueña");
+    /* Y por correo (08/10/26), con todo lo que cargó, para pasarle un número sin entrar al panel. */
+    const email = store.owner?.email;
+    const d = v.datos;
+    if (email) despues(() => sendAvisoConcesionariaEmail(email, {
+      tienda: store.name, titulo: "Nueva tasación", resumen: aviso.body,
+      filas: [
+        ["Quiere", d.modalidad === "PERMUTA" ? "Entregarlo en parte de pago" : "Venderlo"],
+        ["Su vehículo", resumenDelUsado(d)],
+        ["Estado", d.estado], ["Combustible", d.combustible], ["Caja", d.transmision],
+        ["Le interesa", producto?.name], ["Comentario", d.comentario],
+        ["Nombre", d.nombre], ["Teléfono", d.telefono],
+      ],
+      nombre: d.nombre, telefono: d.telefono,
+      saludo: `Hola ${d.nombre.split(/\s+/)[0]}, te escribo de ${store.name} por la tasación de tu ${d.marca} ${d.modelo} ${d.anio}.`,
+      panel: siteUrl("/dashboard/tasaciones"), panelTexto: "Ver en Tasaciones",
+    }), "tasación: correo a la dueña");
 
     return NextResponse.json({ id: t.id }, { status: 201 });
   } catch {

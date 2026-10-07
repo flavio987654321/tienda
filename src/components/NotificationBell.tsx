@@ -28,6 +28,7 @@ const ICONS: Record<string, string> = {
   NEW_TASACION: "🔁",
   AGENDA_DEL_DIA: "📅",
   BUSQUEDA_COINCIDE: "🎯",
+  NEW_BUSQUEDA: "🔔",
   ORDER_PENDING_REMINDER: "⏳",
   // Pagos de MercadoPago que necesitan a la dueña (webhook, 05/10/26)
   PAYMENT_REFUNDED: "↩️",

@@ -7,20 +7,37 @@ import { getClientIp } from "@/lib/request-ip";
 import { createNotification } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { despues } from "@/lib/despues";
+import { sendAvisoConcesionariaEmail } from "@/lib/email";
+import { siteUrl } from "@/lib/site";
 import { consultasDelPanel } from "@/lib/consultasPanel";
 
 /* La dueña se entera de una consulta nueva (06/10/26): campanita y teléfono,
    como con un pedido. Sólo si trae datos (vino del formulario): el toque de
    WhatsApp no avisa, porque ese mensaje ya le llega a su WhatsApp, y avisar dos
    veces lo mismo es lo que hace que se silencien las notificaciones. */
-function avisarConsultaNueva(ownerId: string, vehiculo: string, nombre: string | null) {
+type TiendaQueAvisa = { ownerId: string; name: string; owner: { email: string | null } | null };
+type DatosDeConsulta = { customerName: string | null; customerPhone: string | null; customerMessage: string | null };
+
+function avisarConsultaNueva(store: TiendaQueAvisa, vehiculo: string, d: DatosDeConsulta) {
+  const nombre = d.customerName;
   if (!nombre) return;
+  const ownerId = store.ownerId;
   const aviso = {
     title: "Nueva consulta",
     body: `${nombre.split(/\s+/)[0]} consultó por ${vehiculo}. Te dejó su teléfono para que lo contactes.`,
   };
   despues(() => createNotification({ userId: ownerId, type: "NEW_LEAD", ...aviso, link: "/dashboard/consultas" }), "consulta: campanita a la dueña");
   despues(() => sendPushToUser(ownerId, { ...aviso, url: "/dashboard/consultas" }), "consulta: push a la dueña");
+  /* Y por correo (08/10/26): el teléfono sólo suena si activó las notificaciones,
+     y una consulta es una posible venta. */
+  const email = store.owner?.email;
+  if (email) despues(() => sendAvisoConcesionariaEmail(email, {
+    tienda: store.name, titulo: "Nueva consulta", resumen: `${nombre} consultó por ${vehiculo}.`,
+    filas: [["Vehículo", vehiculo], ["Nombre", nombre], ["Teléfono", d.customerPhone], ["Mensaje", d.customerMessage]],
+    nombre, telefono: d.customerPhone ?? "",
+    saludo: `Hola ${nombre.split(/\s+/)[0]}, te escribo de ${store.name} por tu consulta por el ${vehiculo}.`,
+    panel: siteUrl("/dashboard/consultas"), panelTexto: "Ver en Consultas",
+  }), "consulta: correo a la dueña");
 }
 
 // POST /api/leads — una consulta por un vehículo: el toque de WhatsApp (sin datos) o el formulario (con nombre y teléfono)
@@ -56,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     const store = await prisma.store.findUnique({
       where: { id: storeId },
-      select: { id: true, ownerId: true, commissionRate: true, tipoTienda: true, isActive: true, isPublished: true, closedAt: true, owner: { select: { banned: true } } },
+      select: { id: true, name: true, ownerId: true, commissionRate: true, tipoTienda: true, isActive: true, isPublished: true, closedAt: true, owner: { select: { banned: true, email: true } } },
     });
     // Una tienda sin publicar, cerrada o de un dueño baneado no toma consultas
     // (06/10/26): antes se guardaban igual y le llenaban la bandeja a nadie.
@@ -117,7 +134,7 @@ export async function POST(req: NextRequest) {
         data: datos,
       });
       if (completada.count > 0) {
-        avisarConsultaNueva(store.ownerId, product.name, datos.customerName);
+        avisarConsultaNueva(store, product.name, datos);
         return NextResponse.json({ leadId }, { status: 200 });
       }
       // Si no se pudo (venció, ya tenía datos), se crea una nueva abajo.
@@ -150,7 +167,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    avisarConsultaNueva(store.ownerId, product.name, datos.customerName);
+    avisarConsultaNueva(store, product.name, datos);
     return NextResponse.json({ leadId: lead.id }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

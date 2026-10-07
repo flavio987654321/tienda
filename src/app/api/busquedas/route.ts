@@ -4,7 +4,12 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { despues } from "@/lib/despues";
-import { validarBusqueda } from "@/lib/busquedas";
+import { validarBusqueda, resumenDeBusqueda } from "@/lib/busquedas";
+import { createNotification } from "@/lib/notifications";
+import { sendPushToUser } from "@/lib/push";
+import { sendAvisoConcesionariaEmail } from "@/lib/email";
+import { monedaDeTienda } from "@/lib/monedaVehiculo";
+import { siteUrl } from "@/lib/site";
 import { revisarBusquedas, busquedasDelPanel } from "@/lib/busquedasServidor";
 
 /* POST /api/busquedas — "Avisame si entra", desde la tienda, sin sesión.
@@ -25,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const store = await prisma.store.findUnique({
       where: { id: storeId },
-      select: { id: true, tipoTienda: true, isActive: true, isPublished: true, closedAt: true, owner: { select: { banned: true } } },
+      select: { id: true, name: true, ownerId: true, storeConfig: true, tipoTienda: true, isActive: true, isPublished: true, closedAt: true, owner: { select: { banned: true, email: true } } },
     });
     if (!store || store.tipoTienda !== "AUTOS" || !store.isActive || !store.isPublished || store.closedAt || store.owner?.banned) {
       return NextResponse.json({ error: "Esta tienda no está disponible" }, { status: 404 });
@@ -50,6 +55,20 @@ export async function POST(req: NextRequest) {
     }
 
     const b = await prisma.busquedaGuardada.create({ data: { storeId: store.id, ...d } });
+    /* La dueña se entera de la búsqueda en el momento (08/10/26): es un cliente
+       esperando algo puntual. Antes sólo sabía cuando entraba algo que coincidía. */
+    const que = resumenDeBusqueda(d, monedaDeTienda(store.storeConfig)) || "un vehículo";
+    const aviso = { title: "Nueva búsqueda", body: `${d.nombre.split(/\s+/)[0]} busca ${que}. Te avisamos si entra algo así.` };
+    despues(() => createNotification({ userId: store.ownerId, type: "NEW_BUSQUEDA", ...aviso, link: "/dashboard/busquedas" }), "búsqueda: campanita a la dueña");
+    despues(() => sendPushToUser(store.ownerId, { ...aviso, url: "/dashboard/busquedas" }), "búsqueda: push a la dueña");
+    const email = store.owner?.email;
+    if (email) despues(() => sendAvisoConcesionariaEmail(email, {
+      tienda: store.name, titulo: "Nueva búsqueda", resumen: `${d.nombre} busca ${que}.`,
+      filas: [["Busca", que], ["Comentario", d.comentario], ["Nombre", d.nombre], ["Teléfono", d.telefono]],
+      nombre: d.nombre, telefono: d.telefono,
+      saludo: `Hola ${d.nombre.split(/\s+/)[0]}, te escribo de ${store.name} por la búsqueda que dejaste (${que}).`,
+      panel: siteUrl("/dashboard/busquedas"), panelTexto: "Ver en Búsquedas",
+    }), "búsqueda: correo a la dueña");
     /* Si YA hay algo que coincide (reservado, o algo que no vio), la dueña se
        entera ahora: es un interesado concreto por una unidad que tiene. */
     despues(() => revisarBusquedas(store.id), "búsqueda nueva: revisar coincidencias");

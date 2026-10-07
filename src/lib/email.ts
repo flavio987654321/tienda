@@ -2,6 +2,7 @@
 import { RUBROS, ESTETICAS, PALETAS, FOTOS, CATALOGO, LOGO } from "@/lib/designBrief";
 import { siteUrl } from "@/lib/site";
 import { crearFirmaResena } from "@/lib/firmaResena";
+import { correoAvisoAutos, type AvisoParaConcesionaria } from "@/lib/correoAvisoAutos";
 
 function escapeHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -130,6 +131,13 @@ export async function sendContactFormEmail({
       </div>
     `,
   });
+}
+
+/** Consulta, tasación o búsqueda nueva: el correo a la concesionaria (ver lib/correoAvisoAutos). */
+export async function sendAvisoConcesionariaEmail(ownerEmail: string, aviso: AvisoParaConcesionaria) {
+  if (!process.env.RESEND_API_KEY || !ownerEmail) return;
+  const { asunto, html } = correoAvisoAutos(aviso);
+  await transporter.sendMail({ from: `"${aviso.tienda.replace(/["<>]/g, "")}" <${FROM_ADDRESS}>`, to: ownerEmail, subject: asunto, html });
 }
 
 export async function sendLowStockEmail({
