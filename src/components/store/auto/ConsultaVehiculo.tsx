@@ -4,6 +4,8 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import CampoTelefono from "@/components/CampoTelefono";
+import CampoTrampa from "@/components/store/auto/CampoTrampa";
+import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
 import { getContrastColor } from "@/contexts/EditContext";
 
@@ -69,6 +71,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [trampa, setTrampa] = useState("");
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);
@@ -110,7 +113,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
         body: JSON.stringify({
           storeId, productId: product.id, affiliateId: afiliadoDeEstaTienda() ?? undefined,
           leadId: consultaPrevia(product.id) ?? undefined,
-          customerName: nombre, customerPhone: telefono, customerMessage: mensaje,
+          customerName: nombre, customerPhone: telefono, customerMessage: mensaje, [CAMPO_TRAMPA]: trampa,
         }),
       });
       const data = await res.json().catch(() => ({})) as { leadId?: string; error?: string };
@@ -158,7 +161,8 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
           ¿Preferís que te llamen? Dejá tus datos
         </button>
       ) : (
-        <form onSubmit={enviar} noValidate style={{ display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+        <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+          <CampoTrampa value={trampa} onChange={setTrampa} />
           <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#1a2744" }}>
             {waHref ? "Dejá tus datos y te contactamos" : "Consultá por este vehículo"}
           </p>

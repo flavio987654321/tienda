@@ -4,6 +4,8 @@ import { getContrastColor } from "@/contexts/EditContext";
 import { ESTADOS_DEL_USADO, COMBUSTIBLES, TRANSMISIONES, anioMaximo, ANIO_MINIMO, KM_MAXIMO, validarTasacion } from "@/lib/tasaciones";
 import { conPuntos, sinPuntos } from "@/lib/monedaVehiculo";
 import CampoTelefono from "@/components/CampoTelefono";
+import CampoTrampa from "@/components/store/auto/CampoTrampa";
+import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
 
 /* "Tasá tu usado" (06/10/26), rehecha el 07/10/26 como paso a paso. El dueño:
@@ -64,6 +66,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   abiertoDeEntrada?: boolean;
 }) {
   const [abierto, setAbierto] = useState(abiertoDeEntrada);
+  const [trampa, setTrampa] = useState("");
   const [paso, setPaso] = useState<Paso>(1);
   const [haciaAtras, setHaciaAtras] = useState(false);
   const [f, setF] = useState({ marca: "", modelo: "", version: "", anio: "", km: "", combustible: "", transmision: "", estado: "", comentario: "", nombre: "", telefono: "" });
@@ -125,7 +128,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
       const res = await fetch("/api/tasaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id }),
+        body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id, [CAMPO_TRAMPA]: trampa }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo enviar. Probá de nuevo en un momento."); return; }
@@ -198,15 +201,24 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 
   return (
     <form onSubmit={enviar} noValidate aria-label="Tasá tu usado"
-      style={{ ...raiz, display: "flex", flexDirection: "column", gap: 14, borderRadius: 14, padding: "clamp(16px,3vw,22px)",
+      style={{ ...raiz, position: "relative", display: "flex", flexDirection: "column", gap: 14, borderRadius: 14, padding: "clamp(16px,3vw,22px)",
         background: "#fff", border: `1px solid ${RAYA}`, boxShadow: "0 1px 2px rgba(20,26,38,.04), 0 12px 32px rgba(20,26,38,.06)" }}>
       <style>{CSS}</style>
+      <CampoTrampa value={trampa} onChange={setTrampa} />
 
       {/* ── Avance ── */}
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.6, textTransform: "uppercase", color: accent }}>Tasá tu usado</span>
-          <span style={{ fontSize: 12, color: SUAVE }}>Paso {paso} de 4</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, color: SUAVE }}>Paso {paso} de 4</span>
+            {/* Metida en la página no tenía cómo cerrarse (08/10/26). Lo cargado queda: si la vuelve a abrir, sigue donde estaba. */}
+            {!abiertoDeEntrada && (
+              <button type="button" onClick={() => { setError(""); setAbierto(false); }} aria-label="Cerrar la tasación"
+                style={{ width: 32, height: 32, marginRight: -6, borderRadius: "50%", border: "none", background: "transparent", color: SUAVE,
+                  fontSize: 20, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            )}
+          </span>
         </div>
         <ol aria-label="Pasos" style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
           {([1, 2, 3, 4] as Paso[]).map((n) => (

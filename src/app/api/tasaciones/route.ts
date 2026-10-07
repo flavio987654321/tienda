@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { cayoEnLaTrampa } from "@/lib/trampaBots";
 import { createNotification } from "@/lib/notifications";
 import { sendPushToUser } from "@/lib/push";
 import { despues } from "@/lib/despues";
@@ -27,6 +28,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json().catch(() => null);
+    // Un bot que llenó el campo invisible: "listo" como si nada, sin guardar ni avisar (lib/trampaBots).
+    if (cayoEnLaTrampa(body)) return NextResponse.json({ ok: true });
     const storeId = typeof body?.storeId === "string" ? body.storeId : "";
     if (!storeId) return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
 

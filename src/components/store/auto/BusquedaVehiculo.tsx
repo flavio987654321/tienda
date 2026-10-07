@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import { getContrastColor } from "@/contexts/EditContext";
 import { CATEGORIAS_BUSQUEDA, validarBusqueda } from "@/lib/busquedas";
 import CampoTelefono from "@/components/CampoTelefono";
+import CampoTrampa from "@/components/store/auto/CampoTrampa";
+import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
 
 /* "Avisame si entra" (06/10/26): la persona deja qué busca y su teléfono, y
@@ -20,6 +22,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   /** Lo que estaba escrito en el buscador, para no hacérselo tipear de nuevo. */
   marcaInicial?: string;
 }) {
+  const [trampa, setTrampa] = useState("");
   const [f, setF] = useState({ categoria: "", marca: marcaInicial.slice(0, 40), modelo: "", anioDesde: "", precioHasta: "", nombre: "", telefono: "" });
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
@@ -42,7 +45,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
     try {
       const res = await fetch("/api/busquedas", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, ...f, categoria: f.categoria || null }),
+        body: JSON.stringify({ storeId, ...f, categoria: f.categoria || null, [CAMPO_TRAMPA]: trampa }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo guardar. Probá de nuevo en un momento."); return; }
@@ -72,7 +75,8 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   }
 
   return (
-    <form onSubmit={enviar} noValidate style={{ display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+    <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+      <CampoTrampa value={trampa} onChange={setTrampa} />
       <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a2744" }}>Avisame si entra</p>
       <p style={{ margin: "0 0 2px", fontSize: 12, color: "#777", lineHeight: 1.45 }}>Contanos qué buscás y te escribimos apenas entre uno. No hace falta completar todo.</p>
       <label style={etiqueta}>Tipo {opcional}
