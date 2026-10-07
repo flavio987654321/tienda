@@ -81,7 +81,7 @@ const ALIAS_MARCA: Record<string, string> = {
   mercedes: "mercedes benz", mb: "mercedes benz", "mercedes benz": "mercedes benz",
   citroen: "citroen", alfa: "alfa romeo", land: "land rover",
 };
-const marcaCanonica = (s: string | null | undefined) => {
+export const marcaCanonica = (s: string | null | undefined) => {
   const n = normalizar(s);
   return ALIAS_MARCA[n] ?? n;
 };

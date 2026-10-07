@@ -1,12 +1,12 @@
 "use client";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
+import { useFavoritosVehiculos } from "@/hooks/useFavoritosVehiculos";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -15,6 +15,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
+import { opcionesDeFiltro, filtrarVehiculos, filtroVacio } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -53,7 +54,14 @@ export default function AutoMotor() {
   const config        = useStoreConfig();
   const pushBell      = usePushBell();
   const { products, loadingProducts } = useStorefront();
-  const { editMode }  = useEditContext();
+  const { editMode, overrides, hiddenSections } = useEditContext();
+  /* El menú sólo a secciones que se ven (5.3 de la auditoría): un link a un
+     bloque oculto no hacía nada. En el menú del celular, tampoco a las que el
+     dueño ocultó sólo en el celular. */
+  const ocultas = config?.hiddenSections ?? hiddenSections;
+  const ocultasCelu = config?.hiddenSectionsCelular ?? [];
+  const menuAncho = [["Catálogo","catálogo","am-catalogo"],["Servicios","servicios","am-servicios"],["Nosotros","nosotros","am-nosotros"],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
+  const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview     = !!config?.previewFill;
   /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
    *  pública de `/plantillas/[id]` necesita lo primero y no lo segundo. */
@@ -61,6 +69,8 @@ export default function AutoMotor() {
   const isOwner       = !!config?.isOwner;
   const accent        = config?.colors.accent ?? "#e8a020";
   const currency      = config?.currency ?? "ARS";
+  // Las marcas de verdad, sin distinguir mayúsculas (ver lib/filtroVehiculos).
+  const cuantasMarcas = useMemo(() => opcionesDeFiltro(products, currency).marcas.length, [products, currency]);
   const storeName     = config?.storeName ?? "AUTO MOTOR";
   const whatsapp      = config?.whatsapp ?? { enabled: false, number: "", message: "" };
   /* El link armado con `linkWhatsApp` (06/10/26): saca el 0 y el 15, pone el
@@ -114,7 +124,6 @@ export default function AutoMotor() {
   const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
 
   const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
-  const router = useRouter();
   const [menuOpen,         setMenuOpen]         = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -122,12 +131,14 @@ export default function AutoMotor() {
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
-  const [favorites,     setFavorites]     = useState<string[]>([]);
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [searchOpen,    setSearchOpen]    = useState(false);
   const [searchQuery,   setSearchQuery]   = useState("");
 
-  const DEFAULTS = ["🚗 Financiación en cuotas", "🔧 Vehículos inspeccionados", "🚚 Entrega en todo el país"];
+  // Lo que se ve si el dueño no escribió su barra: sólo lo que la tienda HACE
+  // (ficha, tasación, búsquedas). Antes prometía financiación, inspección y
+  // envío a todo el país en nombre de agencias que no los ofrecen (5.2).
+  const DEFAULTS = ["📋 Ficha técnica de cada vehículo", "🔁 Tasá tu usado online", "🔔 Te avisamos si entra lo que buscás"];
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
   const annMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
@@ -163,50 +174,30 @@ export default function AutoMotor() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Cargar favoritos: desde API si está logueado, desde localStorage si no
-  useEffect(() => {
-    if (cargando) return;
-    if (logueado) {
-      fetch("/api/favoritos")
-        .then(r => r.ok ? r.json() : [])
-        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
-        .catch(() => {});
-    } else {
-      try {
-        const savedFavs = localStorage.getItem("storefront_favorites");
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza favoritos guardados en localStorage al cargar, no se puede calcular durante el render
-        if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      } catch {}
-    }
-  }, [cargando, logueado]);
-
-  useEffect(() => {
-    if (logueado) return;
-    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites, logueado]);
-
-  async function toggleFavorite(id: string) {
-    if (!logueado) {
-      router.push(`/login?redirect=/tienda/${config?.slug}`);
-      return;
-    }
-    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
-    try {
-      await fetch("/api/favoritos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: id }),
-      });
-    } catch {
-      setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
-    }
-  }
+  // Favoritos: sin sesión quedan en este navegador (ver hooks/useFavoritosVehiculos).
+  const fav = useFavoritosVehiculos(isPreview);
+  const favorites = fav.favoritos;
+  const toggleFavorite = fav.alternar;
 
   const favoriteProducts = products.filter(p => favorites.includes(p.id));
+  // Busca igual que /vehiculos (marca, modelo, año, en cualquier orden; ver lib/filtroVehiculos).
   const searchResults = searchQuery.trim().length > 0
-    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-        || p.category?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    ? filtrarVehiculos(products, { ...filtroVacio(), q: searchQuery }, currency)
     : [];
+
+  /* Escape cierra el buscador y los favoritos (5.6 de la auditoría: antes sólo
+     el modal del vehículo lo escuchaba). El modal tiene el suyo: si está
+     abierto, es de él. */
+  useEffect(() => {
+    if (!searchOpen && !favoritesOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || selected) return;
+      if (searchOpen) { setSearchOpen(false); setSearchQuery(""); }
+      else setFavoritesOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [searchOpen, favoritesOpen, selected]);
 
   const visible = products.slice(0, 8);
   const hasMore = products.length > 8;
@@ -244,13 +235,13 @@ export default function AutoMotor() {
           {annMessages.length > 1 && (
             <div style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4 }}>
               {annMessages.map((_, i) => (
-                <button key={i} onClick={() => setAnnIdx(i)}
+                <button key={i} type="button" onClick={() => setAnnIdx(i)} aria-label={`Ver el aviso ${i + 1}`}
                   style={{ width: i===annIdx ? 14 : 5, height:3, border:"none", borderRadius:2,
                     background: i===annIdx ? accent : "rgba(255,255,255,0.25)", cursor:"pointer", padding:0, transition:"all 0.3s" }} />
               ))}
             </div>
           )}
-          <button onClick={() => setAnnVisible(false)}
+          <button type="button" onClick={() => setAnnVisible(false)} aria-label="Cerrar la barra de avisos"
             style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
               background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:16, opacity:0.6 }}>×</button>
         </div>
@@ -272,7 +263,7 @@ export default function AutoMotor() {
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
           <div className="am-nav-links" style={{ gap:32, alignItems:"center" }}>
-            {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
+            {menuAncho.map(([lbl,id]) => (
               <button key={id} onClick={() => smoothScrollTo(id)}
                 style={{ background:"none", border:"none", cursor:"pointer", fontSize:11,
                   fontWeight:600, letterSpacing:2, textTransform:"uppercase", transition:"color 0.15s",
@@ -347,7 +338,7 @@ export default function AutoMotor() {
             ))}
           {/* User icon */}
           <div ref={userDropdownRef} style={{ position:"relative" }}>
-            <button onClick={() => setUserDropdownOpen(o => !o)}
+            <button type="button" onClick={() => setUserDropdownOpen(o => !o)} aria-label="Mi cuenta" aria-expanded={userDropdownOpen}
               style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
@@ -382,7 +373,7 @@ export default function AutoMotor() {
               </div>
             )}
           </div>
-          <button className="am-burger" onClick={() => setMenuOpen(m => !m)}
+          <button className="am-burger" type="button" onClick={() => setMenuOpen(m => !m)} aria-label={menuOpen ? "Cerrar el menú" : "Abrir el menú"} aria-expanded={menuOpen}
             style={{ background:"none", border:`1px solid ${navBorderColor}`,
               color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
             {menuOpen ? "×" : "☰"}
@@ -391,7 +382,7 @@ export default function AutoMotor() {
         </div>
         {menuOpen && (
           <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px 28px 20px" }}>
-            {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
+            {menuCelu.map(([lbl,id]) => (
               <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navTextMid, cursor:"pointer", textAlign:"left",
@@ -438,7 +429,7 @@ export default function AutoMotor() {
           </h1>
           <p style={{ margin:"0 0 44px", fontSize:"clamp(14px,1.8vw,17px)",
             color:heroMid, fontWeight:300, maxWidth:480, lineHeight:1.75 }}>
-            <EditableZone field="heroSubtext" label="Subtítulo hero">La mejor selección de autos, motos y camionetas. Todos inspeccionados y con documentación en regla.</EditableZone>
+            <EditableZone field="heroSubtext" label="Subtítulo hero">Autos, motos, camionetas y más, con la ficha técnica completa y el precio a la vista.</EditableZone>
           </p>
           <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
             <button onClick={() => smoothScrollTo("catálogo")}
@@ -473,14 +464,18 @@ export default function AutoMotor() {
         borderBottom:"1px solid rgba(0,0,0,0.06)", padding:"0 28px" }}>
         <div style={{ maxWidth:1200, margin:"0 auto",
           display:"flex", flexWrap:"wrap", justifyContent:"center" }}>
+          {/* Antes decía "200+ vehículos", "98% clientes satisfechos" de fábrica (5.2).
+              Vehículos y marcas se cuentan de verdad; años y clientes son del
+              negocio: se ven sólo si el dueño los escribió (en el editor, siempre,
+              para que los pueda completar). */}
           {[
-            { fv:"stat1", fl:"statLabel1", n:"200+", l:"Vehículos" },
-            { fv:"stat2", fl:"statLabel2", n:"15",   l:"Años en el mercado" },
-            { fv:"stat3", fl:"statLabel3", n:"98%",  l:"Clientes satisfechos" },
-            { fv:"stat4", fl:"statLabel4", n:"12",   l:"Marcas disponibles" },
-          ].map((s,i) => (
-            <div key={i} style={{ textAlign:"center", padding:"28px 40px",
-              borderRight: i<3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
+            { fv:"stat1", fl:"statLabel1", n:String(products.length), l:"Vehículos", propio:false },
+            { fv:"stat2", fl:"statLabel2", n:"15",   l:"Años en el mercado", propio:true },
+            { fv:"stat3", fl:"statLabel3", n:"98%",  l:"Clientes satisfechos", propio:true },
+            { fv:"stat4", fl:"statLabel4", n:String(cuantasMarcas), l:"Marcas disponibles", propio:false },
+          ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0")).map((s,i,lista) => (
+            <div key={s.fv} style={{ textAlign:"center", padding:"28px clamp(20px,4vw,40px)",
+              borderRight: i<lista.length-1 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
               <p style={{ margin:0, fontSize:"clamp(22px,3.5vw,34px)", fontWeight:900, color:accent, letterSpacing:-1 }}>
                 <EditableZone field={s.fv} label={`Número stat ${i+1}`}>{s.n}</EditableZone>
               </p>
@@ -566,10 +561,10 @@ export default function AutoMotor() {
           </div>
           <div className="am-svc" style={{ display:"grid", gap:3 }}>
             {[
-              { fv:"svc1Title", fl:"svc1Desc", n:"01", t:"Vehículos verificados",  d:"Cada auto pasa una inspección técnica completa antes de publicarse en el catálogo." },
-              { fv:"svc2Title", fl:"svc2Desc", n:"02", t:"Financiación propia",     d:"Planes en cuotas fijas adaptados a tu presupuesto. Sin vueltas, sin sorpresas." },
-              { fv:"svc3Title", fl:"svc3Desc", n:"03", t:"Documentación en regla",  d:"Nos encargamos de todos los trámites de transferencia sin costo adicional." },
-              { fv:"svc4Title", fl:"svc4Desc", n:"04", t:"Entrega en todo el país", d:"Coordinamos la entrega de tu vehículo a domicilio donde lo necesites." },
+              { fv:"svc1Title", fl:"svc1Desc", n:"01", t:"Ficha técnica completa", d:"Equipamiento, motor y medidas de cada vehículo, y la ficha en PDF para descargar o compartir." },
+              { fv:"svc2Title", fl:"svc2Desc", n:"02", t:"Tasá tu usado", d:"Mandanos los datos de tu vehículo y te respondemos con una oferta." },
+              { fv:"svc3Title", fl:"svc3Desc", n:"03", t:"Avisame si entra", d:"¿No está lo que buscás? Dejanos marca, modelo y presupuesto y te avisamos cuando entre." },
+              { fv:"svc4Title", fl:"svc4Desc", n:"04", t:"Consultá por WhatsApp", d:"Escribinos desde cualquier vehículo y te respondemos con todos los detalles." },
             ].map((s,i) => (
               <div key={i} className="am-svc-card"
                 style={{ padding:"36px 28px",
@@ -621,7 +616,7 @@ export default function AutoMotor() {
               <EditableZone field="nosotrosP1" label="Párrafo 1">Somos especialistas en compra y venta de vehículos usados y a estrenar. Trabajamos con transparencia y seriedad para que tu experiencia sea única.</EditableZone>
             </p>
             <p style={{ margin:"0 0 32px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
-              <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo en nuestro catálogo fue inspeccionado por nuestro equipo técnico. La documentación y la transferencia las gestionamos nosotros sin costo adicional.</EditableZone>
+              <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo tiene fotos reales, su ficha técnica y el precio a la vista. Escribinos por cualquiera y te contamos todo.</EditableZone>
             </p>
             <div style={{ width:48, height:4, background:accent }} />
           </div>
@@ -713,6 +708,15 @@ export default function AutoMotor() {
       </footer>
 
       {showReport && <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />}
+      {/* El aviso de favoritos (guardado en este dispositivo / no se pudo guardar). */}
+      {fav.aviso && (
+        <div role="status" style={{ position:"fixed", left:16, right:16, bottom:20, zIndex: isPreview ? CAPAS.previaModal : 230, display:"flex", justifyContent:"center", pointerEvents:"none" }}>
+          <div style={{ pointerEvents:"auto", display:"flex", alignItems:"center", gap:12, maxWidth:440, background:NAVY_DARK, color:"#fff", borderRadius:12, padding:"12px 12px 12px 16px", boxShadow:"0 10px 30px rgba(0,0,0,0.25)", fontSize:13, lineHeight:1.45 }}>
+            <span style={{ flex:1, overflowWrap:"anywhere" }}>{fav.aviso}</span>
+            <button type="button" onClick={fav.cerrarAviso} aria-label="Cerrar aviso" style={{ flexShrink:0, width:32, height:32, borderRadius:8, border:"none", background:"rgba(255,255,255,0.12)", color:"#fff", fontSize:18, cursor:"pointer" }}>×</button>
+          </div>
+        </div>
+      )}
 
       {/* ── SEARCH OVERLAY ── */}
       {/* El buscador va a SU capa, no a la de la barra.
@@ -729,11 +733,11 @@ export default function AutoMotor() {
           `currentTarget` para que tocar el campo o un resultado no cuente como
           "afuera". */}
       {searchOpen && (
-        <div onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }} style={{ position:"fixed", inset:0, zIndex:CAPAS.buscador, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
+        <div role="dialog" aria-modal="true" aria-label="Buscar vehículos" onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }} style={{ position:"fixed", inset:0, zIndex:CAPAS.buscador, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
           <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
           <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
-            <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            <input autoFocus type="search" aria-label="Buscar vehículos" maxLength={80} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar vehículos..."
               style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${accent}`, color:"#111", fontSize:24, padding:"12px 0", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
           </div>
@@ -760,12 +764,12 @@ export default function AutoMotor() {
       )}
 
       {/* ── FAVORITOS DRAWER ── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div role="dialog" aria-modal="true" aria-label="Favoritos" inert={!favoritesOpen} aria-hidden={!favoritesOpen} style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:"1px solid #e5e5e5" }}>
           <div style={{ padding:"20px 24px 14px", borderBottom:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontWeight:700, fontSize:16, margin:0, color:"#111" }}>Favoritos <span style={{ fontWeight:400, fontSize:13, color:"#888" }}>({favorites.length})</span></p>
-            <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:"#111", fontSize:22, cursor:"pointer" }}>×</button>
+            <button type="button" onClick={() => setFavoritesOpen(false)} aria-label="Cerrar favoritos" style={{ background:"none", border:"none", color:"#111", fontSize:22, cursor:"pointer", width:44, height:44, marginRight:-12 }}>×</button>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"14px 24px" }}>
             {favoriteProducts.length === 0 ? (

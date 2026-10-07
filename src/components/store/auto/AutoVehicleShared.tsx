@@ -99,6 +99,14 @@ function SpecIcon({ label, accent }: { label: string; accent: string }) {
    fila (68 px cada una) ensanchaba la columna, y a 360 px con diez fotos el
    modal medía 733 px — el botón de WhatsApp quedaba fuera de la pantalla. */
 export const AM_MODAL_CSS = `
+  /* La tarjeta del vehículo (5.7): el nombre es el botón y se estira sobre toda
+     la tarjeta, así se abre con el teclado y el corazón queda como botón aparte
+     (antes era un div con click y un botón adentro). */
+  .vc-card { position: relative }
+  .vc-abrir { all: unset; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+  .vc-abrir::after { content: ""; position: absolute; inset: 0; z-index: 1 }
+  .vc-card:has(.vc-abrir:focus-visible) { outline: 2px solid currentColor; outline-offset: 3px }
+  .vc-fav { z-index: 2 }
   .am-modal-body { grid-template-columns: minmax(0,1fr) !important }
   .am-modal-body > * { min-width: 0 }
   @media(min-width:700px){ .am-modal-body { grid-template-columns: minmax(0,3fr) minmax(0,2fr) !important } }
@@ -129,6 +137,9 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string|null>(null);
+  // El teclado se escucha en un efecto que no se rearma con cada foto: lee esto.
+  const fotoAmpliada = useRef(false);
+  useEffect(() => { fotoAmpliada.current = !!lightboxSrc; }, [lightboxSrc]);
   /* Otro vehículo en el mismo modal (desde "también podrían interesarte"): se
      vuelve a la primera foto y arriba de todo (06/10/26). Antes quedaba el
      índice del anterior —"5 / 2" y la foto en blanco— y el scroll abajo. */
@@ -195,6 +206,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       const escribiendo = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      // Con la foto ampliada, Escape cierra sólo la foto y las flechas no mueven nada (5.6).
+      if (fotoAmpliada.current) { if (e.key === "Escape") setLightboxSrc(null); return; }
       // Escape escribiendo suelta el campo; recién el segundo cierra (no se pierde lo escrito).
       if (e.key === "Escape") { if (escribiendo) t!.blur(); else onClose(); return; }
       // Escribiendo en el formulario de consulta, las flechas mueven el cursor, no la foto.
@@ -207,7 +220,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   }, [imgs.length, onClose]);
 
   return (
-    <div onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
+    <div role="dialog" aria-modal="true" aria-label={product.name} onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
       onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) onClose(); tocoElFondo.current = false; }}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: CAPAS.critico,
         display: "flex", alignItems: "flex-start", justifyContent: "center",
@@ -537,10 +550,10 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.pantallaCompleta, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div role="dialog" aria-modal="true" aria-label="Foto ampliada" style={{ position:"fixed", inset:0, zIndex:CAPAS.pantallaCompleta, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
-          <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          <button type="button" autoFocus onClick={() => setLightboxSrc(null)} aria-label="Cerrar la foto" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
     </div>
@@ -573,15 +586,16 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
     .filter(Boolean).join(" · ");
 
   return (
-    <div onClick={onClick}
+    <div className="vc-card"
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ background: cardBg, borderRadius: 6, overflow: "hidden", cursor: "pointer",
+      style={{ background: cardBg, borderRadius: 6, overflow: "hidden", cursor: "pointer", color: titleCol,
         border: `1px solid ${borderCol}`,
         boxShadow: hov ? `0 4px 20px rgba(0,0,0,${D ? 0.4 : 0.1})` : `0 1px 4px rgba(0,0,0,${D ? 0.3 : 0.06})`,
         transition: "box-shadow 0.2s, border-color 0.2s", display: "flex", flexDirection: "column" }}>
       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: D ? "#111" : "#f5f5f5" }}>
-        <img src={img} alt={product.name}
+        {/* El nombre ya lo dice el botón de abajo: la foto no lo repite al lector de pantalla. */}
+        <img src={img} alt=""
           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#ffffff",
             opacity: esReservado(product) ? 0.7 : 1 }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"; }} />
@@ -605,18 +619,19 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
           </div>
         )}
         {onToggleFavorite && (
-          <button onClick={e => { e.stopPropagation(); onToggleFavorite(); }}
-            style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.9)",
-              border: "none", cursor: "pointer", width: 30, height: 30, borderRadius: "50%",
+          <button type="button" className="vc-fav" onClick={e => { e.stopPropagation(); onToggleFavorite(); }}
+            aria-label={isFavorite ? `Sacar ${product.name} de favoritos` : `Guardar ${product.name} en favoritos`} aria-pressed={!!isFavorite}
+            style={{ position: "absolute", top: 6, right: 6, background: "rgba(255,255,255,0.9)",
+              border: "none", cursor: "pointer", width: 40, height: 40, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width={15} height={15} viewBox="0 0 24 24" fill={isFavorite ? accent : "none"} stroke={isFavorite ? accent : "#666"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </button>
         )}
       </div>
       <div style={{ padding: "14px 16px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: titleCol, lineHeight: 1.35,
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
-          overflow: "hidden" }}>{product.name}</p>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: titleCol, lineHeight: 1.35 }}>
+          <button type="button" className="vc-abrir" onClick={onClick}>{product.name}</button>
+        </p>
         <p style={{ margin: 0, fontSize: "clamp(18px,2.2vw,22px)", fontWeight: 700, color: priceCol, letterSpacing: -0.5 }}>
           {fmtPrice(product.price, monedaDe(product, currency))}
         </p>

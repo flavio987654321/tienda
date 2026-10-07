@@ -10,8 +10,12 @@ import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { CAPAS } from "@/lib/capas-tienda";
 import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
-import { monedaDe, compararPrecio } from "@/lib/monedaVehiculo";
-import { esAtributoInterno } from "@/lib/fichaVehiculo";
+import { monedaDeTienda, precioEn, conPuntos, sinPuntos } from "@/lib/monedaVehiculo";
+import { usaHoras } from "@/lib/fichaVehiculo";
+import {
+  filtrarVehiculos, opcionesDeFiltro, filtroDesdeUrl, filtroAUrl, filtroVacio, cuantosFiltros,
+  ORDENES, type FiltroVehiculos, type OrdenVehiculos,
+} from "@/lib/filtroVehiculos";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
 
@@ -146,24 +150,29 @@ const BRAND_DOMAINS: Record<string, string> = {
   lifan:  "lifan.com",
 };
 
-function getBrandLogoUrl(brand: string): string {
-  const key = brand.toLowerCase().trim();
-  const si = SIMPLE_ICONS[key] ??
-    Object.entries(SIMPLE_ICONS).find(([k]) => key.includes(k) || k.includes(key))?.[1];
+/** De una tabla de marcas: igual, o la marca empieza con ella ("Ford Motor" → ford).
+    Antes alcanzaba con que una CONTUVIERA a la otra: "Ram" encontraba a "Ramírez
+    Motos" y una marca de una letra encontraba cualquiera. */
+function deTabla<T>(tabla: Record<string, T>, brand: string): T | undefined {
+  const key = brand.toLowerCase().trim().replace(/\s+/g, " ");
+  if (tabla[key]) return tabla[key];
+  const conGuion = key.replace(/ /g, "-");
+  if (tabla[conGuion]) return tabla[conGuion];
+  return Object.entries(tabla).find(([k]) => k.length > 1 && (key.startsWith(k + " ") || key.startsWith(k + "-")))?.[1];
+}
+
+/** El logo, sólo de las marcas conocidas. Antes, a una desconocida se le pedía el
+    ícono a Google con "<marca>.com" y volvía el globo genérico (5.5 de la
+    auditoría): sin logo conocido va el círculo con la sigla. */
+function getBrandLogoUrl(brand: string): string | null {
+  const si = deTabla(SIMPLE_ICONS, brand);
   if (si) return `https://cdn.simpleicons.org/${si.slug}/${si.hex}`;
-  // fallback: Google S2 favicon
-  const domain = BRAND_DOMAINS[key] ?? `${key.replace(/\s+/g, "")}.com`;
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  const domain = deTabla(BRAND_DOMAINS, brand);
+  return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : null;
 }
 
 function getBrandStyle(brand: string, accent: string): { bg: string; text: string } {
-  const key = brand.toLowerCase().trim();
-  if (BRAND_COLORS[key]) return BRAND_COLORS[key];
-  // Try partial match
-  for (const [k, v] of Object.entries(BRAND_COLORS)) {
-    if (key.includes(k) || k.includes(key)) return v;
-  }
-  return { bg: accent, text: "#fff" };
+  return deTabla(BRAND_COLORS, brand) ?? { bg: accent, text: getContrastColor(accent) === "dark" ? "#111" : "#fff" };
 }
 
 function brandAbbr(name: string): string {
@@ -175,10 +184,20 @@ function brandAbbr(name: string): string {
   };
   const key = name.toLowerCase().trim();
   if (specials[key]) return specials[key];
-  return name.substring(0, 3).toUpperCase();
+  // "John Deere" → "JD", "Can-Am" → "CA"; una sola palabra, las tres primeras.
+  const palabras = name.trim().split(/[\s-]+/).filter(Boolean);
+  if (palabras.length > 1) return palabras.slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+  return name.trim().substring(0, 3).toUpperCase();
 }
 
 const NAVY = "#0d1f3c";
+
+/** Los topes que se ofrecen en "hasta cuántos km / horas". */
+const TOPES_KM = [0, 10_000, 30_000, 50_000, 80_000, 120_000, 200_000, 300_000];
+const TOPES_HORAS = [500, 1_000, 2_000, 3_000, 5_000, 8_000];
+/** Si la dirección trajo un tope que no está en la lista, se suma (si no, el select no lo muestra). */
+const conActual = (topes: number[], actual: number | null) =>
+  actual == null || topes.includes(actual) ? topes : [...topes, actual].sort((a, b) => a - b);
 
 /** Montado mientras la ventana de tasar / avisame está abierta: "atrás" la cierra. */
 function AtrasCierra({ cerrar }: { cerrar: () => void }) {
@@ -209,11 +228,15 @@ function VehiculosPageInner() {
   const [legales,    setLegales]    = useState<ClaveLegal[] | undefined>(undefined);
   const [showReport, setShowReport] = useState(false);
 
-  const [search,         setSearch]      = useState("");
-  const [activeCategory, setActiveCat]   = useState("Todos");
-  const [activeMarca,    setActiveMarca] = useState("Todas");
-  const [activeCiudad,   setActiveCiudad]= useState("Todas");
-  const [sortBy,         setSortBy]      = useState("newest");
+  // Un solo filtro (ver lib/filtroVehiculos), que viaja en la dirección: los
+  // templates linkean acá con `?tipo=camiones` y el comprador lo puede compartir.
+  const [filtro, setFiltro] = useState<FiltroVehiculos>(() => filtroDesdeUrl(searchParams, "ARS"));
+  const cambiar = useCallback((c: Partial<FiltroVehiculos>) => setFiltro(f => ({ ...f, ...c })), []);
+  const [errorCarga, setErrorCarga] = useState(false);
+  const [noEsDeAutos, setNoEsDeAutos] = useState(false);
+  const [intento, setIntento] = useState(0);
+  // En el celular el panel de filtros se abre con un botón; en la compu está siempre.
+  const [verFiltros, setVerFiltros] = useState(false);
   // "Tasá tu usado" (ver lib/tasaciones) y "Avisame si entra" (ver lib/busquedas),
   // en la misma ventana (06/10/26).
   const [dialogo,        setDialogo]     = useState<null | "tasar" | "avisame">(null);
@@ -238,17 +261,27 @@ function VehiculosPageInner() {
 
   useEffect(() => {
     if (!slug) return;
+    let vivo = true;
     fetch(`/api/public/${slug}`)
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(data => {
-        if (!data?.store) return;
+        if (!vivo) return;
+        if (!data?.store) { setErrorCarga(true); return; }
+        // Esta pantalla es sólo del rubro autos (5.5 de la auditoría): en una
+        // tienda de ropa mostraba "Catálogo de vehículos" con remeras adentro.
+        if (data.store.tipoTienda && data.store.tipoTienda !== "AUTOS") { setNoEsDeAutos(true); return; }
+        setErrorCarga(false);
         setStoreName(data.store.name ?? "Tienda");
         setStoreId(data.store.id);
         setIsOwner(!!data.isOwner);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.colors?.accent)          setAccent(cfg.colors.accent);
-          if (cfg.currency)                setCurrency(cfg.currency);
+          if (cfg.currency) {
+            setCurrency(cfg.currency);
+            // El "precio hasta" arranca en la moneda principal, salvo que la dirección diga otra.
+            if (!searchParams?.get("moneda")) cambiar({ moneda: monedaDeTienda(cfg) });
+          }
           if (cfg.whatsapp)                setWhatsapp(cfg.whatsapp);
           if (cfg.templateId ?? cfg.template) setTemplateId(cfg.templateId ?? cfg.template);
           if (cfg.sectionColors?.navBg)    setNavBgColor(cfg.sectionColors.navBg);
@@ -256,70 +289,53 @@ function VehiculosPageInner() {
         if (Array.isArray(data.legales)) setLegales(data.legales);
         setProducts((data.store.products ?? []).map(mapVehicle));
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [slug]);
+      // Antes un error de carga terminaba en "Sin resultados": el comprador
+      // creía que la tienda no tenía nada.
+      .catch(() => { if (vivo) setErrorCarga(true); })
+      .finally(() => { if (vivo) setLoading(false); });
+    return () => { vivo = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams sólo se mira al cargar
+  }, [slug, intento, cambiar]);
 
   useEffect(() => {
     if (!loading) document.title = `${storeName} — Catálogo de vehículos`;
   }, [loading, storeName]);
 
-  const getAttr = useCallback((p: StorefrontProduct, ...keys: string[]) =>
-    keys.reduce<string>((acc, key) =>
-      acc || (p.attributes?.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "")
-    , ""), []);
+  // El filtro a la dirección, sin sumar al historial (atrás vuelve a la tienda).
+  useEffect(() => {
+    const sp = filtroAUrl(filtro, monedaDeTienda({ currency }));
+    if (fromEditor) sp.set("from", "editor");
+    const s = sp.toString();
+    const nueva = `${window.location.pathname}${s ? `?${s}` : ""}`;
+    if (nueva !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, "", nueva);
+  }, [filtro, currency, fromEditor]);
 
-  const getCiudad = useCallback((p: StorefrontProduct) => getAttr(p, "Localidad", "Ciudad / Zona", "Ciudad", "Ubicación"), [getAttr]);
-  const getKm     = useCallback((p: StorefrontProduct) => getAttr(p, "Kilómetros", "Km"), [getAttr]);
-
-  const categories = useMemo(() => {
-    const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    return cats.length > 1 ? ["Todos", ...cats] : [];
-  }, [products]);
-
-  const marcas = useMemo(() => {
-    const vals = [...new Set(products.map(p => getAttr(p, "Marca")).filter(Boolean))].sort();
-    return vals;
-  }, [products, getAttr]);
-
-  const ciudades = useMemo(() => {
-    const vals = [...new Set(products.map(getCiudad).filter(Boolean))].sort();
-    return vals.length > 1 ? vals : [];
-  }, [products, getCiudad]);
-
-  const filtered = useMemo(() => {
-    let r = products.filter(p => {
-      if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
-      if (activeMarca !== "Todas" && getAttr(p, "Marca") !== activeMarca) return false;
-      if (activeCiudad !== "Todas" && getCiudad(p) !== activeCiudad) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const inName = p.name.toLowerCase().includes(q);
-        const inCat  = p.category.toLowerCase().includes(q);
-        const inAttr = p.attributes?.some(a => !esAtributoInterno(a.key) && a.value.toLowerCase().includes(q));
-        if (!inName && !inCat && !inAttr) return false;
-      }
-      return true;
-    });
-    // Cada vehículo en su moneda: sin tipo de cambio, primero pesos y después dólares.
-    const conMoneda = (p: StorefrontProduct) => ({ price: p.price, moneda: monedaDe(p, currency) });
-    if (sortBy === "price_asc")  r = [...r].sort((a, b) => compararPrecio(conMoneda(a), conMoneda(b), true));
-    if (sortBy === "price_desc") r = [...r].sort((a, b) => compararPrecio(conMoneda(a), conMoneda(b), false));
-    if (sortBy === "name_az")    r = [...r].sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === "km_asc")     r = [...r].sort((a, b) => {
-      const kA = parseInt(getKm(a).replace(/\D/g,"") || "0");
-      const kB = parseInt(getKm(b).replace(/\D/g,"") || "0");
-      return kA - kB;
-    });
-    if (sortBy === "year_desc")  r = [...r].sort((a, b) => {
-      const yA = parseInt(a.attributes?.find(x => x.key === "Año")?.value || "0");
-      const yB = parseInt(b.attributes?.find(x => x.key === "Año")?.value || "0");
-      return yB - yA;
-    });
-    return r;
-  }, [products, activeCategory, activeMarca, activeCiudad, search, sortBy, getAttr, getCiudad, getKm, currency]);
-
-  const hasActiveFilter = activeCategory !== "Todos" || activeMarca !== "Todas" || activeCiudad !== "Todas" || !!search;
+  const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
+  const filtered = useMemo(() => filtrarVehiculos(products, filtro, currency), [products, filtro, currency]);
+  const hasActiveFilter = cuantosFiltros(filtro) > 0;
+  const tipoActivo = opciones.tipos.find(t => t.valor === filtro.tipo);
+  const marcaActiva = opciones.marcas.find(m => m.valor === filtro.marca);
+  const conHoras = filtro.tipo ? usaHoras(filtro.tipo) : false;
+  // Los años que se ofrecen: de la tienda, del más nuevo al más viejo.
+  const anios = opciones.anioMin != null && opciones.anioMax != null
+    ? Array.from({ length: opciones.anioMax - opciones.anioMin + 1 }, (_, i) => opciones.anioMax! - i)
+    : [];
+  // Lo que está puesto, como chips para sacar de a uno.
+  type Puesto = { id: string; label: string; sacar: Partial<FiltroVehiculos> };
+  const puestos = ([
+    filtro.q.trim() && { id: "q", label: `"${filtro.q.trim()}"`, sacar: { q: "" } },
+    filtro.tipo && { id: "tipo", label: tipoActivo?.label ?? filtro.tipo, sacar: { tipo: null, horasHasta: null } },
+    filtro.marca && { id: "marca", label: marcaActiva?.label ?? filtro.marca, sacar: { marca: null } },
+    filtro.anioDesde != null && { id: "desde", label: `Desde ${filtro.anioDesde}`, sacar: { anioDesde: null } },
+    filtro.anioHasta != null && { id: "hasta", label: `Hasta ${filtro.anioHasta}`, sacar: { anioHasta: null } },
+    filtro.kmHasta != null && { id: "km", label: `Hasta ${filtro.kmHasta.toLocaleString("es-AR")} km`, sacar: { kmHasta: null } },
+    filtro.horasHasta != null && { id: "horas", label: `Hasta ${filtro.horasHasta.toLocaleString("es-AR")} h`, sacar: { horasHasta: null } },
+    filtro.precioHasta != null && { id: "precio", label: `Hasta ${precioEn(filtro.precioHasta, filtro.moneda)}`, sacar: { precioHasta: null } },
+    filtro.combustible && { id: "comb", label: filtro.combustible, sacar: { combustible: null } },
+    filtro.transmision && { id: "trans", label: filtro.transmision, sacar: { transmision: null } },
+    filtro.ciudad && { id: "ciudad", label: filtro.ciudad, sacar: { ciudad: null } },
+  ] as (Puesto | false | null | "")[]).filter((x): x is Puesto => !!x);
+  const limpiar = () => setFiltro(f => ({ ...filtroVacio(f.moneda), orden: f.orden }));
 
   const isAD = templateId === "auto-drive";
 
@@ -341,6 +357,30 @@ function VehiculosPageInner() {
   const activeTabBg      = isAD ? accent : NAVY;
   const activeTabBorder  = isAD ? accent : NAVY;
 
+  // Campos y botones de 44 px de alto: se tocan bien con el dedo (5.7).
+  const campoStyle: React.CSSProperties = { background:S, border:`1px solid ${border}`, color:T, minHeight:44, width:"100%",
+    padding:"0 12px", fontSize:13, borderRadius:4, boxSizing:"border-box", fontFamily:"inherit" };
+  const botonSecundario: React.CSSProperties = { background:S, border:`1px solid ${border}`, color:T, padding:"0 16px", minHeight:44,
+    fontSize:12, fontWeight:700, cursor:"pointer", borderRadius:4, fontFamily:"inherit" };
+  const botonPrincipal: React.CSSProperties = { background:accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border:"none",
+    padding:"0 18px", minHeight:44, fontSize:13, fontWeight:700, cursor:"pointer", borderRadius:6, fontFamily:"inherit" };
+  // Cuántos filtros del panel hay puestos (para el botón "Filtros (2)" del celular).
+  const cuantosPanel = puestos.filter(x => !["q", "tipo", "marca"].includes(x.id)).length;
+
+  const campo = (label: string, id: string, control: React.ReactNode) => (
+    <div key={id} style={{ display:"flex", flexDirection:"column", gap:6, minWidth:0 }}>
+      <label htmlFor={id} style={{ fontSize:10, letterSpacing:2, color:MID, textTransform:"uppercase", fontWeight:600 }}>{label}</label>
+      {control}
+    </div>
+  );
+  const vacio = (titulo: string, texto: string, acciones: React.ReactNode) => (
+    <div style={{ textAlign:"center", padding:"64px 16px", background:S, borderRadius:8, border:`1px solid ${borderFaint}` }}>
+      <p style={{ fontSize:22, fontWeight:700, color:T, margin:"0 0 8px", overflowWrap:"anywhere" }}>{titulo}</p>
+      <p style={{ fontSize:13, color:MID, margin:0 }}>{texto}</p>
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center", marginTop:18 }}>{acciones}</div>
+    </div>
+  );
+
   return (
     <div style={{ background: BG, color: T, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }}>
       {/* Un solo hijo, no dos.
@@ -359,108 +399,153 @@ function VehiculosPageInner() {
         @media(min-width:560px){ .av-grid { grid-template-columns:repeat(2,1fr) } }
         @media(min-width:900px){ .av-grid { grid-template-columns:repeat(3,1fr) } }
         @media(min-width:1200px){ .av-grid { grid-template-columns:repeat(4,1fr) } }
+        .av-oculto { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+        .av-solo-ancho { display:none }
+        @media(min-width:640px){ .av-solo-ancho { display:inline } .av-solo-celu { display:none !important } }
+        .av-panel { display:none; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:20px }
+        .av-panel.abierto { display:grid }
+        @media(min-width:640px){ .av-panel { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) } }
+        @media(min-width:1024px){ .av-panel { grid-template-columns:repeat(6,minmax(0,1fr)) } }
       `}</style>
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER ──
+          A 360 no entraban "← VOLVER A LA TIENDA", el nombre y la cuenta en una
+          fila de 64 px (5.5 de la auditoría): en el celular queda la flecha sola
+          (con su nombre para el lector de pantalla) y la cuenta pasa al título. */}
       <div style={{ background: headerBg, boxShadow: headerBoxShadow,
         borderBottom: headerBorderLine, position:"sticky", top:0, zIndex:CAPAS.encabezadoListado }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64,
-          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(12px,4vw,32px)", height:60,
+          display:"flex", alignItems:"center", gap:12 }}>
           <Link href={fromEditor ? "/dashboard/configuracion" : `/tienda/${slug}`}
-            style={{ color: headerLinkColor, textDecoration:"none", fontSize:11, letterSpacing:3,
-              textTransform:"uppercase", display:"flex", alignItems:"center", gap:8, transition:"color 0.2s" }}
+            aria-label={fromEditor ? "Volver al editor" : "Volver a la tienda"}
+            style={{ color: headerLinkColor, textDecoration:"none", fontSize:11, letterSpacing:2,
+              textTransform:"uppercase", display:"flex", alignItems:"center", gap:8, minHeight:44, minWidth:44,
+              flexShrink:0, transition:"color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.color=headerLinkHover)}
             onMouseLeave={e => (e.currentTarget.style.color=headerLinkColor)}>
-            ← {fromEditor ? "Volver al editor" : "Volver a la tienda"}
+            <span aria-hidden="true" style={{ fontSize:16 }}>←</span>
+            <span className="av-solo-ancho" aria-hidden="true">{fromEditor ? "Volver al editor" : "Volver a la tienda"}</span>
           </Link>
-          <span style={{ fontSize:17, fontWeight:900, letterSpacing: headerIsDark ? 3 : -0.5,
-            textTransform: headerIsDark ? "uppercase" : "none", color: accent }}>
+          <span style={{ flex:1, minWidth:0, textAlign:"center", fontSize:17, fontWeight:900,
+            letterSpacing: headerIsDark ? 3 : -0.5, textTransform: headerIsDark ? "uppercase" : "none", color: accent,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
             {storeName}
           </span>
-          <span style={{ fontSize:12, color: headerCountColor, letterSpacing:1 }}>
+          <span className="av-solo-ancho" style={{ fontSize:12, color: headerCountColor, letterSpacing:1, flexShrink:0 }}>
             {filtered.length} vehículo{filtered.length !== 1 ? "s" : ""}
           </span>
+          {/* En el celular, del mismo ancho que la flecha: el nombre queda centrado. */}
+          <span className="av-solo-celu" aria-hidden="true" style={{ width:44, flexShrink:0 }} />
         </div>
       </div>
 
-      <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(28px,4vw,44px) clamp(16px,4vw,32px)" }}>
+      <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(24px,4vw,44px) clamp(16px,4vw,32px)" }}>
 
-        {/* ── TÍTULO + CONTROLES ── */}
+        {/* ── TÍTULO + ACCIONES ── */}
         <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between",
-          marginBottom:36, flexWrap:"wrap", gap:16 }}>
-          <div>
+          marginBottom:24, flexWrap:"wrap", gap:16 }}>
+          <div style={{ minWidth:0 }}>
             <p style={{ fontSize:10, letterSpacing:5, color:accent,
               textTransform:"uppercase", margin:"0 0 10px", fontWeight:700 }}>
               Catálogo completo
             </p>
             <h1 style={{ fontSize:"clamp(26px,4vw,40px)", margin:"0 0 6px", color:T,
-              lineHeight:1.1, fontWeight:900, letterSpacing:-0.5 }}>
-              {activeCategory !== "Todos" ? activeCategory : "Todos los vehículos"}
+              lineHeight:1.1, fontWeight:900, letterSpacing:-0.5, overflowWrap:"anywhere" }}>
+              {tipoActivo ? `${tipoActivo.label}${marcaActiva ? ` ${marcaActiva.label}` : ""}` : marcaActiva ? `Vehículos ${marcaActiva.label}` : "Todos los vehículos"}
             </h1>
-            <p style={{ fontSize:12, color:MID, margin:0, letterSpacing:1 }}>
-              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+            <p role="status" style={{ fontSize:12, color:MID, margin:0, letterSpacing:1 }}>
+              {loading ? "Cargando…" : hasActiveFilter
+                ? `${filtered.length} de ${products.length} vehículo${products.length !== 1 ? "s" : ""}`
+                : `${filtered.length} vehículo${filtered.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
-            <button type="button" onClick={() => setDialogo("avisame")}
-              style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12,
-                fontWeight:700, cursor:"pointer", borderRadius:4, fontFamily:"inherit" }}>
+            <button type="button" onClick={() => setDialogo("avisame")} style={botonSecundario}>
               Avisame si entra
             </button>
-            <button type="button" onClick={() => setDialogo("tasar")}
-              style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12,
-                fontWeight:700, cursor:"pointer", borderRadius:4, fontFamily:"inherit" }}>
+            <button type="button" onClick={() => setDialogo("tasar")} style={botonSecundario}>
               Tasá tu usado
             </button>
-            <div style={{ position:"relative" }}>
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar marca, modelo..."
-                style={{ background:S, border:`1px solid ${border}`, color:T,
-                  padding:"11px 16px 11px 40px", fontSize:13, outline:"none",
-                  width:"clamp(180px,50vw,220px)", boxSizing:"border-box" as const, borderRadius:4 }}
-                onFocus={e => (e.target.style.borderColor=accent)}
-                onBlur={e => (e.target.style.borderColor=border)} />
-              <svg style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)",
-                opacity:0.4, pointerEvents:"none" }}
-                width={15} height={15} viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              {search && (
-                <button onClick={() => setSearch("")}
-                  style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)",
-                    background:"none", border:"none", color:MID, cursor:"pointer", fontSize:16, padding:0 }}>
-                  ×
-                </button>
-              )}
-            </div>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-              style={{ background:S, border:`1px solid ${border}`, color:T,
-                padding:"11px 14px", fontSize:12, outline:"none", cursor:"pointer", borderRadius:4 }}>
-              <option value="newest">Más recientes</option>
-              <option value="price_asc">Precio ↑</option>
-              <option value="price_desc">Precio ↓</option>
-              <option value="year_desc">Año (nuevo primero)</option>
-              <option value="km_asc">Menor kilometraje</option>
-              <option value="name_az">Nombre A→Z</option>
-            </select>
           </div>
         </div>
 
-        {/* ── LOGOS DE MARCAS ── */}
-        {marcas.length > 0 && (
-          <div style={{ marginBottom:32 }}>
-            <p style={{ fontSize:10, letterSpacing:3, color:MID, textTransform:"uppercase",
-              margin:"0 0 18px", fontWeight:600 }}>
+        {/* ── BUSCAR + ORDENAR ── */}
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginBottom:20 }}>
+          <div style={{ position:"relative", flex:"1 1 240px", minWidth:0 }}>
+            <label htmlFor="av-buscar" className="av-oculto">Buscar vehículo</label>
+            <input id="av-buscar" type="search" value={filtro.q} maxLength={80}
+              onChange={e => cambiar({ q: e.target.value })}
+              onKeyDown={e => { if (e.key === "Escape") { if (filtro.q) cambiar({ q: "" }); else e.currentTarget.blur(); } }}
+              placeholder="Buscar marca, modelo, año…"
+              style={{ ...campoStyle, width:"100%", padding:"11px 40px", fontSize:14 }}
+              onFocus={e => (e.target.style.borderColor=accent)}
+              onBlur={e => (e.target.style.borderColor=border)} />
+            <svg aria-hidden="true" style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)",
+              opacity:0.4, pointerEvents:"none" }}
+              width={15} height={15} viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            {filtro.q && (
+              <button type="button" onClick={() => cambiar({ q: "" })} aria-label="Borrar la búsqueda"
+                style={{ position:"absolute", right:2, top:"50%", transform:"translateY(-50%)", width:40, height:40,
+                  background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, padding:0 }}>
+                ×
+              </button>
+            )}
+          </div>
+          <label htmlFor="av-orden" className="av-oculto">Ordenar por</label>
+          <select id="av-orden" value={filtro.orden} onChange={e => cambiar({ orden: e.target.value as OrdenVehiculos })}
+            style={{ ...campoStyle, flex:"1 1 160px", width:"auto", cursor:"pointer" }}>
+            {ORDENES.map(o => (
+              <option key={o.id} value={o.id}>
+                {o.id === "km_asc" ? (conHoras ? "Menos horas de uso" : "Menos kilómetros") : o.label}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="av-solo-celu" aria-expanded={verFiltros} aria-controls="av-panel"
+            onClick={() => setVerFiltros(v => !v)}
+            style={{ ...botonSecundario, borderColor: verFiltros ? accent : border }}>
+            {verFiltros ? "Ocultar filtros" : `Filtros${cuantosPanel ? ` (${cuantosPanel})` : ""}`}
+          </button>
+        </div>
+
+        {/* ── TIPO ── sólo los que la tienda tiene, con cuántos hay. */}
+        {opciones.tipos.length > 1 && (
+          <div role="group" aria-label="Tipo de vehículo" className="st-scroll"
+            style={{ display:"flex", gap:8, overflowX:"auto", marginBottom:20, paddingBottom:2,
+              WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
+            {[{ valor: "", label: "Todos", cuantos: products.length }, ...opciones.tipos].map(t => {
+              const activo = (filtro.tipo ?? "") === t.valor;
+              return (
+                <button key={t.valor || "todos"} type="button" aria-pressed={activo}
+                  onClick={() => cambiar(t.valor
+                    ? { tipo: t.valor, ...(usaHoras(t.valor) ? { kmHasta: null } : { horasHasta: null }) }
+                    : { tipo: null, horasHasta: null })}
+                  style={{ background: activo ? activeTabBg : S, color: activo ? getContrastColor(activeTabBg) === "dark" ? "#111" : "#fff" : T,
+                    border:`1px solid ${activo ? activeTabBorder : border}`, minHeight:44,
+                    padding:"9px 18px", fontSize:12, letterSpacing:0.5, cursor:"pointer",
+                    fontWeight:600, transition:"all 0.2s", borderRadius:4, flexShrink:0, whiteSpace:"nowrap", fontFamily:"inherit" }}>
+                  {t.label} <span style={{ opacity:0.6, fontWeight:500 }}>{t.cuantos}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── LOGOS DE MARCAS ── agrupadas sin distinguir mayúsculas ("Ford" = "FORD "). */}
+        {opciones.marcas.length > 1 && (
+          <div style={{ marginBottom:24 }}>
+            <p id="av-marcas" style={{ fontSize:10, letterSpacing:3, color:MID, textTransform:"uppercase",
+              margin:"0 0 12px", fontWeight:600 }}>
               Filtrar por marca
             </p>
-            <div className="st-scroll" style={{ display:"flex", gap:20, overflowX:"auto",
+            <div role="group" aria-labelledby="av-marcas" className="st-scroll" style={{ display:"flex", gap:20, overflowX:"auto",
               paddingBottom:12, paddingTop:12, paddingLeft:4, paddingRight:4,
               WebkitOverflowScrolling:"touch", scrollSnapType:"x mandatory" } as React.CSSProperties}>
-              {/* Chip "Todas" */}
               {/* Chip "Todas" — círculo de color con drop-shadow flotante */}
               {(() => {
-                const isTodas = activeMarca === "Todas";
+                const isTodas = !filtro.marca;
                 const isHov   = hoveredMarca === "__todas__";
                 const shadow  = isTodas
                   ? `drop-shadow(0 8px 20px ${accent}80) drop-shadow(0 2px 6px rgba(0,0,0,0.18))`
@@ -469,13 +554,13 @@ function VehiculosPageInner() {
                     : "drop-shadow(0 5px 14px rgba(0,0,0,0.16)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))";
                 const tf = isTodas ? "scale(1.15) translateY(-5px)" : isHov ? "translateY(-4px)" : "translateY(0)";
                 return (
-                  <button className="brand-chip" onClick={() => setActiveMarca("Todas")}
+                  <button type="button" className="brand-chip" aria-pressed={isTodas} onClick={() => cambiar({ marca: null })}
                     onMouseEnter={() => setHoveredMarca("__todas__")}
                     onMouseLeave={() => setHoveredMarca(null)}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
-                      scrollSnapAlign:"start" }}>
-                    <svg width={52} height={52} viewBox="0 0 52 52" fill="none"
+                      scrollSnapAlign:"start", fontFamily:"inherit" }}>
+                    <svg aria-hidden="true" width={52} height={52} viewBox="0 0 52 52" fill="none"
                       style={{ display:"block", filter: shadow, transform: tf,
                         transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
                       <rect x="6"  y="6"  width="16" height="16" rx="3" fill={isTodas ? accent : "#a0b4cc"}/>
@@ -491,11 +576,12 @@ function VehiculosPageInner() {
                 );
               })()}
 
-              {marcas.map(marca => {
+              {opciones.marcas.map(({ valor, label: marca, cuantos }) => {
                 const bc      = getBrandStyle(marca, accent);
-                const isActive = activeMarca === marca;
+                const isActive = filtro.marca === valor;
                 const abbr    = brandAbbr(marca);
-                const isHov   = hoveredMarca === marca;
+                const isHov   = hoveredMarca === valor;
+                const logo    = imgErrors[valor] ? null : getBrandLogoUrl(marca);
                 const shadow  = isActive
                   ? `drop-shadow(0 8px 22px ${accent}90) drop-shadow(0 2px 6px rgba(0,0,0,0.18))`
                   : isHov
@@ -503,33 +589,34 @@ function VehiculosPageInner() {
                     : "drop-shadow(0 5px 14px rgba(0,0,0,0.16)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))";
                 const tf = isActive ? "scale(1.15) translateY(-5px)" : isHov ? "translateY(-4px)" : "translateY(0)";
                 return (
-                  <button key={marca} className="brand-chip"
-                    onClick={() => setActiveMarca(isActive ? "Todas" : marca)}
-                    onMouseEnter={() => setHoveredMarca(marca)}
+                  <button key={valor} type="button" className="brand-chip" aria-pressed={isActive}
+                    aria-label={`${marca} (${cuantos})`} title={marca}
+                    onClick={() => cambiar({ marca: isActive ? null : valor })}
+                    onMouseEnter={() => setHoveredMarca(valor)}
                     onMouseLeave={() => setHoveredMarca(null)}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
-                      scrollSnapAlign:"start" }}>
-                    {imgErrors[marca] ? (
-                      /* Fallback: círculo de color flotante */
-                      <div style={{ width:56, height:56, borderRadius:"50%", background:bc.bg,
+                      scrollSnapAlign:"start", fontFamily:"inherit" }}>
+                    {logo ? (
+                      /* Logo flotando sin fondo — drop-shadow sigue el contorno */
+                      // eslint-disable-next-line @next/next/no-img-element -- logos de un CDN externo, chicos
+                      <img src={logo} alt="" width={56} height={56}
+                        style={{ objectFit:"contain", display:"block", borderRadius:10,
+                          filter: shadow, transform: tf,
+                          transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}
+                        onError={() => setImgErrors(prev => ({...prev, [valor]: true}))}
+                      />
+                    ) : (
+                      /* Sin logo conocido: círculo de color con la sigla */
+                      <div aria-hidden="true" style={{ width:56, height:56, borderRadius:"50%", background:bc.bg,
                         display:"flex", alignItems:"center", justifyContent:"center",
                         filter: shadow, transform: tf,
                         transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
                         <span style={{ fontSize:13, fontWeight:900, color:bc.text,
                           letterSpacing:0.5, lineHeight:1 }}>{abbr}</span>
                       </div>
-                    ) : (
-                      /* Logo flotando sin fondo — drop-shadow sigue el contorno */
-                      <img src={getBrandLogoUrl(marca)} alt={marca}
-                        width={56} height={56}
-                        style={{ objectFit:"contain", display:"block", borderRadius:10,
-                          filter: shadow, transform: tf,
-                          transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}
-                        onError={() => setImgErrors(prev => ({...prev, [marca]: true}))}
-                      />
                     )}
-                    <span style={{ fontSize:10, fontWeight: isActive ? 700 : 400,
+                    <span aria-hidden="true" style={{ fontSize:10, fontWeight: isActive ? 700 : 400,
                       color: isActive ? accent : MID, letterSpacing:0.3,
                       maxWidth:68, overflow:"hidden", textOverflow:"ellipsis",
                       whiteSpace:"nowrap", textAlign:"center" }}>
@@ -542,73 +629,118 @@ function VehiculosPageInner() {
           </div>
         )}
 
-        {/* ── FILTROS DE CATEGORIA Y ZONA ── */}
-        {(categories.length > 0 || ciudades.length > 0 || hasActiveFilter) && (
-          <div style={{ marginBottom:32, display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
-            {/* Tabs de categoría */}
-            {categories.length > 0 && (
-              <div className="st-scroll" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto",
-                WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
-                {categories.map(cat => {
-                  const isActive = activeCategory === cat;
-                  return (
-                    <button key={cat} onClick={() => setActiveCat(cat)}
-                      style={{ background: isActive ? activeTabBg : S,
-                        color: isActive ? "#fff" : T,
-                        border:`1px solid ${isActive ? activeTabBorder : border}`,
-                        padding:"9px 20px", fontSize:11, letterSpacing:1.5, cursor:"pointer",
-                        fontWeight:600, textTransform:"uppercase", transition:"all 0.2s",
-                        borderRadius:4, flexShrink:0, whiteSpace:"nowrap" }}>
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+        {/* ── MÁS FILTROS ── año, km u horas, precio en su moneda, combustible,
+            transmisión y zona. Cada uno aparece sólo si hay de dónde elegir. */}
+        <div id="av-panel" className={`av-panel${verFiltros ? " abierto" : ""}`}>
+          {anios.length > 1 && campo("Año desde", "av-desde",
+            <select id="av-desde" value={filtro.anioDesde ?? ""} style={campoStyle}
+              onChange={e => cambiar({ anioDesde: e.target.value ? Number(e.target.value) : null })}>
+              <option value="">Cualquiera</option>
+              {anios.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>)}
+          {anios.length > 1 && campo("Año hasta", "av-hasta",
+            <select id="av-hasta" value={filtro.anioHasta ?? ""} style={campoStyle}
+              onChange={e => cambiar({ anioHasta: e.target.value ? Number(e.target.value) : null })}>
+              <option value="">Cualquiera</option>
+              {anios.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>)}
+          {conHoras
+            ? campo("Horas de uso hasta", "av-horas",
+              <select id="av-horas" value={filtro.horasHasta ?? ""} style={campoStyle}
+                onChange={e => cambiar({ horasHasta: e.target.value ? Number(e.target.value) : null })}>
+                <option value="">Cualquiera</option>
+                {conActual(TOPES_HORAS, filtro.horasHasta).map(h => <option key={h} value={h}>{h.toLocaleString("es-AR")} h</option>)}
+              </select>)
+            : campo("Kilómetros hasta", "av-km",
+              <select id="av-km" value={filtro.kmHasta ?? ""} style={campoStyle}
+                onChange={e => cambiar({ kmHasta: e.target.value ? Number(e.target.value) : null })}>
+                <option value="">Cualquiera</option>
+                {conActual(TOPES_KM, filtro.kmHasta).map(k => <option key={k} value={k}>{k === 0 ? "0 km" : `${k.toLocaleString("es-AR")} km`}</option>)}
+              </select>)}
+          {campo("Precio hasta", "av-precio",
+            <div style={{ display:"flex", gap:6 }}>
+              {opciones.monedas.length > 1 ? (
+                <select aria-label="Moneda del precio" value={filtro.moneda} style={{ ...campoStyle, width:"auto", flexShrink:0, padding:"0 8px" }}
+                  onChange={e => cambiar({ moneda: e.target.value === "USD" ? "USD" : "ARS" })}>
+                  <option value="ARS">$</option>
+                  <option value="USD">USD</option>
+                </select>
+              ) : (
+                <span aria-hidden="true" style={{ alignSelf:"center", fontSize:13, color:MID, flexShrink:0 }}>
+                  {filtro.moneda === "USD" ? "USD" : "$"}
+                </span>
+              )}
+              <input id="av-precio" inputMode="numeric" autoComplete="off" placeholder="Sin tope"
+                value={filtro.precioHasta != null ? conPuntos(String(filtro.precioHasta)) : ""}
+                onChange={e => { const d = sinPuntos(e.target.value).slice(0, 12); cambiar({ precioHasta: d && Number(d) > 0 ? Number(d) : null }); }}
+                style={{ ...campoStyle, minWidth:0 }} />
+            </div>)}
+          {opciones.combustibles.length > 1 && campo("Combustible", "av-comb",
+            <select id="av-comb" value={filtro.combustible ?? ""} style={campoStyle}
+              onChange={e => cambiar({ combustible: e.target.value || null })}>
+              <option value="">Cualquiera</option>
+              {opciones.combustibles.map(o => <option key={o.valor} value={o.label}>{o.label} ({o.cuantos})</option>)}
+            </select>)}
+          {opciones.transmisiones.length > 1 && campo("Transmisión", "av-trans",
+            <select id="av-trans" value={filtro.transmision ?? ""} style={campoStyle}
+              onChange={e => cambiar({ transmision: e.target.value || null })}>
+              <option value="">Cualquiera</option>
+              {opciones.transmisiones.map(o => <option key={o.valor} value={o.valor}>{o.label} ({o.cuantos})</option>)}
+            </select>)}
+          {opciones.ciudades.length > 1 && campo("Zona", "av-zona",
+            <select id="av-zona" value={filtro.ciudad ?? ""} style={campoStyle}
+              onChange={e => cambiar({ ciudad: e.target.value || null })}>
+              <option value="">Todas las zonas</option>
+              {opciones.ciudades.map(o => <option key={o.valor} value={o.label}>{o.label} ({o.cuantos})</option>)}
+            </select>)}
+        </div>
 
-            {/* Dropdown de ciudad */}
-            {ciudades.length > 0 && (
-              <select value={activeCiudad} onChange={e => setActiveCiudad(e.target.value)}
-                style={{ background:S, border:`1px solid ${border}`, color:T,
-                  padding:"9px 14px", fontSize:12, outline:"none", cursor:"pointer", borderRadius:4 }}
-                onFocus={e => (e.target.style.borderColor=accent)}
-                onBlur={e => (e.target.style.borderColor=border)}>
-                <option value="Todas">Todas las zonas</option>
-                {ciudades.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            )}
-
-            {hasActiveFilter && (
-              <button onClick={() => { setActiveCat("Todos"); setActiveMarca("Todas"); setActiveCiudad("Todas"); setSearch(""); }}
-                style={{ background:"none", border:`1px solid ${border}`, color:MID, fontSize:11,
-                  letterSpacing:1, cursor:"pointer", padding:"9px 16px", borderRadius:4,
-                  transition:"all 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=border; (e.currentTarget as HTMLElement).style.color=MID; }}>
-                ✕ Limpiar filtros
+        {/* ── LO QUE ESTÁ PUESTO ── se saca de a uno. */}
+        {puestos.length > 0 && (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center", marginBottom:24 }}>
+            {puestos.map(p => (
+              <button key={p.id} type="button" onClick={() => cambiar(p.sacar)} aria-label={`Sacar el filtro ${p.label}`}
+                style={{ display:"inline-flex", alignItems:"center", gap:8, minHeight:36, maxWidth:"100%",
+                  padding:"6px 8px 6px 12px", borderRadius:100, border:`1px solid ${accent}55`, background:`${accent}12`,
+                  color:T, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.label}</span>
+                <span aria-hidden="true" style={{ fontSize:14, lineHeight:1, opacity:0.6 }}>×</span>
               </button>
-            )}
+            ))}
+            <button type="button" onClick={limpiar}
+              style={{ background:"none", border:"none", color:MID, fontSize:12, cursor:"pointer",
+                minHeight:36, padding:"6px 8px", textDecoration:"underline", fontFamily:"inherit" }}>
+              Limpiar todo
+            </button>
           </div>
         )}
 
-        {/* ── GRILLA ── */}
+        {/* ── GRILLA ── un error de carga y "no hay nada" son cosas distintas. */}
         {loading ? (
-          <div style={{ textAlign:"center", padding:"80px 0", color:MID, fontSize:14 }}>
+          <div role="status" style={{ textAlign:"center", padding:"80px 0", color:MID, fontSize:14 }}>
             Cargando vehículos…
           </div>
+        ) : noEsDeAutos ? (
+          vacio("Esta tienda no tiene catálogo de vehículos", "Lo que vende está en su página principal.",
+            <Link href={`/tienda/${slug}`} style={{ ...botonPrincipal, textDecoration:"none", display:"inline-flex", alignItems:"center" }}>Ir a la tienda</Link>)
+        ) : errorCarga ? (
+          vacio("No pudimos cargar los vehículos", "Revisá la conexión y probá de nuevo.",
+            <button type="button" style={botonPrincipal}
+              onClick={() => { setLoading(true); setErrorCarga(false); setIntento(i => i + 1); }}>
+              Reintentar
+            </button>)
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign:"center", padding:"80px 0", background:S,
-            borderRadius:8, border:`1px solid ${borderFaint}` }}>
-            <p style={{ fontSize:22, fontWeight:700, color:T, marginBottom:8 }}>Sin resultados</p>
-            <p style={{ fontSize:13, color:MID }}>Probá con otra búsqueda o marca</p>
-            {/* El mejor momento para "Avisame si entra": buscó y no estaba. */}
-            <button type="button" onClick={() => setDialogo("avisame")}
-              style={{ marginTop:16, background:accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border:"none",
-                padding:"12px 18px", minHeight:44, fontSize:13, fontWeight:700, cursor:"pointer", borderRadius:6, fontFamily:"inherit",
-                maxWidth:"100%", overflowWrap:"anywhere" }}>
-              {search.trim() ? `Avisame si entra un ${search.trim()}` : "Avisame si entra lo que busco"}
-            </button>
-          </div>
+          vacio(products.length === 0 ? "Todavía no hay vehículos publicados" : "Ningún vehículo con esos filtros",
+            products.length === 0 ? "Dejanos lo que buscás y te avisamos cuando entre." : "Probá sacando alguno, o dejanos lo que buscás.",
+            <>
+              {hasActiveFilter && (
+                <button type="button" onClick={limpiar} style={botonSecundario}>Limpiar filtros</button>
+              )}
+              {/* El mejor momento para "Avisame si entra": buscó y no estaba. */}
+              <button type="button" onClick={() => setDialogo("avisame")} style={{ ...botonPrincipal, maxWidth:"100%", overflowWrap:"anywhere" }}>
+                {marcaActiva || filtro.q.trim() ? `Avisame si entra un ${marcaActiva?.label ?? filtro.q.trim()}` : "Avisame si entra lo que busco"}
+              </button>
+            </>)
         ) : (
           <div className="av-grid">
             {filtered.map(p => (
@@ -661,7 +793,7 @@ function VehiculosPageInner() {
                 background:"#f5f5f5", color:"#666", fontSize:18, cursor:"pointer", zIndex:1 }}>×</button>
             {dialogo === "tasar"
               ? <TasacionVehiculo storeId={storeId} accent={accent} isOwner={isOwner} abiertoDeEntrada />
-              : <BusquedaVehiculo storeId={storeId} accent={accent} isOwner={isOwner} marcaInicial={search.trim()} />}
+              : <BusquedaVehiculo storeId={storeId} accent={accent} isOwner={isOwner} marcaInicial={marcaActiva?.label ?? filtro.q.trim()} />}
           </div>
         </div>
       )}

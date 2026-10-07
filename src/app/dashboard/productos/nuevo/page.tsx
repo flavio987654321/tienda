@@ -8,7 +8,7 @@ import Tip from "@/components/Tip";
 import CampoAuto from "@/components/CampoAuto";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
-  X, Star, ShoppingCart, Heart, Tag, Package, Calendar, Film,
+  X, Star, ShoppingCart, MessageCircle, Heart, Tag, Package, Calendar, Film,
   Search, ChevronDown, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
@@ -3339,8 +3339,10 @@ function ProductoFormPage() {
                     className={`w-full py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all ${btnRadius}`}
                     style={{ backgroundColor: store.primaryColor, color: "#fff" }}
                   >
-                    <ShoppingCart className="h-4 w-4" />
-                    Agregar al carrito
+                    {/* Un vehículo no va al carrito: en la tienda el botón es "Consultar". */}
+                    {storeTypeConfig.id === "AUTOS"
+                      ? <><MessageCircle className="h-4 w-4" />Consultar</>
+                      : <><ShoppingCart className="h-4 w-4" />Agregar al carrito</>}
                   </button>
                 </div>
               </div>

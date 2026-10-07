@@ -37,17 +37,25 @@ Reglas que valen para todos (de la memoria):
 
 ## Fase 1 — Base común (el grupo 5 de AUDITORIA-AUTOS-OCT26.md)
 
-- [ ] Filtros de verdad: tipo, marca (sin distinguir mayúsculas), año, km/horas, precio
-      (en su moneda), combustible, transmisión. "Menor km" no pone primero los sin dato.
-- [ ] Textos fijos editables o fuera ("100% verificados", "15+ años", "entrega en todo el país").
-- [ ] Links del menú sólo a secciones que existen.
-- [ ] Favoritos sin sacar a /login de golpe (y nada en la previa del editor).
-- [ ] `/vehiculos`: encabezado a 360, marcas desconocidas, error de carga ≠ "sin resultados",
-      no abre para tiendas que no son de autos.
-- [ ] Escape: cierra el buscador; con la foto ampliada cierra sólo la foto.
-- [ ] Accesibilidad: botones de ícono con nombre, tarjetas con teclado, zonas táctiles,
-      nada de botón dentro de botón.
-- [ ] La vista previa del formulario de un vehículo dice "Agregar al carrito": va "Consultar".
+- [x] ~~Filtros de verdad: tipo, marca (sin distinguir mayúsculas), año, km/horas, precio
+      (en su moneda), combustible, transmisión. "Menor km" no pone primero los sin dato.~~
+      (`lib/filtroVehiculos`, con su chequeo. El filtro viaja en la dirección: los templates
+      linkean a `/vehiculos?tipo=camiones`. Los "filtros rápidos" de Auto Drive ahora son
+      los tipos que la tienda tiene, con su cantidad.)
+- [x] ~~Textos fijos editables o fuera ("100% verificados", "15+ años", "entrega en todo el país").~~
+      Lo que se cuenta sale de los datos (vehículos, marcas); lo que es del negocio (años,
+      satisfacción) se ve sólo si el dueño lo escribió; los textos de fábrica hablan de lo que
+      la tienda hace (ficha, tasación, "Avisame si entra", WhatsApp).
+- [x] ~~Links del menú sólo a secciones que existen.~~ (También las ocultas sólo en el celular.)
+- [x] ~~Favoritos sin sacar a /login de golpe (y nada en la previa del editor).~~
+      (`hooks/useFavoritosVehiculos`: sin sesión, en el navegador con un aviso; al entrar pasan a la cuenta.)
+- [x] ~~`/vehiculos`: encabezado a 360, marcas desconocidas, error de carga ≠ "sin resultados",
+      no abre para tiendas que no son de autos.~~
+- [x] ~~Escape: cierra el buscador; con la foto ampliada cierra sólo la foto.~~ (Y los favoritos.)
+- [x] ~~Accesibilidad: botones de ícono con nombre, tarjetas con teclado, zonas táctiles,
+      nada de botón dentro de botón.~~ (La tarjeta: el nombre es el botón y se estira sobre
+      toda la tarjeta; el corazón queda aparte, de 40 px.)
+- [x] ~~La vista previa del formulario de un vehículo dice "Agregar al carrito": va "Consultar".~~
 
 ## Fase 2 — Rehacer Auto Motor y Auto Drive
 

@@ -180,19 +180,19 @@ Se tacha cada ítem al terminarlo. Nada se deploya hasta que se pida.
 
 ## 5. Templates y `/vehiculos`
 
-- [ ] **5.1 Filtros.** Sin año, km, precio ni carrocería. Los "filtros rápidos" no filtran. La
+- [x] **5.1 Filtros.** (hecho, ver TEMPLATES-AUTOS.md fase 1) Sin año, km, precio ni carrocería. Los "filtros rápidos" no filtran. La
   marca distingue mayúsculas ("Ford" ≠ "FORD "). "Menor km" pone primero los sin dato.
-- [ ] **5.2 Promesas fijas no editables.** "100% Verificados", "15+ años de experiencia" y
+- [x] **5.2 Promesas fijas no editables.** "100% Verificados", "15+ años de experiencia" y
   "Entrega a domicilio / en todo el país".
-- [ ] **5.3 Links del menú a secciones ocultas** no hacen nada.
-- [ ] **5.4 El corazón de favoritos saca a /login sin avisar**, también en la previa del editor.
-- [ ] **5.5 `/vehiculos`.**
+- [x] **5.3 Links del menú a secciones ocultas** no hacen nada.
+- [x] **5.4 El corazón de favoritos saca a /login sin avisar**, también en la previa del editor.
+- [x] **5.5 `/vehiculos`.**
   - Encabezado apretado a 360.
   - Las marcas desconocidas muestran un globo genérico.
   - Un error de carga dice "Sin resultados".
   - Abre para tiendas que no son de autos.
-- [ ] **5.6 Escape.** No cierra el buscador. Con la foto ampliada, cierra el modal entero.
-- [ ] **5.7 Accesibilidad.**
+- [x] **5.6 Escape.** No cierra el buscador. Con la foto ampliada, cierra el modal entero.
+- [x] **5.7 Accesibilidad.**
   - Botones de ícono sin nombre.
   - Tarjetas que no se abren con teclado.
   - El modal sin `role="dialog"`.
