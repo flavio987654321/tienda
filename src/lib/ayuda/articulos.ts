@@ -1,5 +1,6 @@
 import type { Articulo } from "./tipos";
 import { INTENTOS_MAX, BLOQUEO_MS } from "@/lib/codigo-ingreso";
+import { DIAS_VIGENCIA } from "@/lib/busquedas";
 
 /* Los artículos, como datos.
  *
@@ -860,49 +861,166 @@ export const ARTICULOS: Articulo[] = [
     slug: "consultas",
     titulo: "Las consultas de tus vehículos",
     resumen:
-      "Qué es una consulta, en qué estados vive y cómo se convierte en una venta con comisión.",
+      "Cómo entra una consulta, cómo le hacés el seguimiento y cómo la cerrás.",
     grupo: "cobrar",
     clase: "mecanica",
     rol: "dueno",
     pantalla: { label: "Consultas", href: "/dashboard/consultas" },
     checkout: "inquiry",
-    actualizado: "2026-08-11",
-    relacionados: ["que-significan-los-avisos-del-panel"],
+    /* 08/10/26: decía que confirmar acreditaba la comisión de un afiliado —en
+       autos y motos los afiliados están en pausa desde el 06/10— y que una
+       consulta sólo entraba por WhatsApp. Tampoco existía el seguimiento. */
+    actualizado: "2026-10-08",
+    relacionados: ["tasaciones", "busquedas", "que-significan-los-avisos-del-panel"],
     cuerpo: [
       {
         t: "p",
         texto:
           "En tu rubro no hay carrito ni checkout: la operación se cierra por fuera. Por eso tu panel no tiene Pedidos — tiene **Consultas**.",
       },
+      { t: "h", texto: "Cómo entra una" },
+      {
+        t: "lista",
+        items: [
+          "**Por el formulario** de un vehículo: la persona deja su nombre, su teléfono y un mensaje.",
+          "**Por el botón de WhatsApp**: queda registrado por qué vehículo preguntó, sin sus datos. La charla sigue en tu WhatsApp.",
+        ],
+      },
       {
         t: "p",
         texto:
-          "Una consulta se crea cuando alguien toca *Consultar por WhatsApp* en una de tus publicaciones. Queda registrada con el vehículo, el precio y los datos que dejó.",
+          "Te enterás en el momento por la campanita, por push y por mail. Y cada mañana, si hay algo, te llega el resumen del día: visitas agendadas, a quién volver a llamar y cuántas siguen sin respuesta.",
       },
 
-      { t: "h", texto: "Los tres estados" },
+      { t: "h", texto: "El seguimiento" },
       {
-        t: "tabla",
-        cols: ["Estado", "Qué significa"],
-        filas: [
-          ["Pendiente", "Consultó y todavía no sabés en qué terminó. Recién entró."],
-          ["Confirmada", "La operación se cerró. Acá es donde se genera la comisión del afiliado."],
-          ["Rechazada", "No se concretó. Cerrás el caso sin que genere comisión."],
+        t: "p",
+        texto:
+          "Cada consulta abierta tiene botones de **WhatsApp** —con mensajes armados para saludar, ofrecer una visita, hablar de financiación o de permuta— y **Llamar**. Abajo vas anotando cómo viene:",
+      },
+      {
+        t: "lista",
+        items: [
+          "**Etapa**: Contactado, Visita agendada o Negociando.",
+          "**Nota**: lo que quieras recordar. Sólo la ves vos.",
+          "**Recordarme volver a llamar**: mañana, en 3 días, en una semana o el día y la hora que elijas.",
+          "**Visita o prueba de manejo**: la agendás y aparece en la agenda de arriba.",
         ],
       },
       {
         t: "aviso",
         tono: "ojo",
         texto:
-          "Marcar el estado no es burocracia: si la trajo un afiliado, la comisión se le acredita **al confirmar**. Una consulta que se cerró bien y quedó en pendiente es plata que esa persona no cobró.",
+          "Una consulta con teléfono que pasa unas horas **sin ninguna etapa** cuenta como *sin responder*. Es la que más se enfría: alguien preguntó y está esperando.",
+      },
+
+      { t: "h", texto: "Cómo se cierra" },
+      {
+        t: "tabla",
+        cols: ["Botón", "Qué pasa"],
+        filas: [
+          ["Se vendió", "Pasa a *Vendidas* y te ofrece marcar el vehículo como vendido, para que deje de verse en la tienda."],
+          ["Descartar", "No se concretó. Pasa a *Descartadas*."],
+        ],
       },
       {
         t: "aviso",
         tono: "dato",
         texto:
-          "Por eso el número de Consultas en el menú es **rojo** y no amarillo: alguien está esperando que le contestes.",
+          "En autos y motos el programa de afiliados está en pausa: una consulta no genera comisión para nadie.",
       },
       { t: "ruta", label: "Ver mis consultas", href: "/dashboard/consultas" },
+    ],
+  },
+
+  {
+    slug: "tasaciones",
+    titulo: "Tasar el usado de un cliente",
+    resumen:
+      "Qué te llega cuando alguien pide que le tasen su usado, y cómo le pasás una oferta.",
+    grupo: "vender",
+    clase: "mecanica",
+    rol: "dueno",
+    pantalla: { label: "Tasaciones", href: "/dashboard/tasaciones" },
+    checkout: "inquiry",
+    actualizado: "2026-10-08",
+    relacionados: ["consultas", "busquedas"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "En tu tienda, cada vehículo tiene *¿Tenés un usado para entregar? Tasalo*, y el catálogo tiene un botón *Tasá tu usado*. Cuando alguien lo completa, te llega a **Tasaciones** y te avisamos.",
+      },
+      {
+        t: "p",
+        texto:
+          "Ves a la persona, si lo deja como **parte de pago** o si **quiere venderlo**, y el auto: marca, modelo, año, kilómetros, estado y lo que haya comentado. Si vino desde un vehículo tuyo, también cuál le interesa.",
+      },
+      { t: "h", texto: "Los pasos" },
+      {
+        t: "pasos",
+        items: [
+          "**Pedir fotos** abre tu WhatsApp con el pedido armado: frente, costados, interior y el tablero con los kilómetros.",
+          "Cargás **Cuánto se lo tomás** —con una nota para vos, si querés— y tocás **Guardar oferta**.",
+          "**Mandar la oferta** abre WhatsApp con el número escrito. El mensaje lo mandás vos.",
+          "Cuando te contesta: **Aceptó** o **Descartar**. Si te arrepentís, **Reabrir**.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "El número lo ponés vos. TiendaApps no tasa ni sugiere precios, y la oferta queda sujeta a ver el auto y sus papeles en persona.",
+      },
+      { t: "ruta", label: "Ver mis tasaciones", href: "/dashboard/tasaciones" },
+    ],
+  },
+
+  {
+    slug: "busquedas",
+    titulo: "\"Avisame si entra\": la gente que espera un auto",
+    resumen:
+      "Quién te dejó lo que busca, qué es lo que más te piden, y cómo avisarle cuando entra.",
+    grupo: "vender",
+    clase: "mecanica",
+    rol: "dueno",
+    pantalla: { label: "Búsquedas", href: "/dashboard/busquedas" },
+    checkout: "inquiry",
+    actualizado: "2026-10-08",
+    relacionados: ["consultas", "tasaciones"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "En el catálogo de tu tienda hay un botón *Avisame si entra*, que aparece también cuando alguien busca algo que no tenés. La persona deja su nombre, su teléfono y qué busca: tipo, marca, modelo, desde qué año y hasta qué precio.",
+      },
+      { t: "h", texto: "Lo que más te piden" },
+      {
+        t: "p",
+        texto:
+          "Arriba de la lista se juntan las búsquedas activas y se cruzan con tu stock: *3 personas · no tenés*. Es la mejor pista para decidir qué comprar.",
+      },
+      { t: "h", texto: "Cuando entra uno que coincide" },
+      {
+        t: "pasos",
+        items: [
+          "Cargás un vehículo y, si coincide con alguna búsqueda, te avisamos.",
+          "En esa búsqueda aparece *Entró 1 que coincide*, con el vehículo.",
+          "**Avisarle** abre tu WhatsApp con el mensaje y el link armados, y queda marcado *Ya le avisaste*.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "El mensaje lo mandás vos, desde tu teléfono: TiendaApps no le escribe a nadie. Y esos datos son para avisarle de lo que buscó, no para sumarlo a una lista de difusión.",
+      },
+      {
+        t: "p",
+        texto:
+          `Cada búsqueda se cierra sola a los ${DIAS_VIGENCIA} días. Si ya consiguió auto, la cerrás antes con **Cerrar búsqueda**.`,
+      },
+      { t: "ruta", label: "Ver las búsquedas", href: "/dashboard/busquedas" },
     ],
   },
 
@@ -972,6 +1090,9 @@ export const ARTICULOS: Articulo[] = [
     clase: "mecanica",
     rol: "dueno",
     pantalla: { label: "Afiliados", href: "/dashboard/vendedoras" },
+    /* Sólo tiendas con carrito (08/10/26): en autos y motos —las por consulta—
+       el programa está en pausa y la sección no aparece en el menú. */
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["los-estados-de-un-pedido"],
     cuerpo: [
@@ -1574,6 +1695,30 @@ export const ARTICULOS: Articulo[] = [
         t: "p",
         texto:
           "La pantalla separa a los que **compraron por primera vez** de los que **ya te habían comprado**. Si casi todos son nuevos, estás gastando en atraer gente que no vuelve; si casi ninguno lo es, vendés bien pero no estás creciendo.",
+      },
+
+      /* 08/10/26: todo lo de arriba es de una tienda con carrito. Una
+         concesionaria abría esta ayuda desde el "?" y leía de pedidos. */
+      { t: "h", texto: "Si vendés vehículos" },
+      {
+        t: "p",
+        texto:
+          "La pantalla es otra, porque no hay pedidos. Arriba ves **Consultas**, **Autos vendidos**, **Precio prom. de venta** y **Visitas** del período. Abajo, lo que más te sirve para decidir:",
+      },
+      {
+        t: "tabla",
+        cols: ["Cuadro", "Para qué sirve"],
+        filas: [
+          ["Qué autos traen más consultas", "Los que mueven gente. Si uno tiene muchas y no se vende, mirá el precio o las fotos."],
+          ["Los autos más vistos", "Mucho visto y poco consultado suele ser precio."],
+          ["Tasaciones", "Cuántas tenés en cada estado. Muchas sin responder es plata que se enfría."],
+          ["Lo que te buscan", "Lo más pedido en *Avisame si entra*: lo que te conviene salir a comprar."],
+        ],
+      },
+      {
+        t: "p",
+        texto:
+          "Si cargás el costo y los gastos de cada vehículo, también ves la **ganancia** de lo que vendiste.",
       },
       { t: "ruta", label: "Ver mis estadísticas", href: "/dashboard/metricas" },
     ],

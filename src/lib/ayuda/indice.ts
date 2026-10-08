@@ -28,6 +28,8 @@ export const INDICE: { slug: string; titulo: string }[] = [
   { slug: "entrar-con-google-o-con-un-codigo", titulo: "Entrar con Google o con un código por mail" },
   { slug: "medios-de-cobro",                     titulo: "Cómo cobrar" },
   { slug: "consultas",                           titulo: "Las consultas de tus vehículos" },
+  { slug: "tasaciones",                          titulo: "Tasar el usado de un cliente" },
+  { slug: "busquedas",                           titulo: "\"Avisame si entra\": la gente que espera un auto" },
   { slug: "las-fotos-de-tus-productos",          titulo: "Las fotos: cuál va primera y por qué importa" },
   { slug: "afiliados",                           titulo: "Que otros vendan lo tuyo" },
   { slug: "notificaciones",                      titulo: "Avisarle a tus clientes" },

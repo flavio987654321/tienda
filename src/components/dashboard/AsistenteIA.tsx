@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import Link from "next/link";
-import { X, Send, Loader2, ShoppingCart, ArrowRight, ShoppingBag, PackageSearch, Store, Package, Wallet, BookOpen } from "lucide-react";
+import { X, Send, Loader2, ShoppingCart, ArrowRight, ShoppingBag, PackageSearch, Store, Package, Wallet, BookOpen, MessageCircle, Repeat, Target } from "lucide-react";
 import AsistentePersonaje, { type EstadoSasha } from "./AsistentePersonaje";
 // Solo el slug y el título de cada artículo. Está separado de `articulos.ts`
 // justamente para esto: importar la ayuda entera acá la bajaría al navegador
@@ -25,6 +25,10 @@ const ACCIONES: Record<string, Accion> = {
   FALTA_DISENO: { label: "Elegir diseño de mi tienda", href: "/dashboard/configuracion", icon: Store },
   FALTA_PRODUCTOS: { label: "Cargar un producto", href: "/dashboard/productos", icon: Package },
   FALTA_COBRO: { label: "Configurar método de cobro", href: "/dashboard/pagos", icon: Wallet },
+  // Tiendas de vehículos (los mismos íconos que el menú).
+  CONSULTAS_SIN_RESPONDER: { label: "Ver consultas sin responder", href: "/dashboard/consultas", icon: MessageCircle },
+  TASACIONES_SIN_OFERTA: { label: "Ver tasaciones sin oferta", href: "/dashboard/tasaciones", icon: Repeat },
+  BUSQUEDAS_PARA_AVISAR: { label: "Ver búsquedas para avisar", href: "/dashboard/busquedas", icon: Target },
 };
 
 type AccionesValidas = Record<string, boolean>;

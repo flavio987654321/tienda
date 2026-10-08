@@ -51,6 +51,11 @@ export async function GET() {
     STOCK_BAJO: snapshot.productosStockBajo > 0,
     FALTA_DISENO: !checklist.hasTemplate,
     FALTA_PRODUCTOS: !checklist.hasProducts,
-    FALTA_COBRO: !(checklist.hasMercadoPago || checklist.hasPaymentData),
+    // Una concesionaria publica sin método de cobro: el botón la mandaría a
+    // "Legal" a buscar algo que no existe ahí.
+    FALTA_COBRO: !snapshot.esTipoConsultas && !(checklist.hasMercadoPago || checklist.hasPaymentData),
+    CONSULTAS_SIN_RESPONDER: (snapshot.autos?.consultasSinResponder ?? 0) > 0,
+    TASACIONES_SIN_OFERTA: (snapshot.autos?.tasacionesSinOferta ?? 0) > 0,
+    BUSQUEDAS_PARA_AVISAR: (snapshot.autos?.busquedasParaAvisar ?? 0) > 0,
   });
 }

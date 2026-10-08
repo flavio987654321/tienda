@@ -12,6 +12,7 @@ import {
   PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS,
   myActiveCouponsWhere, livePromotionsWhere,
 } from "@/lib/planLimits";
+import { HORAS_DEMORA } from "@/lib/seguimiento";
 
 /**
  * Tipos de tienda "de consultas" (sin pedidos/carrito, ej. autos) — debe coincidir
@@ -110,6 +111,28 @@ export type StoreSnapshot = {
     margenPromedio: number | null;
     productosSinCosto: number;
   };
+
+  /**
+   * Sólo tiendas de vehículos; `null` en el resto (08/10/26).
+   *
+   * Una concesionaria no tiene pedidos, así que con los datos de arriba Sasha
+   * le decía siempre "sin ventas registradas" y nunca podía nombrar lo que de
+   * verdad la mueve: consultas, tasaciones y búsquedas. Los cortes son los
+   * mismos que usan el resumen de la mañana (`agendaDiaria`) y Métricas.
+   */
+  autos: {
+    /** Consultas que entraron en los últimos 30 días, y en los 30 anteriores. */
+    consultas30: number;
+    consultasPrev30: number;
+    /** Abiertas, con teléfono, de hace más de `HORAS_DEMORA` horas y sin etapa: nadie le escribió. */
+    consultasSinResponder: number;
+    /** Tasaciones que todavía no tienen oferta. */
+    tasacionesSinOferta: number;
+    /** Búsquedas activas a las que les entró un vehículo que todavía no se le avisó a la persona. */
+    busquedasParaAvisar: number;
+    /** Vehículos marcados vendidos en los últimos 30 días (sin repuestos ni accesorios). */
+    vendidos30: number;
+  } | null;
 };
 
 export type ChecklistEstado = {
@@ -325,6 +348,37 @@ async function getMarketingSnapshot(
   };
 }
 
+/** Lo que en una concesionaria reemplaza a pedidos y ventas. Ver `StoreSnapshot.autos`. */
+async function getAutosSnapshot(storeId: string, hace30: Date, hace60: Date, ahora: Date): Promise<NonNullable<StoreSnapshot["autos"]>> {
+  const [consultas30, consultasPrev30, consultasSinResponder, tasacionesSinOferta, busquedas, vendidos30] = await Promise.all([
+    prisma.lead.count({ where: { storeId, createdAt: { gte: hace30 } } }),
+    prisma.lead.count({ where: { storeId, createdAt: { gte: hace60, lt: hace30 } } }),
+    prisma.lead.count({
+      where: {
+        storeId, status: "PENDING", customerPhone: { not: null },
+        createdAt: { lt: new Date(ahora.getTime() - HORAS_DEMORA * 3600_000) },
+        OR: [{ seguimiento: { is: null } }, { seguimiento: { is: { etapa: null } } }],
+      },
+    }),
+    prisma.tasacion.count({ where: { storeId, status: "PENDIENTE" } }),
+    prisma.busquedaGuardada.findMany({
+      where: { storeId, status: "ACTIVA", NOT: { notificadoIds: { isEmpty: true } } },
+      select: { notificadoIds: true, avisadoIds: true },
+      take: 2000,
+    }),
+    prisma.product.count({
+      where: {
+        storeId, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: hace30 },
+        NOT: { category: { in: ["repuestos", "accesorios"] } },
+      },
+    }),
+  ]);
+  return {
+    consultas30, consultasPrev30, consultasSinResponder, tasacionesSinOferta, vendidos30,
+    busquedasParaAvisar: busquedas.filter((b) => b.notificadoIds.some((id) => !b.avisadoIds.includes(id))).length,
+  };
+}
+
 export async function getStoreSnapshot(
   storeId: string,
   tipoTienda: string,
@@ -368,6 +422,7 @@ export async function getStoreSnapshot(
     pedidosEstancadosAgg,
     sinDespacharAgg,
     marketing,
+    autos,
   ] = await Promise.all([
       esTipoConsultas
         ? Promise.resolve(0)
@@ -461,6 +516,8 @@ export async function getStoreSnapshot(
             inicioDiaArgentino(sumarDiasCalendario(hoyDia, 1)),
             now
           ),
+
+      esTipoConsultas ? getAutosSnapshot(storeId, hace30, hace60, now) : Promise.resolve(null),
     ]);
 
   const productIdsStockBajo = new Set(variantesSinUmbral.map((v) => v.productId));
@@ -551,5 +608,6 @@ export async function getStoreSnapshot(
     agotadosHaceDias: productosAgotadosHaceDias.size,
     agotadoQueMasVendias: topAgotadoId ? nombrePorId.get(topAgotadoId) ?? null : null,
     marketing,
+    autos,
   };
 }

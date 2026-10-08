@@ -47,6 +47,7 @@ const tiendaTranquila: StoreSnapshot = {
     promosVivas: 0, promosTope: null, promoMasUsada: null,
     margenPromedio: null, productosSinCosto: 0,
   },
+  autos: null,
 };
 
 const snap = (cambios: Partial<StoreSnapshot>): StoreSnapshot => ({ ...tiendaTranquila, ...cambios });

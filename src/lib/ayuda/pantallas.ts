@@ -18,6 +18,8 @@ export type Pantalla = { href: string; slug: string; titulo: string };
 const RUTAS: [href: string, slug: string][] = [
   ["/dashboard/pedidos",              "los-estados-de-un-pedido"],
   ["/dashboard/consultas",            "consultas"],
+  ["/dashboard/tasaciones",           "tasaciones"],
+  ["/dashboard/busquedas",            "busquedas"],
   // El `?` de Productos abre el paso a paso, no el artículo de Google: el que
   // está parado ahí y toca ayuda está cargando algo, no planificando su SEO.
   ["/dashboard/productos",            "como-cargar-un-producto"],
