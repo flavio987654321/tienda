@@ -162,11 +162,34 @@
 // de pago con sus plazos, y aclaración de que una tienda cerrada no es una cuenta
 // cancelada (la retención de datos no arranca al cerrar).
 //
+// 1.10 (08/10/2026) — lo que el producto ya hacía y el documento no decía, casi
+//     todo de las tiendas de vehículos.
+//   · Afiliados en autos y motos: la sección 6 del Dueño y la 3 del Afiliado
+//     decían que una consulta por el link de un afiliado acreditaba comisión al
+//     confirmarse. Desde el 06/10/26 está apagado (`consultaGeneraComision`, ver
+//     lib/storeTypes): la consulta se guarda sin afiliado y no genera nada. Un
+//     afiliado podía reclamar una comisión con el documento en la mano.
+//   · "6 ter" pasa a cubrir los MAILS además del push: una campaña sale por los
+//     dos canales y cuenta una sola vez para el tope semanal (que ahora sale de
+//     `PUSH_CAMPAIGNS_PER_WEEK` y no de un "3" escrito a mano). Y dice que la
+//     lista no se carga a mano ni se usa por fuera de la plataforma.
+//   · "6 quinquies", nueva: consultas, tasaciones y "Avisame si entra". El
+//     número de la tasación lo pone la tienda, a quien busca le escribe la
+//     tienda desde su teléfono, y la garantía legal corre aunque no se ofrezca
+//     una propia. El cambio de rubro (7 ter) nombra que se borran tasaciones y
+//     búsquedas, que el sistema ya borraba.
+//   · Y la POLÍTICA DE PRIVACIDAD: el newsletter por mail no figuraba en
+//     ninguna solapa (mails e IP de gente sin cuenta, desde agosto); la sección
+//     de push decía que no se guardaba ningún dato de la persona, y seguir una
+//     tienda exige cuenta y el dueño ve nombre y foto; y faltaban las
+//     consultas, tasaciones y búsquedas de las tiendas de vehículos, que el
+//     asistente de políticas de cada tienda ya declaraba.
+//
 // Ojo: este valor estuvo clavado en "1.2" desde el 23/06 mientras los términos
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.9";
+export const CURRENT_TERMS_VERSION = "1.10";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -190,8 +213,9 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Si vendés productos digitales y conectaste un dominio tuyo con el plan Pro, cambió qué pasa si dejás de tener Pro: antes decíamos que el dominio seguía funcionando, y ahora pasa a redirigir a tu dirección de tiendaapps.com — quien entre por tu dominio llega igual a tu página. Si volvés a Pro, vuelve a andar solo. Y si pasan 90 días sin Pro, lo desconectamos de nuestro lado, avisándote 7 días antes por correo.",
-  "Y quedó escrito qué pasa si reemplazás el archivo de un producto que ya vendiste: quien lo compró puede bajar la versión nueva mientras le dure su enlace. Sirve para corregir o mejorar; si querés vender otra cosa, creá otro producto.",
+  "Si tenés una tienda de autos o motos: quedó escrito cómo funcionan las consultas, las tasaciones de usados y \"Avisame si entra\". La oferta por un usado la ponés vos, y a quien dejó su búsqueda le escribís vos desde tu WhatsApp. También aclaramos que en estos rubros el programa de afiliados está en pausa: las consultas no generan comisión.",
+  "Las campañas de Notificaciones ahora pueden salir también por mail, a quienes se anotaron en tu tienda y confirmaron su dirección. Cuentan igual para el tope semanal, y esa lista es solo para mandar tus campañas desde el panel.",
+  "En la política de privacidad sumamos lo que guardamos de tus seguidores y de tus suscriptores por mail, y qué ves vos de cada uno.",
 ];
 
 /**
@@ -201,4 +225,4 @@ export const CURRENT_TERMS_SUMMARY: string[] = [
  * afirman que "la fecha de última actualización al inicio de esta página siempre
  * refleja la versión vigente". Si subís la versión, actualizá esto también.
  */
-export const TERMS_LAST_UPDATED = "septiembre 2026";
+export const TERMS_LAST_UPDATED = "octubre 2026";

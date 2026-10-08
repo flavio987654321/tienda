@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, COMISION_DIGITAL } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, COMISION_DIGITAL, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+import { DIAS_VIGENCIA } from "@/lib/busquedas";
 /* Los plazos de la entrega digital salen de la MISMA constante que los aplica.
    Escritos a mano acá, el día que cambie el tope los términos prometen un número
    y el sistema entrega otro — y lo que vale para un reclamo es lo que dicen los
@@ -119,7 +120,7 @@ const CONTENT = {
       },
       {
         title: "6. Gestión de afiliados y comisiones",
-        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. El funcionamiento del programa varía según el tipo de negocio: (a) Tiendas con venta online: para activar el programa necesitás tener conectada tu cuenta de MercadoPago. Cuando se confirma un pago, la plataforma retiene automáticamente la comisión y la acredita en el panel de comisiones del afiliado. El afiliado puede solicitar el retiro a su cuenta bancaria desde su panel. En ningún caso tenés que realizar transferencias ni intervenir en el pago de comisiones. TiendaApps es el responsable directo del pago de comisiones a los afiliados. (b) Tiendas de consultas (autos, motos y rubros similares): no se requiere MercadoPago. Cuando un potencial cliente consulta a través del link de un afiliado, la plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en el panel de comisiones del afiliado. Si la rechazás, no se genera comisión. En ambos casos, el titular de la tienda no tiene intervención ni responsabilidad sobre el pago de fondos a los afiliados. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326.",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. El funcionamiento del programa varía según el tipo de negocio: (a) Tiendas con venta online: para activar el programa necesitás tener conectada tu cuenta de MercadoPago. Cuando se confirma un pago, la plataforma retiene automáticamente la comisión y la acredita en el panel de comisiones del afiliado. El afiliado puede solicitar el retiro a su cuenta bancaria desde su panel. En ningún caso tenés que realizar transferencias ni intervenir en el pago de comisiones. TiendaApps es el responsable directo del pago de comisiones a los afiliados. (b) Tiendas de consultas (autos y motos): por ahora el programa de afiliados está en pausa en estos rubros. Las consultas se registran igual en tu panel, pero no se atribuyen a ningún afiliado ni generan comisión. Cuando se habilite, se informará cómo funciona antes de activarlo. En ningún caso el titular de la tienda tiene intervención ni responsabilidad sobre el pago de fondos a los afiliados.",
       },
       {
         title: "6 bis. Programa de Verificación de identidad",
@@ -137,14 +138,15 @@ const CONTENT = {
         ],
       },
       {
-        title: "6 ter. Notificaciones push a visitantes (Plan Premium)",
+        title: "6 ter. Notificaciones push y mails a tus seguidores y suscriptores (Plan Premium)",
         body: null,
         list: [
-          "Los dueños de tiendas con Plan Tienda Premium pueden enviar notificaciones push a visitantes que hayan activado voluntariamente esta función en la tienda.",
-          "Límite: máximo 3 campañas de notificaciones por semana por tienda. El límite se renueva cada 7 días.",
+          "Con el Plan Tienda Premium podés mandar campañas a quienes eligieron recibirlas: push a quienes siguen tu tienda y activaron las notificaciones, y mail a quienes se anotaron en el bloque de novedades de tu tienda y confirmaron su dirección.",
+          `Límite: máximo ${PUSH_CAMPAIGNS_PER_WEEK} campañas por semana por tienda. Una campaña que sale por push y por mail cuenta una sola vez. El límite se renueva cada 7 días.`,
           "Contenido permitido: novedades de productos, ofertas, actualizaciones relevantes a tu tienda.",
           "Contenido prohibido: publicidad engañosa o falsa, spam, lenguaje ofensivo, inapropiado o discriminatorio, promoción de productos o servicios externos no relacionados con tu tienda.",
-          "Cada suscriptor puede cancelar la suscripción en cualquier momento desde el banner en la tienda. Debés respetar esa decisión y no intentar re-suscribirlos sin su consentimiento.",
+          "Cada seguidor puede desactivar las notificaciones o dejar de seguirte, y cada suscriptor puede darse de baja con un clic desde cualquier mail. Debés respetar esa decisión y no intentar re-suscribirlos sin su consentimiento.",
+          "La lista de mails se arma solo con quienes se anotan desde tu tienda: no se pueden cargar ni importar direcciones a mano. Es para tus campañas desde el panel; usarla para otra cosa —pasarla a otra herramienta, cederla o mandarle publicidad ajena— no está permitido.",
           "TiendaApps puede suspender o limitar permanentemente el acceso a esta función ante uso abusivo, spam o incumplimiento de estas reglas, sin derecho a reembolso.",
           "No podés usar notificaciones para redirigir a sitios externos, terceros o realizar actividades de phishing.",
         ],
@@ -159,6 +161,21 @@ const CONTENT = {
           "TiendaApps no es responsable por suspensiones, rechazos, cambios de políticas o interrupciones de los servicios de Meta, Google u otros terceros integrados.",
           "Podés desconectar cualquier integración en cualquier momento desde el panel. El tratamiento de datos de estas integraciones se detalla en la Política de Privacidad (secciones 2 quinquies y 2 sexies).",
           "TiendaApps puede agregar, modificar o discontinuar aplicaciones de la sección Aplicaciones, avisando con razonable anticipación cuando el cambio afecte una integración que tengas activa.",
+        ],
+      },
+      /* Agregado el 08/10/26 con las herramientas de concesionaria (tasación,
+         "Avisame si entra"). Lo que importa dejar escrito: el número de la
+         tasación lo pone la tienda, no nosotros, y a quien busca le escribe la
+         tienda desde su teléfono, no la plataforma. */
+      {
+        title: "6 quinquies. Tiendas de vehículos: consultas, tasaciones y 'Avisame si entra'",
+        body: null,
+        list: [
+          "Las consultas, los pedidos de tasación y las búsquedas de 'Avisame si entra' que te dejan en tu tienda te llegan al panel con el nombre y el teléfono de la persona. Sos responsable de esos datos conforme a la Ley 25.326, y solo podés usarlos para responder esa consulta, esa tasación o esa búsqueda.",
+          "La tasación es tuya: TiendaApps no valúa vehículos ni garantiza ningún precio. La oferta que pases la armás vos, y queda sujeta a lo que veas del vehículo en persona.",
+          `Cuando entra un vehículo que coincide con una búsqueda, te avisamos a vos; el mensaje al interesado lo mandás vos, desde tu teléfono. TiendaApps no le escribe por vos. Cada búsqueda se cierra sola a los ${DIAS_VIGENCIA} días.`,
+          "Los precios de tus vehículos, y la moneda en que los publicás (pesos o dólares), los cargás vos y tienen que ser veraces.",
+          "La garantía legal de la Ley 24.240 corre para los vehículos que vendas aunque no ofrezcas una garantía propia. El asistente de políticas de tu tienda la incluye siempre, y si escribís tu propio texto no podés excluirla: vale igual, diga lo que diga tu política.",
         ],
       },
       {
@@ -191,7 +208,7 @@ const CONTENT = {
         title: "7 ter. Cambio de rubro de la tienda",
         body: "El panel te permite cambiar el tipo (rubro) de tu tienda. Es una acción con consecuencias importantes que aceptás al confirmarla:",
         list: [
-          "El cambio de rubro reinicia tu tienda: se eliminan de tu panel los productos, pedidos, pagos, cupones, promociones, reseñas, consultas, carritos abandonados y el historial de ventas de tus afiliados del ciclo anterior. La acción es irreversible desde el panel.",
+          "El cambio de rubro reinicia tu tienda: se eliminan de tu panel los productos, pedidos, pagos, cupones, promociones, reseñas, consultas, tasaciones, búsquedas de 'Avisame si entra', carritos abandonados y el historial de ventas de tus afiliados del ciclo anterior. La acción es irreversible desde el panel.",
           "Bloqueos de protección: el cambio no se permite mientras tengas pedidos sin entregar o cancelar, premios de ruleta ganados por clientes y todavía vigentes sin usar, comisiones de afiliados sin liquidar (saldo acreditado o retiros pendientes), cupones que tus clientes todavía puedan usar, o promociones aplicándose en tu tienda. Las comisiones ya acreditadas no se extinguen por el cambio de rubro: el sistema exige liquidarlas antes.",
           "Ofertas vigentes: el sistema no te deja cambiar de rubro con cupones o promociones que un cliente pueda usar en ese momento. Tenés que darlos de baja vos —desactivar o eliminar los cupones, archivar las promociones— para que la baja de la oferta sea una decisión tuya y no un borrado automático. Los que ya estén desactivados, vencidos, agotados o archivados no frenan el cambio, y se eliminan junto con el resto del ciclo anterior.",
           "Antes de confirmar, la plataforma te ofrece descargar una copia de tus productos, pedidos (con pagos y comisiones), cupones y promociones. Como emisor de los comprobantes y responsable fiscal de tus ventas (sección 5), la conservación de esos registros es tu responsabilidad — te recomendamos descargarlos y guardarlos.",
@@ -287,7 +304,7 @@ const CONTENT = {
           "El plan de Afiliado/a es gratuito, sin costo de suscripción y sin límite de tiempo.",
           "No se requiere tarjeta de crédito para usar la plataforma como afiliado/a.",
           "Una vez aprobado/a por una tienda, podés generar y usar tu link de afiliado de inmediato, sin necesidad de pagar ni de período de prueba.",
-          "Las comisiones se acreditan automáticamente en tu panel de comisiones dentro de TiendaApps cuando se confirma un pago. Desde ahí podés solicitar un retiro a tu cuenta bancaria (CBU/alias) cuando quieras, sin vencimiento de saldo. Para tiendas por consulta (AUTOS), la comisión se acredita cuando el dueño de la tienda confirma la venta.",
+          "Las comisiones se acreditan automáticamente en tu panel de comisiones dentro de TiendaApps cuando se confirma un pago. Desde ahí podés solicitar un retiro a tu cuenta bancaria (CBU/alias) cuando quieras, sin vencimiento de saldo. En las tiendas de vehículos (autos y motos) el programa de afiliados está en pausa: no se puede sumar afiliados y las consultas no generan comisión.",
           "Podés afiliarte a múltiples tiendas simultáneamente según las disponibilidades de cada una.",
           "Podés prestar servicios similares a otras plataformas o marcas al mismo tiempo. TiendaApps no impone exclusividad.",
         ],

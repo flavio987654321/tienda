@@ -22,6 +22,8 @@ import {
 } from "./legal-generator";
 import { DIAS_VIGENCIA } from "./busquedas";
 import { tieneBloqueDeMail, tieneBloqueDeMailSegunConfig } from "./bloque-mail";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -239,6 +241,21 @@ chequear("con WhatsApp: lo nombra y deja el email", conWa.includes(`por WhatsApp
 const soloEspacios = generatePolicyPrivacy({ name: "X", contact: "   " }, SIN_NADA);
 chequear("contacto en blanco se trata como vacío", soloEspacios.includes("Escribinos por email"));
 chequear("y no deja un paréntesis con aire", !soloEspacios.includes("WhatsApp ("));
+
+/* Lo que declara cada TIENDA (arriba) y lo que declara la PLATAFORMA tienen que
+   decir lo mismo (08/10/26). La política de TiendaApps no nombraba el newsletter
+   por mail, decía que del seguidor push no se guardaba ningún dato y no tenía
+   una palabra de tasaciones ni de "Avisame si entra". */
+console.log("\n5) La política de la plataforma dice lo mismo que las de las tiendas");
+const raiz = join(__dirname, "..", "..");
+const priv = readFileSync(join(raiz, "src/app/privacidad/page.tsx"), "utf8");
+const term = readFileSync(join(raiz, "src/app/terminos/page.tsx"), "utf8");
+chequear("privacidad: declara los suscriptores por mail (Dueño y Cliente)", priv.includes("Suscriptores por mail de tu tienda") && priv.includes("Novedades por mail de una tienda"));
+chequear("privacidad: ya no dice que del seguidor no se guarda ningún dato", !priv.includes("No almacenamos nombre, email ni ningún dato personal identificable del visitante"));
+chequear("privacidad: declara tasaciones y 'Avisame si entra' (Dueño y Cliente)", (priv.match(/Avisame si entra/g) ?? []).length >= 4 && priv.includes("Tasación de tu usado"));
+chequear("privacidad: los días de la búsqueda salen de DIAS_VIGENCIA", priv.includes("import { DIAS_VIGENCIA }") && !/\b90 días la búsqueda/.test(priv));
+chequear("términos: el tope semanal sale de la constante", term.includes("${PUSH_CAMPAIGNS_PER_WEEK} campañas por semana") && !term.includes("máximo 3 campañas"));
+chequear("términos: ninguna consulta de autos acredita comisión", !term.includes("la comisión se acredita cuando el dueño de la tienda confirma la venta") && !term.includes("Si confirmás la consulta como venta, la comisión se acredita"));
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);

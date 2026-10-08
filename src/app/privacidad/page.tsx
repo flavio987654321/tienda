@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
 import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
+/* Los días de "Avisame si entra" salen de la constante que cierra las
+   búsquedas: escritos a mano, la política podía prometer un plazo y el sistema
+   cumplir otro. Lo mismo hace el asistente de políticas de cada tienda. */
+import { DIAS_VIGENCIA } from "@/lib/busquedas";
 
 const DESCRIPTION =
   "Política de privacidad de TiendaApps: qué datos guardamos, para qué los usamos, cuánto los conservamos y cómo pedir que los borremos.";
@@ -58,7 +62,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta: nombre, email y contraseña (almacenada con hash bcrypt).",
           "Datos de tienda: nombre, logo, productos, precios, stock e imágenes.",
-          "Datos de operación: pedidos, afiliados, estadísticas de ventas.",
+          "Datos de operación: pedidos, consultas, afiliados, estadísticas de ventas.",
           "Datos de pago: procesados por Mercado Pago. No almacenamos datos de tarjetas.",
           "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
           "Datos de verificación de identidad (voluntario y con consentimiento explícito): imágenes de DNI y selfie; número de CUIT/CUIL si lo informás voluntariamente. Ver sección 3 bis para el detalle completo.",
@@ -108,6 +112,8 @@ const CONTENT = {
           "Datos bancarios de afiliados (CBU, CUIL, alias): ejecución del contrato de afiliación y liquidación de comisiones (art. 5 inc. b).",
           "Datos de verificación de identidad (DNI, selfie): consentimiento expreso del titular (art. 5 inc. a y art. 7). Es voluntario y revocable.",
           "Datos de suscriptores push: consentimiento expreso del visitante al suscribirse (art. 5 inc. a).",
+          "Suscriptores por mail de tu tienda: consentimiento expreso de cada persona, que además tiene que confirmar su dirección desde un mail antes de recibir nada (art. 5 inc. a).",
+          "Consultas, tasaciones y pedidos de 'Avisame si entra' en tiendas de vehículos: consentimiento de quien los deja, que los carga él mismo para que la tienda lo contacte (art. 5 inc. a).",
           "Logs de auditoría y seguridad: interés legítimo en la prevención de fraudes y obligación legal (art. 5 inc. c y f).",
           "Historial de pedidos conservado post-cancelación: obligación legal para resolución de disputas (Ley 24.240 art. 10 bis) e interés legítimo (art. 5 inc. f).",
           "Respaldo de registros de ventas ante un cambio de rubro: obligación legal de conservación de documentación comercial (art. 328 del Código Civil y Comercial) e interés legítimo en la defensa ante disputas y contracargos (art. 5 inc. f).",
@@ -124,15 +130,37 @@ const CONTENT = {
           "Es parte del servicio: a diferencia de la Verificación de identidad, el uso de Sasha no requiere un consentimiento separado, ya que no procesa datos sensibles ni datos personales de terceros — solo información agregada de tu propia tienda.",
         ],
       },
+      /* ⚠️ Hasta el 08/10/26 decía "no almacenamos nombre, email ni ningún dato
+         personal identificable del visitante". Dejó de ser cierto cuando seguir
+         una tienda pasó a exigir cuenta: el seguidor queda atado a su usuario, y
+         el dueño ve su nombre y su foto en la lista. */
       {
-        title: "2 bis. Datos de suscriptores push (Plan Premium)",
-        body: "Si usás la función de notificaciones push, almacenamos en tu nombre los tokens técnicos de los visitantes que se suscriben a tu tienda:",
+        title: "2 bis. Seguidores de tu tienda y notificaciones push (Plan Premium)",
+        body: "Cualquier persona con cuenta en TiendaApps puede seguir tu tienda. Si además activa las notificaciones, con el Plan Premium podés mandarle push:",
         list: [
-          "Qué almacenamos: endpoint URL de push del navegador del visitante y claves de cifrado técnicas (auth y p256dh). No almacenamos nombre, email ni ningún dato personal identificable del visitante.",
+          "Qué almacenamos: que esa cuenta sigue tu tienda y desde cuándo, y —si activó las notificaciones— el endpoint de push de cada navegador o celular donde las activó, con sus claves técnicas de cifrado (auth y p256dh).",
+          "Qué ves vos: el nombre y la foto de perfil de quien te sigue, y desde cuándo. Nunca su email: el push sale desde nuestro servidor y no lo necesitás.",
           "Finalidad exclusiva: enviar las campañas de notificaciones push que vos creás desde el panel.",
-          "Duración: los tokens se conservan mientras el visitante permanezca suscripto. Se eliminan automáticamente si el navegador invalida la suscripción (ej: al borrar datos del navegador o desinstalar la app en iPhone).",
-          "El visitante puede cancelar la suscripción en cualquier momento desde el banner en tu tienda pública.",
+          "Duración: mientras la persona te siga. Si deja de seguirte, borramos en el momento sus endpoints de push de tu tienda. Si el navegador invalida la suscripción (ej: al borrar datos del navegador o desinstalar la app en iPhone), se elimina sola en el siguiente envío.",
+          "Las suscripciones de antes de que hiciera falta una cuenta para seguir una tienda no están asociadas a ninguna persona: son solo el endpoint y sus claves.",
           "Sos responsable de que el contenido de las notificaciones cumpla con los Términos y Condiciones y con la legislación vigente sobre comunicaciones no solicitadas.",
+        ],
+      },
+      /* El newsletter por mail existe desde agosto y esta política no lo
+         nombraba en ninguna solapa: guardábamos mails de gente sin cuenta, y su
+         IP, sin una línea que lo dijera. Agregado el 08/10/26, junto con el
+         bloque de mail de los diseños de vehículos. */
+      {
+        title: "2 bis b. Suscriptores por mail de tu tienda",
+        body: "Algunos diseños de tienda —también los de vehículos— tienen un bloque para que la gente deje su mail y reciba tus novedades. Si tu diseño lo muestra, guardamos en tu nombre:",
+        list: [
+          "Qué almacenamos: el email, la fecha en que se anotó y en que confirmó, y la dirección IP desde la que se anotó (sirve para frenar altas masivas).",
+          "Doble confirmación: anotarse no alcanza. Le mandamos un mail para que confirme su dirección, y hasta que no toca ese link no recibe nada. Así nadie puede anotar la dirección de otra persona.",
+          "Qué ves vos: la lista de emails con su estado (pendiente, confirmado o dado de baja). Podés sacar a alguien cuando quieras.",
+          "Para qué: enviar las campañas que creás desde Notificaciones (Plan Premium). Las manda TiendaApps a través de Resend, a nombre de tu tienda, y cada mail trae un link para darse de baja con un clic.",
+          "Bajas: si la persona se da de baja, si su casilla rebota o si marca un mail como spam, deja de recibir. La dirección no se borra: queda marcada como baja para que nadie la pueda volver a sumar. Solo vuelve a recibir si se anota de nuevo y confirma otra vez.",
+          "No se pueden cargar ni importar mails a mano: la única forma de entrar a la lista es que la persona se anote sola desde tu tienda.",
+          "Sos responsable de esa lista y de lo que le mandás; TiendaApps la guarda y hace los envíos por cuenta tuya.",
         ],
       },
       {
@@ -184,10 +212,13 @@ const CONTENT = {
       },
       {
         title: "3. Datos de tus clientes y potenciales compradores",
-        body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
+        body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Si tu tienda vende por consulta (vehículos), cada vez que alguien consulta por un vehículo la Plataforma registra por cuál, y el nombre, teléfono y mensaje que haya dejado, y te lo muestra en el panel de Consultas. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
         list: [
           "Carritos abandonados: si alguien carga sus datos en tu checkout y no termina la compra, vas a ver su email, nombre, teléfono y los productos elegidos en la sección Carritos abandonados. Es la misma obligación que con el resto: solo podés usar esos datos para intentar recuperar esa compra puntual (un recordatorio o un mensaje por WhatsApp), nunca para sumarlos a una lista de difusión ni para ofrecerles otra cosa.",
           "Esos carritos se eliminan solos a los 45 días sin actividad si la compra no se completó. Si la persona te pide que borres sus datos, tenés que hacerlo aunque no hayan pasado los 45 días.",
+          "Tasaciones (tiendas de vehículos): si alguien te pide que le tasen su usado, vas a ver su nombre, su teléfono y los datos del vehículo que cargó (marca, modelo, año, kilómetros, estado y lo que quiera comentar). Son para pasarle una oferta por ese vehículo.",
+          "'Avisame si entra' (tiendas de vehículos): si alguien deja lo que está buscando, vas a ver su nombre, su teléfono y su búsqueda. Cuando entra un vehículo que coincide te avisamos a vos, y el mensaje se lo mandás vos desde tu WhatsApp: TiendaApps no le escribe. A los " + DIAS_VIGENCIA + " días la búsqueda se cierra sola y dejamos de cruzarla con lo que publicás.",
+          "Lo mismo que con los carritos: esos datos son para responder esa consulta, esa tasación o esa búsqueda. No podés sumarlos a una lista de difusión ni usarlos para ofrecer otra cosa.",
         ],
       },
       {
@@ -198,7 +229,7 @@ const CONTENT = {
           "Supabase (supabase.com): gestión de autenticación, base de datos y almacenamiento de archivos (incluyendo documentos de verificación en bucket privado). Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
           "Vercel (vercel.com): hosting y ejecución de la plataforma. Servidores en AWS/Cloudflare. Política de privacidad: vercel.com/legal/privacy-policy",
           "Mercado Pago (mercadopago.com.ar): procesamiento de pagos de suscripción. Nunca almacenamos datos de tarjetas — Mercado Pago gestiona todo con cumplimiento PCI-DSS nivel 1. Política de privacidad: mercadopago.com.ar/privacidad",
-          "Resend (resend.com): envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje. Política de privacidad: resend.com/legal/privacy-policy",
+          "Resend (resend.com): envío de emails transaccionales (confirmaciones, alertas) y de las campañas por mail a los suscriptores de tu tienda. Solo se comparte el email necesario para cada mensaje. Política de privacidad: resend.com/legal/privacy-policy",
           "Anthropic (anthropic.com): procesa los datos agregados de tu tienda para el funcionamiento de Sasha, nuestro asistente con IA. Ver sección 2 ter para el detalle de qué le compartimos. Política de privacidad: anthropic.com/privacy",
           "Envíopack (enviopack.com): si activás la cotización automática de envío, le compartimos la dirección de origen de tu tienda y el peso de los productos para calcular tarifas con Correo Argentino, OCA y Andreani. Política de privacidad: enviopack.com",
           "Meta Platforms (facebook.com): si conectás el Catálogo de Meta o Catálogo en WhatsApp desde la sección Aplicaciones, le compartimos los datos de tu catálogo de productos (ver sección 2 quinquies). Además, recibe los datos de navegación por las páginas de la plataforma que recoge nuestro propio Meta Pixel, que funciona siempre (ver sección 2 septies). Política de privacidad: facebook.com/privacy",
@@ -226,6 +257,8 @@ const CONTENT = {
           "Si tenés una tienda cerrada y querés que borremos todo igual, podés eliminar tu cuenta desde Configuración → Zona de peligro, o pedirlo por email (ver sección 8).",
           "Historial de pedidos: 12 meses adicionales tras el cierre de cuenta para resolver disputas o reclamaciones de garantía.",
           "Carritos abandonados de tu tienda: se eliminan automáticamente a los 45 días sin actividad si la compra no se completó. Los que sí terminaron en compra quedan como parte del pedido y siguen su mismo plazo.",
+          "Consultas, tasaciones y búsquedas de 'Avisame si entra': se conservan mientras exista tu tienda, para que tengas el historial de cada trato, y se eliminan si cambiás de rubro o eliminás la cuenta. Una búsqueda deja de usarse a los " + DIAS_VIGENCIA + " días, aunque siga en tu lista como cerrada.",
+          "Suscriptores por mail: mientras exista tu tienda. Los que se dieron de baja quedan marcados, sin recibir nada, para que su dirección no se pueda volver a sumar sin que ellos la confirmen.",
           "Respaldo por cambio de rubro: si cambiás el tipo de tienda, los pedidos, pagos, comisiones y cupones del ciclo anterior se eliminan de tu panel, pero se conserva una copia interna de respaldo por hasta 10 años (plazo de conservación de documentación comercial, art. 328 del Código Civil y Comercial), con finalidad exclusiva contable y de resolución de disputas o contracargos. Podés descargarla en cualquier momento desde Configuración → Respaldos.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados junto con la cuenta. No se conservan post-cancelación.",
           "Backups automáticos de base de datos: 30 días de retención gestionados por Supabase. Los backups no permiten recuperar una cuenta eliminada.",
@@ -293,7 +326,7 @@ const CONTENT = {
       },
       {
         title: "3. Link de afiliado, tracking y consultas",
-        body: "Tu link de afiliado incluye un identificador único que registra tanto las ventas como las consultas que generás. Cuando un potencial comprador hace clic en tu link y consulta al dueño de la tienda por WhatsApp, la Plataforma registra ese evento (consulta/lead) vinculado a tu cuenta. El nombre, teléfono y mensaje del consultante son compartidos con el dueño de la tienda para que pueda gestionar la consulta. Si el dueño confirma la venta, se acredita una comisión en tu billetera. Tus estadísticas son visibles solo para vos y para el dueño de la tienda a la que estás afiliado. No compartimos tu identidad ni datos con otros afiliados.",
+        body: "Tu link de afiliado incluye un identificador único que registra tanto las ventas como las consultas que generás. Cuando un potencial comprador hace clic en tu link y consulta al dueño de la tienda por WhatsApp, la Plataforma registra ese evento (consulta/lead) vinculado a tu cuenta. El nombre, teléfono y mensaje del consultante son compartidos con el dueño de la tienda para que pueda gestionar la consulta. Si el dueño confirma la venta, se acredita una comisión en tu billetera. Tus estadísticas son visibles solo para vos y para el dueño de la tienda a la que estás afiliado. No compartimos tu identidad ni datos con otros afiliados. En las tiendas de vehículos (autos y motos) el programa de afiliados está en pausa: no se registran consultas a tu nombre ni se generan comisiones.",
       },
       {
         title: "3 bis. Meta Pixel propio de TiendaApps (publicidad de la plataforma)",
@@ -498,6 +531,8 @@ const CONTENT = {
           "Datos de pago: procesados directamente por cada tienda. TiendaApps no almacena datos de tarjetas.",
           "Datos de uso: tiendas visitadas, productos vistos y productos guardados como favoritos.",
           "Compras que no llegaste a terminar: si cargás tus datos en el checkout de una tienda y no completás el pedido, guardamos tu email, nombre, teléfono y los productos que habías elegido, y la tienda los ve en su panel. Sirve para que puedan recordarte el carrito. Ver la sección 2 bis.",
+          "Si consultás en una tienda de vehículos, pedís la tasación de tu usado o dejás un 'Avisame si entra': tu nombre, tu teléfono y lo que nos contaste. Ver la sección 6 quater.",
+          "Si seguís una tienda o te anotás en sus novedades por mail: ver las secciones 6 bis y 6 bis b.",
         ],
       },
       {
@@ -589,6 +624,7 @@ const CONTENT = {
           "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 30 días para eliminación completa.",
           "Historial de pedidos: 1 año tras el cierre de cuenta para resolución de garantías y disputas.",
           "Carritos que no terminaste de comprar: 45 días desde tu última actividad, y después se eliminan solos (sección 2 bis).",
+          "Consultas, tasaciones y búsquedas en tiendas de vehículos: mientras exista esa tienda, o hasta que le pidas que las borre. Se eliminan si la tienda cambia de rubro (sección 6 quater).",
           "Si una tienda donde compraste cambia de rubro, ese pedido deja de verse en tu historial, pero TiendaApps conserva una copia interna de respaldo (incluye tus datos de contacto y envío de ese pedido) por hasta 10 años, con finalidad exclusiva de respaldo contable, garantías, disputas y contracargos. Podés pedir el comprobante de una compra archivada por los medios de la sección 8.",
           "Favoritos y preferencias: eliminados al eliminar la cuenta.",
           "Para eliminar tu cuenta antes del plazo escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de cuenta — [tu email]'.",
@@ -606,14 +642,26 @@ const CONTENT = {
         ],
       },
       {
-        title: "6 bis. Notificaciones push de tiendas",
-        body: "Si elegís activar notificaciones en una tienda de la plataforma:",
+        title: "6 bis. Seguir una tienda y sus notificaciones push",
+        body: "Si seguís una tienda de la plataforma y elegís activar sus notificaciones:",
         list: [
-          "Almacenamos un token técnico de suscripción de tu navegador (endpoint URL y claves de cifrado). Este token no contiene tu nombre, email ni datos personales identificables.",
+          "Para seguir una tienda necesitás una cuenta. Guardamos que la seguís y desde cuándo, y la tienda ve tu nombre y tu foto de perfil — nunca tu email.",
+          "Si activás las notificaciones, almacenamos un token técnico de suscripción de tu navegador (endpoint URL y claves de cifrado), asociado a tu cuenta.",
           "El token se usa exclusivamente para enviarte notificaciones de esa tienda puntual. No lo compartimos con otros usuarios, otras tiendas ni terceros.",
-          "Podés cancelar la suscripción en cualquier momento tocando el banner de notificaciones en la tienda y eligiendo 'Desactivar'. El token se elimina del servidor de inmediato.",
+          "Podés cancelar la suscripción en cualquier momento tocando el banner de notificaciones en la tienda y eligiendo 'Desactivar', o dejar de seguir la tienda. En los dos casos el token se elimina del servidor de inmediato.",
           "Si borrás los datos del navegador o desinstalás la app (en iPhone), la suscripción queda inválida y se elimina automáticamente del servidor la próxima vez que intentamos enviarte una notificación.",
           "La suscripción a notificaciones es voluntaria y no afecta tu acceso a la tienda ni a tus compras.",
+        ],
+      },
+      {
+        title: "6 bis b. Novedades por mail de una tienda",
+        body: "Algunas tiendas tienen un bloque para dejar tu mail y recibir sus novedades. Si te anotás:",
+        list: [
+          "Guardamos tu email, la fecha en que te anotaste y la dirección IP desde la que lo hiciste (para frenar altas masivas). No hace falta tener cuenta.",
+          "Te mandamos un mail para confirmar. Hasta que no lo confirmás no recibís nada: si alguien anotó tu dirección sin que lo sepas, alcanza con ignorar ese mail.",
+          "Los mails los envía TiendaApps por cuenta de esa tienda, solo con las novedades que ella publique. La tienda ve tu email y si confirmaste. No se lo pasamos a otras tiendas ni a terceros.",
+          "Cada mail trae un link para darte de baja con un clic. Desde ese momento esa tienda no te vuelve a escribir, salvo que te anotes de nuevo y lo confirmes.",
+          "Base legal: tu consentimiento (art. 5 inc. a, Ley 25.326), que retirás cuando quieras con esa baja.",
         ],
       },
       {
@@ -624,6 +672,21 @@ const CONTENT = {
           "No usamos ese email para publicidad ni se lo compartimos a otras tiendas — queda asociado únicamente a la tienda donde jugaste.",
           "Si la tienda no pide email, igual registramos tu dirección IP para limitar cuántas veces se puede jugar desde la misma conexión.",
           "Para pedir que se elimine tu participación, escribile directamente a la tienda o contactanos por los medios de la sección 8.",
+        ],
+      },
+      /* Agregado el 08/10/26. Las tiendas de vehículos juntan datos que una
+         tienda con carrito no junta —la tasación del usado y "Avisame si
+         entra"—, y el asistente de políticas de cada tienda ya los declara: la
+         plataforma no podía ser la única que no los nombraba. */
+      {
+        title: "6 quater. Tiendas de vehículos: consultas, tasaciones y 'Avisame si entra'",
+        body: "Las tiendas de autos y motos no venden con carrito: se consulta, se tasa el usado o se deja lo que uno busca. En cada caso:",
+        list: [
+          "Consultas: si consultás por un vehículo desde el formulario, la tienda recibe tu nombre, tu teléfono y tu mensaje. Si tocás el botón de WhatsApp, queda registrado que consultaste por ese vehículo, sin tus datos — la conversación sigue en WhatsApp, fuera de TiendaApps.",
+          "Tasación de tu usado: la tienda recibe tu nombre, tu teléfono y los datos del vehículo que cargaste, para pasarte una oferta. La oferta la arma la tienda, no TiendaApps.",
+          "'Avisame si entra': la tienda recibe tu nombre, tu teléfono y lo que estás buscando. Cuando entra algo que coincide le avisamos a la tienda, y es ella quien te escribe. A los " + DIAS_VIGENCIA + " días tu búsqueda se cierra sola.",
+          "Esos datos son para responderte eso y nada más: la tienda no puede usarlos para mandarte publicidad ni sumarte a una lista de difusión.",
+          "Para que los borren, pedíselo a la tienda o escribinos por los medios de la sección 8.",
         ],
       },
       {
