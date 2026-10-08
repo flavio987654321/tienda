@@ -56,6 +56,9 @@ function Icono({ cual, color, tam = 22 }: { cual: "cambio" | "plata" | "auto" | 
   return <svg {...p}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
 }
 
+/** La hora, para los clicks. Afuera del componente: nunca se llama al dibujar. */
+const ahora = () => Date.now();
+
 export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false }: {
   storeId?: string;
   accent: string;
@@ -76,6 +79,13 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   const enviando = useRef(false);
   const titulo = useRef<HTMLHeadingElement>(null);
   const primeraVez = useRef(true);
+  /* Cuándo cambió el paso (08/10/26). "Seguir" queda en el mismo lugar en los
+     cuatro pasos, y lo que aparece abajo del dedo es otra cosa: un doble click
+     en el paso 3 saltaba al 4 y pedía la tasación sin teléfono; en el paso 1,
+     el segundo click elegía la marca que caía ahí. Enter sostenido, lo mismo.
+     Durante un instante después de cambiar, los clicks no cuentan. */
+  const pasoCambioEn = useRef(0);
+  const recienCambio = () => ahora() - pasoCambioEn.current < 400;
   const soloMirando = !storeId || isOwner || isPreview;
   const sobreAcento = getContrastColor(accent) === "dark" ? "#111" : "#fff";
 
@@ -86,6 +96,8 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   }, [paso, estado]);
 
   const poner = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+  /** Para los botones de opción: lo que se escribe pasa siempre, un toque recién llegado al paso no. */
+  const elegir = (k: keyof typeof f, v: string) => { if (!recienCambio()) poner(k, v); };
   const cambiar = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const v = e.target.value;
     // Año: sólo dígitos. Km: con puntos de miles a la vista, se guardan los dígitos.
@@ -105,7 +117,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
     return "";
   }
 
-  const irA = (p: Paso) => { setError(""); setHaciaAtras(p < paso); setPaso(p); };
+  const irA = (p: Paso) => { pasoCambioEn.current = ahora(); setError(""); setHaciaAtras(p < paso); setPaso(p); };
   const siguiente = () => {
     const e = errorDelPaso(paso);
     if (e) { setError(e); return; }
@@ -114,6 +126,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
+    if (recienCambio()) return;
     if (paso < 4) { siguiente(); return; }
     if (enviando.current) return;
     setError("");
@@ -242,7 +255,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
                 const activo = modalidad === m;
                 return (
                   <button key={m} type="button" role="radio" aria-checked={activo} className="tv-opcion"
-                    onClick={() => { setModalidad(m); setError(""); setHaciaAtras(false); setPaso(2); }}
+                    onClick={() => { if (recienCambio()) return; setModalidad(m); setError(""); setHaciaAtras(false); pasoCambioEn.current = ahora(); setPaso(2); }}
                     style={{ textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 16, borderRadius: 12, minHeight: 104,
                       border: `1.5px solid ${activo ? accent : RAYA}`, background: activo ? `${accent}12` : "#fff", color: TINTA,
                       display: "flex", flexDirection: "column", gap: 8 }}>
@@ -266,7 +279,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
               <label htmlFor="tv-marca" style={etiqueta}>Marca</label>
               <div role="group" aria-label="Marcas comunes" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 {MARCAS_COMUNES.map((m) => (
-                  <button key={m} type="button" className="tv-opcion" aria-pressed={f.marca === m} onClick={() => poner("marca", m)} style={chip(f.marca === m)}>{m}</button>
+                  <button key={m} type="button" className="tv-opcion" aria-pressed={f.marca === m} onClick={() => elegir("marca", m)} style={chip(f.marca === m)}>{m}</button>
                 ))}
               </div>
               <input id="tv-marca" className="tv-campo" value={f.marca} onChange={cambiar("marca")} maxLength={40} placeholder="U otra: Nissan, Jeep…" style={campo} />
@@ -291,7 +304,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
                   const activo = f.estado === e;
                   const color = COLOR_ESTADO[e];
                   return (
-                    <button key={e} type="button" role="radio" aria-checked={activo} className="tv-opcion" onClick={() => poner("estado", activo ? "" : e)}
+                    <button key={e} type="button" role="radio" aria-checked={activo} className="tv-opcion" onClick={() => elegir("estado", activo ? "" : e)}
                       style={{ cursor: "pointer", fontFamily: "inherit", padding: "10px 4px", borderRadius: 10, minHeight: 64,
                         border: `1.5px solid ${activo ? color : RAYA}`, background: activo ? `${color}14` : "#fff", color: TINTA,
                         display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -307,7 +320,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
               <div role="radiogroup" aria-label="Combustible" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 {COMBUSTIBLES.map((c) => (
                   <button key={c} type="button" role="radio" aria-checked={f.combustible === c} className="tv-opcion"
-                    onClick={() => poner("combustible", f.combustible === c ? "" : c)} style={chip(f.combustible === c)}>{c}</button>
+                    onClick={() => elegir("combustible", f.combustible === c ? "" : c)} style={chip(f.combustible === c)}>{c}</button>
                 ))}
               </div>
             </div>
@@ -316,7 +329,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
               <div role="radiogroup" aria-label="Caja" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 {TRANSMISIONES.map((c) => (
                   <button key={c} type="button" role="radio" aria-checked={f.transmision === c} className="tv-opcion"
-                    onClick={() => poner("transmision", f.transmision === c ? "" : c)} style={chip(f.transmision === c)}>{c}</button>
+                    onClick={() => elegir("transmision", f.transmision === c ? "" : c)} style={chip(f.transmision === c)}>{c}</button>
                 ))}
               </div>
             </div>
@@ -364,7 +377,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
       {/* ── Navegación ── El paso 1 avanza solo al elegir. */}
       {paso > 1 && (
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button type="button" onClick={() => irA((paso - 1) as Paso)}
+          <button type="button" onClick={() => { if (!recienCambio()) irA((paso - 1) as Paso); }}
             style={{ minHeight: 48, padding: "0 16px", borderRadius: 10, border: `1.5px solid ${RAYA}`, background: "#fff", color: TINTA, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
             ← Atrás
           </button>

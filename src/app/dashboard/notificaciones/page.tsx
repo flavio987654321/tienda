@@ -106,6 +106,9 @@ export default function NotificacionesPage() {
   const [continuando, setContinuando] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const enviandoRef = useRef(false);
+  /* Retomar el mail con doble click mandaba dos pedidos que arrancaban del mismo
+     punto de la lista: los mismos suscriptores recibían el mail dos veces. */
+  const continuandoRef = useRef(false);
   const esAutos = stats?.rubro === "AUTOS";
   const presets = esAutos ? PRESET_TYPES_AUTOS : PRESET_TYPES;
   /* Sólo push cuando la tienda no tiene dónde dejar el mail: en autos, si
@@ -145,7 +148,7 @@ export default function NotificacionesPage() {
     //
     // Ahora sólo pisa lo que está vacío o lo que puso otro preset. Lo que
     // escribió una persona no se toca sin permiso.
-    const tituloEsDeOtroPreset = presets.some((p) => p.titleTemplate !== "" && p.titleTemplate === title);
+    const tituloEsDeOtroPreset = [...PRESET_TYPES, ...PRESET_TYPES_AUTOS].some((p) => p.titleTemplate !== "" && p.titleTemplate === title);
     const hayAlgoEscrito = (title.trim() !== "" && !tituloEsDeOtroPreset) || message.trim() !== "";
 
     if (hayAlgoEscrito && !confirm("Cambiar el tipo reemplaza lo que escribiste. ¿Seguir?")) return;
@@ -159,6 +162,12 @@ export default function NotificacionesPage() {
   function handleSubmitClick(e: React.FormEvent) {
     e.preventDefault();
     if (!tosAccepted || title.trim().length === 0 || message.trim().length === 0) return;
+    // El link se revisa ANTES de confirmar: si no, el error del servidor llegaba
+    // después de "¿Confirmar envío?" y parecía que algo se había mandado.
+    if (url.trim() && !/^https?:\/\/[^\s.]+\.[^\s]+$/i.test(url.trim())) {
+      setResult({ ok: false, msg: "El link tiene que empezar con https:// (por ejemplo, https://www.tiendaapps.com/tienda/mi-tienda)." });
+      return;
+    }
     setShowConfirm(true);
   }
 
@@ -221,6 +230,8 @@ export default function NotificacionesPage() {
    * servidor guarda hasta dónde llegó y sigue desde el siguiente.
    */
   async function handleContinuar(campaignId: string) {
+    if (continuandoRef.current) return;
+    continuandoRef.current = true;
     setContinuando(campaignId);
     try {
       const res = await fetch("/api/newsletter/continuar", {
@@ -244,6 +255,7 @@ export default function NotificacionesPage() {
       setResult({ ok: false, msg: "Error de red. Intentá de nuevo." });
     } finally {
       setContinuando(null);
+      continuandoRef.current = false;
     }
   }
 

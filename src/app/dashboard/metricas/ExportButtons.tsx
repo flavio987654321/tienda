@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Download, FileText } from "lucide-react";
 
 export function ExportButtons({
@@ -12,9 +12,12 @@ export function ExportButtons({
   storeSlug: string;
 }) {
   const [loadingCsv, setLoadingCsv] = useState(false);
+  const enCurso = useRef(false);
 
   async function downloadCsv() {
-    if (loadingCsv) return;
+    // El estado no llega a frenar el segundo click de un doble click; el ref sí.
+    if (enCurso.current) return;
+    enCurso.current = true;
     setLoadingCsv(true);
     try {
       // Las fechas ya resueltas, no el preset. Mandando "30 días" el archivo se
@@ -36,6 +39,7 @@ export function ExportButtons({
       alert("No se pudo descargar el archivo.");
     } finally {
       setLoadingCsv(false);
+      enCurso.current = false;
     }
   }
 

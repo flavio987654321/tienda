@@ -30,6 +30,7 @@ export default function ShareStatsButton({
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+  const enCurso = useRef(false);
 
   const stats = isAutos
     ? [
@@ -53,7 +54,9 @@ export default function ShareStatsButton({
   }
 
   async function handleShare() {
-    if (loading || !cardRef.current) return;
+    // El estado no llega a frenar el segundo click de un doble click; el ref sí.
+    if (enCurso.current || !cardRef.current) return;
+    enCurso.current = true;
     setLoading(true);
     try {
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, skipFonts: true });
