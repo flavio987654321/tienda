@@ -15,9 +15,9 @@
  * vino— abajo del pliegue, y en un teléfono los saca de la pantalla.
  */
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, X } from "lucide-react";
+import { Calendar, Loader2, X } from "lucide-react";
 import { PRESETS, NOMBRE_PRESET, MAX_DIAS, type Comparacion } from "@/lib/rango-fechas";
 
 export function RangeSelector({
@@ -37,6 +37,19 @@ export function RangeSelector({
   const [d, setD] = useState(desde);
   const [h, setH] = useState(hasta);
   const [comp, setComp] = useState<Comparacion>(comparacion);
+  /* Mientras el servidor arma el período nuevo (uno o dos segundos con 90
+     días) no pasaba nada en pantalla: parecía que el botón no andaba y se lo
+     volvía a tocar. Ahora el elegido se marca en el acto y gira un indicador. */
+  const [cargando, iniciar] = useTransition();
+  const [elegido, setElegido] = useState<number | null>(null);
+  const activo = cargando ? elegido : preset;
+
+  /* El panel arranca con las fechas de AHORA. Su estado se carga una vez: sin
+     esto, después de tocar "7 días" seguía mostrando las del período anterior. */
+  function abrirOCerrar() {
+    if (!abierto) { setD(desde); setH(hasta); setComp(comparacion); }
+    setAbierto((v) => !v);
+  }
 
   // El único caso imposible de arreglar del lado del servidor sin recargar. Los
   // otros —fechas al revés, futuro, rango larguísimo— los corrige `resolverRango`
@@ -47,7 +60,8 @@ export function RangeSelector({
     if (invalido) return;
     const p = new URLSearchParams({ desde: d, hasta: h });
     if (comp === "anio") p.set("comparar", "anio");
-    router.push(`/dashboard/metricas?${p.toString()}`);
+    setElegido(null);
+    iniciar(() => router.push(`/dashboard/metricas?${p.toString()}`));
     setAbierto(false);
   }
 
@@ -56,7 +70,8 @@ export function RangeSelector({
     if (r !== 30) p.set("range", String(r));
     if (comp === "anio") p.set("comparar", "anio");
     const qs = p.toString();
-    router.push(`/dashboard/metricas${qs ? `?${qs}` : ""}`);
+    setElegido(r);
+    iniciar(() => router.push(`/dashboard/metricas${qs ? `?${qs}` : ""}`));
     setAbierto(false);
   }
 
@@ -69,8 +84,9 @@ export function RangeSelector({
               key={r}
               type="button"
               onClick={() => irAPreset(r)}
+              aria-pressed={r === activo}
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                r === preset ? "bg-indigo-600 text-white" : "text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
+                r === activo ? "bg-indigo-600 text-white" : "text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/50"
               }`}
             >
               {NOMBRE_PRESET[r]}
@@ -80,7 +96,7 @@ export function RangeSelector({
 
         <button
           type="button"
-          onClick={() => setAbierto((v) => !v)}
+          onClick={abrirOCerrar}
           className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
             aMedida || comparacion === "anio"
               ? "border-indigo-200 panel-oscuro:border-indigo-500/30 bg-indigo-50 panel-oscuro:bg-indigo-500/10 text-indigo-700 panel-oscuro:text-indigo-300"
@@ -88,7 +104,9 @@ export function RangeSelector({
           }`}
           aria-expanded={abierto}
         >
-          <Calendar className="h-4 w-4 shrink-0" />
+          {cargando
+            ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-label="Cargando el período" />
+            : <Calendar className="h-4 w-4 shrink-0" />}
           {/* En angosto sólo el ícono: con los tres botones al lado, "Otras
               fechas" completo empuja todo a una segunda fila. */}
           <span className="hidden sm:inline">
