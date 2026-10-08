@@ -55,6 +55,17 @@ export function acotarPorcentaje(valor: number): number {
  * derechos. Salió al revisar el texto real de una tienda, no en los chequeos:
  * los de entonces miraban que no quedara un paréntesis vacío, no cómo se leía.
  */
+/** Cuántos días dura un "Avisame si entra". Tiene que ser DIAS_VIGENCIA de lib/busquedas (lo compara un chequeo). */
+export const DIAS_AVISAME = 90;
+
+/**
+ * La garantía legal de un vehículo vendido por una concesionaria (art. 11 de la
+ * Ley 24.240, texto de la Ley 27.250): 3 meses si es usado, 6 meses si es nuevo,
+ * desde la entrega. Es la misma que ya declaran las tiendas de moda.
+ */
+export const GARANTIA_LEGAL_AUTOS =
+  "Esto no reemplaza la garantía legal de la Ley 24.240: 6 meses para vehículos 0 km y 3 meses para usados, contados desde la entrega.";
+
 export function porDondeEscribir(contacto: string): string {
   const limpio = contacto.trim();
   return limpio ? `por WhatsApp (${limpio}) o por email` : "por email";
@@ -176,11 +187,11 @@ export type HechosPrivacidad = {
    * lo que más se olvida porque no se siente como "juntar datos" — se siente
    * como una ruleta, un formulario de novedades y una campanita.
    *
-   * Ninguno aplica a Auto Motor / Auto Drive: esas tiendas no tienen ruleta
-   * (`GAMIFICATION_EXCLUDED_TEMPLATES`) ni formulario de novedades
-   * (`TEMPLATES_CON_NEWSLETTER`). Igual el generador los ignora si
-   * `esAutos` es true, para que no dependa de que quien arme los hechos se
-   * acuerde de la regla.
+   * En autos (08/10/26) cambian: no hay ruleta (`GAMIFICATION_EXCLUDED_TEMPLATES`,
+   * y el generador la ignora aunque llegue), pero sí puede haber novedades por
+   * mail ("Recibí los ingresos por mail", ver lib/bloque-mail) y seguidores. Y
+   * suma dos propios que toda tienda de autos tiene en la ficha de cada
+   * vehículo: la tasación del usado y "Avisame si entra".
    */
 
   /** La ruleta/raspadita está activa Y pide el email antes de dejar jugar. */
@@ -201,26 +212,36 @@ export function generatePolicyPrivacy(store: LegalStoreInfo, hechos: HechosPriva
 
   blocks.push(
     hechos.esAutos
-      ? "Qué datos recibimos: los que dejás al hacernos una consulta — nombre, email, teléfono y el mensaje que nos escribas. No pedimos ni recibimos datos de tarjetas: la operación se cierra en persona."
+      ? "Qué datos recibimos: los que nos dejás vos. Si nos hacés una consulta, tu nombre, tu teléfono y el mensaje que nos escribas. Si nos pedís que tasemos tu usado, además los datos de ese vehículo: marca, modelo, versión, año, kilómetros y su estado. No pedimos ni recibimos datos de tarjetas: la operación se cierra en persona."
       : "Qué datos recibimos: los que cargás al comprar — nombre, email, teléfono y la dirección de entrega. Si dejás tus datos en el checkout y no llegás a confirmar la compra, guardamos ese contacto para poder escribirte una vez y recordarte el pedido que quedó a medias."
   );
 
   blocks.push(
     hechos.esAutos
-      ? "Para qué los usamos: exclusivamente para responder tu consulta y coordinar la operación. No los vendemos ni los cedemos a terceros con fines publicitarios."
+      ? "Para qué los usamos: exclusivamente para responder tu consulta, pasarte una oferta por tu usado si la pediste y coordinar la operación. No los vendemos ni los cedemos a terceros con fines publicitarios."
       : "Para qué los usamos: exclusivamente para preparar y entregarte tu pedido, avisarte de su estado y responder cualquier consulta sobre esa compra. No los vendemos ni los cedemos a terceros con fines publicitarios."
   );
 
-  // Lo que se junta sin que la persona compre nada. En autos no existe ninguna
-  // de las tres, así que ni se evalúan.
-  if (!hechos.esAutos) {
+  // Lo que se junta sin que la persona compre nada.
+  {
     const sinComprar: string[] = [];
-    if (hechos.tieneNewsletter) {
+    if (hechos.esAutos) {
+      // "Avisame si entra" está en la ficha de cada vehículo de toda tienda de
+      // autos: se declara siempre. Los 90 días son DIAS_VIGENCIA (lib/busquedas):
+      // un chequeo compara los dos números.
       sinComprar.push(
-        "Si te suscribís a nuestras novedades, guardamos tu email para avisarte de productos nuevos y ofertas. Antes de mandarte nada te pedimos que confirmes la suscripción desde tu correo, y podés darte de baja desde el pie de cualquiera de esos emails."
+        `Si nos pedís que te avisemos cuando entre un vehículo ("Avisame si entra"), guardamos tu nombre, tu teléfono y lo que estás buscando para escribirte cuando llegue uno que coincida. A los ${DIAS_AVISAME} días dejamos de avisarte.`
       );
     }
-    if (hechos.juegoConEmail) {
+    if (hechos.tieneNewsletter) {
+      sinComprar.push(
+        hechos.esAutos
+          ? "Si te suscribís a nuestras novedades, guardamos tu email para avisarte cuando ingresen vehículos o baje un precio. Antes de mandarte nada te pedimos que confirmes la suscripción desde tu correo, y podés darte de baja desde el pie de cualquiera de esos emails."
+          : "Si te suscribís a nuestras novedades, guardamos tu email para avisarte de productos nuevos y ofertas. Antes de mandarte nada te pedimos que confirmes la suscripción desde tu correo, y podés darte de baja desde el pie de cualquiera de esos emails."
+      );
+    }
+    // La ruleta no existe en autos: aunque llegue el dato, no se declara.
+    if (hechos.juegoConEmail && !hechos.esAutos) {
       sinComprar.push(
         `Si jugás a la ${hechos.juegoConEmail} para ganar un cupón, te pedimos el email para poder entregarte el código del premio.`
       );
@@ -265,8 +286,10 @@ export function generatePolicyPrivacy(store: LegalStoreInfo, hechos: HechosPriva
 
   blocks.push(
     hechos.usaAnalytics || hechos.usaPixel
-      ? "Cookies: además de las cookies necesarias para que funcione el carrito y tu sesión, esta tienda usa las herramientas de medición nombradas arriba, que instalan sus propias cookies. Podés bloquearlas desde la configuración de tu navegador; la tienda sigue funcionando igual."
-      : "Cookies: esta tienda usa solo las cookies necesarias para que funcionen el carrito y tu sesión. No usamos cookies de publicidad ni de seguimiento de terceros."
+      ? `Cookies: además de las cookies necesarias para que ${hechos.esAutos ? "funcione tu sesión" : "funcione el carrito y tu sesión"}, esta tienda usa las herramientas de medición nombradas arriba, que instalan sus propias cookies. Podés bloquearlas desde la configuración de tu navegador; la tienda sigue funcionando igual.`
+      : hechos.esAutos
+        ? "Cookies: esta tienda usa solo las cookies necesarias para que funcione tu sesión. No usamos cookies de publicidad ni de seguimiento de terceros."
+        : "Cookies: esta tienda usa solo las cookies necesarias para que funcionen el carrito y tu sesión. No usamos cookies de publicidad ni de seguimiento de terceros."
   );
 
   // Decir "cuánto se guardan" y después callar el plazo de la mitad de los
@@ -274,14 +297,13 @@ export function generatePolicyPrivacy(store: LegalStoreInfo, hechos: HechosPriva
   // punto que quedó abierto.
   const plazos = [
     hechos.esAutos
-      ? "los datos de una consulta se conservan mientras dure el trato y el plazo que exijan las obligaciones fiscales y contables"
+      ? "los datos de una consulta o de una tasación se conservan mientras dure el trato y el plazo que exijan las obligaciones fiscales y contables"
       : "los datos de una compra se conservan mientras dure la relación comercial y el plazo que exigen las obligaciones fiscales y contables",
   ];
-  if (!hechos.esAutos) {
-    plazos.push("los contactos que quedaron sin concretar una compra se borran solos a los 45 días");
-    if (hechos.tieneNewsletter) plazos.push("tu suscripción a las novedades queda hasta que te des de baja");
-    if (hechos.tienePushDeSeguidores) plazos.push("dejamos de guardar que seguís la tienda apenas dejás de seguirla");
-  }
+  if (hechos.esAutos) plazos.push(`un pedido de "Avisame si entra" deja de usarse a los ${DIAS_AVISAME} días`);
+  else plazos.push("los contactos que quedaron sin concretar una compra se borran solos a los 45 días");
+  if (hechos.tieneNewsletter) plazos.push("tu suscripción a las novedades queda hasta que te des de baja");
+  if (hechos.tienePushDeSeguidores) plazos.push("dejamos de guardar que seguís la tienda apenas dejás de seguirla");
   blocks.push(`Cuánto los guardamos: ${plazos.join("; ")}.`);
 
   blocks.push(
@@ -338,6 +360,11 @@ export function generatePolicyOperationAutos(store: LegalStoreInfo, answers: Leg
       : "Los vehículos se venden en el estado en que se exhiben, sin garantía adicional más allá de la que pueda ofrecer el fabricante o un seguro vigente, si corresponde."
   );
 
+  // "Sin garantía adicional" no puede leerse como "sin ninguna garantía": la
+  // del art. 11 de la Ley 24.240 no se puede renunciar en una venta a un
+  // consumidor. Va siempre, con y sin garantía propia.
+  blocks.push(GARANTIA_LEGAL_AUTOS);
+
   blocks.push(
     "Te recomendamos revisar el vehículo en persona y confirmar el estado de la documentación antes de pagar cualquier monto."
   );
@@ -356,12 +383,23 @@ export function generatePolicyTermsAutos(store: LegalStoreInfo, _answers: LegalW
     "Toda la información del vehículo (kilometraje, estado, documentación) es la declarada por quien lo publica. Te recomendamos verificarla en persona antes de pagar cualquier monto."
   );
 
+  // Cada vehículo tiene su moneda (lib/monedaVehiculo): usados en dólares y
+  // 0 km en pesos, a la vez. Lo mismo que dicen las tiendas de moda sobre el
+  // precio, con esa diferencia.
   blocks.push(
-    "Tus datos personales se usan exclusivamente para gestionar tu consulta, conforme a la Ley 25.326 de Protección de Datos Personales."
+    "Los precios se publican en pesos o en dólares, según cada vehículo. Pueden cambiar sin previo aviso, sin afectar una operación ya acordada."
   );
 
   blocks.push(
-    "Esta operación se concreta de forma presencial, después de un contacto inicial por WhatsApp — no es una venta a distancia con pago online a través de la plataforma."
+    "Si nos pedís una tasación de tu usado, la oferta que te pasemos se arma con los datos que nos cargaste y queda sujeta a revisar el vehículo y su documentación en persona."
+  );
+
+  blocks.push(
+    "Tus datos personales se usan exclusivamente para gestionar tu consulta o tu tasación, conforme a la Ley 25.326 de Protección de Datos Personales."
+  );
+
+  blocks.push(
+    "Esta operación se concreta de forma presencial, después de un primer contacto por WhatsApp, por teléfono o desde el formulario de la tienda: no es una venta a distancia con pago online a través de la plataforma."
   );
 
   blocks.push(

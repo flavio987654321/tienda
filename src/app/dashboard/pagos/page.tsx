@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardLayout from "@/components/DashboardLayout";
 import PagosClient from "./PagosClient";
-import type { StorePaymentInfo, ShippingMethod, TemplateId } from "@/types/store-config";
-import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, TEMPLATES_CON_NEWSLETTER } from "@/types/store-config";
+import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
+import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import { tieneBloqueDeMailSegunConfig } from "@/lib/bloque-mail";
 import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
@@ -100,7 +101,9 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     ? null
     : store?.gamificationWidget?.type === "SCRATCH" ? "raspadita" : "ruleta";
 
-  const tieneNewsletter = !!template && TEMPLATES_CON_NEWSLETTER.includes(template as TemplateId);
+  // El mismo criterio que Notificaciones (lib/bloque-mail): en autos, si el
+  // bloque "Recibí los ingresos por mail" está a la vista.
+  const tieneNewsletter = tieneBloqueDeMailSegunConfig(store?.storeConfig);
   // El seguimiento de la tienda y el push son exclusivos de Premium, y con la
   // suscripción vencida dejan de funcionar — declarar algo que no corre sería
   // igual de falso que callarlo.

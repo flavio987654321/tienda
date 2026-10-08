@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   CreditCard, Banknote, FileText, Shield, Truck, Check,
   ChevronDown, ChevronUp, Save, AlertCircle, ToggleLeft, ToggleRight,
@@ -132,6 +132,8 @@ export default function PagosClient({ initial }: Props) {
   // encontrarse una sección ya desplegada sin haberla tocado.
   const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "envios" | "policies" | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  // El estado no llega a frenar el segundo click de un doble click; el ref sí.
+  const guardando = useRef(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
@@ -165,6 +167,7 @@ export default function PagosClient({ initial }: Props) {
   }
 
   async function handleSave() {
+    if (guardando.current) return;
     // Validación: si transferencia activa, necesita al menos un identificador
     if (paymentInfo.transferencia.enabled) {
       const t = paymentInfo.transferencia;
@@ -179,6 +182,7 @@ export default function PagosClient({ initial }: Props) {
     }
     setValidationError(null);
     setSaveState("saving");
+    guardando.current = true;
     try {
       const res = await fetch("/api/pagos", {
         method: "PUT",
@@ -210,6 +214,8 @@ export default function PagosClient({ initial }: Props) {
       setValidationError(err instanceof Error && err.message ? err.message : null);
       setSaveState("error");
       setTimeout(() => setSaveState("idle"), 3000);
+    } finally {
+      guardando.current = false;
     }
   }
 
@@ -933,6 +939,9 @@ function LegalWizardModalAutos({ storeInfo, hechos, onClose, onApply }: {
                   Sí, suelen tener
                 </button>
               </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400 panel-oscuro:text-gray-500">
+                La garantía legal (3 meses para usados, 6 para 0 km) va siempre en tus condiciones: no se puede renunciar. Esto pregunta si además tienen una propia, de fábrica o tuya.
+              </p>
             </div>
 
             <button

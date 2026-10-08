@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { tieneBloqueDeMailSegunConfig } from "@/lib/bloque-mail";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
@@ -263,27 +264,10 @@ export async function GET() {
     // Para los textos: una concesionaria no anuncia "productos", y sus
     // templates no tienen el bloque para dejar el mail.
     rubro: store.tipoTienda,
-    mailEnTienda: tieneBloqueDeMail(store.tipoTienda, store.storeConfig),
+    mailEnTienda: tieneBloqueDeMailSegunConfig(store.storeConfig),
   });
 }
 
-/**
- * Si la tienda tiene a la vista el bloque donde la gente deja su mail.
- *
- * Los de moda lo traen desde siempre. Los de autos, desde el 08/10/26
- * ("Recibí los ingresos por mail"), y la dueña lo puede ocultar en Diseño: ahí
- * la pantalla tiene que decir que por ahora sale sólo por push. El template se
- * lee de storeConfig, no de Store.templateId (que dice "default" en todas).
- */
-const BLOQUE_MAIL_AUTOS: Record<string, string> = { "auto-motor": "am-novedades", "auto-drive": "ad-novedades" };
-function tieneBloqueDeMail(tipoTienda: string | null, storeConfig: string | null): boolean {
-  if (tipoTienda !== "AUTOS") return true;
-  try {
-    const c = JSON.parse(storeConfig || "{}") as { template?: string; hiddenSections?: string[] };
-    const bloque = c.template ? BLOQUE_MAIL_AUTOS[c.template] : undefined;
-    return !!bloque && !(c.hiddenSections ?? []).includes(bloque);
-  } catch { return false; }
-}
 
 // DELETE — borra campañas del store del owner autenticado
 // ?id=<campaignId> → borra esa campaña; sin params borra todas

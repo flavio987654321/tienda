@@ -15,10 +15,13 @@
 
 import {
   generatePolicyReturns, generatePolicyTerms, generatePolicyShipping, generatePolicyPrivacy,
-  acotarDiasExtra, acotarPorcentaje,
+  generatePolicyOperationAutos, generatePolicyTermsAutos,
+  acotarDiasExtra, acotarPorcentaje, DIAS_AVISAME, GARANTIA_LEGAL_AUTOS,
   MAX_DIAS_EXTRA_DEVOLUCION, MAX_PORCENTAJE_CANCELACION, MAX_LARGO_DEMORA,
   type LegalWizardAnswers, type LegalStoreInfo, type HechosPrivacidad,
 } from "./legal-generator";
+import { DIAS_VIGENCIA } from "./busquedas";
+import { tieneBloqueDeMail, tieneBloqueDeMailSegunConfig } from "./bloque-mail";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -135,18 +138,23 @@ chequear("push: aparece en el plazo de guardado", conPush.includes("apenas dejá
 chequear("con los tres: los tres aparecen",
   ["novedades", "ruleta", "notificaciones"].every((t) => conTodo.includes(t)));
 
-// Autos no tiene ninguna de las tres: el renderer excluye la ruleta por
-// template y esos dos templates no dibujan el formulario de novedades. Aunque
-// alguien arme los hechos mal, el generador no puede emitirlas.
-console.log("\n3 ter) En autos ninguna de las tres puede salir");
+// Autos (08/10/26): la ruleta no existe ahí (el renderer la excluye por
+// template) y no puede salir aunque llegue el dato. Las novedades por mail y
+// los seguidores SÍ pueden existir, y "Avisame si entra" está siempre.
+console.log("\n3 ter) Autos: lo que puede y lo que no");
 const autosForzado = generatePolicyPrivacy(TIENDA, {
   ...SIN_NADA, esAutos: true,
   juegoConEmail: "ruleta", tieneNewsletter: true, tienePushDeSeguidores: true,
 });
-chequear("autos: no aparece el bloque", !autosForzado.includes("Datos que podés dejarnos sin comprar"), autosForzado.slice(0, 120));
-chequear("autos: no habla de novedades", !autosForzado.includes("novedades"));
-chequear("autos: no habla de ruleta", !autosForzado.includes("ruleta"));
+chequear("autos: la ruleta no sale aunque llegue", !autosForzado.includes("ruleta"));
 chequear("autos: no habla de carritos de 45 días", !autosForzado.includes("45 días"));
+chequear("autos con el bloque de mail: declara las novedades, de vehículos", autosForzado.includes("cuando ingresen vehículos o baje un precio") && !autosForzado.includes("productos nuevos"));
+chequear("autos con seguidores: los declara", autosForzado.includes("activás las notificaciones"));
+const autosSinMail = generatePolicyPrivacy(TIENDA, { ...SIN_NADA, esAutos: true });
+chequear("autos sin el bloque de mail: no habla de suscribirse", !autosSinMail.includes("Si te suscribís"));
+chequear("autos: Avisame si entra se declara siempre", autosSinMail.includes("Avisame si entra") && autosSinMail.includes("lo que estás buscando"));
+chequear("autos: dice cuántos días dura", autosSinMail.includes(`A los ${DIAS_AVISAME} días dejamos de avisarte`) && autosSinMail.includes(`deja de usarse a los ${DIAS_AVISAME} días`));
+chequear("los días de la política son los mismos que usa el sistema (DIAS_VIGENCIA)", DIAS_AVISAME === DIAS_VIGENCIA, { DIAS_AVISAME, DIAS_VIGENCIA });
 
 /* ── 4) Lo que tiene que estar siempre ────────────────────────────────────── */
 console.log("\n4) Las clausulas que no pueden faltar");
@@ -167,6 +175,40 @@ console.log("\n4 bis) Autos");
 const autos = generatePolicyPrivacy(TIENDA, { ...SIN_NADA, esAutos: true });
 chequear("autos: habla de consulta, no de pedido", autos.includes("consulta") && !autos.includes("dirección de entrega"));
 chequear("autos: aclara que no recibe datos de tarjeta", autos.includes("No pedimos ni recibimos datos de tarjetas"));
+// La consulta pide nombre, teléfono y mensaje: decir "email" era declarar un dato que no se pide.
+const queDatos = autos.split("\n\n").find((b) => b.startsWith("Qué datos recibimos")) ?? "";
+chequear("autos: la consulta no dice que pide email", !queDatos.includes("email"), queDatos);
+chequear("autos: declara los datos de la tasación", queDatos.includes("tasemos tu usado") && queDatos.includes("kilómetros"));
+chequear("autos: para qué incluye la oferta por el usado", autos.includes("pasarte una oferta por tu usado"));
+chequear("autos: las cookies no hablan de carrito", !autos.includes("carrito"));
+chequear("autos: la tasación entra en el plazo de guardado", autos.includes("de una consulta o de una tasación"));
+const autosConTrackers = generatePolicyPrivacy(TIENDA, { ...SIN_NADA, esAutos: true, usaPixel: true });
+chequear("autos con Pixel: las cookies tampoco hablan de carrito", !autosConTrackers.includes("carrito") && autosConTrackers.includes("Meta Pixel"));
+
+console.log("\n4 ter) Autos: condiciones y términos");
+const AUTOS_RESP = { hasWarranty: false, requiresDeposit: false, depositRefundable: false };
+const sinGarantia = generatePolicyOperationAutos(TIENDA, AUTOS_RESP);
+const conGarantia = generatePolicyOperationAutos(TIENDA, { ...AUTOS_RESP, hasWarranty: true });
+chequear("sin garantía propia: igual nombra la garantía legal", sinGarantia.includes(GARANTIA_LEGAL_AUTOS));
+chequear("con garantía propia: también", conGarantia.includes(GARANTIA_LEGAL_AUTOS));
+chequear("la garantía legal dice 3 meses usados y 6 meses 0 km", GARANTIA_LEGAL_AUTOS.includes("3 meses para usados") && GARANTIA_LEGAL_AUTOS.includes("6 meses para vehículos 0 km"));
+const terminosAutos = generatePolicyTermsAutos(TIENDA, AUTOS_RESP);
+chequear("términos: precios en pesos o dólares según el vehículo", terminosAutos.includes("en pesos o en dólares, según cada vehículo"));
+chequear("términos: la tasación depende de ver el auto en persona", terminosAutos.includes("queda sujeta a revisar el vehículo"));
+chequear("términos: el primer contacto no es sólo WhatsApp", terminosAutos.includes("por WhatsApp, por teléfono o desde el formulario"));
+chequear("términos: no es venta a distancia", terminosAutos.includes("no es una venta a distancia"));
+
+console.log("\n4 quater) Cuándo una tienda junta mails (lib/bloque-mail)");
+chequear("Auto Motor con el bloque a la vista: sí", tieneBloqueDeMail("auto-motor", []));
+chequear("Auto Motor con el bloque oculto: no", !tieneBloqueDeMail("auto-motor", ["am-novedades"]));
+chequear("Auto Drive con el bloque oculto: no", !tieneBloqueDeMail("auto-drive", ["ad-novedades"]));
+chequear("Auto Drive ocultando OTRO bloque: sí", tieneBloqueDeMail("auto-drive", ["am-novedades", "ad-videos"]));
+chequear("Aire (moda): sí", tieneBloqueDeMail("aire", []));
+chequear("Electro Prime (sin bloque): no", !tieneBloqueDeMail("electro-prime", []));
+chequear("sin diseño elegido: no", !tieneBloqueDeMail(null, []));
+chequear("desde el JSON de la base", tieneBloqueDeMailSegunConfig(JSON.stringify({ template: "auto-motor" })) && !tieneBloqueDeMailSegunConfig(JSON.stringify({ template: "auto-motor", hiddenSections: ["am-novedades"] })));
+chequear("JSON roto: no (y no explota)", !tieneBloqueDeMailSegunConfig("{roto"));
+chequear("JSON vacío: no", !tieneBloqueDeMailSegunConfig(""));
 chequear("no-autos: sí habla del carrito abandonado", limpia.includes("no llegás a confirmar la compra"));
 
 /* ── 5) Sin datos de la tienda no queda un hueco ──────────────────────────── */
