@@ -43,17 +43,17 @@ export const GUION_PANEL: Guion = {
   consultas: {
     icon: MessageCircle,
     title: "Consultas de clientes",
-    body: "Cuando alguien consulta por un vehículo y deja su nombre y teléfono, llega acá y te avisamos. Le escribís por WhatsApp o lo llamás desde el panel.",
+    body: "Cuando alguien consulta por un vehículo —desde el formulario o tocando WhatsApp— llega acá y te avisamos. Le escribís o lo llamás desde el panel, anotás en qué etapa va, te agendás cuándo volver a llamar y la cerrás con \"Se vendió\" o \"Descartar\".",
   },
   tasaciones: {
     icon: Repeat,
     title: "Tasaciones de usados",
-    body: "Cuando alguien quiere entregar su auto en parte de pago, te deja los datos desde la tienda y llega acá. Cargás cuánto se lo tomás y se lo mandás por WhatsApp.",
+    body: "Cuando alguien quiere entregar su auto en parte de pago o venderlo, te deja los datos desde la tienda y llega acá. Le pedís fotos, cargás cuánto se lo tomás y se lo mandás por WhatsApp. El número lo ponés vos.",
   },
   busquedas: {
     icon: Target,
     title: "Búsquedas de compradores",
-    body: "Cuando alguien busca algo que no tenés, deja qué busca y su teléfono. Si entra un vehículo que coincide te avisamos, y le escribís con un toque. Acá ves también qué es lo que más te piden.",
+    body: "Los \"Avisame si entra\": alguien busca algo que no tenés y deja qué busca y su teléfono. Si entra un vehículo que coincide te avisamos, y le escribís con un toque. Acá ves también qué es lo que más te piden.",
   },
   productos: {
     icon: Package,
@@ -74,7 +74,9 @@ export const GUION_PANEL: Guion = {
   cupones: {
     icon: Tag,
     title: "Cupones de descuento",
-    body: "Códigos de descuento para tus clientes: monto fijo o porcentaje, con límite de usos y fecha de vencimiento.",
+    // No hay un botón para crear un código suelto: los cupones salen de la
+    // ruleta o raspadita y de recuperar un carrito por WhatsApp.
+    body: "Acá armás tu ruleta o raspadita de premios, y cada ganador se lleva su propio código. También ves el historial de todos los cupones: cuántas veces se usó cada uno y cuánto descontó.",
   },
   promociones: {
     icon: BadgePercent,
@@ -106,12 +108,12 @@ export const GUION_PANEL: Guion = {
   },
   notificaciones: {
     icon: Bell,
-    title: "Notificaciones push",
-    body: "Mensajes directos a las personas que activaron notificaciones en tu tienda. Disponible en plan Premium.",
+    title: "Notificaciones",
+    body: "Un mensaje que sale por dos vías: push al celular de quienes siguen tu tienda, y mail a quienes dejaron su correo en el bloque de novedades y lo confirmaron. Disponible en plan Premium.",
     porTipo: {
       AUTOS: {
-        title: "Notificaciones push",
-        body: "Novedades o alertas de vehículos nuevos para quienes activaron notificaciones en tu sitio. Disponible en plan Premium.",
+        title: "Notificaciones",
+        body: "Avisá que entró un auto o que bajó un precio: push a quienes siguen tu sitio y mail a quienes se anotaron en \"Recibí los ingresos por mail\". Disponible en plan Premium.",
       },
     },
   },
@@ -149,7 +151,7 @@ export const GUION_PANEL: Guion = {
     porTipo: {
       AUTOS: {
         title: "Legal y políticas",
-        body: "Tus términos y condiciones y la política de devoluciones. Tus clientes las abren desde el pie de página del sitio.",
+        body: "Las condiciones de la operación (seña, entrega y garantía), cómo se coordina la entrega, tus términos y tu política de privacidad. El asistente las arma con unas preguntas, y tus clientes las abren desde el pie de página del sitio.",
       },
     },
   },
@@ -160,7 +162,7 @@ export const GUION_PANEL: Guion = {
     porTipo: {
       AUTOS: {
         title: "Estadísticas",
-        body: "Cuánta gente entra, qué vehículos mira y de dónde llegan las consultas. Sirve para saber qué publicar y cuándo.",
+        body: "Consultas, autos vendidos y visitas del período; qué autos traen más consultas, cuáles se miran más, tus tasaciones y lo que más te buscan. Sirve para saber qué publicar y qué salir a comprar.",
       },
     },
   },
