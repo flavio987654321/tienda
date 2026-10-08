@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const email = normalizarEmail(body?.email);
     if (!email) return NextResponse.json({ error: "Ingresá un email válido." }, { status: 400 });
 
-    if (!(await verifyTurnstile(body?.turnstileToken, ip, "codigo"))) {
+    if (!(await verifyTurnstile(body?.turnstileToken, ip, "codigo", req.nextUrl.hostname))) {
       return NextResponse.json({ error: "No pudimos verificar que no seas un robot. Recargá e intentá de nuevo." }, { status: 400 });
     }
 

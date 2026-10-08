@@ -5,9 +5,15 @@ import { Send, Loader2, CheckCircle2, Mail, Clock, MapPin } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useTurnstile } from "@/components/Turnstile";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+
+const FORMULARIO_VACIO = { name: "", email: "", subject: "", message: "" };
+const hayBorrador = (form: typeof FORMULARIO_VACIO) => !!(form.name || form.email || form.subject || form.message);
 
 export default function ContactoPage() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const draft = useSessionDraft("tiendaapps:contacto", FORMULARIO_VACIO, hayBorrador);
+  const form = draft.value;
+  const setForm = draft.setValue;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -33,6 +39,8 @@ export default function ContactoPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Error al enviar."); return; }
       setSuccess(true);
+      setForm(FORMULARIO_VACIO);
+      draft.clearDraft();
     } catch {
       setError("Error de conexión. Intentá de nuevo.");
     } finally {
@@ -105,7 +113,7 @@ export default function ContactoPage() {
                 <h2 className="text-xl font-black text-gray-950 mb-2">¡Mensaje enviado!</h2>
                 <p className="text-gray-500 text-sm mb-6">Te respondemos en menos de 24 horas.</p>
                 <button
-                  onClick={() => { setSuccess(false); setForm({ name: "", email: "", subject: "", message: "" }); }}
+                  onClick={() => { setSuccess(false); setForm(FORMULARIO_VACIO); draft.clearDraft(); }}
                   className="text-orange-600 hover:text-orange-700 text-sm font-semibold transition-colors"
                 >
                   Enviar otro mensaje
@@ -166,8 +174,11 @@ export default function ContactoPage() {
                   </div>
 
                   {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
-                      {error}
+                    <div role="alert" className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                      <p>{error} Tus datos siguen guardados en esta pestaña; podés reintentar.</p>
+                      <button type="button" onClick={() => { draft.clearDraft(); setForm(FORMULARIO_VACIO); setError(""); }} className="mt-2 underline">
+                        Borrar los datos guardados
+                      </button>
                     </div>
                   )}
 
@@ -179,7 +190,7 @@ export default function ContactoPage() {
                     className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl text-sm transition-colors disabled:opacity-60"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    Enviar mensaje
+                    {error ? "Reintentar envío" : "Enviar mensaje"}
                   </button>
                 </form>
               </div>

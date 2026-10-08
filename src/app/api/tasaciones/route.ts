@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (!porTienda.permitido) {
       return NextResponse.json({ error: "La concesionaria está recibiendo muchas tasaciones. Probá en un rato o escribile por WhatsApp." }, { status: 429 });
     }
-    if (!(await verifyTurnstile(body.turnstileToken, ip, "tasacion"))) {
+    if (!(await verifyTurnstile(body.turnstileToken, ip, "tasacion", req.nextUrl.hostname))) {
       return NextResponse.json({ error: "No pudimos verificar el envío. Completá la verificación e intentá de nuevo." }, { status: 400 });
     }
 

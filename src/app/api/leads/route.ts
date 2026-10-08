@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
     // El registro liviano del toque en WhatsApp no contiene datos personales;
     // el formulario que crea/completa una consulta sí requiere el desafío.
-    if (Object.values(datos).some(Boolean) && !(await verifyTurnstile(body.turnstileToken, ip, "consulta-auto"))) {
+    if (Object.values(datos).some(Boolean) && !(await verifyTurnstile(body.turnstileToken, ip, "consulta-auto", req.nextUrl.hostname))) {
       return NextResponse.json({ error: "No pudimos verificar el envío. Completá la verificación e intentá de nuevo." }, { status: 400 });
     }
 

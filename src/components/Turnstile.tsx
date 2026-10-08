@@ -20,6 +20,22 @@ declare global {
 }
 
 type TurnstileHandle = { reset: () => void };
+type TurnstileConfig = { configured: boolean; siteKey?: string; error?: string };
+const configCache = new Map<string, Promise<TurnstileConfig>>();
+
+function loadTurnstileConfig(): Promise<TurnstileConfig> {
+  const hostname = typeof window === "undefined" ? "" : window.location.hostname;
+  const cached = configCache.get(hostname);
+  if (cached) return cached;
+  const pending = fetch("/api/turnstile/config", { cache: "no-store" })
+    .then(async (res) => {
+      const data = await res.json() as TurnstileConfig;
+      if (!res.ok) throw new Error(data.error ?? "No pudimos cargar la verificación de seguridad.");
+      return data;
+    });
+  configCache.set(hostname, pending);
+  return pending;
+}
 
 // Widget de verificación "soy una persona" de Cloudflare Turnstile. Modo managed:
 // la mayoría de las veces no le pide nada al visitante, solo interviene si Cloudflare
@@ -27,10 +43,12 @@ type TurnstileHandle = { reset: () => void };
 // si expira o falla — el formulario debe tratar ambos como "todavía no verificado".
 // El script de Cloudflare recién se descarga cuando el widget entra al viewport,
 // así los formularios al pie de página no le cuestan nada a quien nunca llega ahí.
-export function Turnstile({ onVerify, apiRef, action }: {
+export function Turnstile({ onVerify, apiRef, action, siteKey, configError }: {
   onVerify: (token: string) => void;
   apiRef?: MutableRefObject<TurnstileHandle | null>;
   action?: string;
+  siteKey?: string;
+  configError?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -41,8 +59,6 @@ export function Turnstile({ onVerify, apiRef, action }: {
   const [inView, setInView] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [scriptFailed, setScriptFailed] = useState(false);
-
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   useEffect(() => {
     if (inView || !siteKey) return;
@@ -119,6 +135,7 @@ export function Turnstile({ onVerify, apiRef, action }: {
 
   // Sin clave pública configurada (ej. desarrollo local) no se muestra nada —
   // el backend igual deja pasar si TURNSTILE_SECRET_KEY tampoco está configurada.
+  if (configError) return <p style={{ fontSize: 12, color: "#ef4444", margin: 0 }}>{configError}</p>;
   if (!siteKey) return null;
 
   return (
@@ -157,8 +174,19 @@ export function Turnstile({ onVerify, apiRef, action }: {
 // así un token resuelto en un formulario no sirve para ningún otro.
 export function useTurnstile(action?: string) {
   const [token, setToken] = useState("");
+  const [config, setConfig] = useState<TurnstileConfig | null>(null);
   const apiRef = useRef<TurnstileHandle | null>(null);
-  const configured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  useEffect(() => {
+    let active = true;
+    loadTurnstileConfig()
+      .then((data) => { if (active) setConfig(data); })
+      .catch((error: unknown) => {
+        configCache.delete(typeof window === "undefined" ? "" : window.location.hostname);
+        if (active) setConfig({ configured: true, error: error instanceof Error ? error.message : "No pudimos cargar la verificación de seguridad." });
+      });
+    return () => { active = false; };
+  }, []);
+  const configured = config?.configured ?? true;
 
   const reset = useCallback(() => {
     apiRef.current?.reset();
@@ -169,8 +197,8 @@ export function useTurnstile(action?: string) {
     token,
     configured,
     // Listo para enviar: siempre si el captcha no está configurado; con token si lo está.
-    ready: !configured || !!token,
+    ready: config !== null && (config.error ? false : !configured || !!token),
     reset,
-    widget: <Turnstile onVerify={setToken} apiRef={apiRef} action={action} />,
+    widget: <Turnstile onVerify={setToken} apiRef={apiRef} action={action} siteKey={config?.siteKey} configError={config?.error} />,
   };
 }

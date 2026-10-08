@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const mensajeLimpio = recortar(mensaje, MENSAJE_MAX);
 
   // Captcha al final: un error de campos no consume el token (es de un solo uso)
-  if (!(await verifyTurnstile(turnstileToken, ip, "contact"))) {
+  if (!(await verifyTurnstile(turnstileToken, ip, "contact", req.nextUrl.hostname))) {
     return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
   }
 

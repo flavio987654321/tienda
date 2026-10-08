@@ -66,7 +66,6 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
   const cierre = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idTarjeta = useId();
 
-  useEffect(() => { if (abierta) setYaVista(true); }, [abierta]);
   /* Antes de pintar: medida desde la chapita, y corrida a la izquierda si no
      entra (el ancho máximo es el mismo de la tarjeta: 300px o el 80% de la
      pantalla). */
@@ -102,6 +101,7 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
 
   const entra = (e: React.PointerEvent) => {
     if (e.pointerType !== "mouse") return;
+    setYaVista(true);
     if (cierre.current) { clearTimeout(cierre.current); cierre.current = null; }
     setAbierta(a => a || "mouse");
   };
@@ -133,7 +133,7 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
         {ayuda && (
           /* Un toque con la tarjeta abierta por el mouse la deja fija, no la cierra:
              quien hace clic quiere leerla tranquilo. */
-          <button type="button" className="chapita-ayuda" onClick={() => setAbierta(a => (a === "fija" ? false : "fija"))}
+          <button type="button" className="chapita-ayuda" onClick={() => { setYaVista(true); setAbierta(a => (a === "fija" ? false : "fija")); }}
             onPointerEnter={entra} onPointerLeave={sale}
             aria-expanded={!!abierta} aria-controls={idTarjeta}
             aria-label={`¿Para qué sirve "${nombre}"?`}

@@ -3,6 +3,10 @@ import { useContext, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
 import { NOMBRE_MAX, EMAIL_MAX, MENSAJE_MAX } from "@/lib/contacto-limites";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+
+const FORMULARIO_VACIO = { nombre: "", email: "", mensaje: "" };
+const hayBorrador = (form: typeof FORMULARIO_VACIO) => !!(form.nombre || form.email || form.mensaje);
 
 export type ContactFormTheme = {
   showLabels?: boolean;
@@ -42,7 +46,14 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
   prefillMessage?: string;
 }) {
   /* `website` es el honeypot: siempre vacio para una persona. Ver el campo. */
-  const [form, setForm] = useState({ nombre: "", email: "", mensaje: "", website: "" });
+  const draft = useSessionDraft(
+    storeId && !isPreview ? `tienda:contacto:${storeId}` : null,
+    FORMULARIO_VACIO,
+    hayBorrador,
+  );
+  const form = draft.value;
+  const setForm = draft.setValue;
+  const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const captcha = useTurnstile("contact");
   const t = theme ?? {};
@@ -68,9 +79,9 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
     try {
       const res = await fetch("/api/contact", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, ...form, turnstileToken: captcha.token }),
+        body: JSON.stringify({ storeId, ...form, website, turnstileToken: captcha.token }),
       });
-      if (res.ok) { setStatus("sent"); setForm({ nombre: "", email: "", mensaje: "", website: "" }); }
+      if (res.ok) { setStatus("sent"); setForm(FORMULARIO_VACIO); setWebsite(""); draft.clearDraft(); }
       else setStatus("error");
     } catch { setStatus("error"); }
     captcha.reset();
@@ -182,8 +193,8 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
           salio bien y no manda nada. Es lo que frena al bot ANTES del captcha,
           sin molestar a nadie. Va con `aria-hidden` y fuera del orden de
           tabulacion para que un lector de pantalla tampoco lo ofrezca. */}
-      <input type="text" name="website" value={form.website}
-        onChange={e => setForm(f => ({ ...f, website: e.target.value }))}
+      <input type="text" name="website" value={website}
+        onChange={e => setWebsite(e.target.value)}
         tabIndex={-1} autoComplete="off" aria-hidden="true"
         style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
       {!isPreview && captcha.widget}
@@ -192,7 +203,13 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
         onMouseLeave={t.buttonHoverStyle ? e => Object.assign(e.currentTarget.style, defaultButtonStyle, t.buttonStyle ?? {}) : undefined}>
         {status === "sending" ? "Enviando..." : t.buttonLabel ?? (variant === "underline" ? "Enviar mensaje →" : "Enviar mensaje")}
       </button>
-      {status === "error" && <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>No se pudo enviar. Probá de nuevo.</p>}
+      {status === "error" && <div role="alert" style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>
+        <p style={{ margin: "0 0 6px" }}>No se pudo enviar. Tus datos siguen acá; revisá tu conexión y probá de nuevo.</p>
+        <button type="button" onClick={() => { draft.clearDraft(); setForm(FORMULARIO_VACIO); setWebsite(""); setStatus("idle"); }}
+          style={{ background: "none", border: 0, padding: 0, color: "inherit", textDecoration: "underline", cursor: "pointer", font: "inherit" }}>
+          Borrar los datos guardados
+        </button>
+      </div>}
       {isPreview && !enDemoPublica && <p style={{ fontSize: 11, color: mutedColor, margin: 0 }}>Vista previa — el formulario no envía en modo edición.</p>}
     </form>
   );

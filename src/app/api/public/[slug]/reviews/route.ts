@@ -208,7 +208,7 @@ export async function POST(
   const comentario = typeof comment === "string" ? comment.trim().slice(0, COMENTARIO_MAX) || null : null;
 
   // Captcha al final: un error de campos no consume el token (es de un solo uso)
-  if (!(await verifyTurnstile(turnstileToken, ip, "review"))) {
+  if (!(await verifyTurnstile(turnstileToken, ip, "review", req.nextUrl.hostname))) {
     return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
   }
 

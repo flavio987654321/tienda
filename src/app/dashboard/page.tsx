@@ -21,6 +21,12 @@ import AvisoDelPanel from "@/components/AvisoDelPanel";
 import AvisosAlCelular from "@/components/dashboard/AvisosAlCelular";
 import { avisosParaElPanel } from "@/lib/avisos-admin-servidor";
 
+/** Cuenta el perÃ­odo desde el reloj del servidor en cada pedido al dashboard. */
+async function contarLeadsDeLaUltimaSemana(storeId: string) {
+  const desde = new Date(Date.now() - 7 * 864e5);
+  return prisma.lead.count({ where: { storeId, createdAt: { gte: desde } } });
+}
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
@@ -158,9 +164,7 @@ export default async function DashboardPage() {
   const pendingLeadsCount = isAutos ? await prisma.lead.count({
     where: { storeId: store.id, status: "PENDING" },
   }) : 0;
-  const leadsSemana = isAutos ? await prisma.lead.count({
-    where: { storeId: store.id, createdAt: { gte: new Date(Date.now() - 7 * 864e5) } },
-  }) : 0;
+  const leadsSemana = isAutos ? await contarLeadsDeLaUltimaSemana(store.id) : 0;
   const soldVehiclesCount = isAutos ? await prisma.product.count({
     where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" },
   }) : 0;

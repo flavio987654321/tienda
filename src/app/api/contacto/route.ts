@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Captcha al final: un error de campos no consume el token (es de un solo uso)
-  if (!(await verifyTurnstile(body.turnstileToken, ip, "contacto"))) {
+  if (!(await verifyTurnstile(body.turnstileToken, ip, "contacto", req.nextUrl.hostname))) {
     return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
   }
 

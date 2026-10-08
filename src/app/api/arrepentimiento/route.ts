@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
      solo uso: si se gastara antes y los campos estuvieran mal, la persona
      tendría que resolver el captcha de nuevo para corregir una letra. Es el
      mismo orden que /api/contacto, y por el mismo motivo. */
-  if (!(await verifyTurnstile(body.turnstileToken, ip, "arrepentimiento"))) {
+  if (!(await verifyTurnstile(body.turnstileToken, ip, "arrepentimiento", req.nextUrl.hostname))) {
     return NextResponse.json(
       { error: "No pudimos verificar que sos una persona. Probá de nuevo." },
       { status: 400 }

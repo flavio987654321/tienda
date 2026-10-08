@@ -309,6 +309,10 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const [favoritesOpen,  setFavoritesOpen]  = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [toastMsg,       setToastMsg]       = useState<string | null>(null);
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2500);
+  }
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
   const [donationEnabled, setDonationEnabled] = useState(false);
   const [donationAmount,  setDonationAmount]  = useState(1000);
@@ -461,8 +465,10 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       });
       return cambio ? siguiente : prev;
     });
-    if (sacados.length > 0) showToast(`Sacamos del carrito lo que ya no está disponible: ${sacados.join(", ")}`);
-    else if (cambioPrecio) showToast("Actualizamos los precios de tu carrito");
+    const aviso = sacados.length > 0
+      ? `Sacamos del carrito lo que ya no está disponible: ${sacados.join(", ")}`
+      : cambioPrecio ? "Actualizamos los precios de tu carrito" : "";
+    if (aviso) queueMicrotask(() => showToast(aviso));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, isPreview, carritoListo]);
 
@@ -758,18 +764,13 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
      marcaba ningún botón y mandaba "retiro" igual: el servidor lo convertía en
      retiro gratis (05/10/26). Ahora el elegido es siempre el que se ve. */
   const envioElegidoId = selectedEnvio?.id ?? envioId;
-  useEffect(() => {
-    if (selectedEnvio && selectedEnvio.id !== envioId) setEnvioId(selectedEnvio.id);
-  }, [selectedEnvio, envioId]);
   /* Lo mismo con el pago: los medios salen de `lib/mediosDePago` (la regla del
      servidor) y, si el que estaba marcado no se ofrece, se marca el primero. */
   const pagoOptions = useMemo(
     () => getPagoOptions(hasMercadoPago, !!affiliateId, paymentInfo),
     [hasMercadoPago, affiliateId, paymentInfo]
   );
-  useEffect(() => {
-    if (pagoOptions.length > 0 && !pagoOptions.some(o => o.id === pagoId)) setPagoId(pagoOptions[0].id);
-  }, [pagoOptions, pagoId]);
+  const pagoElegidoId = pagoOptions.some(o => o.id === pagoId) ? pagoId : (pagoOptions[0]?.id ?? pagoId);
   const selectedLiveQuotePrice = selectedEnvio?.liveQuote ? getLiveQuotePrice(selectedEnvio.id) : null;
   const envioPriceRaw  = selectedEnvio?.liveQuote ? (selectedLiveQuotePrice ?? 0) : (selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0));
   // Una promo de envío gratis pone el costo en 0 y deja de ser "a coordinar".
@@ -817,11 +818,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   // Functions
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2500);
-  };
-
   /* Al abrir la ficha se elige la primera COMBINACIÓN de talle y color con stock.
 
      Versión 1 del arreglo: se preseleccionaba `p.sizes[0]` sin mirar nada, así que
@@ -1231,8 +1227,8 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
        vuelve a tocar "Pagar" SIN cambiar nada, se reintenta el pago del pedido
        que ya existe en vez de crear otro: antes cada reintento era un pedido
        nuevo que volvía a descontar stock y a gastar un uso del cupón. */
-    const firma = JSON.stringify({ itemsDelPedido, customer, envioId: envioElegidoId, pagoId, cupon: cuponActivo?.id ?? null, donacion });
-    const previo = pagoId === "mercadopago" && pedidoSinPagar.current?.firma === firma ? pedidoSinPagar.current : null;
+    const firma = JSON.stringify({ itemsDelPedido, customer, envioId: envioElegidoId, pagoId: pagoElegidoId, cupon: cuponActivo?.id ?? null, donacion });
+    const previo = pagoElegidoId === "mercadopago" && pedidoSinPagar.current?.firma === firma ? pedidoSinPagar.current : null;
 
     let res: { ok: boolean; orderId?: string; donationId?: string; error?: string };
     if (previo) {
@@ -1242,7 +1238,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
         cartItems: itemsDelPedido,
         customer,
         shippingMethod:  envioElegidoId,
-        paymentProvider: pagoId,
+        paymentProvider: pagoElegidoId,
         // El bloqueado no se manda: el servidor lo ignoraría igual (chequea
         // `pricing.couponsAllowed`), pero así el pedido no queda con un cupón atado
         // que no descontó nada.
@@ -1253,7 +1249,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
 
     // Si eligió MercadoPago, crear preferencia y redirigir
-    if (pagoId === "mercadopago" && res.orderId) {
+    if (pagoElegidoId === "mercadopago" && res.orderId) {
       pedidoSinPagar.current = { orderId: res.orderId, donationId: res.donationId, firma };
       let mpData: { initPoint?: string; error?: string } = {};
       let mpOk = false;
@@ -1343,7 +1339,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     seleccion, setSeleccion, setOpcion,
     qty, setQty,
     checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
-    envioId, setEnvioId, pagoId, setPagoId,
+    envioId: envioElegidoId, setEnvioId, pagoId: pagoElegidoId, setPagoId,
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     cuponAbierto, setCuponAbierto,
     notas, setNotas, rememberData, setRememberData,

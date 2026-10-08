@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     });
     if (repetida) return NextResponse.json({ id: repetida.id }, { status: 200 });
 
-    if (!(await verifyTurnstile(body.turnstileToken, ip, "busqueda-auto"))) {
+    if (!(await verifyTurnstile(body.turnstileToken, ip, "busqueda-auto", req.nextUrl.hostname))) {
       return NextResponse.json({ error: "No pudimos verificar el envío. Completá la verificación e intentá de nuevo." }, { status: 400 });
     }
 

@@ -2508,6 +2508,25 @@ model StoreMilestone {
   @@index([storeId, shownAt])
 }
 
+// Widgets de Turnstile usados por los dominios propios. Las claves secretas se
+// guardan cifradas con ENCRYPTION_KEY; el hostname tiene una única asignación.
+model TurnstileWidget {
+  siteKey         String              @id
+  name            String
+  secretEncrypted String
+  hostnames       TurnstileHostname[]
+  createdAt       DateTime            @default(now())
+}
+
+model TurnstileHostname {
+  hostname  String         @id
+  siteKey   String
+  widget    TurnstileWidget @relation(fields: [siteKey], references: [siteKey], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@index([siteKey])
+}
+
 // ─── DESIGN BRIEF (formulario "Diseñá tu propia tienda") ──────────────────────
 // Una idea de diseño mandada desde /diseno-propio. No tiene relación con Store
 // ni con User a propósito: el formulario es público y sin registro, así que la

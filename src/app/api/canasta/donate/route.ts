@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
   // plata —el webhook verifica el pago contra MercadoPago— pero sí llenar la base
   // de donaciones pendientes y quemar la cuota de la API de MP, que es la cuenta
   // de cobro de toda la plataforma.
-  if (!(await verifyTurnstile(body.turnstileToken, ip, "canasta-donate"))) {
+  if (!(await verifyTurnstile(body.turnstileToken, ip, "canasta-donate", req.nextUrl.hostname))) {
     return NextResponse.json(
       { error: "No pudimos verificar que sos una persona. Intentá de nuevo." },
       { status: 400 }

@@ -3,6 +3,9 @@ import { useContext, useRef, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
 import { EMAIL_MAX } from "@/lib/contacto-limites";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+
+const HAY_EMAIL = (email: string) => email.length > 0;
 
 /**
  * El formulario de suscripción al newsletter.
@@ -44,7 +47,13 @@ export function NewsletterForm({
   botonEnviando?: string;
   theme?: NewsletterTheme;
 }) {
-  const [email, setEmail] = useState("");
+  const draft = useSessionDraft<string>(
+    slug && !isPreview ? `tienda:newsletter:${slug}` : null,
+    "",
+    HAY_EMAIL,
+  );
+  const email = draft.value;
+  const setEmail = draft.setValue;
   const [trampa, setTrampa] = useState("");
   const [estado, setEstado] = useState<"listo" | "yendo" | "hecho">("listo");
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +116,6 @@ export function NewsletterForm({
       });
       // El token es de un solo uso: sin reset, un reintento viaja con uno ya
       // gastado y el servidor lo rechaza sin que se entienda por qué.
-      captcha.reset();
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setError(data?.error ?? "No pudimos suscribirte. Probá de nuevo en un momento.");
@@ -116,10 +124,14 @@ export function NewsletterForm({
       }
       setEstado("hecho");
       setEmail("");
+      draft.clearDraft();
     } catch {
       setError("No pudimos conectarnos. Revisá tu conexión y probá de nuevo.");
       setEstado("listo");
     } finally {
+      // El servidor pudo consumir el token aunque el navegador no recibiera
+      // la respuesta; se renueva para que el próximo intento funcione.
+      captcha.reset();
       enViaje.current = false;
     }
   }
@@ -160,7 +172,7 @@ export function NewsletterForm({
           disabled={estado === "yendo" || esperandoCaptcha}
           style={{ ...theme.boton, ...(estado === "yendo" || esperandoCaptcha ? { opacity: 0.65, cursor: "default" } : null) }}
         >
-          {estado === "yendo" ? botonEnviando : boton}
+          {estado === "yendo" ? botonEnviando : error ? "Reintentar" : boton}
         </button>
       </div>
 
@@ -171,7 +183,7 @@ export function NewsletterForm({
       {!isPreview && captcha.configured && <div style={{ marginTop: 10 }}>{captcha.widget}</div>}
 
       {error && (
-        <p style={{ fontSize: 12, margin: "8px 0 0", lineHeight: 1.5, color: theme.colorError ?? "#dc2626" }}>
+        <p role="alert" style={{ fontSize: 12, margin: "8px 0 0", lineHeight: 1.5, color: theme.colorError ?? "#dc2626" }}>
           {error}
         </p>
       )}

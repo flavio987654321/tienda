@@ -343,9 +343,8 @@ export type ResultadoDominio =
  *   2. Se suma a **Vercel**. Si Vercel dice que no, se **deshace la reserva**:
  *      un dominio anotado que nunca va a levantar es peor que ninguno, porque
  *      además lo deja tomado para el que sí es su dueño.
- *   3. Se suma al **captcha**. Esto sí es fail-soft: si Cloudflare no contesta,
- *      el dominio anda igual y lo único que queda flojo es el captcha de esa
- *      página. Bloquear acá sería tirar abajo un alta que ya está buena.
+ *   3. Se suma al **captcha**. Si no se puede registrar, se deshacen Vercel y
+ *      la reserva: el dominio no debe quedar activo con los formularios rotos.
  */
 export async function conectarDominio(
   productoId: string,
@@ -365,15 +364,26 @@ export async function conectarDominio(
 
   /* Ya lo tiene puesto: no hay nada que hacer, y rehacer el alta en Vercel por
      un botón apretado dos veces gasta cuota de su API para nada. */
-  if (antes.dominioPropio === dominio) return { ok: true, dominio };
+  // Repetir el mismo dominio reconcilia Vercel y Turnstile si una petición
+  // anterior quedó a medias por una pérdida de conexión.
+  const yaEstabaConectado = antes.dominioPropio === dominio;
 
   /* ── 1. La reserva ─────────────────────────────────────────────────────── */
-  let reservado: ResultadoDominio;
+  let reservado: ResultadoDominio = { ok: true, dominio };
   try {
-    reservado = await prisma.$transaction(async (tx) => {
-      /* El candado va sobre el DOMINIO. Dos personas peleando por el mismo se
-         hacen una después de la otra; dos que piden distinto no se estorban. */
+    if (!yaEstabaConectado) reservado = await prisma.$transaction(async (tx) => {
+      // Serializar primero cambios concurrentes sobre el mismo producto y luego
+      // reclamos por el mismo dominio. Siempre se toman en este orden.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"prod-dom:" + productoId}))`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"dom:" + dominio}))`;
+
+      // También serializar cambios distintos sobre EL MISMO producto. Sin este
+      // chequeo, dos pestañas podían reservar dominios diferentes y dejar uno
+      // huérfano en Vercel/Turnstile aunque sólo el último quedara en la base.
+      const actual = await tx.product.findUnique({ where: { id: productoId }, select: { dominioPropio: true } });
+      if (!actual || actual.dominioPropio !== antes.dominioPropio) {
+        return { ok: false as const, motivo: "La configuración del dominio cambió en otra solicitud. Recargá e intentá de nuevo." };
+      }
 
       const [tienda, otro] = await Promise.all([
         tx.store.findFirst({ where: { customDomain: dominio }, select: { id: true } }),
@@ -429,18 +439,27 @@ export async function conectarDominio(
   if (!enVercel.ok) {
     /* Se deshace la reserva. Un dominio anotado que no va a levantar deja a la
        persona esperando y encima se lo bloquea a su dueño legítimo. */
-    await prisma.product
-      .update({ where: { id: productoId }, data: { dominioPropio: antes.dominioPropio } })
+    if (!yaEstabaConectado) await prisma.product
+      .updateMany({ where: { id: productoId, dominioPropio: dominio }, data: { dominioPropio: antes.dominioPropio } })
       .catch((e) => console.error("[dominio-digital] no se pudo deshacer la reserva", { productoId, e }));
     return { ok: false, motivo: enVercel.motivo };
   }
 
   /* ── 3. El captcha ─────────────────────────────────────────────────────── */
-  await syncTurnstileHostname(dominio, "add");
+  const captchaListo = await syncTurnstileHostname(dominio, "add");
+  if (!captchaListo) {
+    if (!yaEstabaConectado) {
+      await quitarDominioDeVercel(dominio);
+      await prisma.product
+        .updateMany({ where: { id: productoId, dominioPropio: dominio }, data: { dominioPropio: antes.dominioPropio } })
+        .catch((e) => console.error("[dominio-digital] no se pudo deshacer la reserva tras fallar Turnstile", { productoId, e }));
+    }
+    return { ok: false, motivo: "No pudimos preparar la verificación de seguridad para este dominio. Revisá la configuración de Turnstile o contactanos." };
+  }
 
   /* Y el que tenía antes se suelta: en Vercel para no dejarlo ocupando lugar, y
      en el captcha sólo si no queda nadie más colgando de ese apex. */
-  if (antes.dominioPropio) {
+  if (antes.dominioPropio && antes.dominioPropio !== dominio) {
     await quitarDominioDeVercel(antes.dominioPropio);
     if (!(await apexSigueEnUso(antes.dominioPropio, productoId))) {
       await syncTurnstileHostname(antes.dominioPropio, "remove");

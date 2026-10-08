@@ -72,9 +72,10 @@ export async function POST(req: NextRequest) {
   //
   // Es lo que frena el ataque que ni el honeypot ni el límite por IP ven: cargar
   // miles de direcciones ajenas para que a cada una le llegue un mail nuestro.
-  // `verifyTurnstile` es fail-open a propósito (si Cloudflare no contesta, deja
-  // pasar) — el piso sigue siendo el rate limit, el honeypot y el doble opt-in.
-  if (!(await verifyTurnstile(turnstileToken, ip, "newsletter"))) {
+  // En producción una caída de Cloudflare rechaza el envío; en desarrollo sin
+  // claves se permite probar el formulario. El rate limit, el honeypot y el
+  // doble opt-in siguen siendo capas adicionales.
+  if (!(await verifyTurnstile(turnstileToken, ip, "newsletter", req.nextUrl.hostname))) {
     return NextResponse.json(
       { error: "No pudimos verificar que sos una persona. Probá de nuevo." },
       { status: 400 }

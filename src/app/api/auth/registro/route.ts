@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     // Captcha después de validar campos (un error de tipeo no gasta el token, que es
     // de un solo uso) pero antes de tocar la base (nadie enumera emails sin resolverlo).
-    if (!(await verifyTurnstile(turnstileToken, ip, "registro"))) {
+    if (!(await verifyTurnstile(turnstileToken, ip, "registro", req.nextUrl.hostname))) {
       return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
     }
 

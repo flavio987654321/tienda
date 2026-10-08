@@ -8,6 +8,7 @@ import CampoTrampa from "@/components/store/auto/CampoTrampa";
 import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
 import { useTurnstile } from "@/components/Turnstile";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 
 /* "Tasá tu usado" (06/10/26), rehecha el 07/10/26 como paso a paso. El dueño:
    "siento que está hecho así nomás, le falta amor, efectos, más visual".
@@ -20,6 +21,14 @@ import { useTurnstile } from "@/components/Turnstile";
 
 type Estado = "idle" | "enviando" | "listo";
 type Paso = 1 | 2 | 3 | 4;
+const TASACION_VACIA = {
+  f: { marca: "", modelo: "", version: "", anio: "", km: "", combustible: "", transmision: "", estado: "", comentario: "", nombre: "", telefono: "" },
+  modalidad: null as "PERMUTA" | "VENTA" | null,
+  paso: 1 as Paso,
+  submissionKey: "",
+};
+const hayTasacion = (draft: typeof TASACION_VACIA) =>
+  !!draft.modalidad || Object.values(draft.f).some(Boolean);
 
 const MARCAS_COMUNES = ["Volkswagen", "Toyota", "Ford", "Chevrolet", "Fiat", "Renault", "Peugeot"];
 
@@ -71,14 +80,19 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 }) {
   const [abierto, setAbierto] = useState(abiertoDeEntrada);
   const [trampa, setTrampa] = useState("");
-  const [paso, setPaso] = useState<Paso>(1);
+  const borrador = useSessionDraft(
+    storeId && !isOwner && !isPreview ? `tienda:tasacion:${storeId}:${producto?.id ?? "general"}` : null,
+    TASACION_VACIA,
+    hayTasacion,
+  );
+  const { paso, f, modalidad } = borrador.value;
+  const setPaso = (paso: Paso) => borrador.setValue((d) => ({ ...d, paso }));
+  const setF = (update: React.SetStateAction<typeof TASACION_VACIA.f>) => borrador.setValue((d) => ({ ...d, f: typeof update === "function" ? update(d.f) : update }));
+  const setModalidad = (modalidad: "PERMUTA" | "VENTA" | null) => borrador.setValue((d) => ({ ...d, modalidad }));
   const [haciaAtras, setHaciaAtras] = useState(false);
-  const [f, setF] = useState({ marca: "", modelo: "", version: "", anio: "", km: "", combustible: "", transmision: "", estado: "", comentario: "", nombre: "", telefono: "" });
-  const [modalidad, setModalidad] = useState<"PERMUTA" | "VENTA" | null>(null);
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);
-  const submissionKey = useRef("");
   const captcha = useTurnstile("tasacion");
   const titulo = useRef<HTMLHeadingElement>(null);
   const primeraVez = useRef(true);
@@ -90,6 +104,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   const pasoCambioEn = useRef(0);
   const recienCambio = () => ahora() - pasoCambioEn.current < 400;
   const soloMirando = !storeId || isOwner || isPreview;
+  const formularioAbierto = abierto || (borrador.loaded && hayTasacion(borrador.value));
   const sobreAcento = getContrastColor(accent) === "dark" ? "#111" : "#fff";
 
   // Al cambiar de paso, el foco va al título: el lector de pantalla anuncia dónde está.
@@ -142,14 +157,16 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
     enviando.current = true;
     setEstado("enviando");
     try {
-      if (!submissionKey.current) submissionKey.current = crypto.randomUUID();
+      const submissionKey = borrador.value.submissionKey || crypto.randomUUID();
+      if (!borrador.value.submissionKey) borrador.setValue((d) => ({ ...d, submissionKey }));
       const res = await fetch("/api/tasaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id, submissionKey: submissionKey.current, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa }),
+        body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id, submissionKey, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo enviar. Probá de nuevo en un momento."); return; }
+      borrador.clearDraft();
       setEstado("listo");
     } catch {
       setEstado("idle");
@@ -194,7 +211,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   }
 
   /* ── Cerrada: una invitación, no un botón perdido ── */
-  if (!abierto) {
+  if (!formularioAbierto) {
     return (
       <button type="button" onClick={() => setAbierto(true)} className="tv-cta"
         style={{ ...raiz, display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", cursor: "pointer",
