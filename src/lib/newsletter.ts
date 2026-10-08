@@ -97,10 +97,23 @@ const CONCURRENCIA = 8;
  */
 const PRESUPUESTO_MS = 8_000;
 
+/**
+ * Cuánto dura el candado de una pasada si nadie lo suelta.
+ *
+ * Una pasada termina sola a los ~8 segundos y suelta el candado al salir. Si la
+ * plataforma la mata antes (o se cae la base en el medio), el candado queda
+ * puesto: a los 5 minutos se da por muerta y otra pasada puede seguir. Más
+ * corto arriesgaría que dos pasadas vivas se solapen; más largo dejaría a la
+ * dueña esperando sin motivo.
+ */
+const CANDADO_MS = 5 * 60_000;
+
 export type ResultadoEnvio = {
   enviados: number;
   /** true si quedó gente sin recibir y hay que volver a pasar. */
   falta: boolean;
+  /** true si no se mandó nada porque otra pasada ya la estaba mandando. */
+  enCurso?: boolean;
 };
 
 /**
@@ -121,6 +134,34 @@ export type ResultadoEnvio = {
  *    de saberlo.
  */
 export async function enviarCampanaPorMail(
+  storeId: string,
+  campaignId: string,
+  campana: CampanaNewsletter
+): Promise<ResultadoEnvio> {
+  /* Se toma la campaña en UNA escritura condicional: si dos pedidos llegan a la
+     vez, la base deja pasar a uno solo (el otro ve 0 filas cambiadas). Leer
+     primero y escribir después no serviría: los dos leerían "libre". */
+  const desde = new Date();
+  const tomada = await prisma.pushCampaign.updateMany({
+    where: {
+      id: campaignId,
+      OR: [{ emailEnvioDesde: null }, { emailEnvioDesde: { lt: new Date(desde.getTime() - CANDADO_MS) } }],
+    },
+    data: { emailEnvioDesde: desde },
+  });
+  if (tomada.count === 0) return { enviados: 0, falta: true, enCurso: true };
+  try {
+    return await enviarTandas(storeId, campaignId, campana);
+  } finally {
+    // Se suelta sólo si sigue siendo el nuestro: si venció y otra pasada lo
+    // tomó, no se le saca de abajo.
+    await prisma.pushCampaign
+      .updateMany({ where: { id: campaignId, emailEnvioDesde: desde }, data: { emailEnvioDesde: null } })
+      .catch((e) => console.error("[newsletter] no se pudo soltar el candado:", e));
+  }
+}
+
+async function enviarTandas(
   storeId: string,
   campaignId: string,
   campana: CampanaNewsletter

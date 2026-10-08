@@ -471,6 +471,13 @@ model PushCampaign {
   /// lo primero que hace el dueño cuando ve un error.
   emailCursor String?
 
+  // Candado del envío por mail (08/10/26): desde cuándo hay una pasada
+  // mandando esta campaña. Dos pasadas a la vez (dos pestañas con "continuar
+  // envío") arrancaban del mismo cursor y la misma tanda le llegaba dos veces a
+  // los mismos suscriptores. Null = nadie la está mandando. Si una pasada se
+  // muere sin soltarlo, vence solo (ver lib/newsletter).
+  emailEnvioDesde DateTime?
+
   @@index([storeId, createdAt(sort: Desc)])
   // Para que el drenado (hoy manual, mañana por cron) encuentre lo que quedó
   // a medias sin recorrer todo el historial.

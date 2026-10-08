@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, enviados: 0, falta: false });
   }
 
-  const { enviados, falta } = await enviarCampanaPorMail(store.id, campaign.id, {
+  const { enviados, falta, enCurso } = await enviarCampanaPorMail(store.id, campaign.id, {
     storeName: store.name,
     storeUrl: campaign.url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`,
     logo: store.logo,
@@ -62,6 +62,15 @@ export async function POST(req: NextRequest) {
     body: campaign.body,
     ownerEmail: store.owner?.email ?? null,
   });
+
+  // Otra pasada la está mandando (otra pestaña, o el envío original que
+  // todavía no terminó). No se manda nada, y se avisa en vez de fingir.
+  if (enCurso) {
+    return NextResponse.json(
+      { error: "Esa campaña ya se está enviando. Esperá un momento y volvé a tocar continuar." },
+      { status: 409 }
+    );
+  }
 
   return NextResponse.json({ ok: true, enviados, falta });
 }
