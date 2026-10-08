@@ -15,16 +15,19 @@ import { CAPAS } from "@/lib/capas-tienda";
  *   soltar afuera no la cierra).
  * - En el celular, "atrás" la cierra en vez de salir de la tienda.
  */
-export function VentanaAuto({ titulo, onClose, panel, children }: {
+export function VentanaAuto({ titulo, onClose, panel, children, abierta = true }: {
   titulo: string;
   onClose: () => void;
   panel?: React.CSSProperties;
   children: React.ReactNode;
+  /** Cerrada visualmente, pero mantiene montado el formulario para conservar el borrador. */
+  abierta?: boolean;
 }) {
   const tocoElFondo = useRef(false);
-  useCerrarConAtras(onClose);
+  useCerrarConAtras(onClose, abierta);
 
   useEffect(() => {
+    if (!abierta) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
@@ -35,13 +38,13 @@ export function VentanaAuto({ titulo, onClose, panel, children }: {
     };
     window.addEventListener("keydown", onKey);
     return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
-  }, [onClose]);
+  }, [onClose, abierta]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={titulo}
+    <div role="dialog" aria-modal={abierta || undefined} aria-hidden={!abierta} aria-label={titulo}
       onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
       onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) onClose(); tocoElFondo.current = false; }}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: CAPAS.critico, display: "flex",
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: CAPAS.critico, display: abierta ? "flex" : "none",
         alignItems: "flex-start", justifyContent: "center", padding: "20px 16px", overflowY: "auto" }}>
       <div style={{ background: "#fff", color: "#1a2744", borderRadius: 14, width: "100%", maxWidth: 520, margin: "auto 0",
         padding: "52px 12px 12px", position: "relative", ...panel }}>

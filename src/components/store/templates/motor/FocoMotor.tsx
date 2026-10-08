@@ -1,18 +1,12 @@
 "use client";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
-import { attr, fmtPrice, esReservado, vehicleLocation, WaIcon } from "@/components/store/auto/AutoVehicleShared";
+import { attr, fmtPrice, vehicleLocation, WaIcon } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { urlFichaPdf, NOMBRE_TIPO, usaHoras, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { getContrastColor } from "@/contexts/EditContext";
 import { usoDe } from "./TarjetaMotor";
-
-/** El que va en foco: el marcado "destacado", si no el primero con etiqueta, si no el más nuevo sin reservar. */
-export function elegirFoco(productos: StorefrontProduct[]): StorefrontProduct | null {
-  const libres = productos.filter(p => !esReservado(p));
-  return libres.find(p => /destacad/i.test(p.badge ?? "")) ?? libres.find(p => p.badge) ?? libres[0] ?? productos[0] ?? null;
-}
 
 /**
  * "Vehículo en foco" de Auto Motor (06/10/26): uno solo, grande, con lo que

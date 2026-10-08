@@ -115,8 +115,8 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   // la foto no compite con la escena, es el bloque: va la de la tienda si sube
   // una, y si no la de sus propios productos.
   "aurora":        ["bgHero"],
-  "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgServicios", "bgStats"],
-  "auto-motor":    ["bgCatalogo", "bgContacto", "bgFooter", "bgNosotros", "bgServicios"],
+  "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFoco", "bgFooter", "bgHero", "bgNovedades", "bgNosotros", "bgPresupuesto", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgVideos"],
+  "auto-motor":    ["bgCatalogo", "bgContacto", "bgFoco", "bgFooter", "bgNovedades", "bgNosotros", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgTipos", "bgVideos"],
   "boho-terra":    ["bgNewsletter"],
   "casa-clara":    ["bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
   "chic-paris":    [],
@@ -137,8 +137,12 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
 //      que un campo nuevo se guarda bien en pantalla y desaparece al recargar,
 //   3. `overrideStyle` en `src/contexts/EditContext.tsx`, que es el único lugar
 //      donde esto se convierte en CSS (y por eso lo heredan los diez templates).
+export type ColorTextoRango = { inicio: number; fin: number; color: string };
+
 export type TextOverride = {
   text?: string;
+  /** Colores aplicados a fragmentos del texto, por posición de carácter. */
+  coloresEnTexto?: ColorTextoRango[];
   color?: string;
   fontFamily?: string;
   fontSize?: number;
@@ -405,6 +409,8 @@ export type StoreConfig = {
    *  oculta en todos lados. Lo aplica `SectionBlock` + `globals.css`. */
   hiddenSectionsCelular?: string[];
   sectionOrder?: string[];
+  /** Vehículo elegido para la vidriera de Auto Motor / Auto Drive. */
+  featuredVehicleId?: string;
 };
 
 // ── Qué templates dejan elegir el color de la barra de navegación ────────────
@@ -492,5 +498,6 @@ export const DEFAULT_CONFIG: StoreConfig = {
   textOverrides: {},
   imageOverrides: {},
   sectionColors: {},
+  featuredVehicleId: undefined,
   promoBanner: { enabled: true },
 };

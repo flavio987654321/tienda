@@ -13,6 +13,7 @@ import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGI
 import { parseBg, serializeBg, extremo, extremosDe, DIR_LABELS, type SectionBg, type BgDir, type BgHacia } from "@/lib/section-bg";
 import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
 import { topeDelTexto, nombreDelTope } from "@/lib/topes-texto";
+import { ajustarRangosColorTexto, colorearRangoTexto } from "@/lib/estilosTexto";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import TourGuide from "@/components/TourGuide";
 import MarcoCelular, { SelectorAncho, type Ancho } from "./MarcoCelular";
@@ -1833,6 +1834,9 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
   setMsCarrusel: (ms: number) => void;
 }) {
   const { activeField, activeLabel, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
+  const seleccionTextoRef = useRef<{ campo: string; inicio: number; fin: number }>({ campo: "", inicio: 0, fin: 0 });
+  const [seleccionTexto, setSeleccionTexto] = useState<{ campo: string; inicio: number; fin: number }>({ campo: "", inicio: 0, fin: 0 });
+  const [colorFragmento, setColorFragmento] = useState("#f59e0b");
 
   // Cerrar con Escape o tocando fuera del panel.
   //
@@ -1881,6 +1885,13 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
     { label: "Elegante con serifa",  value: "Georgia, 'Times New Roman', serif" },
     { label: "Editorial",            value: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" },
     { label: "Titular impactante",   value: "Impact, 'Arial Narrow Bold', sans-serif" },
+    { label: "Condensada",           value: "'Arial Narrow', 'Liberation Sans Narrow', sans-serif" },
+    { label: "Humanista",            value: "'Gill Sans', 'Trebuchet MS', sans-serif" },
+    { label: "Geométrica",           value: "'Century Gothic', 'Avant Garde', sans-serif" },
+    { label: "Manuscrita",           value: "'Comic Sans MS', 'Comic Sans', cursive" },
+    { label: "Serif de sistema",     value: "ui-serif, Georgia, serif" },
+    { label: "Sans de sistema",      value: "ui-sans-serif, system-ui, sans-serif" },
+    { label: "Monoespaciada",        value: "'Consolas', 'Courier New', monospace" },
     { label: "Máquina de escribir",  value: "'Courier New', Courier, monospace" },
   ];
   const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
@@ -1973,6 +1984,22 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
      lo escrito — y justo después de volver al original todavía muestra lo
      escrito: leerlo ahí guardaba lo tipeado como si fuera de fábrica. */
   const original = (celular ? originalCelular : originalEnPantalla(activeField)) ?? "";
+  const textoEditor = ov.text ?? original;
+  const seleccionActiva = seleccionTexto.campo === activeField && seleccionTexto.fin > seleccionTexto.inicio;
+  const registrarSeleccion = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const { selectionStart: inicio, selectionEnd: fin } = e.currentTarget;
+    seleccionTextoRef.current = { campo: activeField, inicio, fin };
+    setSeleccionTexto({ campo: activeField, inicio, fin });
+  };
+  const aplicarColorFragmento = (color?: string) => {
+    const seleccion = seleccionTextoRef.current;
+    if (seleccion.campo !== activeField || seleccion.fin <= seleccion.inicio) return;
+    const colores = colorearRangoTexto(ov.coloresEnTexto, seleccion.inicio, seleccion.fin, color);
+    setOverride(activeField, {
+      text: !colores.length && textoEditor === original ? undefined : textoEditor,
+      coloresEnTexto: colores.length ? colores : undefined,
+    });
+  };
 
   /** Cambia sólo lo del celular; lo que queda sin definir se saca, y si no queda nada, se va entero. */
   const setCel = (p: Partial<TextOverrideCelular>) => {
@@ -2078,14 +2105,20 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
             precios— con un "Error al guardar" que no decía dónde estaba el
             problema. Es mucho mejor frenar acá, donde se ve lo que pasa. */}
         <textarea
-          value={ov.text ?? original}
+          value={textoEditor}
           placeholder={label}
           rows={3}
           maxLength={topeDeEsteCampo}
           /* Vacío se deja mientras se escribe: si volviera al original en el acto,
              borrar todo para escribir algo nuevo sería imposible. Al salir de la
              caja, vacío o igual al original vuelven a ser "el del diseño". */
-          onChange={e => setOverride(activeField, { text: e.target.value })}
+          onChange={e => {
+            const nuevo = e.target.value;
+            const colores = ajustarRangosColorTexto(ov.coloresEnTexto, textoEditor, nuevo);
+            setOverride(activeField, { text: nuevo, coloresEnTexto: colores.length ? colores : undefined });
+            registrarSeleccion(e);
+          }}
+          onSelect={registrarSeleccion}
           style={{
             width: "100%", boxSizing: "border-box", marginTop: 7,
             border: "1px solid #e2e8f0", borderRadius: 8,
@@ -2096,9 +2129,36 @@ function FloatingEditor({ template, celular = false, puedeAlinear, originalCelul
           onBlur={e => {
             e.target.style.borderColor = "#e2e8f0";
             const v = e.target.value;
-            if (ov.text !== undefined && (v.trim() === "" || v === original)) setOverride(activeField, { text: undefined });
+            if (ov.text !== undefined && !ov.coloresEnTexto?.length && (v.trim() === "" || v === original)) setOverride(activeField, { text: undefined });
           }}
         />
+        <div style={{ marginTop: 10, padding: 10, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff" }}>
+          <p style={{ margin: "0 0 7px", fontSize: 10, fontWeight: 700, color: P.muted, letterSpacing: 0.7, textTransform: "uppercase" }}>
+            Color de una palabra o fragmento
+          </p>
+          <p style={{ margin: "0 0 8px", fontSize: 10.5, color: P.muted, lineHeight: 1.4 }}>
+            SeleccionÃ¡ una parte del texto de arriba y elegÃ­ su color. El resto queda igual.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <input type="color" value={colorFragmento} onChange={e => setColorFragmento(e.target.value)}
+              aria-label="Color del fragmento seleccionado"
+              style={{ width: 34, height: 32, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+            <button type="button" disabled={!seleccionActiva} onMouseDown={e => e.preventDefault()} onClick={() => aplicarColorFragmento(colorFragmento)}
+              style={{ flex: 1, height: 32, border: "1px solid #e2e8f0", borderRadius: 6, background: seleccionActiva ? "#f8fafc" : "#f1f5f9",
+                color: seleccionActiva ? P.text : P.muted, cursor: seleccionActiva ? "pointer" : "not-allowed", fontSize: 10.5, fontWeight: 700 }}>
+              Aplicar
+            </button>
+            <button type="button" disabled={!seleccionActiva} onMouseDown={e => e.preventDefault()} onClick={() => aplicarColorFragmento(undefined)}
+              title="Quitar el color del fragmento seleccionado"
+              style={{ height: 32, padding: "0 8px", border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff",
+                color: seleccionActiva ? P.muted : "#cbd5e1", cursor: seleccionActiva ? "pointer" : "not-allowed", fontSize: 10.5 }}>
+              Quitar
+            </button>
+          </div>
+          <p style={{ margin: "6px 0 0", fontSize: 10, color: P.hint }}>
+            {seleccionActiva ? `Seleccionaste ${seleccionTexto.fin - seleccionTexto.inicio} caracteres.` : "Primero seleccioná una palabra o fragmento en el texto de arriba."}
+          </p>
+        </div>
         {/* El contador aparece recién cerca del tope, y el tope depende de QUÉ
             es este campo: un botón no acepta lo mismo que un párrafo. Antes era
             500 para todo, y medido en el navegador eso dejaba poner 500 letras
@@ -2645,6 +2705,11 @@ export default function ConfiguracionPage() {
     setIsDirty(true);
   }, []);
 
+  const setFeaturedVehicleId = useCallback((id: string | undefined) => {
+    setConfig(c => ({ ...c, featuredVehicleId: id }));
+    setIsDirty(true);
+  }, []);
+
   /* "Deshacer todo lo del celular": vuelve cada texto y cada bloque a como se ve
      en computadora. Toca sólo lo del celular —lo de PC queda como está— y es
      un borrador más: hasta "Guardar cambios" no se pierde nada. */
@@ -2668,10 +2733,10 @@ export default function ConfiguracionPage() {
   const llamadaDelCelular = useCallback((fn: Llamada, args: unknown[]) => {
     const funciones: Record<Llamada, (...a: never[]) => void> = {
       setActiveField, setOverride, resetOverride, setImageOverride,
-      setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular,
+      setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular, setFeaturedVehicleId,
     };
     (funciones[fn] as (...a: unknown[]) => void)(...args);
-  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular]);
+  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular, setFeaturedVehicleId]);
   const edicionCelular = useMemo<Edicion>(
     () => ({ activeField, activeLabel, imageLoading: imageLoadingFields }),
     [activeField, activeLabel, imageLoadingFields],
@@ -3225,6 +3290,7 @@ export default function ConfiguracionPage() {
           toggleHiddenSection,
           sectionOrder: config.sectionOrder ?? [],
           moveSection,
+          setFeaturedVehicleId,
         }}>
           {ancho === "celular" ? (
             /* En el celular también se toca para editar: lo que se toque adentro

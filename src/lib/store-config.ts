@@ -63,6 +63,11 @@ export const storeConfigSchema = z.object({
   // juntos, siempre.
   textOverrides: z.record(z.string(), z.object({
     text: z.string().max(500).optional(),
+    coloresEnTexto: z.array(z.object({
+      inicio: z.number().int().min(0).max(500),
+      fin: z.number().int().min(1).max(500),
+      color: z.string().regex(/^#[\da-fA-F]{6}$/),
+    })).max(100).optional(),
     color: z.string().max(30).optional(),
     fontFamily: z.string().max(80).optional(),
     // Con topes: sin ellos, un valor absurdo guardado a mano reventaba el diseño y
@@ -136,6 +141,7 @@ export const storeConfigSchema = z.object({
   // cantidad: ningún template tiene más de 15 bloques.
   hiddenSectionsCelular: z.array(z.string().max(60)).max(40).optional(),
   sectionOrder: z.array(z.string().max(60)).optional(),
+  featuredVehicleId: z.string().max(100).optional(),
 });
 
 export type StoreConfigInput = z.infer<typeof storeConfigSchema>;

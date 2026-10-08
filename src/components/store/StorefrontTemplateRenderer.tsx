@@ -88,6 +88,7 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         toggleHiddenSection: () => {},
         sectionOrder: config.sectionOrder ?? [],
         moveSection: () => {},
+        setFeaturedVehicleId: () => {},
       }}>
         <Template />
         {!config.isOwner && config.flyerConfig?.enabled && (config.flyerConfig.images?.length ?? 0) > 0 && (

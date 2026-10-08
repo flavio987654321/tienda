@@ -14,6 +14,7 @@ import { useSesion } from "@/components/AuthProvider";
 import { useFavoritosVehiculos } from "@/hooks/useFavoritosVehiculos";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { SelectorVehiculoFoco } from "@/components/store/auto/SelectorVehiculoFoco";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -32,6 +33,8 @@ import { PresupuestoDrive, PRESUPUESTO_DRIVE_CSS, tramosDePrecio } from "@/compo
 import { VideosDrive, VIDEOS_DRIVE_CSS } from "@/components/store/templates/drive/VideosDrive";
 import { VenderDrive, VENDER_DRIVE_CSS } from "@/components/store/templates/drive/VenderDrive";
 import { PreguntasDrive } from "@/components/store/templates/drive/PreguntasDrive";
+import { FocoDrive } from "@/components/store/templates/drive/FocoDrive";
+import { elegirFoco } from "@/lib/vehiculoFoco";
 
 /**
  * Auto Drive (rehecho el 07/10/26): la portada clara, tipo portal de autos.
@@ -76,7 +79,7 @@ const FONDO = "#f4f6f9";
 const TINTA = "#0f172a";
 const LINEA = "#e8ebf0";
 
-const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
+const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-foco", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
 
 /** El título de cada bloque: etiqueta en pastilla y título grande. */
 function Titulo({ acento, tinta = TINTA, kicker, titulo, derecha, centrado }: { acento: string; tinta?: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode; centrado?: boolean }) {
@@ -101,7 +104,7 @@ export default function AutoDrive() {
   const config       = useStoreConfig();
   const pushBell     = usePushBell();
   const { products, loadingProducts } = useStorefront();
-  const { editMode, overrides, setOverride, hiddenSections } = useEditContext();
+  const { editMode, overrides, setOverride, hiddenSections, setFeaturedVehicleId } = useEditContext();
   /* El menú sólo a secciones que se ven (5.3 de la auditoría): un link a un
      bloque oculto no hacía nada. En el menú del celular, tampoco a las que el
      dueño ocultó sólo en el celular. */
@@ -128,6 +131,7 @@ export default function AutoDrive() {
   const waLink = whatsapp.enabled ? linkWhatsApp(whatsapp.number, whatsapp.message) : null;
   // Lo que la tienda tiene (ver lib/filtroVehiculos): buscador, tipos, tramos y números.
   const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
+  const foco = useMemo(() => elegirFoco(products, config?.featuredVehicleId), [products, config?.featuredVehicleId]);
   // Los videos que ya están en cada vehículo (no se sube nada aparte).
   const videos = useMemo(() => videosDeVehiculos(products), [products]);
   const hayTramos = useMemo(() => tramosDePrecio(products, principal).length > 0, [products, principal]);
@@ -157,6 +161,25 @@ export default function AutoDrive() {
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
+
+  const focoBg = sc["bgFoco"] ?? "#ffffff";
+  const focoImg = iovr["sectionbg_bgFoco"];
+  const focoText = secText(focoImg, focoBg);
+  const focoMid = secMid(focoImg, focoBg);
+  const presupuestoBg = sc["bgPresupuesto"] ?? "#ffffff";
+  const presupuestoImg = iovr["sectionbg_bgPresupuesto"];
+  const presupuestoText = secText(presupuestoImg, presupuestoBg);
+  const tasarBg = sc["bgTasar"] ?? FONDO;
+  const tasarImg = iovr["sectionbg_bgTasar"];
+  const tasarText = secText(tasarImg, tasarBg);
+  const novedadesBg = sc["bgNovedades"] ?? "#ffffff";
+  const novedadesImg = iovr["sectionbg_bgNovedades"];
+  const videosBg = sc["bgVideos"] ?? "#ffffff";
+  const videosImg = iovr["sectionbg_bgVideos"];
+  const videosText = secText(videosImg, videosBg);
+  const preguntasBg = sc["bgPreguntas"] ?? FONDO;
+  const preguntasImg = iovr["sectionbg_bgPreguntas"];
+  const preguntasText = secText(preguntasImg, preguntasBg);
 
   const statsBg     = sc["bgStats"]      ?? "#ffffff";
   const statsImg    = iovr["sectionbg_bgStats"];
@@ -275,7 +298,7 @@ export default function AutoDrive() {
   // "Recién ingresados": hasta 8, del tipo elegido (con las pestañas de los tipos que hay).
   const tiposVista = opciones.tipos.length > 1 ? opciones.tipos.slice(0, 5) : [];
   const delTipo = tipoVista ? products.filter(p => datosDe(p, currency).tipo === tipoVista) : products;
-  const showcased = delTipo.slice(0, 8);
+  const showcased = delTipo.filter(p => p.id !== foco?.id).slice(0, 8);
   const linkTodos = `/tienda/${slug}/vehiculos${isPreview ? "?from=editor" : ""}`;
 
   /* Números: vehículos y marcas se cuentan de verdad; años y satisfacción son
@@ -662,7 +685,7 @@ export default function AutoDrive() {
             </ul>
           ) : (
             <div style={{ textAlign:"center", padding:"56px 24px", border:`1.5px dashed #cbd5e1`, borderRadius:20, background:"#fff" }}>
-              <p style={{ margin:0, color:catMid, fontSize:15 }}>Todavía no hay vehículos publicados.</p>
+              <p style={{ margin:0, color:catMid, fontSize:15 }}>{foco ? "El vehículo destacado está en la vidriera de arriba." : "Todavía no hay vehículos publicados."}</p>
             </div>
           )}
           {delTipo.length > showcased.length && (
@@ -678,12 +701,37 @@ export default function AutoDrive() {
       </section>
       </SectionBlock>
 
+      {/* ── VIDRIERA: una unidad elegida por la agencia. */}
+      <SectionBlock id="ad-foco" label="Vehículo destacado" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
+      {(foco || (editMode && isPreview)) ? (
+        <section style={{ padding:"clamp(44px,6vw,72px) clamp(16px,3vw,28px)", position:"relative", ...secBg(focoImg, focoBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgFoco" /><SectionOverlay ov={focoImg} />
+          <EditableSectionBg field="bgFoco" label="Fondo de la vidriera" />
+          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+            {editMode && isPreview && <div style={{ marginBottom:18 }}>
+              <SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} onChange={setFeaturedVehicleId} />
+            </div>}
+            {foco ? <>
+              <Titulo acento={accent} tinta={focoText}
+                kicker={<EditableZone field="focoDriveKicker" label="Etiqueta de la vidriera">Nuestra selección</EditableZone>}
+                titulo={<EditableZone field="focoDriveHeading" label="Título de la vidriera">Un vehículo para destacar</EditableZone>} />
+              <FocoDrive p={foco} acento={accent} moneda={currency} href={paginaDe(foco)} whatsapp={whatsapp} />
+            </> : <p style={{ margin:0, padding:24, color:focoText, border:`1px dashed ${focoMid}`, borderRadius:16, textAlign:"center" }}>
+              {loadingProducts ? "Cargando vehículos…" : "Todavía no hay vehículos para mostrar en la vidriera."}
+            </p>}
+          </div>
+        </section>
+      ) : null}
+      </SectionBlock>
+
       {/* ── POR PRESUPUESTO ── tramos con los precios reales. */}
       <SectionBlock id="ad-presupuesto" label="Por presupuesto" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       {(hayTramos || enEditor) ? (
-      <section style={{ padding:"clamp(44px,6vw,72px) clamp(16px,3vw,28px)", background:"#fff" }}>
-        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
-          <Titulo acento={accent}
+      <section style={{ padding:"clamp(44px,6vw,72px) clamp(16px,3vw,28px)", position:"relative", ...secBg(presupuestoImg, presupuestoBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgPresupuesto" /><SectionOverlay ov={presupuestoImg} />
+        <EditableSectionBg field="bgPresupuesto" label="Fondo de presupuesto" />
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+          <Titulo acento={accent} tinta={presupuestoText}
             kicker={<EditableZone field="presupuestoKicker" label="Etiqueta de presupuesto">Por presupuesto</EditableZone>}
             titulo={<EditableZone field="presupuestoHeading" label="Título de presupuesto">¿Cuánto querés gastar?</EditableZone>} />
           {hayTramos
@@ -696,9 +744,11 @@ export default function AutoDrive() {
 
       {/* ── VENDÉ TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="ad-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
-      <section id="tasar" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", background:FONDO }}>
-        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
-          <Titulo acento={accent}
+      <section id="tasar" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", position:"relative", ...secBg(tasarImg, tasarBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgTasar" /><SectionOverlay ov={tasarImg} />
+        <EditableSectionBg field="bgTasar" label="Fondo de tasación" />
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+          <Titulo acento={accent} tinta={tasarText}
             kicker={<EditableZone field="tasarKicker" label="Etiqueta de tasación">Vendé o permutá</EditableZone>}
             titulo={<EditableZone field="tasarHeading" label="Título de tasación">Tu usado vale</EditableZone>} />
           <VenderDrive storeId={config?.storeId} acento={accent} isOwner={isOwner} isPreview={isPreview} foto={tasarUrl}
@@ -718,8 +768,10 @@ export default function AutoDrive() {
           algo. Es la lista a la que le escribe Notificaciones; la lógica (captcha,
           confirmación, baja) es la de todos los templates, ver NewsletterForm. */}
       <SectionBlock id="ad-novedades" label="Recibí los ingresos por mail" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
-      <section style={{ padding:"clamp(32px,5vw,56px) clamp(16px,3vw,28px)", background:"#fff" }}>
-        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
+      <section style={{ padding:"clamp(32px,5vw,56px) clamp(16px,3vw,28px)", position:"relative", ...secBg(novedadesImg, novedadesBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgNovedades" /><SectionOverlay ov={novedadesImg} />
+        <EditableSectionBg field="bgNovedades" label="Fondo de novedades" />
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
           <div className="ad-novedades" style={{ background:accent, color:sobreAcento, borderRadius:22, padding:"clamp(24px,4vw,44px)" }}>
             <div style={{ minWidth:0 }}>
               <p style={{ margin:"0 0 10px", display:"inline-flex", fontSize:12, fontWeight:800, padding:"6px 12px", borderRadius:999,
@@ -759,9 +811,11 @@ export default function AutoDrive() {
       {/* ── VIDEOS ── los que la agencia subió en sus vehículos. */}
       <SectionBlock id="ad-videos" label="Videos" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       {(videos.length > 0 || enEditor) ? (
-      <section style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", background:"#fff" }}>
-        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
-          <Titulo acento={accent}
+      <section style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", position:"relative", ...secBg(videosImg, videosBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgVideos" /><SectionOverlay ov={videosImg} />
+        <EditableSectionBg field="bgVideos" label="Fondo de videos" />
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+          <Titulo acento={accent} tinta={videosText}
             kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
             titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos antes de venir</EditableZone>} />
           <VideosDrive videos={videos} acento={accent} moneda={currency} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
@@ -921,11 +975,13 @@ export default function AutoDrive() {
 
       {/* ── PREGUNTAS FRECUENTES ── contestadas con lo que la tienda tiene (lib/preguntasFrecuentes). */}
       <SectionBlock id="ad-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
-      <section id="preguntas" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", background:FONDO }}>
-        <div data-ef="sube" className="ad-faq" style={{ maxWidth:1240, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,64px)" }}>
+      <section id="preguntas" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", position:"relative", ...secBg(preguntasImg, preguntasBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgPreguntas" /><SectionOverlay ov={preguntasImg} />
+        <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
+        <div data-ef="sube" className="ad-faq" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,64px)" }}>
           {/* Del lado izquierdo, una foto y una salida para la duda que no está: que no quede un hueco. */}
           <div className="ad-faq-lado">
-            <Titulo acento={accent}
+            <Titulo acento={accent} tinta={preguntasText}
               kicker={<EditableZone field="faqKicker" label="Etiqueta de preguntas">Preguntas frecuentes</EditableZone>}
               titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
             <div className="ad-faq-tarjeta" style={{ background:"#fff", borderRadius:24, padding:8, boxShadow:"0 10px 30px rgba(15,23,42,0.07)", maxWidth:520 }}>

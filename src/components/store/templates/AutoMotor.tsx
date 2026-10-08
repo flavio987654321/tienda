@@ -27,6 +27,8 @@ import { useSesion } from "@/components/AuthProvider";
 import { useFavoritosVehiculos } from "@/hooks/useFavoritosVehiculos";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { SelectorVehiculoFoco } from "@/components/store/auto/SelectorVehiculoFoco";
+import { elegirFoco } from "@/lib/vehiculoFoco";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -39,7 +41,7 @@ import { CAPAS } from "@/lib/capas-tienda";
 import { TarjetaMotor, MOTOR_TARJETA_CSS } from "@/components/store/templates/motor/TarjetaMotor";
 import { BuscadorMotor } from "@/components/store/templates/motor/BuscadorMotor";
 import { TiposMotor } from "@/components/store/templates/motor/TiposMotor";
-import { FocoMotor, elegirFoco } from "@/components/store/templates/motor/FocoMotor";
+import { FocoMotor } from "@/components/store/templates/motor/FocoMotor";
 import { ServiciosMotor } from "@/components/store/templates/motor/ServiciosMotor";
 import { VideosMotor, VIDEOS_MOTOR_CSS } from "@/components/store/templates/motor/VideosMotor";
 import { PreguntasMotor } from "@/components/store/templates/motor/PreguntasMotor";
@@ -98,7 +100,7 @@ export default function AutoMotor() {
   const config        = useStoreConfig();
   const pushBell      = usePushBell();
   const { products, loadingProducts } = useStorefront();
-  const { editMode, overrides, hiddenSections } = useEditContext();
+  const { editMode, overrides, hiddenSections, setFeaturedVehicleId } = useEditContext();
   /* El menú sólo a secciones que se ven (5.3 de la auditoría): un link a un
      bloque oculto no hacía nada. En el menú del celular, tampoco a las que el
      dueño ocultó sólo en el celular. */
@@ -120,7 +122,7 @@ export default function AutoMotor() {
   const slug          = config?.slug ?? "";
   // Lo que la tienda tiene, para el buscador, los tipos y las estadísticas (ver lib/filtroVehiculos).
   const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
-  const foco = useMemo(() => elegirFoco(products), [products]);
+  const foco = useMemo(() => elegirFoco(products, config?.featuredVehicleId), [products, config?.featuredVehicleId]);
   // Los videos que ya están en cada vehículo (no se sube nada aparte).
   const videos = useMemo(() => videosDeVehiculos(products), [products]);
   const storeName     = config?.storeName ?? "AUTO MOTOR";
@@ -144,6 +146,31 @@ export default function AutoMotor() {
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
+
+  const tiposBg = sc["bgTipos"] ?? NEGRO;
+  const tiposImg = iovr["sectionbg_bgTipos"];
+  const tiposText = secText(tiposImg, tiposBg);
+  const tiposMid = secMid(tiposImg, tiposBg);
+  const focoBg = sc["bgFoco"] ?? NEGRO;
+  const focoImg = iovr["sectionbg_bgFoco"];
+  const focoText = secText(focoImg, focoBg);
+  const focoMid = secMid(focoImg, focoBg);
+  const videosBg = sc["bgVideos"] ?? NEGRO;
+  const videosImg = iovr["sectionbg_bgVideos"];
+  const videosText = secText(videosImg, videosBg);
+  const tasarBg = sc["bgTasar"] ?? SUPERFICIE;
+  const tasarImg = iovr["sectionbg_bgTasar"];
+  const tasarText = secText(tasarImg, tasarBg);
+  const novedadesBg = sc["bgNovedades"] ?? NEGRO;
+  const novedadesImg = iovr["sectionbg_bgNovedades"];
+  const novedadesText = secText(novedadesImg, novedadesBg);
+  const novedadesMid = secMid(novedadesImg, novedadesBg);
+  const statsBg = sc["bgStats"] ?? NEGRO;
+  const statsImg = iovr["sectionbg_bgStats"];
+  const statsText = secText(statsImg, statsBg);
+  const preguntasBg = sc["bgPreguntas"] ?? NEGRO;
+  const preguntasImg = iovr["sectionbg_bgPreguntas"];
+  const preguntasText = secText(preguntasImg, preguntasBg);
 
   const serviciosBg = sc["bgServicios"] ?? SUPERFICIE;
   const serviciosImg= iovr["sectionbg_bgServicios"];
@@ -286,10 +313,8 @@ export default function AutoMotor() {
         .bm-grilla { grid-template-columns:1fr }
         @media(min-width:700px){ .bm-grilla { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) } }
         .tp-grilla { grid-template-columns:repeat(2,minmax(0,1fr)) }
-        .tp-item { grid-column: span var(--tp-celu,1) }
-        @media(min-width:900px){ .tp-grilla { grid-template-columns:repeat(var(--tp-cols,4),minmax(0,1fr)) } .tp-item { grid-column: span var(--tp-compu,1) } .tp-grande { grid-row: span 2 } }
-        .tp-item { min-height:150px }
-        @media(min-width:900px){ .tp-item { min-height:190px } }
+        @media(min-width:640px){ .tp-grilla { grid-template-columns:repeat(3,minmax(0,1fr)) } }
+        @media(min-width:1100px){ .tp-grilla { grid-template-columns:repeat(4,minmax(0,1fr)) } }
         .tp-foto { transition: transform .8s cubic-bezier(.2,.7,.2,1) }
         .tp-item:hover .tp-foto { transform: scale(1.05) }
         .tp-item:focus-visible { outline:2px solid ${accent}; outline-offset:3px }
@@ -553,9 +578,11 @@ export default function AutoMotor() {
       {/* ── EXPLORÁ POR TIPO ── */}
       <SectionBlock id="am-tipos" label="Explorá por tipo" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {(opciones.tipos.length > 1 || opciones.marcas.length > 1) ? (
-        <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px) 0", background: NEGRO }}>
-          <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
-            <TiposMotor productos={products} opciones={opciones} moneda={currency} slug={slug} enEditor={isPreview}
+        <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px) 0", position:"relative", ...secBg(tiposImg, tiposBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgTipos" /><SectionOverlay ov={tiposImg} />
+          <EditableSectionBg field="bgTipos" label="Fondo de los tipos" />
+          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+            <TiposMotor productos={products} opciones={opciones} moneda={currency} slug={slug} enEditor={isPreview} acento={accent} tinta={tiposText} tintaSuave={tiposMid}
               titulo={<EditableZone field="tiposHeading" label="Título de los tipos">{opciones.tipos.length > 1 ? "Explorá por tipo" : "Explorá por marca"}</EditableZone>} />
           </div>
         </section>
@@ -603,12 +630,18 @@ export default function AutoMotor() {
 
       {/* ── VEHÍCULO EN FOCO ── */}
       <SectionBlock id="am-foco" label="Vehículo en foco" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      {foco ? (
-        <section style={{ padding:"0 clamp(16px,4vw,32px) clamp(56px,8vw,96px)", background: catalogoImg?.url ? NEGRO : catalogoBg }}>
-          <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
-            <FocoMotor p={foco} acento={accent} moneda={currency} whatsapp={whatsapp} enPrevia={isPreview}
+      {(foco || (editMode && isPreview)) ? (
+        <section style={{ padding:`${editMode && isPreview ? "52px" : "0"} clamp(16px,4vw,32px) clamp(56px,8vw,96px)`, position:"relative", ...secBg(focoImg, focoBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgFoco" /><SectionOverlay ov={focoImg} />
+          <EditableSectionBg field="bgFoco" label="Fondo de la vidriera" />
+          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+            {editMode && isPreview && <div style={{ marginBottom:16 }}>
+              <SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} oscuro onChange={setFeaturedVehicleId} />
+            </div>}
+            {foco ? <FocoMotor p={foco} acento={accent} moneda={currency} whatsapp={whatsapp} enPrevia={isPreview}
               href={paginaDe(foco)}
               kicker={<EditableZone field="focoKicker" label="Etiqueta del vehículo en foco">En foco</EditableZone>} />
+              : <p style={{ margin:0, padding:24, color:focoText, border:`1px dashed ${focoMid}`, textAlign:"center" }}>Todavía no hay vehículos para mostrar en la vidriera.</p>}
           </div>
         </section>
       ) : null}
@@ -617,13 +650,15 @@ export default function AutoMotor() {
       {/* ── VIDEOS ── los que la agencia subió en sus vehículos. */}
       <SectionBlock id="am-videos" label="Videos" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {(videos.length > 0 || enEditor) ? (
-        <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
-          <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
-            <Encabezado acento={accent} tinta="#f4f4f5"
+        <section style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", position:"relative", borderTop:`1px solid ${LINEA}`, ...secBg(videosImg, videosBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgVideos" /><SectionOverlay ov={videosImg} />
+          <EditableSectionBg field="bgVideos" label="Fondo de videos" />
+          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+            <Encabezado acento={accent} tinta={videosText}
               kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
               titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos andar</EditableZone>} />
-            <VideosMotor videos={videos} acento={accent} moneda={currency} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
-              vacio={<p style={{ margin:0, padding:"28px 20px", border:`1px dashed ${LINEA}`, borderRadius:4, color:"rgba(255,255,255,0.6)", fontSize:14, lineHeight:1.6 }}>
+            <VideosMotor videos={videos} acento={accent} moneda={currency} tinta={videosText} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
+              vacio={<p style={{ margin:0, padding:"28px 20px", border:`1px dashed ${LINEA}`, borderRadius:4, color:videosText === "#111111" ? "rgba(0,0,0,.62)" : "rgba(255,255,255,0.6)", fontSize:14, lineHeight:1.6 }}>
                 Acá aparecen los videos que subas en cada vehículo (en Productos → el vehículo → Videos). Cada uno lleva a su vehículo. Mientras no haya ninguno, este bloque no se muestra en la tienda.
               </p>} />
           </div>
@@ -633,9 +668,11 @@ export default function AutoMotor() {
 
       {/* ── TASÁ TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="am-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section id="tasar" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: SUPERFICIE, borderTop:`1px solid ${LINEA}` }}>
-        <div data-ef="sube" style={{ maxWidth:1280, margin:"0 auto" }}>
-          <Encabezado acento={accent} tinta="#f4f4f5"
+      <section id="tasar" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", position:"relative", borderTop:`1px solid ${LINEA}`, ...secBg(tasarImg, tasarBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgTasar" /><SectionOverlay ov={tasarImg} />
+        <EditableSectionBg field="bgTasar" label="Fondo de tasación" />
+        <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
+          <Encabezado acento={accent} tinta={tasarText}
             kicker={<EditableZone field="tasarKicker" label="Etiqueta de tasación">Antes de comprar</EditableZone>}
             titulo={<EditableZone field="tasarHeading" label="Título de tasación">Te ayudamos a dar el paso</EditableZone>} />
           <ServiciosMotor storeId={config?.storeId} acento={accent} isOwner={isOwner} isPreview={isPreview}
@@ -654,13 +691,15 @@ export default function AutoMotor() {
           algo. Es la lista a la que le escribe Notificaciones; la lógica (captcha,
           confirmación, baja) es la de todos los templates, ver NewsletterForm. */}
       <SectionBlock id="am-novedades" label="Recibí los ingresos por mail" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section style={{ padding:"clamp(48px,7vw,80px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
-        <div data-ef="sube" className="am-novedades" style={{ maxWidth:1280, margin:"0 auto" }}>
+      <section style={{ padding:"clamp(48px,7vw,80px) clamp(16px,4vw,32px)", position:"relative", borderTop:`1px solid ${LINEA}`, ...secBg(novedadesImg, novedadesBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgNovedades" /><SectionOverlay ov={novedadesImg} />
+        <EditableSectionBg field="bgNovedades" label="Fondo de novedades" />
+        <div data-ef="sube" className="am-novedades" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
           <div style={{ minWidth:0 }}>
-            <Encabezado acento={accent} tinta="#f4f4f5"
+            <Encabezado acento={accent} tinta={novedadesText}
               kicker={<EditableZone field="novedadesKicker" label="Etiqueta de novedades">Novedades</EditableZone>}
               titulo={<EditableZone field="novedadesHeading" label="Título de novedades">Enterate primero de lo que entra</EditableZone>} />
-            <p style={{ margin:"-12px 0 0", maxWidth:520, fontSize:15, lineHeight:1.6, color:"rgba(255,255,255,0.62)" }}>
+            <p style={{ margin:"-12px 0 0", maxWidth:520, fontSize:15, lineHeight:1.6, color:novedadesMid }}>
               <EditableZone field="novedadesTexto" label="Texto de novedades">Dejanos tu mail y te avisamos cuando ingresen unidades nuevas o baje un precio. Sin spam.</EditableZone>
             </p>
           </div>
@@ -689,14 +728,16 @@ export default function AutoMotor() {
       {/* ── NÚMEROS ── */}
       <SectionBlock id="am-stats" label="Números" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       {stats.length > 0 ? (
-        <div style={{ background: NEGRO, borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, padding:"0 clamp(16px,4vw,32px)" }}>
-          <div className="am-stats" data-ef="grilla" style={{ maxWidth:1280, margin:"0 auto" }}>
+        <div style={{ position:"relative", borderTop:`1px solid ${LINEA}`, borderBottom:`1px solid ${LINEA}`, padding:`${editMode && isPreview ? "44px" : "0"} clamp(16px,4vw,32px) 0`, ...secBg(statsImg, statsBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgStats" /><SectionOverlay ov={statsImg} />
+          <EditableSectionBg field="bgStats" label="Fondo de los números" />
+          <div className="am-stats" data-ef="grilla" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
             {stats.map((s, i) => (
               <div key={s.fv} style={{ padding:"clamp(28px,4vw,44px) 16px", borderLeft: i > 0 ? `1px solid ${LINEA}` : "none" }}>
-                <p data-ef-contar style={{ margin:0, fontSize:"clamp(34px,5vw,60px)", fontWeight:900, color:"#fff", letterSpacing:-2, lineHeight:1, fontVariantNumeric:"tabular-nums" }}>
+                <p data-ef-contar style={{ margin:0, fontSize:"clamp(34px,5vw,60px)", fontWeight:900, color:statsText, letterSpacing:-2, lineHeight:1, fontVariantNumeric:"tabular-nums" }}>
                   <EditableZone field={s.fv} label={`Número ${i+1}`}>{s.n}</EditableZone>
                 </p>
-                <p style={{ margin:"10px 0 0", fontSize:11, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:2.5 }}>
+                <p style={{ margin:"10px 0 0", fontSize:11, color:statsText === "#111111" ? "rgba(0,0,0,.58)" : "rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:2.5 }}>
                   <EditableZone field={s.fl} label={`Texto del número ${i+1}`}>{s.l}</EditableZone>
                 </p>
               </div>
@@ -785,11 +826,13 @@ export default function AutoMotor() {
 
       {/* ── PREGUNTAS FRECUENTES ── contestadas con lo que la tienda tiene (lib/preguntasFrecuentes). */}
       <SectionBlock id="am-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
-      <section id="preguntas" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
-        <div data-ef="sube" className="am-faq" style={{ maxWidth:1280, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,72px)" }}>
+      <section id="preguntas" style={{ padding:"clamp(56px,8vw,96px) clamp(16px,4vw,32px)", position:"relative", borderTop:`1px solid ${LINEA}`, ...secBg(preguntasImg, preguntasBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgPreguntas" /><SectionOverlay ov={preguntasImg} />
+        <EditableSectionBg field="bgPreguntas" label="Fondo de preguntas" />
+        <div data-ef="sube" className="am-faq" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto", display:"grid", gap:"24px clamp(32px,5vw,72px)" }}>
           {/* La columna de la izquierda no queda vacía: foto (editable) y una salida para la duda que no está. */}
           <div className="am-faq-lado">
-            <Encabezado acento={accent} tinta="#f4f4f5"
+            <Encabezado acento={accent} tinta={preguntasText}
               kicker={<EditableZone field="faqKicker" label="Etiqueta de preguntas">Preguntas</EditableZone>}
               titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
             <div className="am-faq-foto" style={{ position:"relative", overflow:"hidden", aspectRatio:"4/3", borderRadius:4, border:`1px solid ${LINEA}` }}>
@@ -814,7 +857,7 @@ export default function AutoMotor() {
               <EditableImageButton field="faqImage" label="Foto de preguntas" />
             </div>
           </div>
-          <PreguntasMotor acento={accent} preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })} />
+          <PreguntasMotor acento={accent} tinta={preguntasText} preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })} />
         </div>
       </section>
       </SectionBlock>

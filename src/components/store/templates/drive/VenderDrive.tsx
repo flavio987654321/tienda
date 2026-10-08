@@ -70,13 +70,12 @@ export function VenderDrive({ storeId, acento, isOwner, isPreview, foto, botonFo
           </button>
         </div>
       </div>
-      {abierto && (
-        <VentanaAuto titulo={abierto === "tasar" ? "Tasá tu usado" : "Avisame si entra"} onClose={cerrar}>
-          {abierto === "tasar"
-            ? <TasacionVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} abiertoDeEntrada />
-            : <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} />}
-        </VentanaAuto>
-      )}
+      <VentanaAuto abierta={abierto === "tasar"} titulo="Tasá tu usado" onClose={cerrar}>
+        <TasacionVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} abiertoDeEntrada />
+      </VentanaAuto>
+      <VentanaAuto abierta={abierto === "avisame"} titulo="Avisame si entra" onClose={cerrar}>
+        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} />
+      </VentanaAuto>
     </>
   );
 }

@@ -55,11 +55,11 @@ export function VideosDrive({ videos, acento, moneda, hrefDe, vacio }: {
       )}
     </>
   );
-  const caja: React.CSSProperties = { position: "relative", display: "block", width: "100%", aspectRatio: "16/10", borderRadius: 20, overflow: "hidden",
+  const caja: React.CSSProperties = { position: "relative", display: "block", width: "100%", aspectRatio: "16/9", borderRadius: 20, overflow: "hidden",
     background: "#e2e8f0", border: "none", padding: 0, cursor: "pointer" };
 
   return (
-    <div className="vd-grilla" style={{ display: "grid", gap: 16, alignItems: "start" }}>
+    <div className={`vd-grilla${videos.length === 1 ? " vd-solo" : ""}`} style={{ display: "grid", gap: 16, alignItems: "start" }}>
       <div>
         {reel.kind === "link"
           ? <a href={actual.url} target="_blank" rel="noopener noreferrer" aria-label={`Ver el video de ${p.name} en ${reel.platform}`} className="vd-grande" style={caja}>{tapaGrande}</a>
@@ -112,7 +112,8 @@ export function VideosDrive({ videos, acento, moneda, hrefDe, vacio }: {
 }
 
 export const VIDEOS_DRIVE_CSS = `
-  @media(min-width:900px){ .vd-grilla { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) } .vd-lista { max-height:520px; overflow-y:auto; padding-right:4px !important } }
+  @media(min-width:900px){ .vd-grilla:not(.vd-solo) { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) } .vd-solo { grid-template-columns:minmax(0,min(100%,760px)); justify-content:center } .vd-lista { max-height:520px; overflow-y:auto; padding-right:4px !important } }
+  .vd-solo > div:first-child { width:min(100%,760px); margin-inline:auto }
   @media(max-width:899px){ .vd-lista { display:flex !important; overflow-x:auto; scroll-snap-type:x mandatory } .vd-lista li { flex:0 0 min(300px,82%); scroll-snap-align:start } }
   .vd-foto { transition: transform .7s cubic-bezier(.2,.7,.2,1) }
   .vd-grande:hover .vd-foto { transform: scale(1.03) }

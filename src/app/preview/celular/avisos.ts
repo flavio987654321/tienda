@@ -27,6 +27,7 @@ export const LLAMADAS = [
   "toggleHiddenSection",
   "moveSection",
   "setHiddenSectionCelular",
+  "setFeaturedVehicleId",
 ] as const;
 export type Llamada = (typeof LLAMADAS)[number];
 

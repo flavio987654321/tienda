@@ -21,11 +21,12 @@ import { useEffect, useRef } from "react";
    y llega tarde: si justo se abrió otra ventana, la cerraba. Ese se ignora. */
 let atrasPropio = false;
 
-export function useCerrarConAtras(cerrar: () => void) {
+export function useCerrarConAtras(cerrar: () => void, habilitado = true) {
   const cerrarRef = useRef(cerrar);
   useEffect(() => { cerrarRef.current = cerrar; });
 
   useEffect(() => {
+    if (!habilitado) return;
     let marca: string | null = null;
     let porAtras = false;
     const espera = window.setTimeout(() => {
@@ -49,5 +50,5 @@ export function useCerrarConAtras(cerrar: () => void) {
         window.history.back();
       }
     };
-  }, []);
+  }, [habilitado]);
 }

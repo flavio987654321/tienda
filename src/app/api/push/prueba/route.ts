@@ -24,16 +24,19 @@ export async function POST(req: NextRequest) {
 
   if (!pushConfigurado()) return NextResponse.json({ error: "Los avisos no están configurados en este servidor." }, { status: 503 });
 
-  const body = (await req.json().catch(() => null)) as { endpoint?: unknown; demora?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { endpoint?: unknown; demora?: unknown; panel?: unknown } | null;
   if (!endpointDePushValido(body?.endpoint)) return NextResponse.json({ error: "Este celular no está anotado." }, { status: 400 });
 
   if (body?.demora === true) await new Promise((r) => setTimeout(r, DEMORA_MS));
 
+  const esDigitales = body?.panel === "digitales";
   const r = await sendPushDePrueba(user.id, body!.endpoint as string, {
-    title: "¡Funciona! 🎉",
-    body: "Así te van a llegar los avisos de tu tienda, aunque tengas la app cerrada.",
-    url: "/dashboard",
-    tag: "aviso-de-prueba",
+    title: esDigitales ? "¡Avisos de ventas activados! 🎉" : "¡Funciona! 🎉",
+    body: esDigitales
+      ? "Así te avisaremos cuando se concrete una venta, aunque tengas la app cerrada."
+      : "Así te van a llegar los avisos de tu tienda, aunque tengas la app cerrada.",
+    url: esDigitales ? "/digitales/ventas" : "/dashboard",
+    tag: esDigitales ? "aviso-de-prueba-digitales" : "aviso-de-prueba",
   });
   if (r === "ok") return NextResponse.json({ ok: true });
   if (r === "vencida" || r === "no-esta") {

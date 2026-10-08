@@ -13,8 +13,8 @@ import { monedaDe } from "@/lib/monedaVehiculo";
  * (ProductReels); Instagram y TikTok se abren en su app.
  */
 export const VIDEOS_MOTOR_CSS = `
-  .vm-tira { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:6px; scrollbar-width:thin }
-  .vm-card { scroll-snap-align:start; flex:0 0 clamp(190px,52vw,250px) }
+  .vm-tira { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; padding:0 0 6px; scrollbar-width:thin }
+  .vm-card { scroll-snap-align:start; flex:0 0 clamp(150px,22vw,220px); min-width:0 }
   .vm-foto { transition: transform .7s cubic-bezier(.2,.7,.2,1) }
   .vm-card:hover .vm-foto { transform: scale(1.05) }
   .vm-play { transition: transform .25s }
@@ -22,13 +22,14 @@ export const VIDEOS_MOTOR_CSS = `
   @media (prefers-reduced-motion: reduce) { .vm-foto, .vm-play { transition:none } }
 `;
 
-export function VideosMotor({ videos, acento, moneda, hrefDe, vacio }: {
+export function VideosMotor({ videos, acento, moneda, hrefDe, vacio, tinta = "#f4f4f5" }: {
   videos: VideoDeVehiculo[];
   acento: string;
   moneda: string;
   hrefDe: (id: string) => string;
   /** Lo que se ve en el editor si todavía no hay videos (afuera, el bloque no se muestra). */
   vacio?: React.ReactNode;
+  tinta?: string;
 }) {
   const [abierto, setAbierto] = useState<string | null>(null);
   if (!videos.length) return vacio ? <>{vacio}</> : null;
@@ -57,14 +58,14 @@ export function VideosMotor({ videos, acento, moneda, hrefDe, vacio }: {
               )}
             </>
           );
-          const caja: React.CSSProperties = { position: "relative", display: "block", aspectRatio: "9/16", overflow: "hidden", borderRadius: 4,
+          const caja: React.CSSProperties = { position: "relative", display: "block", aspectRatio: "4/3", overflow: "hidden", borderRadius: 4,
             background: "#141619", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", padding: 0, width: "100%" };
           return (
             <li key={`${p.id}-${url}`} className="vm-card">
               {reel.kind === "link"
                 ? <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Ver el video de ${p.name} en ${reel.platform}`} style={caja}>{tapa}</a>
                 : <button type="button" onClick={() => setAbierto(url)} aria-label={`Ver el video de ${p.name}`} style={caja}>{tapa}</button>}
-              <Link href={hrefDe(p.id)} style={{ display: "block", marginTop: 10, color: "#f4f4f5", textDecoration: "none" }}>
+              <Link href={hrefDe(p.id)} style={{ display: "block", marginTop: 10, color:tinta, textDecoration: "none" }}>
                 <span style={{ display: "block", fontSize: 14, fontWeight: 700, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                 <span style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 3, fontSize: 13 }}>
                   <span style={{ fontWeight: 800 }}>{p.price > 0 ? fmtPrice(p.price, monedaDe(p, moneda)) : "Consultar"}</span>

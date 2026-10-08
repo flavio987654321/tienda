@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Bell, BellOff, Check, Loader2, Send } from "lucide-react";
 import { Smartphone, Download } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getPushSubscription, isPushSupported } from "@/lib/push-client";
 import { esAppInstalada, esIOS } from "@/lib/pwa";
@@ -29,10 +29,14 @@ import { useSePuedeInstalar, instalarLaApp } from "@/lib/instalar-app";
  *   - activo / apagado: el interruptor.
  */
 type Estado = "cargando" | "activo" | "apagado" | "bloqueado" | "error" | "sin-servidor";
+type EstadoPrueba = "nada" | "enviando" | "enviado" | "error";
 
 export default function AvisosDeVenta() {
   const [estado, setEstado] = useState<Estado>("cargando");
+  const [prueba, setPrueba] = useState<EstadoPrueba>("nada");
+  const [errorPrueba, setErrorPrueba] = useState("");
   const enVuelo = useRef(false);
+  const probando = useRef(false);
 
   /* `null` en el servidor: no se sabe. Con `false` a secas, el primer pintado
      diría "tu navegador no soporta avisos" a todo el mundo. */
@@ -80,9 +84,46 @@ export default function AvisosDeVenta() {
       }
       const ok = eraActivo ? await unsubscribeFromPush() : await subscribeToPush();
       if (!ok && !eraActivo && Notification.permission === "denied") setEstado("bloqueado");
-      else setEstado(ok ? (eraActivo ? "apagado" : "activo") : "error");
+      else {
+        setEstado(ok ? (eraActivo ? "apagado" : "activo") : "error");
+        if (ok) { setPrueba("nada"); setErrorPrueba(""); }
+      }
     } finally {
       enVuelo.current = false;
+    }
+  }
+
+  async function probar() {
+    if (probando.current) return;
+    probando.current = true;
+    setPrueba("enviando");
+    setErrorPrueba("");
+    try {
+      const sub = await getPushSubscription();
+      if (!sub) {
+        setEstado("apagado");
+        setPrueba("error");
+        setErrorPrueba("Este dispositivo no tiene los avisos activos. Activá los avisos y probá de nuevo.");
+        return;
+      }
+      const r = await fetch("/api/push/prueba", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint, panel: "digitales" }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const d = (await r.json().catch(() => ({}))) as { error?: string; reactivar?: boolean };
+      if (r.ok) setPrueba("enviado");
+      else {
+        if (d.reactivar) setEstado("apagado");
+        setPrueba("error");
+        setErrorPrueba(d.error ?? "No se pudo mandar el aviso de prueba. Probá de nuevo.");
+      }
+    } catch {
+      setPrueba("error");
+      setErrorPrueba("No pudimos comprobar el envío. Revisá tu conexión y probá de nuevo.");
+    } finally {
+      probando.current = false;
     }
   }
 
@@ -164,6 +205,35 @@ export default function AvisosDeVenta() {
               : "Apenas se concreta una venta, un aviso en este dispositivo."}
       </span>
     </div>
+    {(activo || prueba === "error") && (
+      <div className="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 p-3 sm:p-4">
+        {activo && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-100">Comprobá que llegan a este dispositivo</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+                Al tocar «Mandar prueba», enviamos un aviso a este dispositivo. Al tocar el aviso, abre tus ventas.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void probar()}
+              disabled={prueba === "enviando"}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500 disabled:opacity-60"
+            >
+              {prueba === "enviando" ? <Loader2 className="h-4 w-4 animate-spin" /> : prueba === "enviado" ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+              {prueba === "enviando" ? "Enviando…" : prueba === "enviado" ? "Volver a probar" : "Mandar prueba"}
+            </button>
+          </div>
+        )}
+        {prueba === "enviado" && (
+          <p role="status" className="mt-3 text-sm text-green-700 panel-oscuro:text-green-300">
+            El servidor aceptó el envío. Revisá las notificaciones de este dispositivo; puede tardar unos segundos.
+          </p>
+        )}
+        {prueba === "error" && <p role="alert" className="mt-3 text-sm text-red-600 panel-oscuro:text-red-300">{errorPrueba}</p>}
+      </div>
+    )}
     </div>
   );
 }

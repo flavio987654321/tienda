@@ -41,6 +41,7 @@ type EditContextType = {
   toggleHiddenSection: (id: string) => void;
   sectionOrder: string[];
   moveSection: (id: string, defaultOrder: string[], direction: "up" | "down") => void;
+  setFeaturedVehicleId: (id: string | undefined) => void;
   /** Se está editando la vista de celular (el iframe de /preview/celular).
    *  Opcional: la tienda publicada y la previa de PC no lo pasan. */
   vistaCelular?: boolean;
@@ -70,6 +71,7 @@ export const EditContext = createContext<EditContextType>({
   toggleHiddenSection: () => {},
   sectionOrder: [],
   moveSection: () => {},
+  setFeaturedVehicleId: () => {},
 });
 
 // Luminancia relativa del color (0 = negro, 1 = blanco), o `null` si no se pudo
@@ -253,12 +255,31 @@ export function EditableZone({
   const tocaCelular = Object.keys(marcasCelular).length > 0;
 
   const displayContent = ov.text !== undefined ? ov.text : children;
+  const contenidoConColores = typeof displayContent === "string" && ov.coloresEnTexto?.length
+    ? (() => {
+        const rangos = [...ov.coloresEnTexto]
+          .filter(r => Number.isInteger(r.inicio) && Number.isInteger(r.fin) && r.inicio >= 0 && r.fin > r.inicio && r.inicio < displayContent.length)
+          .sort((a, b) => a.inicio - b.inicio);
+        const partes: React.ReactNode[] = [];
+        let desde = 0;
+        for (const r of rangos) {
+          const inicio = Math.max(desde, r.inicio);
+          const fin = Math.min(displayContent.length, r.fin);
+          if (fin <= inicio) continue;
+          if (inicio > desde) partes.push(displayContent.slice(desde, inicio));
+          partes.push(<span key={`${inicio}-${fin}-${r.color}`} style={{ color: r.color }}>{displayContent.slice(inicio, fin)}</span>);
+          desde = fin;
+        }
+        if (desde < displayContent.length) partes.push(displayContent.slice(desde));
+        return partes;
+      })()
+    : displayContent;
   /* El texto que trae el diseño, para que el panel lo muestre en la caja aunque
      ya se haya cambiado. Se saca de `children` y no de la pantalla: la pantalla
      muestra lo escrito, y recién después de volver al original muestra el
      original — leerla ahí confundía lo tipeado con el texto de fábrica. */
   const original = editMode ? textoPlano(children) : "";
-  const hasStyle = Object.keys(overrideStyle).length > 0 || tocaCelular;
+  const hasStyle = Object.keys(overrideStyle).length > 0 || tocaCelular || !!ov.coloresEnTexto?.length;
 
   /* Que una palabra larguísima CORTE en vez de salirse de la pantalla.
    *
@@ -288,7 +309,7 @@ export function EditableZone({
     if (isHidden) return null;
     if (!hasStyle && ov.text === undefined) return <>{children}</>;
     const Tag = block ? "div" : ("span" as React.ElementType);
-    return <Tag style={estiloConCorte} {...marcasCelular}>{displayContent}</Tag>;
+    return <Tag style={estiloConCorte} {...marcasCelular}>{contenidoConColores}</Tag>;
   }
 
   const Tag = block ? "div" : ("span" as React.ElementType);
@@ -328,7 +349,7 @@ export function EditableZone({
           maxWidth: "100%",
         } as React.CSSProperties}
       >
-        {displayContent}
+        {contenidoConColores}
         {(hovered || isActive) && (
           <span data-edit-globito="" style={{
             position: "absolute", top: 0, left: 0,
@@ -393,7 +414,7 @@ export function EditableZone({
         ...overrideStyle,
       } as React.CSSProperties}
     >
-      {displayContent}
+      {contenidoConColores}
       {hovered && !isActive && !noBadge && (
         <span data-edit-globito="" style={{
           position: "absolute", top: 0, left: 0,

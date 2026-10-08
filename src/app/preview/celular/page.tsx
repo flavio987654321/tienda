@@ -224,6 +224,7 @@ export default function PreviaCelular() {
       moveSection: p("moveSection"),
       vistaCelular: !!edicion,
       setHiddenSectionCelular: p("setHiddenSectionCelular"),
+      setFeaturedVehicleId: p("setFeaturedVehicleId"),
     };
   }, [edicion, config]);
 
