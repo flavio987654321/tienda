@@ -47,6 +47,7 @@ const POR_TIPO: Record<string, string> = {
   nosotros: "Tu historia: quién está detrás de la tienda. La gente le compra a personas; contarlo genera confianza.",
   contacto: "Cómo escribirte: formulario, WhatsApp y redes. Si lo ocultás, el botón \"Escribinos\" de las preguntas lleva a tu WhatsApp.",
   newsletter: "Para que te dejen su mail y enterarse de ofertas y novedades. Es la forma de volver a hablarles a los que ya te conocen.",
+  novedades: "Para que te dejen su mail y avisarles cuando entra una unidad o baja un precio. Les escribís desde Notificaciones. Si lo ocultás, nadie puede dejar su correo y tus avisos salen sólo por push.",
 };
 
 const POR_ID: Record<string, string> = {

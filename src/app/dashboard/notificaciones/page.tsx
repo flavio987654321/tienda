@@ -60,6 +60,8 @@ type Stats = {
   totalCampanas: number;
   historialMax: number;
   rubro?: string | null;
+  /** false = la tienda no tiene a la vista dónde dejar el mail (autos con el bloque oculto). */
+  mailEnTienda?: boolean;
 };
 
 type LoadState = "loading" | "ok" | "not_premium" | "error";
@@ -106,6 +108,10 @@ export default function NotificacionesPage() {
   const enviandoRef = useRef(false);
   const esAutos = stats?.rubro === "AUTOS";
   const presets = esAutos ? PRESET_TYPES_AUTOS : PRESET_TYPES;
+  /* Sólo push cuando la tienda no tiene dónde dejar el mail: en autos, si
+     ocultó el bloque "Recibí los ingresos por mail". Entonces no se habla
+     de dos vías. */
+  const soloPush = esAutos && stats?.mailEnTienda === false;
 
   function loadStats() {
     fetch("/api/push/send")
@@ -318,7 +324,7 @@ export default function NotificacionesPage() {
             Notificaciones push
           </h1>
           <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
-            {esAutos
+            {soloPush
               ? "Un mensaje al celular de los que siguen tu tienda: un ingreso, una baja de precio, una novedad."
               : "Un mensaje que sale por dos vías: push al celular de tus seguidores y mail a los suscriptores de tu tienda."}
           </p>
@@ -350,7 +356,7 @@ export default function NotificacionesPage() {
             <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
               {loadingStats
                 ? " "
-                : esAutos
+                : soloPush
                   ? `${stats?.followerCount ?? 0} siguiendo tu tienda`
                   : `${stats?.followerCount ?? 0} por push · ${stats?.emailCount ?? 0} por mail`}
             </p>
@@ -424,14 +430,13 @@ export default function NotificacionesPage() {
           <p className="text-xs font-bold text-blue-700 panel-oscuro:text-blue-300 uppercase tracking-wide mb-2">¿Cómo funciona?</p>
           <div className="grid gap-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300 sm:grid-cols-3">
             {[
-              esAutos
+              soloPush
                 ? <>Escribís el mensaje <strong>una sola vez</strong> y les llega a todos los que siguen tu tienda.</>
                 : <>Escribís el mensaje <strong>una sola vez</strong> y sale por dos vías distintas.</>,
               <><strong>Push</strong> al celular de los que tocan 👍 en tu tienda, aunque la tengan cerrada. En iPhone solo si instalaron la tienda en su pantalla de inicio.</>,
-              // Los templates de autos no tienen el bloque para dejar el mail:
-              // prometerlo era mentirle a la concesionaria.
-              esAutos
-                ? <><strong>Mail</strong>: todavía no. Los templates de autos no tienen el bloque para dejar el correo, así que por ahora sale solo por push.</>
+              // Con el bloque oculto, prometer el mail era mentirle a la dueña.
+              soloPush
+                ? <><strong>Mail</strong>: apagado. Tu tienda no muestra el bloque &quot;Recibí los ingresos por mail&quot; (está oculto en Diseño, o todavía no elegiste un diseño), así que por ahora sale solo por push.</>
                 : <><strong>Mail</strong> a los que dejaron su correo en el bloque de novedades y lo confirmaron.</>,
             ].map((texto, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -442,7 +447,7 @@ export default function NotificacionesPage() {
           </div>
           <p className="mt-3 border-t border-blue-100 panel-oscuro:border-blue-500/30 pt-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300">
             El límite de <strong>{PUSH_CAMPAIGNS_PER_WEEK} por semana</strong> cuenta mensajes, no envíos
-            {esAutos ? ": no importa a cuánta gente le llegue, cada uno gasta uno solo." : ": mandar por las dos vías gasta uno solo."}
+            {soloPush ? ": no importa a cuánta gente le llegue, cada uno gasta uno solo." : ": mandar por las dos vías gasta uno solo."}
           </p>
         </div>
 
@@ -907,7 +912,7 @@ export default function NotificacionesPage() {
             <Bell className="h-8 w-8 text-gray-300 panel-oscuro:text-gray-600 mx-auto mb-3" />
             <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Todavía no tenés a quién escribirle</p>
             <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1 max-w-sm mx-auto leading-relaxed">
-              {esAutos
+              {soloPush
                 ? "Se suma gente cuando un cliente registrado toca 👍 en tu tienda para seguirla."
                 : "Se suma gente por dos lados: los clientes registrados que tocan 👍 en tu tienda para seguirla, y los que dejan su correo en el bloque de novedades y lo confirman por mail."}
             </p>

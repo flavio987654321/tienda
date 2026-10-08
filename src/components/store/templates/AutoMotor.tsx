@@ -14,6 +14,7 @@
  */
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
+import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -74,7 +75,7 @@ const NEGRO = "#0b0c0e";
 const SUPERFICIE = "#101114";
 const LINEA = "rgba(255,255,255,0.08)";
 
-const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-videos", "am-tasar", "am-stats", "am-servicios", "am-nosotros", "am-preguntas", "am-contacto"];
+const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-videos", "am-tasar", "am-novedades", "am-stats", "am-servicios", "am-nosotros", "am-preguntas", "am-contacto"];
 
 /** El título de cada bloque: rayita del acento, etiqueta chica y título grande. */
 function Encabezado({ acento, tinta, kicker, titulo, derecha }: { acento: string; tinta: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode }) {
@@ -310,6 +311,9 @@ export default function AutoMotor() {
         @keyframes am-spin { to { transform:rotate(360deg) } }
         @keyframes am-sube { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
         .am-entra { animation: am-sube .9s cubic-bezier(.2,.7,.2,1) both }
+        /* Recibí los ingresos por mail: texto y campo lado a lado; en angosto, uno abajo del otro. */
+        .am-novedades { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:clamp(20px,4vw,56px); align-items:end }
+        @media (max-width: 860px) { .am-novedades { grid-template-columns:minmax(0,1fr) } }
         /* Efectos al bajar (08/10/26), ver shared/efectosAutos: entran con fuerza, uno tras otro. */
         @keyframes am-ef-sube { from { opacity:0; transform:translateY(36px) } to { opacity:1; transform:none } }
         .ef-listo [data-ef="sube"]:not(.ef-in) > *, .ef-listo [data-ef="grilla"]:not(.ef-in) > * { opacity:0 }
@@ -641,6 +645,43 @@ export default function AutoMotor() {
               avisameTitulo: <EditableZone field="avisameTitulo" label="Avisame si entra — título">¿No está lo que buscás?</EditableZone>,
               avisameTexto: <EditableZone field="avisameTexto" label="Avisame si entra — texto">Dejanos marca, modelo y hasta cuánto querés gastar. Cuando entre, te escribimos primero.</EditableZone>,
             }} />
+        </div>
+      </section>
+      </SectionBlock>
+
+      {/* ── RECIBÍ LOS INGRESOS POR MAIL ── (08/10/26) Mucha gente no se registra
+          para tocar el corazón, pero deja su mail para enterarse cuando entra
+          algo. Es la lista a la que le escribe Notificaciones; la lógica (captcha,
+          confirmación, baja) es la de todos los templates, ver NewsletterForm. */}
+      <SectionBlock id="am-novedades" label="Recibí los ingresos por mail" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+      <section style={{ padding:"clamp(48px,7vw,80px) clamp(16px,4vw,32px)", background: NEGRO, borderTop:`1px solid ${LINEA}` }}>
+        <div data-ef="sube" className="am-novedades" style={{ maxWidth:1280, margin:"0 auto" }}>
+          <div style={{ minWidth:0 }}>
+            <Encabezado acento={accent} tinta="#f4f4f5"
+              kicker={<EditableZone field="novedadesKicker" label="Etiqueta de novedades">Novedades</EditableZone>}
+              titulo={<EditableZone field="novedadesHeading" label="Título de novedades">Enterate primero de lo que entra</EditableZone>} />
+            <p style={{ margin:"-12px 0 0", maxWidth:520, fontSize:15, lineHeight:1.6, color:"rgba(255,255,255,0.62)" }}>
+              <EditableZone field="novedadesTexto" label="Texto de novedades">Dejanos tu mail y te avisamos cuando ingresen unidades nuevas o baje un precio. Sin spam.</EditableZone>
+            </p>
+          </div>
+          <div style={{ minWidth:0 }}>
+            <NewsletterForm
+              slug={slug}
+              isPreview={isPreview}
+              placeholder="tu@email.com"
+              boton="Avisarme"
+              theme={{
+                form: { display:"flex", gap:0, background:SUPERFICIE, border:`1px solid rgba(255,255,255,0.14)`, borderRadius:4, overflow:"hidden" },
+                input: { flex:1, minWidth:0, border:"none", outline:"none", background:"transparent", color:"#f4f4f5", fontSize:15, padding:"16px 16px", fontFamily:"inherit" },
+                boton: { flexShrink:0, background:accent, color:sobreAcento, border:"none", borderRadius:0, padding:"0 24px", fontSize:12, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" },
+                colorMensaje: "#f4f4f5",
+                colorError: "#f87171",
+              }}
+            />
+            <p style={{ margin:"10px 0 0", fontSize:12, color:"rgba(255,255,255,0.42)", lineHeight:1.5 }}>
+              Te llega un mail para confirmar. Te das de baja cuando quieras.
+            </p>
+          </div>
         </div>
       </section>
       </SectionBlock>

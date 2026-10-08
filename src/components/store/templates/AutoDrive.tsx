@@ -1,6 +1,7 @@
 "use client";
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
+import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -77,7 +78,7 @@ const FONDO = "#f4f6f9";
 const TINTA = "#0f172a";
 const LINEA = "#e8ebf0";
 
-const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-presupuesto", "ad-tasar", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
+const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
 
 /** El título de cada bloque: etiqueta en pastilla y título grande. */
 function Titulo({ acento, tinta = TINTA, kicker, titulo, derecha, centrado }: { acento: string; tinta?: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode; centrado?: boolean }) {
@@ -334,6 +335,9 @@ export default function AutoDrive() {
         .ad-svc-card { transition:box-shadow .25s, transform .25s }
         .ad-svc-card:hover { box-shadow:0 14px 34px rgba(15,23,42,.08) !important; transform:translateY(-2px) }
         .ad-link-nav:hover { color: ${navText} !important }
+        /* Recibí los ingresos por mail: texto y campo lado a lado; en angosto, uno abajo del otro. */
+        .ad-novedades { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:clamp(18px,3vw,40px); align-items:center }
+        @media (max-width: 860px) { .ad-novedades { grid-template-columns:minmax(0,1fr) } }
         /* Efectos al bajar (08/10/26), ver shared/efectosAutos: suaves, de portal. */
         @keyframes ad-ef-aparece { from { opacity:0; transform:translateY(14px) scale(.985) } to { opacity:1; transform:none } }
         @keyframes ad-ef-pop { 0% { opacity:0; transform:scale(.8) } 70% { opacity:1; transform:scale(1.06) } 100% { opacity:1; transform:none } }
@@ -705,6 +709,49 @@ export default function AutoDrive() {
               avisameTitulo: <EditableZone field="avisameTitulo" label="Avisame si entra — título">¿No está lo que buscás?</EditableZone>,
               avisameTexto: <EditableZone field="avisameTexto" label="Avisame si entra — texto">Dejanos marca, modelo y hasta cuánto querés gastar. Cuando entre, te escribimos primero.</EditableZone>,
             }} />
+        </div>
+      </section>
+      </SectionBlock>
+
+      {/* ── RECIBÍ LOS INGRESOS POR MAIL ── (08/10/26) Mucha gente no se registra
+          para tocar el corazón, pero deja su mail para enterarse cuando entra
+          algo. Es la lista a la que le escribe Notificaciones; la lógica (captcha,
+          confirmación, baja) es la de todos los templates, ver NewsletterForm. */}
+      <SectionBlock id="ad-novedades" label="Recibí los ingresos por mail" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
+      <section style={{ padding:"clamp(32px,5vw,56px) clamp(16px,3vw,28px)", background:"#fff" }}>
+        <div data-ef="sube" style={{ maxWidth:1240, margin:"0 auto" }}>
+          <div className="ad-novedades" style={{ background:accent, color:sobreAcento, borderRadius:22, padding:"clamp(24px,4vw,44px)" }}>
+            <div style={{ minWidth:0 }}>
+              <p style={{ margin:"0 0 10px", display:"inline-flex", fontSize:12, fontWeight:800, padding:"6px 12px", borderRadius:999,
+                background: sobreAcento === "#fff" ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.08)" }}>
+                <EditableZone field="novedadesKicker" label="Etiqueta de novedades">Novedades</EditableZone>
+              </p>
+              <h2 style={{ margin:0, fontSize:"clamp(24px,3.4vw,36px)", fontWeight:900, letterSpacing:-1.2, lineHeight:1.08 }}>
+                <EditableZone field="novedadesHeading" label="Título de novedades">Enterate primero de lo que entra</EditableZone>
+              </h2>
+              <p style={{ margin:"10px 0 0", fontSize:15, lineHeight:1.55, opacity:0.85 }}>
+                <EditableZone field="novedadesTexto" label="Texto de novedades">Dejanos tu mail y te avisamos cuando ingresen unidades nuevas o baje un precio. Sin spam.</EditableZone>
+              </p>
+            </div>
+            <div style={{ minWidth:0 }}>
+              <NewsletterForm
+                slug={slug}
+                isPreview={isPreview}
+                placeholder="tu@email.com"
+                boton="Avisarme"
+                theme={{
+                  form: { display:"flex", gap:0, background:"#fff", borderRadius:999, padding:5, overflow:"hidden", boxShadow:"0 10px 30px rgba(15,23,42,0.18)" },
+                  input: { flex:1, minWidth:0, border:"none", outline:"none", background:"transparent", color:TINTA, fontSize:15, padding:"12px 8px 12px 18px", fontFamily:"inherit" },
+                  boton: { flexShrink:0, background:TINTA, color:"#fff", border:"none", borderRadius:999, padding:"12px 22px", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" },
+                  colorMensaje: sobreAcento,
+                  colorError: sobreAcento,
+                }}
+              />
+              <p style={{ margin:"10px 0 0 6px", fontSize:12, lineHeight:1.5, opacity:0.75 }}>
+                Te llega un mail para confirmar. Te das de baja cuando quieras.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
       </SectionBlock>
