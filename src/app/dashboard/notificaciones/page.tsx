@@ -59,6 +59,7 @@ type Stats = {
   /** Cuántas hay en total. `campaigns` viene cortado en `historialMax`. */
   totalCampanas: number;
   historialMax: number;
+  rubro?: string | null;
 };
 
 type LoadState = "loading" | "ok" | "not_premium" | "error";
@@ -70,6 +71,13 @@ type LoadState = "loading" | "ok" | "not_premium" | "error";
 const PRESET_TYPES = [
   { label: "Producto nuevo",  titleTemplate: "🆕 ¡Nuevo producto disponible!" },
   { label: "Oferta especial", titleTemplate: "🔥 ¡Oferta por tiempo limitado!" },
+  { label: "Novedad libre",   titleTemplate: "" },
+];
+// Lo mismo para una concesionaria (08/10/26): no tiene "productos" sino
+// unidades, y lo que más se anuncia es lo que acaba de entrar.
+const PRESET_TYPES_AUTOS = [
+  { label: "Ingresó un auto", titleTemplate: "🚗 ¡Entró un auto nuevo!" },
+  { label: "Precio especial", titleTemplate: "🔥 ¡Precio especial por tiempo limitado!" },
   { label: "Novedad libre",   titleTemplate: "" },
 ];
 
@@ -96,6 +104,8 @@ export default function NotificacionesPage() {
   const [continuando, setContinuando] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const enviandoRef = useRef(false);
+  const esAutos = stats?.rubro === "AUTOS";
+  const presets = esAutos ? PRESET_TYPES_AUTOS : PRESET_TYPES;
 
   function loadStats() {
     fetch("/api/push/send")
@@ -129,13 +139,13 @@ export default function NotificacionesPage() {
     //
     // Ahora sólo pisa lo que está vacío o lo que puso otro preset. Lo que
     // escribió una persona no se toca sin permiso.
-    const tituloEsDeOtroPreset = PRESET_TYPES.some((p) => p.titleTemplate !== "" && p.titleTemplate === title);
+    const tituloEsDeOtroPreset = presets.some((p) => p.titleTemplate !== "" && p.titleTemplate === title);
     const hayAlgoEscrito = (title.trim() !== "" && !tituloEsDeOtroPreset) || message.trim() !== "";
 
     if (hayAlgoEscrito && !confirm("Cambiar el tipo reemplaza lo que escribiste. ¿Seguir?")) return;
 
     setPresetIdx(idx);
-    setTitle(PRESET_TYPES[idx].titleTemplate);
+    setTitle(presets[idx].titleTemplate);
     setMessage("");
     setResult(null);
   }
@@ -308,7 +318,9 @@ export default function NotificacionesPage() {
             Notificaciones push
           </h1>
           <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
-            Un mensaje que sale por dos vías: push al celular de tus seguidores y mail a los suscriptores de tu tienda.
+            {esAutos
+              ? "Un mensaje al celular de los que siguen tu tienda: un ingreso, una baja de precio, una novedad."
+              : "Un mensaje que sale por dos vías: push al celular de tus seguidores y mail a los suscriptores de tu tienda."}
           </p>
         </div>
 
@@ -338,7 +350,9 @@ export default function NotificacionesPage() {
             <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
               {loadingStats
                 ? " "
-                : `${stats?.followerCount ?? 0} por push · ${stats?.emailCount ?? 0} por mail`}
+                : esAutos
+                  ? `${stats?.followerCount ?? 0} siguiendo tu tienda`
+                  : `${stats?.followerCount ?? 0} por push · ${stats?.emailCount ?? 0} por mail`}
             </p>
             {!loadingStats && (stats?.pendientesEmail ?? 0) > 0 && (
               <p className="text-[10px] text-amber-500 mt-0.5">
@@ -371,13 +385,29 @@ export default function NotificacionesPage() {
                 <span className="text-base font-normal text-gray-400 panel-oscuro:text-gray-500">/{stats?.weeklyLimit ?? PUSH_CAMPAIGNS_PER_WEEK}</span>
               </p>
             )}
+            {/* Sin datos no se afirma nada: antes, mientras cargaba (y si la
+                carga fallaba) decía "Límite semanal alcanzado" sin haber
+                mandado una sola. */}
             <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5">
-              {stats && stats.weeklyRemaining > 0
-                ? `Te ${stats.weeklyRemaining === 1 ? "queda" : "quedan"} ${stats.weeklyRemaining} disponible${stats.weeklyRemaining !== 1 ? "s" : ""}`
-                : "Límite semanal alcanzado"}
+              {!stats
+                ? " "
+                : stats.weeklyRemaining > 0
+                  ? `Te ${stats.weeklyRemaining === 1 ? "queda" : "quedan"} ${stats.weeklyRemaining} disponible${stats.weeklyRemaining !== 1 ? "s" : ""}`
+                  : "Límite semanal alcanzado"}
             </p>
           </div>
         </div>}
+
+        {/* Si no cargó, se dice y se puede reintentar. Antes quedaba todo en 0,
+            el botón apagado y un "límite de undefined notificaciones". */}
+        {loadState === "error" && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-100 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-4 py-3 text-sm text-red-700 panel-oscuro:text-red-300">
+            <span className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 shrink-0" /> No pudimos cargar tu audiencia ni tu cupo semanal.</span>
+            <button type="button" onClick={() => { setLoadState("loading"); loadStats(); }} className="rounded-lg bg-white panel-oscuro:bg-gray-900 border border-red-200 panel-oscuro:border-red-500/30 px-3 py-1.5 text-xs font-semibold hover:bg-red-100 panel-oscuro:hover:bg-red-500/15 transition-colors">
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {/* Aviso de cómo funcionan */}
         {/* Numerado y no un párrafo corrido. Adentro hay tres cosas que se
@@ -394,9 +424,15 @@ export default function NotificacionesPage() {
           <p className="text-xs font-bold text-blue-700 panel-oscuro:text-blue-300 uppercase tracking-wide mb-2">¿Cómo funciona?</p>
           <div className="grid gap-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300 sm:grid-cols-3">
             {[
-              <>Escribís el mensaje <strong>una sola vez</strong> y sale por dos vías distintas.</>,
+              esAutos
+                ? <>Escribís el mensaje <strong>una sola vez</strong> y les llega a todos los que siguen tu tienda.</>
+                : <>Escribís el mensaje <strong>una sola vez</strong> y sale por dos vías distintas.</>,
               <><strong>Push</strong> al celular de los que tocan 👍 en tu tienda, aunque la tengan cerrada. En iPhone solo si instalaron la tienda en su pantalla de inicio.</>,
-              <><strong>Mail</strong> a los que dejaron su correo en el bloque de novedades y lo confirmaron.</>,
+              // Los templates de autos no tienen el bloque para dejar el mail:
+              // prometerlo era mentirle a la concesionaria.
+              esAutos
+                ? <><strong>Mail</strong>: todavía no. Los templates de autos no tienen el bloque para dejar el correo, así que por ahora sale solo por push.</>
+                : <><strong>Mail</strong> a los que dejaron su correo en el bloque de novedades y lo confirmaron.</>,
             ].map((texto, i) => (
               <div key={i} className="flex items-start gap-2">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 panel-oscuro:bg-blue-500/25 text-[10px] font-bold text-blue-700 panel-oscuro:text-blue-300">{i + 1}</span>
@@ -405,7 +441,8 @@ export default function NotificacionesPage() {
             ))}
           </div>
           <p className="mt-3 border-t border-blue-100 panel-oscuro:border-blue-500/30 pt-2.5 text-xs text-blue-800 panel-oscuro:text-blue-300">
-            El límite de <strong>{PUSH_CAMPAIGNS_PER_WEEK} por semana</strong> cuenta mensajes, no envíos: mandar por las dos vías gasta uno solo.
+            El límite de <strong>{PUSH_CAMPAIGNS_PER_WEEK} por semana</strong> cuenta mensajes, no envíos
+            {esAutos ? ": no importa a cuánta gente le llegue, cada uno gasta uno solo." : ": mandar por las dos vías gasta uno solo."}
           </p>
         </div>
 
@@ -449,7 +486,7 @@ export default function NotificacionesPage() {
                   suelta y corrida — la típica fila desprolija. En columnas la
                   tercera arranca alineada con la primera. */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                {PRESET_TYPES.map((p, i) => (
+                {presets.map((p, i) => (
                   <button
                     key={i}
                     type="button"
@@ -500,7 +537,7 @@ export default function NotificacionesPage() {
                 <CampoAuto
                   value={title}
                   onChange={(v) => { setTitle(recortar(v, TITLE_MAX)); setResult(null); }}
-                  placeholder="ej: ¡Nuevo producto disponible!"
+                  placeholder={esAutos ? "ej: ¡Entró una Hilux 2021!" : "ej: ¡Nuevo producto disponible!"}
                   ariaLabel="Título de la notificación"
                   className="text-gray-900 panel-oscuro:text-gray-100 placeholder-gray-400 panel-oscuro:placeholder-gray-500"
                 />
@@ -523,7 +560,9 @@ export default function NotificacionesPage() {
                 <textarea
                   value={message}
                   onChange={(e) => { setMessage(recortar(e.target.value, BODY_MAX)); setResult(null); }}
-                  placeholder="ej: Entrá a la tienda y mirá los nuevos productos que llegaron esta semana."
+                  placeholder={esAutos
+                    ? "ej: Pasá a verla o escribinos para coordinar una prueba de manejo."
+                    : "ej: Entrá a la tienda y mirá los nuevos productos que llegaron esta semana."}
                   required
                   rows={3}
                   className="w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2.5 text-sm text-gray-900 panel-oscuro:text-gray-100 placeholder-gray-400 panel-oscuro:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none"
@@ -647,7 +686,7 @@ export default function NotificacionesPage() {
               )}
 
               {/* Límite semanal */}
-              {!loadingStats && !canSend && (
+              {stats && !canSend && (
                 <div className="flex items-center gap-2 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/30 px-3 py-2.5 text-xs text-amber-700 panel-oscuro:text-amber-300">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   Alcanzaste el límite de {stats?.weeklyLimit} notificaciones por semana. Podés enviar más el próximo lunes.
@@ -868,8 +907,9 @@ export default function NotificacionesPage() {
             <Bell className="h-8 w-8 text-gray-300 panel-oscuro:text-gray-600 mx-auto mb-3" />
             <p className="text-sm font-medium text-gray-700 panel-oscuro:text-gray-300">Todavía no tenés a quién escribirle</p>
             <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1 max-w-sm mx-auto leading-relaxed">
-              Se suma gente por dos lados: los clientes registrados que tocan 👍 en tu tienda para
-              seguirla, y los que dejan su correo en el bloque de novedades y lo confirman por mail.
+              {esAutos
+                ? "Se suma gente cuando un cliente registrado toca 👍 en tu tienda para seguirla."
+                : "Se suma gente por dos lados: los clientes registrados que tocan 👍 en tu tienda para seguirla, y los que dejan su correo en el bloque de novedades y lo confirman por mail."}
             </p>
           </div>
         )}

@@ -211,7 +211,7 @@ export async function GET() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true },
+    select: { id: true, tipoTienda: true },
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
@@ -260,6 +260,9 @@ export async function GET() {
     // tope en poco más de un año.
     totalCampanas,
     historialMax: HISTORIAL_MAX,
+    // Para los textos: una concesionaria no anuncia "productos", y sus
+    // templates no tienen el bloque para dejar el mail.
+    rubro: store.tipoTienda,
   });
 }
 
