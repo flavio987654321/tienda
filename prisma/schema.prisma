@@ -2141,6 +2141,7 @@ model SeguimientoConsulta {
 // Entra desde la tienda sin sesión, como una consulta. Ver `lib/tasaciones`.
 model Tasacion {
   id            String    @id @default(cuid())
+  submissionKey String?   @unique
   storeId       String
   store         Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   nombre        String

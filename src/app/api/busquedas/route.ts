@@ -12,6 +12,7 @@ import { sendAvisoConcesionariaEmail } from "@/lib/email";
 import { monedaDeTienda } from "@/lib/monedaVehiculo";
 import { siteUrl } from "@/lib/site";
 import { revisarBusquedas, busquedasDelPanel } from "@/lib/busquedasServidor";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 /* POST /api/busquedas — "Avisame si entra", desde la tienda, sin sesión.
    Mismo molde que /api/tasaciones. Ver `lib/busquedas`. */
@@ -52,6 +53,10 @@ export async function POST(req: NextRequest) {
       select: { id: true },
     });
     if (repetida) return NextResponse.json({ id: repetida.id }, { status: 200 });
+
+    if (!(await verifyTurnstile(body.turnstileToken, ip, "busqueda-auto"))) {
+      return NextResponse.json({ error: "No pudimos verificar el envío. Completá la verificación e intentá de nuevo." }, { status: 400 });
+    }
 
     if ((await prisma.busquedaGuardada.count({ where: { storeId: store.id, status: "ACTIVA" } })) >= TOPE_ACTIVAS) {
       return NextResponse.json({ error: "Probá en un rato o escribile a la concesionaria por WhatsApp." }, { status: 429 });

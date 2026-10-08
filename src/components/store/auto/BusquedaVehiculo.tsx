@@ -6,6 +6,7 @@ import CampoTelefono from "@/components/CampoTelefono";
 import CampoTrampa from "@/components/store/auto/CampoTrampa";
 import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
+import { useTurnstile } from "@/components/Turnstile";
 
 /* "Avisame si entra" (06/10/26): la persona deja qué busca y su teléfono, y
    la concesionaria le avisa cuando entra. Va en /vehiculos (botón arriba y
@@ -27,6 +28,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);
+  const captcha = useTurnstile("busqueda-auto");
   const soloMirando = !storeId || isOwner || isPreview;
   const cambiar = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: k === "anioDesde" ? e.target.value.replace(/\D/g, "").slice(0, 4) : k === "precioHasta" ? e.target.value.replace(/\D/g, "").slice(0, 11) : e.target.value }));
@@ -40,12 +42,13 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
     const v = validarBusqueda({ ...f, categoria: f.categoria || null });
     if ("error" in v) { setError(v.error); return; }
     if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
+    if (!captcha.ready) { setError("Completá la verificación para continuar."); return; }
     enviando.current = true;
     setEstado("enviando");
     try {
       const res = await fetch("/api/busquedas", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, ...f, categoria: f.categoria || null, [CAMPO_TRAMPA]: trampa }),
+        body: JSON.stringify({ storeId, ...f, categoria: f.categoria || null, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo guardar. Probá de nuevo en un momento."); return; }
@@ -55,6 +58,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
       setError("Sin conexión. Revisá internet y probá de nuevo.");
     } finally {
       enviando.current = false;
+      captcha.reset();
     }
   }
 
@@ -77,6 +81,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   return (
     <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
       <CampoTrampa value={trampa} onChange={setTrampa} />
+      {captcha.widget}
       <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a2744" }}>Avisame si entra</p>
       <p style={{ margin: "0 0 2px", fontSize: 12, color: "#777", lineHeight: 1.45 }}>Contanos qué buscás y te escribimos apenas entre uno. No hace falta completar todo.</p>
       <label style={etiqueta}>Tipo {opcional}
@@ -100,7 +105,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
         </div>
       </div>
       {error && <p role="alert" style={{ margin: 0, fontSize: 12, color: "#b91c1c" }}>{error}</p>}
-      <button type="submit" disabled={estado === "enviando"}
+      <button type="submit" disabled={estado === "enviando" || !captcha.ready}
         style={{ background: accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border: "none", borderRadius: 6, padding: "12px 16px", minHeight: 44,
           fontSize: 14, fontWeight: 700, cursor: estado === "enviando" ? "default" : "pointer", opacity: estado === "enviando" ? 0.7 : 1, fontFamily: "inherit" }}>
         {estado === "enviando" ? "Guardando…" : "Avisame"}

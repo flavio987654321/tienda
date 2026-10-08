@@ -8,6 +8,7 @@ import CampoTrampa from "@/components/store/auto/CampoTrampa";
 import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
 import { getContrastColor } from "@/contexts/EditContext";
+import { useTurnstile } from "@/components/Turnstile";
 
 /* ══════════════════════════════════════════════════════════════════════════
    CÓMO CONSULTA EL COMPRADOR POR UN VEHÍCULO (06/10/26)
@@ -76,6 +77,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
   const [error, setError] = useState("");
   const enviando = useRef(false);
   const registrando = useRef(false);
+  const captcha = useTurnstile("consulta-auto");
   const soloMirando = !storeId || isOwner || isPreview;
 
   /* El toque de WhatsApp anota la consulta (sin datos: el chat sigue afuera).
@@ -104,6 +106,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
     const errTel = errorDeTelefono(telefono);
     if (errTel) { setError(`Revisá el teléfono: ${errTel.charAt(0).toLowerCase()}${errTel.slice(1)}`); return; }
     if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
+    if (!captcha.ready) { setError("Completá la verificación para continuar."); return; }
     enviando.current = true;
     setEstado("enviando");
     try {
@@ -113,7 +116,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
         body: JSON.stringify({
           storeId, productId: product.id, affiliateId: afiliadoDeEstaTienda() ?? undefined,
           leadId: consultaPrevia(product.id) ?? undefined,
-          customerName: nombre, customerPhone: telefono, customerMessage: mensaje, [CAMPO_TRAMPA]: trampa,
+          customerName: nombre, customerPhone: telefono, customerMessage: mensaje, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa,
         }),
       });
       const data = await res.json().catch(() => ({})) as { leadId?: string; error?: string };
@@ -129,6 +132,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
       setError("Sin conexión. Revisá internet y probá de nuevo.");
     } finally {
       enviando.current = false;
+      captcha.reset();
     }
   }
 
@@ -163,6 +167,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
       ) : (
         <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
           <CampoTrampa value={trampa} onChange={setTrampa} />
+          {captcha.widget}
           <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#1a2744" }}>
             {waHref ? "Dejá tus datos y te contactamos" : "Consultá por este vehículo"}
           </p>
@@ -181,7 +186,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
             <textarea value={mensaje} onChange={(e) => setMensaje(e.target.value)} maxLength={1000} rows={2} placeholder="Ej: ¿Aceptan permuta? ¿Tiene financiación?" style={{ ...campo, marginTop: 4, resize: "vertical" }} />
           </label>
           {error && <p role="alert" style={{ margin: 0, fontSize: 12, color: "#b91c1c" }}>{error}</p>}
-          <button type="submit" disabled={estado === "enviando"}
+          <button type="submit" disabled={estado === "enviando" || !captcha.ready}
             style={{ background: accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border: "none", borderRadius: 6, padding: "12px 16px", minHeight: 44,
               fontSize: 14, fontWeight: 700, cursor: estado === "enviando" ? "default" : "pointer", opacity: estado === "enviando" ? 0.7 : 1, fontFamily: "inherit" }}>
             {estado === "enviando" ? "Enviando…" : "Enviar consulta"}

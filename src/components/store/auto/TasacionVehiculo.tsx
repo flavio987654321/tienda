@@ -7,6 +7,7 @@ import CampoTelefono from "@/components/CampoTelefono";
 import CampoTrampa from "@/components/store/auto/CampoTrampa";
 import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
+import { useTurnstile } from "@/components/Turnstile";
 
 /* "Tasá tu usado" (06/10/26), rehecha el 07/10/26 como paso a paso. El dueño:
    "siento que está hecho así nomás, le falta amor, efectos, más visual".
@@ -77,6 +78,8 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);
+  const submissionKey = useRef("");
+  const captcha = useTurnstile("tasacion");
   const titulo = useRef<HTMLHeadingElement>(null);
   const primeraVez = useRef(true);
   /* Cuándo cambió el paso (08/10/26). "Seguir" queda en el mismo lugar en los
@@ -135,13 +138,15 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
     const v = validarTasacion({ ...f, modalidad: modalidad ?? "PERMUTA" });
     if ("error" in v) { setError(v.error); return; }
     if (soloMirando) { setError("Así lo ven tus clientes. Desde la vista previa no se envía."); return; }
+    if (!captcha.ready) { setError("Completá la verificación para continuar."); return; }
     enviando.current = true;
     setEstado("enviando");
     try {
+      if (!submissionKey.current) submissionKey.current = crypto.randomUUID();
       const res = await fetch("/api/tasaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id, [CAMPO_TRAMPA]: trampa }),
+        body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id, submissionKey: submissionKey.current, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo enviar. Probá de nuevo en un momento."); return; }
@@ -151,6 +156,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
       setError("Sin conexión. Revisá internet y probá de nuevo.");
     } finally {
       enviando.current = false;
+      captcha.reset();
     }
   }
 
@@ -218,6 +224,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         background: "#fff", border: `1px solid ${RAYA}`, boxShadow: "0 1px 2px rgba(20,26,38,.04), 0 12px 32px rgba(20,26,38,.06)" }}>
       <style>{CSS}</style>
       <CampoTrampa value={trampa} onChange={setTrampa} />
+      {paso === 4 && captcha.widget}
 
       {/* ── Avance ── */}
       <div>
@@ -381,7 +388,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
             style={{ minHeight: 48, padding: "0 16px", borderRadius: 10, border: `1.5px solid ${RAYA}`, background: "#fff", color: TINTA, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
             ← Atrás
           </button>
-          <button type="submit" disabled={estado === "enviando"}
+          <button type="submit" disabled={estado === "enviando" || (paso === 4 && !captcha.ready)}
             style={{ flex: 1, minHeight: 48, padding: "0 18px", borderRadius: 10, border: "none", background: accent, color: sobreAcento,
               fontWeight: 800, fontSize: 15, cursor: estado === "enviando" ? "default" : "pointer", opacity: estado === "enviando" ? 0.7 : 1, fontFamily: "inherit" }}>
             {paso < 4 ? "Seguir" : estado === "enviando" ? "Enviando…" : "Pedir tasación"}

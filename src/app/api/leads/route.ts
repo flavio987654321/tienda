@@ -11,6 +11,7 @@ import { despues } from "@/lib/despues";
 import { sendAvisoConcesionariaEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/site";
 import { consultasDelPanel } from "@/lib/consultasPanel";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 /* La dueña se entera de una consulta nueva (06/10/26): campanita y teléfono,
    como con un pedido. Sólo si trae datos (vino del formulario): el toque de
@@ -120,6 +121,12 @@ export async function POST(req: NextRequest) {
       customerPhone: texto(customerPhone, 30),
       customerMessage: texto(customerMessage, 1000),
     };
+
+    // El registro liviano del toque en WhatsApp no contiene datos personales;
+    // el formulario que crea/completa una consulta sí requiere el desafío.
+    if (Object.values(datos).some(Boolean) && !(await verifyTurnstile(body.turnstileToken, ip, "consulta-auto"))) {
+      return NextResponse.json({ error: "No pudimos verificar el envío. Completá la verificación e intentá de nuevo." }, { status: 400 });
+    }
 
     /* ── Completar la consulta que abrió el botón de WhatsApp (06/10/26) ─────
        Tocar WhatsApp registra la consulta sin datos (el chat sigue afuera). Si

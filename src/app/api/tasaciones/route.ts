@@ -11,6 +11,7 @@ import { sendAvisoConcesionariaEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/site";
 import { validarTasacion, resumenDelUsado, esEstadoTasacion } from "@/lib/tasaciones";
 import { tasacionesDelPanel } from "@/lib/tasacionesPanel";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 /* POST /api/tasaciones — un pedido de tasación desde la tienda, sin sesión.
    Mismo molde que /api/leads: techo por IP y por tienda, sólo tiendas de autos
@@ -41,6 +42,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Esta tienda no está disponible" }, { status: 404 });
     }
 
+    const v = validarTasacion(body);
+    if ("error" in v) return NextResponse.json({ error: v.error }, { status: 400 });
+
+    const submissionKey = typeof body.submissionKey === "string" ? body.submissionKey : "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionKey)) {
+      return NextResponse.json({ error: "Actualizá la página y probá de nuevo." }, { status: 400 });
+    }
+    const previa = await prisma.tasacion.findUnique({ where: { submissionKey }, select: { id: true, storeId: true } });
+    if (previa) {
+      if (previa.storeId !== store.id) return NextResponse.json({ error: "No se pudo procesar el envío." }, { status: 409 });
+      return NextResponse.json({ id: previa.id }, { status: 200 });
+    }
+
     const porTienda = await checkRateLimitConRespaldo(`tasacion-tienda:${store.id}`, 60, 60 * 60_000, {
       limiteFallback: 60,
       limiteFallbackGlobal: 600,
@@ -48,9 +62,9 @@ export async function POST(req: NextRequest) {
     if (!porTienda.permitido) {
       return NextResponse.json({ error: "La concesionaria está recibiendo muchas tasaciones. Probá en un rato o escribile por WhatsApp." }, { status: 429 });
     }
-
-    const v = validarTasacion(body);
-    if ("error" in v) return NextResponse.json({ error: v.error }, { status: 400 });
+    if (!(await verifyTurnstile(body.turnstileToken, ip, "tasacion"))) {
+      return NextResponse.json({ error: "No pudimos verificar el envío. Completá la verificación e intentá de nuevo." }, { status: 400 });
+    }
 
     /* El vehículo de interés sale de la BASE: el nombre que se guarda es el
        real, y si no es de esta tienda o ya no está a la venta, se ignora (la
@@ -63,9 +77,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const t = await prisma.tasacion.create({
-      data: { storeId: store.id, ...v.datos, productoId: producto?.id ?? null, productoNombre: producto?.name ?? null },
-    });
+    let t;
+    try {
+      t = await prisma.tasacion.create({
+        data: { storeId: store.id, submissionKey, ...v.datos, productoId: producto?.id ?? null, productoNombre: producto?.name ?? null },
+      });
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+        const ganadora = await prisma.tasacion.findUnique({ where: { submissionKey }, select: { id: true, storeId: true } });
+        if (ganadora?.storeId === store.id) return NextResponse.json({ id: ganadora.id }, { status: 200 });
+      }
+      throw error;
+    }
 
     const aviso = {
       title: "Nueva tasación",
