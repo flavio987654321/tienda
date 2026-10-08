@@ -1,6 +1,7 @@
 "use client";
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
+import { irASeccion } from "@/components/store/templates/shared/irASeccion";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
@@ -41,9 +42,6 @@ import { PreguntasDrive } from "@/components/store/templates/drive/PreguntasDriv
  * La lógica es la compartida de autos (lib/filtroVehiculos, components/store/auto).
  */
 
-function smoothScrollTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-}
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
   if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
@@ -335,6 +333,8 @@ export default function AutoDrive() {
         .ad-svc-card { transition:box-shadow .25s, transform .25s }
         .ad-svc-card:hover { box-shadow:0 14px 34px rgba(15,23,42,.08) !important; transform:translateY(-2px) }
         .ad-link-nav:hover { color: ${navText} !important }
+        /* El menú baja a cada sección: que su título quede debajo de la barra fija y no tapado (ver shared/irASeccion). */
+        section[id] { scroll-margin-top:${(showAnn ? PROMO_H : 0) + NAV_H + 12}px }
         /* Recibí los ingresos por mail: texto y campo lado a lado; en angosto, uno abajo del otro. */
         .ad-novedades { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:clamp(18px,3vw,40px); align-items:center }
         @media (max-width: 860px) { .ad-novedades { grid-template-columns:minmax(0,1fr) } }
@@ -389,7 +389,7 @@ export default function AutoDrive() {
       )}
 
       {/* ── BARRA DE ARRIBA ── */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed",
+      <nav aria-label="Principal" style={{ position: isPreview ? "sticky" : "fixed",
         top: showAnn ? PROMO_H : 0,
         left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
         zIndex: isPreview ? CAPAS.previaNav : 100,
@@ -412,7 +412,7 @@ export default function AutoDrive() {
           </div>
           <div className="ad-nav-links" style={{ gap:4, alignItems:"center" }}>
             {menuAncho.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => smoothScrollTo(id)} className="ad-link-nav"
+              <button key={id} type="button" onClick={() => irASeccion(id)} className="ad-link-nav"
                 style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:"10px 14px", borderRadius:10,
                   fontSize:14, fontWeight:600, fontFamily:"inherit", transition:"color 0.15s" }}>
                 {lbl}
@@ -517,7 +517,7 @@ export default function AutoDrive() {
         {menuOpen && (
           <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px clamp(16px,3vw,28px) 18px" }}>
             {menuCelu.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
+              <button key={id} type="button" onClick={() => { irASeccion(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navText, cursor:"pointer", textAlign:"left", fontFamily:"inherit",
                   padding:"14px 0", fontSize:15, fontWeight:600, borderBottom:`1px solid ${navBorderColor}` }}>

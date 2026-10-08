@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ThumbsUp, ThumbsDown, Loader2, X } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { pedirTurno } from "@/lib/interrupcion-tienda";
@@ -171,6 +172,14 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
 
       </div>
 
+      {/* El globo y los carteles se dibujan sobre la página entera y no acá
+          adentro (08/10/26). Este botón vive en la barra de cada template, y
+          varias barras llevan desenfoque (backdrop-filter): eso encierra a todo
+          lo "fixed" que tengan adentro. En Auto Motor el "¿Seguir esta tienda?"
+          salía metido en los 68px de la barra, cortado y sin velo. Sólo aparecen
+          después de un click o de un efecto, así que en el servidor no hay
+          `document` que extrañar. */}
+      {(showHint || alert) && typeof document !== "undefined" && createPortal(<>
       {showHint && (
         <div
           role="status"
@@ -282,6 +291,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
           onCancel={null}
         />
       )}
+      </>, document.body)}
     </>
   );
 }

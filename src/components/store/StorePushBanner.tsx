@@ -28,8 +28,14 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
         bell?.closeDrawer();
       }
     }
+    // Escape cierra, como cualquier panel: antes sólo se salía con la ✕ o tocando afuera.
+    function onEscape(e: KeyboardEvent) { if (e.key === "Escape") bell?.closeDrawer(); }
     document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onEscape);
+    };
   }, [bell?.drawerOpen, bell]);
 
   if (!bell) return null;
@@ -56,6 +62,11 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
       {/* Drawer */}
       <div
         ref={drawerRef}
+        role="dialog"
+        aria-modal={drawerOpen}
+        aria-label="Novedades"
+        aria-hidden={!drawerOpen}
+        inert={!drawerOpen}
         style={{ zIndex: CAPAS.cajon }}
         className={`fixed bottom-0 left-0 right-0 w-full max-h-[80vh] bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out flex flex-col
           sm:top-0 sm:bottom-0 sm:left-auto sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl ${

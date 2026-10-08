@@ -14,6 +14,7 @@
  */
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
+import { irASeccion } from "@/components/store/templates/shared/irASeccion";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
@@ -45,9 +46,6 @@ import { PreguntasMotor } from "@/components/store/templates/motor/PreguntasMoto
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
 import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
 
-function smoothScrollTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-}
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
   if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
@@ -311,6 +309,8 @@ export default function AutoMotor() {
         @keyframes am-spin { to { transform:rotate(360deg) } }
         @keyframes am-sube { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
         .am-entra { animation: am-sube .9s cubic-bezier(.2,.7,.2,1) both }
+        /* El menú baja a cada sección: que su título quede debajo de la barra fija y no tapado (ver shared/irASeccion). */
+        section[id] { scroll-margin-top:${(showAnn ? PROMO_H : 0) + NAV_H + 12}px }
         /* Recibí los ingresos por mail: texto y campo lado a lado; en angosto, uno abajo del otro. */
         .am-novedades { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:clamp(20px,4vw,56px); align-items:end }
         @media (max-width: 860px) { .am-novedades { grid-template-columns:minmax(0,1fr) } }
@@ -376,7 +376,7 @@ export default function AutoMotor() {
           </div>
           <div className="am-nav-links" style={{ gap:28, alignItems:"center" }}>
             {menuAncho.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => smoothScrollTo(id)} className="am-link"
+              <button key={id} type="button" onClick={() => irASeccion(id)} className="am-link"
                 style={{ background:"none", border:"none", cursor:"pointer", fontSize:12, minHeight:44,
                   fontWeight:600, letterSpacing:1.5, textTransform:"uppercase", transition:"color 0.15s",
                   color: navTextMid, fontFamily:"inherit" }}>
@@ -482,7 +482,7 @@ export default function AutoMotor() {
         {menuOpen && (
           <div style={{ borderTop:`1px solid ${navBorderColor}`, padding:"6px 0 18px" }}>
             {menuCelu.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
+              <button key={id} type="button" onClick={() => { irASeccion(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navText, cursor:"pointer", textAlign:"left", minHeight:48,
                   fontSize:13, fontWeight:700, textTransform:"uppercase", fontFamily:"inherit",
