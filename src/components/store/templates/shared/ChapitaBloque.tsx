@@ -156,6 +156,9 @@ export function ChapitaBloque({ nombre, ayuda, id }: { nombre: string; ayuda?: s
             boxShadow: "0 12px 32px rgba(15,23,42,0.28)", fontFamily: "system-ui, -apple-system, sans-serif", textTransform: "none", letterSpacing: 0 }}>
           <p style={{ margin: "0 0 5px", fontSize: 11, fontWeight: 800, color: LINEA_EDITOR, textTransform: "uppercase", letterSpacing: 0.5 }}>{nombre}: ¿para qué sirve?</p>
           <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, fontWeight: 400 }}>{ayuda}</p>
+          <p style={{ margin: "8px 0 0", paddingTop: 7, borderTop: "1px solid #e2e8f0", fontSize: 11, lineHeight: 1.45, color: "#64748b", fontWeight: 400 }}>
+            En modo edición pueden aparecer productos de muestra: sirven para ver el diseño, no son parte de tu stock y no se publican. Revisá los textos editables antes de publicar.
+          </p>
           <button type="button" onClick={() => setAbierta(false)} aria-label="Cerrar"
             style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 999, border: "none", background: "transparent",
               color: "#64748b", cursor: "pointer", fontSize: 15, lineHeight: 1 }}>×</button>

@@ -18,6 +18,17 @@
    nunca en la vista previa, ni en la tienda publicada, ni en la demo pública. */
 
 const POR_TIPO: Record<string, string> = {
+  // Portada de autos y motos
+  tipos: "Atajos visuales para recorrer tus vehículos por tipo o marca. Se arman con las categorías y marcas que ya tienen unidades cargadas; si todavía no hay opciones suficientes, el bloque no aparece.",
+  filtros: "Atajos visuales para explorar el stock por tipo o marca. Se arman con las categorías y marcas que ya tienen unidades cargadas; si todavía no hay más de una opción, el bloque no aparece.",
+  catalogo: "Muestra las unidades que tenés en stock, empezando por las últimas que cargaste. Desde acá pueden abrir cada ficha o ir a ver todo el catálogo.",
+  foco: "Una unidad grande y protagonista, como la vidriera de la agencia. Elegí una unidad real disponible o dejá Automático para destacar una de tu stock. En el editor podés ver ejemplos para entender el diseño: no se publican ni se pueden elegir.",
+  videos: "Reúne los videos que agregues dentro de las fichas de tus vehículos. Cada video lleva a la unidad correspondiente. Si no hay videos, el bloque no aparece en la tienda publicada.",
+  tasar: "Permite que te consulten para tasar su usado y que te dejen qué unidad están buscando. Las consultas llegan a la agencia con los datos enviados.",
+  stats: "Una franja con números para destacar datos de la agencia. Editá cada cifra y su texto, y asegurate de que describan algo real de tu negocio.",
+  servicios: "Explica los pasos para comprar: desde elegir una unidad hasta coordinar una visita. Podés editar los textos para contar cómo trabaja tu agencia.",
+  presupuesto: "Una selección automática de vehículos agrupados por rango de precio, para que cada persona explore opciones según cuánto quiere gastar. Aparece cuando hay al menos cuatro vehículos con precio.",
+
   // Portada y catálogo
   productos: "Tus productos, para que el cliente los mire y entre a cada uno. Es el corazón de la tienda: conviene dejarlo arriba.",
   tira: "Accesos rápidos a tus categorías. Ayuda a que el cliente vaya directo a lo que busca sin recorrer todo.",
