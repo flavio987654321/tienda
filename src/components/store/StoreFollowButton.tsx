@@ -313,6 +313,13 @@ function FollowAlert({
   onCancel: (() => void) | null;
   cancelLabel?: string;
 }) {
+  // Escape cancela, como cualquier cartel. El de iPhone no tiene "cancelar": ahí no hace nada.
+  useEffect(() => {
+    if (!onCancel) return;
+    const alEscape = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", alEscape);
+    return () => document.removeEventListener("keydown", alEscape);
+  }, [onCancel]);
   return (
     <div
       style={{
