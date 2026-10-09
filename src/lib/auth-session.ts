@@ -1,5 +1,17 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/supabase/server";
+
+const profileSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  image: true,
+  banned: true,
+} satisfies Prisma.UserSelect;
+
+type UserProfile = Prisma.UserGetPayload<{ select: typeof profileSelect }>;
 
 export type AppSessionUser = {
   id: string;
@@ -11,6 +23,17 @@ export type AppSessionUser = {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.toLowerCase().trim();
 
+async function toSessionUser(profile: UserProfile, isAdminEmail: boolean): Promise<AppSessionUser | null> {
+  if (profile.banned) return null;
+
+  const { banned: _, ...user } = profile;
+  if (isAdminEmail && user.role !== "ADMIN") {
+    await prisma.user.update({ where: { id: profile.id }, data: { role: "ADMIN" } });
+    user.role = "ADMIN";
+  }
+  return user;
+}
+
 export async function getCurrentUser(): Promise<AppSessionUser | null> {
   if (!hasSupabaseServerConfig()) return null;
 
@@ -19,52 +42,42 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
 
   if (error || !data.user?.email) return null;
 
-  const isAdminEmail = ADMIN_EMAIL && data.user.email.toLowerCase() === ADMIN_EMAIL;
+  const isAdminEmail = Boolean(ADMIN_EMAIL && data.user.email.toLowerCase() === ADMIN_EMAIL);
 
   const profile = await prisma.user.findFirst({
     where: {
       OR: [{ id: data.user.id }, { email: data.user.email }],
     },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      image: true,
-      banned: true,
-    },
+    select: profileSelect,
   });
 
-  if (profile) {
-    if (profile.banned) return null;
-    // `banned: _` se destructura sólo para que NO entre en `rest`. Ya no necesita un
-    // `eslint-disable`: la regla ahora acepta el guión bajo como "esto no se usa a
-    // propósito", que es exactamente lo que este `_` quiso decir siempre.
-    const { banned: _, ...rest } = profile;
-    // Si el email es el admin y el role no es ADMIN, lo corrige automáticamente
-    if (isAdminEmail && rest.role !== "ADMIN") {
-      await prisma.user.update({ where: { id: profile.id }, data: { role: "ADMIN" } });
-      rest.role = "ADMIN";
+  if (profile) return toSessionUser(profile, isAdminEmail);
+
+  try {
+    const createdOrExistingProfile = await prisma.user.upsert({
+      where: { id: data.user.id },
+      update: {},
+      create: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name ?? null,
+        role: isAdminEmail ? "ADMIN" : "BUYER",
+      },
+      select: profileSelect,
+    });
+    return toSessionUser(createdOrExistingProfile, isAdminEmail);
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+      throw error;
     }
-    return rest;
-  }
 
-  // upsert evita crash por unique constraint si dos requests llegan simultáneamente para el mismo usuario nuevo
-  return prisma.user.upsert({
-    where: { id: data.user.id },
-    update: {},
-    create: {
-      id: data.user.id,
-      email: data.user.email,
-      name: data.user.user_metadata?.name ?? null,
-      role: isAdminEmail ? "ADMIN" : "BUYER",
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      image: true,
-    },
-  });
+    // Otra solicitud pudo crear el mismo perfil de Supabase después de la búsqueda.
+    const profileCreatedByConcurrentRequest = await prisma.user.findUnique({
+      where: { id: data.user.id },
+      select: profileSelect,
+    });
+    if (!profileCreatedByConcurrentRequest) throw error;
+
+    return toSessionUser(profileCreatedByConcurrentRequest, isAdminEmail);
+  }
 }
