@@ -189,7 +189,7 @@ export default function EventosSeguridad() {
     + (data?.alertas.repeticiones.length ?? 0);
 
   return (
-    <section className="mt-10">
+    <section className="mt-6 rounded-2xl border border-white/10 bg-gray-900/40 p-5 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-xl font-bold text-white">Errores y actividad sospechosa</h2>

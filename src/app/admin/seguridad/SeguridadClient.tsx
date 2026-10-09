@@ -192,9 +192,15 @@ export default function SeguridadClient() {
   }
 
   return (
-    <div className="max-w-lg">
+    <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-5 md:p-6">
+      <div>
+        <h2 className="text-lg font-bold text-white">Verificación en dos pasos</h2>
+        <p className="mt-1 text-sm text-gray-400">Protegé el acceso al panel con una app de autenticación.</p>
+      </div>
+
+      <div className="mt-5 grid items-start gap-4 lg:grid-cols-2">
       {/* Estado actual */}
-      <div className={`rounded-2xl border p-5 mb-6 flex items-start gap-4 ${
+      <div className={`rounded-2xl border p-5 flex items-start gap-4 ${
         view === "on"
           ? "border-emerald-500/20 bg-emerald-500/5"
           : "border-amber-500/20 bg-amber-500/5"
@@ -219,7 +225,7 @@ export default function SeguridadClient() {
       </div>
 
       {error && (
-        <div className="mb-5 flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-300">
+        <div className="lg:col-span-2 flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-300">
           <X className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
@@ -230,7 +236,7 @@ export default function SeguridadClient() {
         <button
           onClick={startEnroll}
           disabled={busy}
-          className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+          className="w-full lg:col-start-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
           Activar verificación en dos pasos
@@ -239,8 +245,8 @@ export default function SeguridadClient() {
 
       {/* ENROLLING → QR + secreto + código */}
       {view === "enrolling" && (
-        <div className="space-y-5">
-          <div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 lg:col-span-2">
+          <div className="rounded-xl border border-white/5 bg-gray-950/40 p-4">
             <p className="text-white text-sm font-semibold mb-1">1. Escaneá el código con tu app</p>
             <p className="text-gray-500 text-xs mb-3">Google Authenticator, Safe Authenticator, Authy o similar.</p>
             {/* qr_code es el markup SVG del QR. Se inyecta inline y se deja que el
@@ -255,7 +261,7 @@ export default function SeguridadClient() {
             )}
           </div>
 
-          <div>
+          <div className="rounded-xl border border-white/5 bg-gray-950/40 p-4">
             <p className="text-white text-sm font-semibold mb-1">2. ¿No podés escanear? Ingresalo a mano</p>
             <p className="text-gray-500 text-xs mb-2">
               En tu app elegí “Ingresar clave” (o “Enter setup key”) y pegá este código.
@@ -271,7 +277,7 @@ export default function SeguridadClient() {
             </div>
           </div>
 
-          <div>
+          <div className="rounded-xl border border-white/5 bg-gray-950/40 p-4">
             <p className="text-white text-sm font-semibold mb-2">3. Ingresá el código de 6 dígitos que muestra la app</p>
             <input
               type="text"
@@ -284,7 +290,7 @@ export default function SeguridadClient() {
             />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 md:col-span-2 xl:col-span-3">
             <button
               onClick={cancelEnroll}
               disabled={busy}
@@ -306,7 +312,7 @@ export default function SeguridadClient() {
 
       {/* ON → desactivar */}
       {view === "on" && (
-        <div className="space-y-4">
+        <div className="space-y-4 lg:col-start-2">
           <div className="bg-gray-800/40 border border-white/5 rounded-xl p-4">
             <p className="text-gray-400 text-xs leading-relaxed">
               <strong className="text-gray-300">¿Perdiste el acceso a tu app?</strong> Pegá el código de respaldo
@@ -362,6 +368,7 @@ export default function SeguridadClient() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </section>
   );
 }
