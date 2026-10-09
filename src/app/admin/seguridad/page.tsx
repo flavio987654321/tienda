@@ -1,4 +1,5 @@
 import SeguridadClient from "./SeguridadClient";
+import EventosSeguridad from "./EventosSeguridad";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function AdminSeguridadPage() {
         <p className="text-gray-400 text-sm">Verificación en dos pasos de tu cuenta de administrador.</p>
       </div>
       <SeguridadClient />
+      <EventosSeguridad />
     </div>
   );
 }

@@ -9,7 +9,8 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "lint": "eslint",
-    "check": "node scripts/correr-chequeos.mjs"
+    "check": "node scripts/correr-chequeos.mjs",
+    "security:fixtures": "node scripts/eventos-seguridad-sinteticos.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

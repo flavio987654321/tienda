@@ -8,11 +8,21 @@ import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { validarDatosDeAlta, nombreDeTiendaTomado, perfilDeAlta } from "@/lib/alta-de-cuenta";
 import { pruebaUsadaAntes } from "@/lib/alta-google-servidor";
+import { registrarEventoSeguridad } from "@/lib/security-events";
 
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req);
     if (!(await checkRateLimit(`registro:${ip}`, 5, 60_000))) {
+      await registrarEventoSeguridad({
+        kind: "RATE_LIMITED",
+        origin: "AUTOMATION_SIGNAL",
+        route: "/api/auth/registro",
+        method: req.method,
+        status: 429,
+        reason: "registration_rate_limit",
+        headers: req.headers,
+      });
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
@@ -50,6 +60,15 @@ export async function POST(req: NextRequest) {
     // Captcha después de validar campos (un error de tipeo no gasta el token, que es
     // de un solo uso) pero antes de tocar la base (nadie enumera emails sin resolverlo).
     if (!(await verifyTurnstile(turnstileToken, ip, "registro", req.nextUrl.hostname))) {
+      await registrarEventoSeguridad({
+        kind: "CAPTCHA_REJECTED",
+        origin: "AUTOMATION_SIGNAL",
+        route: "/api/auth/registro",
+        method: req.method,
+        status: 400,
+        reason: "registration_turnstile_rejected",
+        headers: req.headers,
+      });
       return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
     }
 
@@ -110,6 +129,16 @@ export async function POST(req: NextRequest) {
 
     if (authError || !authData?.user || !linkDeConfirmacion) {
       console.error("REGISTRO: no se pudo generar el link de confirmación", authError?.message);
+      await registrarEventoSeguridad({
+        kind: "SERVER_ERROR",
+        origin: "ANONYMOUS",
+        route: "/api/auth/registro",
+        method: req.method,
+        status: 400,
+        reason: "confirmation_link_failed",
+        errorName: authError ? "AuthProviderError" : "MissingConfirmationLink",
+        headers: req.headers,
+      });
       return NextResponse.json({ error: authError?.message || "No se pudo crear el usuario" }, { status: 400 });
     }
 
@@ -147,6 +176,16 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         mailEnviado = false;
         console.error("REGISTRO: no se pudo mandar el mail de confirmación a", normalizedEmail, err);
+        await registrarEventoSeguridad({
+          kind: "SERVER_ERROR",
+          origin: "ANONYMOUS",
+          route: "/api/auth/registro",
+          method: req.method,
+          status: 200,
+          reason: "confirmation_email_failed",
+          errorName: err instanceof Error ? err.name : "UnknownError",
+          headers: req.headers,
+        });
       }
 
       return NextResponse.json({ success: true, userId: user.id, mailEnviado, ...(sinPrueba ? { sinPrueba } : {}) });
@@ -160,6 +199,16 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     console.error("REGISTRO ERROR:", e instanceof Error ? e.message : e, e instanceof Error ? e.stack : undefined);
+    await registrarEventoSeguridad({
+      kind: "SERVER_ERROR",
+      origin: "ANONYMOUS",
+      route: "/api/auth/registro",
+      method: req.method,
+      status: 500,
+      reason: "registration_unhandled_error",
+      errorName: e instanceof Error ? e.name : "UnknownError",
+      headers: req.headers,
+    });
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

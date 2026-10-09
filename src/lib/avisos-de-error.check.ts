@@ -40,7 +40,7 @@ const leer = (f: string) => (existsSync(f) ? readFileSync(f, "utf8") : "");
 const instrumentacion = leer("src/instrumentation.ts");
 
 check("ERR-A",
-  /export const onRequestError = Sentry\.captureRequestError/.test(instrumentacion),
+  /Sentry\.captureRequestError\(/.test(instrumentacion),
   "los errores del servidor se le cuentan a Sentry");
 
 /* Y que las tres configuraciones sigan estando: `onRequestError` sin `init` no

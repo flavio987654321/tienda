@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import type { Instrumentation } from "next";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -23,9 +24,8 @@ export async function register() {
  *
  * Este enganche es la puerta que Next abre justamente para eso: le avisa a
  * Sentry de cada error que atajó, con el pedido que lo causó y en qué parte
- * pasó. Sin él, un `500` en una ruta de pago o un componente que rompe una
- * pantalla entera se ven **sólo en los registros de Vercel**, que nadie mira
- * hasta que alguien se queja.
+ * pasó. Los errores del runtime Node también quedan resumidos en los eventos
+ * de seguridad del admin, sin guardar el mensaje crudo ni datos del formulario.
  *
  * Encontrado en la auditoría del panel del 09/09/26.
  *
@@ -33,4 +33,14 @@ export async function register() {
  * (`beforeSend: scrubPii` en las tres configuraciones): acá adentro hay pedidos
  * de gente que compra, con su correo y su dirección.
  */
-export const onRequestError = Sentry.captureRequestError;
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Next uses a runtime-conditional require here to keep Node-only code out of Edge bundles.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { onRequestError: registrarErrores } = require("./instrumentation-node");
+    await registrarErrores(error, request, context);
+    return;
+  }
+
+  Sentry.captureRequestError(error, request, context);
+};

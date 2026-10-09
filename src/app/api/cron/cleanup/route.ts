@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DIAS_RETENCION_VISITAS } from "@/lib/retencion";
+import { DIAS_RETENCION_EVENTOS_SEGURIDAD } from "@/lib/security-events";
 import { rechazoDeCron } from "@/lib/cron-auth";
 import { rutaDeRef } from "@/lib/subida-digital";
 import {
@@ -28,6 +29,7 @@ export async function limpiar() {
   const ago90d  = new Date(now.getTime() - 90  * 24 * 60 * 60 * 1000);
   const ago6m   = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
   const ago1y   = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+  const agoSecurityEvents = new Date(now.getTime() - DIAS_RETENCION_EVENTOS_SEGURIDAD * 24 * 60 * 60 * 1000);
   const corteVisitas = new Date(now.getTime() - DIAS_RETENCION_VISITAS * 24 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
 
@@ -44,6 +46,7 @@ export async function limpiar() {
     visitasDigitales,
     origenesDigitales,
     campaniasDigitales,
+    securityEvents,
   ] = await Promise.all([
     // Sesiones de NextAuth ya expiradas
     prisma.session.deleteMany({
@@ -99,6 +102,11 @@ export async function limpiar() {
     prisma.digitalVisitaCampania.deleteMany({
       where: { date: { lt: corteVisitas } },
     }),
+    // Señales de seguridad con huella HMAC. El evento y la huella tienen el
+    // mismo plazo de conservación, según la política de privacidad.
+    prisma.securityEvent.deleteMany({
+      where: { createdAt: { lt: agoSecurityEvents } },
+    }),
   ]);
 
   // Va al final y aparte del `Promise.all`: es lo único acá que sale a internet.
@@ -120,11 +128,13 @@ export async function limpiar() {
       visitasDigitales: visitasDigitales.count,
       origenesDigitales: origenesDigitales.count,
       campaniasDigitales: campaniasDigitales.count,
+      securityEvents: securityEvents.count,
     },
     total: sessions.count + clicks.count + notifications.count +
            adminLogs.count + coupons.count + storeViews.count +
            storeViewSources.count + funnelSteps.count + abandonedCarts.count +
-           visitasDigitales.count + origenesDigitales.count + campaniasDigitales.count,
+           visitasDigitales.count + origenesDigitales.count + campaniasDigitales.count +
+           securityEvents.count,
     ranAt: now.toISOString(),
   });
 }

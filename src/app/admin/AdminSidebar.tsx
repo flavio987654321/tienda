@@ -57,6 +57,7 @@ const NAV_GROUPS = [
 type Badges = {
   pendingVerif: number; pendingReports: number; pendingRetiros: number; pendingCierres: number;
   newDisenos: number; newLeads: number; newTestimonios: number; newDonaciones: number;
+  activeSecurityAlerts: number;
 };
 
 function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: Badges; onNavigate?: () => void }) {
@@ -75,6 +76,7 @@ function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: 
     if (href === "/admin/leads") return badges.newLeads;
     if (href === "/admin/testimonios") return badges.newTestimonios;
     if (href === "/admin/canasta") return badges.newDonaciones;
+    if (href === "/admin/seguridad") return badges.activeSecurityAlerts;
     return 0;
   }
 
@@ -145,6 +147,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
   const [badges, setBadges] = useState<Badges>({
     pendingVerif: 0, pendingReports: 0, pendingRetiros: 0, pendingCierres: 0,
     newDisenos: 0, newLeads: 0, newTestimonios: 0, newDonaciones: 0,
+    activeSecurityAlerts: 0,
   });
   const pathname = usePathname();
   const { signOut } = useAuth();
@@ -162,7 +165,8 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
           window.location.assign("/login?vencida=1");
           return;
         }
-        setBadges({
+        setBadges((current) => ({
+          ...current,
           pendingVerif: d.pendingVerif ?? 0,
           pendingReports: d.pendingReports ?? 0,
           pendingRetiros: d.pendingRetiros ?? 0,
@@ -171,7 +175,10 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
           newLeads: d.newLeads ?? 0,
           newTestimonios: d.newTestimonios ?? 0,
           newDonaciones: d.newDonaciones ?? 0,
-        });
+          activeSecurityAlerts: typeof d.activeSecurityAlerts === "number"
+            ? d.activeSecurityAlerts
+            : current.activeSecurityAlerts,
+        }));
       } catch {
         // Un contador que no carga no rompe el panel: se deja el valor previo.
       }

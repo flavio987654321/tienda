@@ -10,6 +10,7 @@ import {
 import { limpiarTexto } from "@/lib/texto-limpio";
 import { MAX_PRODUCTOS_DIGITALES_CREADOS } from "@/lib/planLimits";
 import { espacioDigital } from "@/lib/espacio-digital";
+import { registrarEventoSeguridad } from "@/lib/security-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,10 +43,28 @@ export async function POST(req: NextRequest) {
 
   try {
     if (!(await checkRateLimit(`digital-producto:${user.id}`, 60, 60 * 60 * 1000))) {
+      await registrarEventoSeguridad({
+        kind: "RATE_LIMITED",
+        origin: "REGISTERED_USER",
+        route: "/api/digitales/productos",
+        method: req.method,
+        status: 429,
+        reason: "digital_product_rate_limit",
+        headers: req.headers,
+      });
       return NextResponse.json({ error: "Demasiados productos seguidos. Esperá un momento." }, { status: 429 });
     }
   } catch {
     console.error("[rate-limit] Redis no disponible en /digitales/productos");
+    await registrarEventoSeguridad({
+      kind: "SERVER_ERROR",
+      origin: "REGISTERED_USER",
+      route: "/api/digitales/productos",
+      method: req.method,
+      status: 200,
+      reason: "digital_rate_limit_unavailable",
+      headers: req.headers,
+    });
   }
 
   const body = await req.json().catch(() => null);

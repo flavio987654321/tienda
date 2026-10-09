@@ -2023,6 +2023,27 @@ model AdminActionLog {
   ip         String?
 }
 
+/// Eventos técnicos y señales de abuso, sin guardar datos del formulario ni
+/// direcciones IP legibles. `ipFingerprint` es un HMAC temporal y se borra con
+/// el evento en la limpieza diaria posterior a los 30 días.
+model SecurityEvent {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  kind           String
+  origin         String
+  route          String
+  method         String
+  status         Int?
+  reason         String?
+  errorName      String?
+  requestId      String?
+  ipFingerprint  String?
+
+  @@index([createdAt(sort: Desc)])
+  @@index([kind, createdAt(sort: Desc)])
+  @@index([ipFingerprint, createdAt(sort: Desc)])
+}
+
 // PROMOCIONES — flyers que el admin de la plataforma sube y se muestran en
 // un carrusel en la home pública. Máximo 3 activas a la vez (se valida en
 // la API, no acá), ordenadas por sortOrder. sortOrder es único porque cada
