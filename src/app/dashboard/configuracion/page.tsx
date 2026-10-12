@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { ordenEfectivo } from "@/lib/ordenBloques";
 import { ayudaDeBloque } from "@/lib/ayudaBloques";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { subirImagenDeDiseno } from "@/lib/subir-imagen-diseno";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, TextOverrideCelular, ImageOverride, TemplateId } from "@/types/store-config";
 import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, SECTION_BG_FOCO_CELULAR, SECTION_BG_SOLO_FOTO, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
@@ -343,23 +343,22 @@ function FlyerImageSlot({ url, slot, onUpload, onRemove }: {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Candado sincrónico, igual que en las fotos de sección: dos archivos elegidos
+  // rápido subían los dos y quedaba el que terminara último.
+  const subiendo = useRef(false);
 
   const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || subiendo.current) return;
+    subiendo.current = true;
     setUploading(true);
     setError(null);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `tienda-imagenes/flyer-${slot}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
-      onUpload(slot, data.publicUrl);
+      onUpload(slot, await subirImagenDeDiseno(file));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {
+      subiendo.current = false;
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
@@ -1122,13 +1121,7 @@ function ImageFieldEditor({
     setUploading(true);
     setUploadError(null);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `tienda-imagenes/${field}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
-      setImageOverride(field, { url: data.publicUrl });
+      setImageOverride(field, { url: await subirImagenDeDiseno(file) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al subir la imagen";
       setUploadError(msg);
@@ -1506,16 +1499,11 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto, focoCelular = 
     setUploading(true);
     setUploadError(null);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `tienda-imagenes/${imgKey}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
+      const url = await subirImagenDeDiseno(file);
       // La de celular no toca la capa: la capa es una sola para las dos fotos.
       setImageOverride(imgKey, destinoSubida.current === "urlMobile"
-        ? { urlMobile: data.publicUrl }
-        : { url: data.publicUrl, overlayType: "dark", overlayOpacity: 0.45 });
+        ? { urlMobile: url }
+        : { url, overlayType: "dark", overlayOpacity: 0.45 });
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {

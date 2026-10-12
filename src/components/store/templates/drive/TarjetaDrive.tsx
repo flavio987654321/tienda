@@ -6,6 +6,7 @@ import { usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
 import { getContrastColor } from "@/contexts/EditContext";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * La tarjeta de Auto Drive (07/10/26): blanca, redondeada, la foto con marco,
@@ -54,7 +55,7 @@ export function TarjetaDrive({ p, acento, moneda, href, favorito, onFavorito }: 
       ...({ "--td-acento": acento, "--td-sobre": sobre } as React.CSSProperties) }}>
       <div className="td-foto" style={{ position: "relative", aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", background: "#eef0f3" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda, ya optimizadas al subir */}
-        <img src={foto} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: reservado ? "grayscale(.6)" : undefined }}
+        <img src={fotoLiviana(foto, 640)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: reservado ? "grayscale(.6)" : undefined }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = FOTO_VACIA; }} />
         <div style={{ position: "absolute", top: 10, left: 10, right: 56, display: "flex", gap: 6, flexWrap: "wrap" }}>
           {reservado ? (

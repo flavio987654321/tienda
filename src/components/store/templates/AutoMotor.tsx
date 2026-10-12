@@ -47,9 +47,10 @@ import { VideosMotor, VIDEOS_MOTOR_CSS } from "@/components/store/templates/moto
 import { PreguntasMotor } from "@/components/store/templates/motor/PreguntasMotor";
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
 import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
-  if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
+  if (ov?.url) return { backgroundImage: `url(${fotoLiviana(ov.url, 1920)})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
 }
 function secText(ov: ImageOverride | undefined, bg: string): string {
@@ -530,7 +531,7 @@ export default function AutoMotor() {
         display:"flex", flexDirection:"column", justifyContent:"flex-end",
         paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), overflow:"hidden", background: NEGRO }}>
         <div aria-hidden="true" style={{ position:"absolute", inset:0,
-          backgroundImage: `url(${heroBgUrl})`,
+          backgroundImage: `url(${fotoLiviana(heroBgUrl, 1920)})`,
           backgroundSize:"cover", backgroundPosition:`${heroOv?.posX ?? 50}% ${heroOv?.posY ?? 50}%` }} />
         {heroOverlayType !== "none" && (
           <div aria-hidden="true" style={{ position:"absolute", inset:0,
@@ -791,7 +792,7 @@ export default function AutoMotor() {
           margin:"0 auto", display:"grid", gap:"clamp(32px,5vw,72px)", alignItems:"center" }}>
           <div style={{ position:"relative", overflow:"hidden", aspectRatio:"5/4", borderRadius:4 }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-            <img src={nosotrosUrl} alt=""
+            <img src={fotoLiviana(nosotrosUrl, 1200)} alt=""
               style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
             {(() => {
               const ov = iovr["nosotrosImage"];
@@ -837,7 +838,7 @@ export default function AutoMotor() {
               titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
             <div className="am-faq-foto" style={{ position:"relative", overflow:"hidden", aspectRatio:"4/3", borderRadius:4, border:`1px solid ${LINEA}` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-              <img src={iovr["faqImage"]?.url ?? "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=900&q=80"} alt=""
+              <img src={fotoLiviana(iovr["faqImage"]?.url, 1200) || "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=900&q=80"} alt=""
                 style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
               <span aria-hidden="true" style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(11,12,14,0.95) 0%, rgba(11,12,14,0.35) 55%, rgba(11,12,14,0.1) 100%)" }} />
               <div style={{ position:"absolute", left:0, right:0, bottom:0, padding:"clamp(18px,3vw,28px)" }}>
@@ -950,7 +951,7 @@ export default function AutoMotor() {
                   <Link key={p.id} href={paginaDe(p)}
                     style={{ display:"block", background:"#141619", border:`1px solid ${LINEA}`, borderRadius:4, textDecoration:"none", color:"#fff", overflow:"hidden" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
-                    <img src={p.images[0] ?? ""} alt="" style={{ width:"100%", aspectRatio:"16/11", objectFit:"cover", display:"block", background:NEGRO }} />
+                    <img src={fotoLiviana(p.images[0], 640)} alt="" style={{ width:"100%", aspectRatio:"16/11", objectFit:"cover", display:"block", background:NEGRO }} />
                     <div style={{ padding:"10px 12px 12px" }}>
                       <p style={{ fontSize:13, fontWeight:700, margin:"0 0 4px" }}>{p.name}</p>
                       <p style={{ fontSize:13, color:accent, fontWeight:800, margin:0 }}>{p.price > 0 ? fmtPrice(p.price, monedaDe(p, currency)) : "Consultar"}</p>
@@ -989,7 +990,7 @@ export default function AutoMotor() {
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:`1px solid ${LINEA}` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
-                <img src={product.images[0] ?? ""} alt="" style={{ width:96, height:68, objectFit:"cover", borderRadius:2, flexShrink:0, background:NEGRO }} />
+                <img src={fotoLiviana(product.images[0], 256)} alt="" style={{ width:96, height:68, objectFit:"cover", borderRadius:2, flexShrink:0, background:NEGRO }} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontSize:14, fontWeight:700, margin:"0 0 4px", overflowWrap:"anywhere" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:800, margin:"0 0 10px" }}>{product.price > 0 ? fmtPrice(product.price, monedaDe(product, currency)) : "Consultar"}</p>

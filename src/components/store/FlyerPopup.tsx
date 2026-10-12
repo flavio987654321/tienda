@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { FlyerConfig } from "@/types/store-config";
 import { pedirTurno } from "@/lib/interrupcion-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
   const [visible, setVisible] = useState(false);
@@ -114,7 +115,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
         <div style={{ display: "inline-block", borderRadius: 16, overflow: "hidden", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
           <img
             key={index}
-            src={images[index]}
+            src={fotoLiviana(images[index], 680)}
             alt={`Flyer ${index + 1}`}
             style={{
               maxWidth: "100%", height: "auto", display: "block",

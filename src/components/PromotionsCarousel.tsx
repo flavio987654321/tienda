@@ -1,7 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 type Promotion = { id: string; imageUrl: string; link: string | null };
+
+/* "No volver a mostrar" se guarda con la lista de flyers que había en ese
+   momento, no con un sí/no. Así, cuando el admin publica uno nuevo, la firma
+   cambia y vuelve a aparecer: quien lo tildó no quería ver ESOS, no quedarse
+   afuera de todas las promociones para siempre. */
+const CLAVE_OCULTAS = "promos-home-ocultas";
+const firmaDe = (ps: Promotion[]) => ps.map((p) => p.id).join(",");
+
+function leerOcultas(): string | null {
+  try { return localStorage.getItem(CLAVE_OCULTAS); } catch { return null; }
+}
 
 // Mismo patrón que el flyer de las tiendas (FlyerPopup): cartel flotante con
 // fondo oscuro, no una franja fija en la página.
@@ -10,6 +22,7 @@ export default function PromotionsCarousel() {
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState<"next" | "prev">("next");
+  const [noMostrarMas, setNoMostrarMas] = useState(false);
 
   useEffect(() => {
     fetch("/api/promociones")
@@ -18,19 +31,30 @@ export default function PromotionsCarousel() {
       .catch(() => {});
   }, []);
 
+  const firma = firmaDe(promotions);
   useEffect(() => {
-    if (promotions.length === 0) return;
+    if (!firma) return;
+    if (leerOcultas() === firma) return;
     const isPwa =
       new URLSearchParams(window.location.search).get("source") === "pwa" ||
       window.matchMedia("(display-mode: standalone)").matches;
     const t = setTimeout(() => setVisible(true), isPwa ? 1200 : 400);
     return () => clearTimeout(t);
-  }, [promotions.length]);
+  }, [firma]);
 
   if (!visible) return null;
 
   const total = promotions.length;
   if (total === 0) return null;
+
+  /* Todas las salidas pasan por acá —la cruz y tocar afuera— para que la casilla
+     valga cierre como cierre. */
+  function cerrar() {
+    if (noMostrarMas) {
+      try { localStorage.setItem(CLAVE_OCULTAS, firma); } catch { /* sin almacenamiento: vuelve a salir, nada más */ }
+    }
+    setVisible(false);
+  }
 
   function prev() { setDir("prev"); setIndex((i) => (i - 1 + total) % total); }
   function next() { setDir("next"); setIndex((i) => (i + 1) % total); }
@@ -46,7 +70,7 @@ export default function PromotionsCarousel() {
         padding: "16px",
         animation: "flyerFadeIn 0.35s ease",
       }}
-      onClick={() => setVisible(false)}
+      onClick={cerrar}
     >
       <style>{`
         @keyframes flyerFadeIn {
@@ -76,7 +100,7 @@ export default function PromotionsCarousel() {
       >
         {/* Botón cerrar */}
         <button
-          onClick={() => setVisible(false)}
+          onClick={cerrar}
           aria-label="Cerrar promociones"
           style={{
             position: "absolute", top: -14, right: -6, zIndex: 2,
@@ -98,7 +122,7 @@ export default function PromotionsCarousel() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 key={index}
-                src={current.imageUrl}
+                src={fotoLiviana(current.imageUrl, 680)}
                 alt={`Promoción ${index + 1}`}
                 style={{
                   maxWidth: "100%", height: "auto", display: "block", cursor: "pointer",
@@ -111,7 +135,7 @@ export default function PromotionsCarousel() {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={index}
-              src={current.imageUrl}
+              src={fotoLiviana(current.imageUrl, 680)}
               alt={`Promoción ${index + 1}`}
               style={{
                 maxWidth: "100%", height: "auto", display: "block",
@@ -165,9 +189,23 @@ export default function PromotionsCarousel() {
           </div>
         )}
 
+        <label style={{
+          display: "inline-flex", alignItems: "center", gap: 8, marginTop: 14,
+          color: "rgba(255,255,255,0.85)", fontSize: 13, cursor: "pointer", userSelect: "none",
+          padding: "6px 4px",
+        }}>
+          <input
+            type="checkbox"
+            checked={noMostrarMas}
+            onChange={(e) => setNoMostrarMas(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: "#f97316", cursor: "pointer", margin: 0 }}
+          />
+          No volver a mostrar
+        </label>
+
         <p style={{
           textAlign: "center", color: "rgba(255,255,255,0.35)",
-          fontSize: 11, marginTop: 10, userSelect: "none",
+          fontSize: 11, marginTop: 6, userSelect: "none",
         }}>
           Tocá afuera para cerrar
         </p>

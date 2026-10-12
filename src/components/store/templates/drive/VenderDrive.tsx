@@ -4,6 +4,7 @@ import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
 import { VentanaAuto } from "@/components/store/auto/VentanaAuto";
 import { getContrastColor } from "@/contexts/EditContext";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * "Vendé o permutá tu usado" de Auto Drive (07/10/26): un panel grande del
@@ -52,7 +53,7 @@ export function VenderDrive({ storeId, acento, isOwner, isPreview, foto, botonFo
           </div>
           <div className="vdr-foto" style={{ position: "relative" }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-            <img src={foto} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <img src={fotoLiviana(foto, 1200)} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             {botonFoto}
           </div>
         </div>

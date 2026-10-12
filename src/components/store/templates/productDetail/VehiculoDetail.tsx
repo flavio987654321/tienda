@@ -28,6 +28,7 @@ import { linkAVehiculo, linkAVehiculos } from "@/lib/filtroVehiculos";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 import { CAPAS } from "@/lib/capas-tienda";
 import PieDeAutos from "@/components/store/auto/PieDeAutos";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 type Tema = "oscuro" | "claro";
 
@@ -83,7 +84,7 @@ function FotoAmpliada({ fotos, inicial, nombre, onClose }: { fotos: string[]; in
     <div role="dialog" aria-modal="true" aria-label={`Fotos de ${nombre}`} onClick={onClose} {...swipe}
       style={{ position: "fixed", inset: 0, zIndex: CAPAS.pantallaCompleta, background: "rgba(0,0,0,0.96)", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
-      <img src={fotos[i]} alt={`${nombre}, foto ${i + 1} de ${fotos.length}`} onClick={e => e.stopPropagation()}
+      <img src={fotoLiviana(fotos[i], 1920)} alt={`${nombre}, foto ${i + 1} de ${fotos.length}`} onClick={e => e.stopPropagation()}
         style={{ maxWidth: "100vw", maxHeight: "100vh", objectFit: "contain", touchAction: "pinch-zoom" }} />
       {fotos.length > 1 && <>{flecha("izq")}{flecha("der")}</>}
       <span style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
@@ -234,7 +235,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
                 onMouseLeave={() => setLupa(null)}
                 style={{ all: "unset", cursor: "zoom-in", position: "absolute", inset: 0 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
-                <img src={fotos[foto]} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                <img src={fotoLiviana(fotos[foto], 1200)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                   onError={e => { (e.currentTarget as HTMLImageElement).src = FOTO_VACIA; }} />
                 {lupa && (
                   <span aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundColor: tema === "oscuro" ? "#000" : "#e9ebef",
@@ -270,7 +271,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
                       border: "none", outline: i === foto ? `2px solid ${acento}` : `1px solid ${c.linea}`, outlineOffset: i === foto ? 1 : 0,
                       opacity: i === foto ? 1 : 0.6, background: c.superficie }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
-                    <img src={f} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <img src={fotoLiviana(f, 256)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   </button>
                 ))}
               </div>

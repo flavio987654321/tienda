@@ -5,6 +5,7 @@ import { parseReel, ReelPlayerModal } from "@/components/store/ProductReels";
 import { fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import type { VideoDeVehiculo } from "@/components/store/auto/videosDeVehiculos";
 import { monedaDe } from "@/lib/monedaVehiculo";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * "Videos" de Auto Motor (07/10/26): una tira de videos verticales, como en las
@@ -46,7 +47,7 @@ export function VideosMotor({ videos, acento, moneda, hrefDe, vacio, tinta = "#f
               {reel.kind === "video"
                 ? <video src={`${url}#t=0.5`} preload="metadata" muted playsInline className="vm-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
                 // eslint-disable-next-line @next/next/no-img-element -- miniatura de YouTube o foto del vehículo
-                : <img src={portada ?? ""} alt="" className="vm-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+                : <img src={fotoLiviana(portada, 828)} alt="" className="vm-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
               <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(11,12,14,0.92) 0%, rgba(11,12,14,0) 55%)" }} />
               <span aria-hidden="true" className="vm-play" style={{ position: "absolute", top: "42%", left: "50%", marginLeft: -28, marginTop: -28, width: 56, height: 56, borderRadius: "50%",
                 background: "rgba(255,255,255,0.16)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>

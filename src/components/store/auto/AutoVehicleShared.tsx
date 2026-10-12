@@ -5,6 +5,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { getContrastColor } from "@/contexts/EditContext";
 import { monedaDe } from "@/lib/monedaVehiculo";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 export function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
@@ -151,7 +152,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", href, 
       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: D ? "#111" : "#f5f5f5" }}>
         {/* El nombre ya lo dice el botón de abajo: la foto no lo repite al lector de pantalla. */}
-        <img src={img} alt=""
+        <img src={fotoLiviana(img, 1200)} alt=""
           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#ffffff",
             opacity: esReservado(product) ? 0.7 : 1 }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"; }} />

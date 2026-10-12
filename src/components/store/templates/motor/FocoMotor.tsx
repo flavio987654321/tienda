@@ -7,6 +7,7 @@ import { urlFichaPdf, NOMBRE_TIPO, usaHoras, type CategoriaVehiculo } from "@/li
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { getContrastColor } from "@/contexts/EditContext";
 import { usoDe } from "./TarjetaMotor";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * "Vehículo en foco" de Auto Motor (06/10/26): uno solo, grande, con lo que
@@ -42,7 +43,7 @@ export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, href, kicker 
       <Link href={href} aria-label={`Ver ${p.name}`}
         style={{ position: "relative", display: "block", minHeight: 280, background: "#0b0c0e" }} className="fm-foto">
         {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
-        <img src={p.images[0] ?? ""} alt="" onError={e => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <img src={fotoLiviana(p.images[0], 1200)} alt="" onError={e => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         {p.images.length > 1 && (
           <span style={{ position: "absolute", right: 14, bottom: 14, fontSize: 11, fontWeight: 700, color: "#fff",
             background: "rgba(11,12,14,0.6)", backdropFilter: "blur(6px)", padding: "6px 10px", borderRadius: 2 }}>

@@ -35,6 +35,7 @@ import { VenderDrive, VENDER_DRIVE_CSS } from "@/components/store/templates/driv
 import { PreguntasDrive } from "@/components/store/templates/drive/PreguntasDrive";
 import { FocoDrive } from "@/components/store/templates/drive/FocoDrive";
 import { elegirFoco } from "@/lib/vehiculoFoco";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * Auto Drive (rehecho el 07/10/26): la portada clara, tipo portal de autos.
@@ -46,7 +47,7 @@ import { elegirFoco } from "@/lib/vehiculoFoco";
  */
 
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
-  if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
+  if (ov?.url) return { backgroundImage: `url(${fotoLiviana(ov.url, 1920)})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
 }
 function secText(ov: ImageOverride | undefined, bg: string): string {
@@ -590,7 +591,7 @@ export default function AutoDrive() {
           <div className="ad-hero-foto" style={{ position:"relative", alignSelf:"stretch", minHeight:460 }}>
             <div style={{ position:"absolute", inset:0, borderRadius:32, overflow:"hidden", boxShadow:"0 30px 60px rgba(15,23,42,0.18)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-              <img src={heroImgUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <img src={fotoLiviana(heroImgUrl, 1920)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
               {(() => {
                 const ov = iovr["heroImage"];
                 if (!ov?.overlayType || ov.overlayType==="none") return null;
@@ -912,7 +913,7 @@ export default function AutoDrive() {
           <div style={{ position:"relative" }}>
             <div style={{ borderRadius:28, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-              <img src={nosotrosUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <img src={fotoLiviana(nosotrosUrl, 1200)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
               {(() => {
                 const ov = iovr["nosotrosImage"];
                 if (!ov?.overlayType || ov.overlayType==="none") return null;
@@ -987,7 +988,7 @@ export default function AutoDrive() {
             <div className="ad-faq-tarjeta" style={{ background:"#fff", borderRadius:24, padding:8, boxShadow:"0 10px 30px rgba(15,23,42,0.07)", maxWidth:520 }}>
               <div style={{ position:"relative", aspectRatio:"16/10", borderRadius:18, overflow:"hidden", background:"#e2e8f0" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-                <img src={faqUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+                <img src={fotoLiviana(faqUrl, 1200)} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
                 <EditableImageButton field="faqImage" label="Foto de preguntas" />
               </div>
               <div style={{ padding:"18px 14px 12px" }}>
@@ -1115,7 +1116,7 @@ export default function AutoDrive() {
                   <Link key={p.id} href={paginaDe(p)}
                     style={{ display:"block", background:"#fff", borderRadius:16, textDecoration:"none", color:TINTA, overflow:"hidden", padding:6, boxShadow:"0 4px 14px rgba(15,23,42,0.06)" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- foto del vehículo */}
-                    <img src={p.images[0] ?? ""} alt="" style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", background:"#eef0f3", borderRadius:12 }} />
+                    <img src={fotoLiviana(p.images[0], 640)} alt="" style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", background:"#eef0f3", borderRadius:12 }} />
                     <div style={{ padding:"10px 8px 6px" }}>
                       <p style={{ fontSize:14, fontWeight:700, margin:"0 0 4px" }}>{p.name}</p>
                       <p style={{ fontSize:14, color:TINTA, fontWeight:800, margin:0 }}>{p.price > 0 ? fmtPrice(p.price, monedaDe(p, currency)) : "Consultar"}</p>
@@ -1148,7 +1149,7 @@ export default function AutoDrive() {
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"12px 0", borderBottom:`1px solid ${LINEA}` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto del vehículo */}
-                <img src={product.images[0] ?? ""} alt="" style={{ width:88, height:66, objectFit:"cover", borderRadius:12, flexShrink:0, background:"#eef0f3" }} />
+                <img src={fotoLiviana(product.images[0], 256)} alt="" style={{ width:88, height:66, objectFit:"cover", borderRadius:12, flexShrink:0, background:"#eef0f3" }} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontSize:14, fontWeight:700, margin:"0 0 2px", color:TINTA, overflowWrap:"anywhere" }}>{product.name}</p>
                   <p style={{ fontSize:14, color:TINTA, fontWeight:800, margin:"0 0 10px" }}>{product.price > 0 ? fmtPrice(product.price, monedaDe(product, currency)) : "Consultar"}</p>

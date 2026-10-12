@@ -6,6 +6,7 @@ import { monedaDe } from "@/lib/monedaVehiculo";
 import { entero } from "@/lib/filtroVehiculos";
 import { usaHoras, NOMBRE_TIPO, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
 import { getContrastColor } from "@/contexts/EditContext";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * La tarjeta de Auto Motor (06/10/26). Propia de este template: oscura, la foto
@@ -70,7 +71,7 @@ export function TarjetaMotor({ p, acento, moneda, href, onAbrir, favorito, onFav
       ...({ "--tm-acento": acento } as React.CSSProperties) }}>
       <div className="tm-foto" style={{ position: "relative", aspectRatio: "16/11", overflow: "hidden", background: "#0b0c0e" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda, ya optimizadas al subir */}
-        <img src={foto} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
+        <img src={fotoLiviana(foto, 640)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
           opacity: reservado ? 0.55 : 1 }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = FOTO_VACIA; }} />
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(11,12,14,0.85) 0%, rgba(11,12,14,0) 45%)" }} />

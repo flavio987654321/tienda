@@ -5,6 +5,7 @@ import { parseReel, ReelPlayerModal } from "@/components/store/ProductReels";
 import { fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import type { VideoDeVehiculo } from "@/components/store/auto/videosDeVehiculos";
 import { monedaDe } from "@/lib/monedaVehiculo";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /**
  * "Videos" de Auto Drive (07/10/26), como una lista de reproducción: uno grande
@@ -45,7 +46,7 @@ export function VideosDrive({ videos, acento, moneda, hrefDe, vacio }: {
       {reel.kind === "video"
         ? <video key={actual.url} src={`${actual.url}#t=0.5`} preload="metadata" muted playsInline className="vd-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         // eslint-disable-next-line @next/next/no-img-element -- foto del vehículo o miniatura de YouTube
-        : <img src={tapaDe(actual)} alt="" className="vd-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+        : <img src={fotoLiviana(tapaDe(actual), 1200)} alt="" className="vd-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
       <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,23,42,.55), rgba(15,23,42,0) 50%)" }} />
       <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><Play tam={72} /></span>
       {reel.kind === "link" && (
@@ -88,7 +89,7 @@ export function VideosDrive({ videos, acento, moneda, hrefDe, vacio }: {
                     boxShadow: activo ? "0 6px 18px rgba(15,23,42,.08)" : "none", transition: "background .2s, border-color .2s" }}>
                   <span style={{ position: "relative", width: 96, aspectRatio: "16/10", borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#e2e8f0" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- foto del vehículo */}
-                    {tapaDe(v) && <img src={tapaDe(v)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                    {tapaDe(v) && <img src={fotoLiviana(tapaDe(v), 384)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
                     <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,.2)" }}><Play tam={26} /></span>
                   </span>
                   <span style={{ minWidth: 0 }}>

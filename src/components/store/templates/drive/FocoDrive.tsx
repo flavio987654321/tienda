@@ -4,6 +4,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, vehicleLocation, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 export function FocoDrive({ p, acento, moneda, href, whatsapp }: {
   p: StorefrontProduct;
@@ -22,7 +23,7 @@ export function FocoDrive({ p, acento, moneda, href, whatsapp }: {
       <article className="fd-grid" style={{ overflow:"hidden", borderRadius:22, background:"#fff", border:"1px solid #e8ebf0", boxShadow:"0 14px 40px rgba(15,23,42,.08)" }}>
         <Link href={href} aria-label={`Ver ${p.name}`} style={{ position:"relative", display:"block", minHeight:260, background:"#e8ebf0" }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- fotos cargadas por cada tienda */}
-          {p.images[0] ? <img src={p.images[0]} alt={p.name} style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+          {p.images[0] ? <img src={fotoLiviana(p.images[0], 1200)} alt={p.name} style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
             : <span style={{ position:"absolute", inset:0, display:"grid", placeItems:"center", color:"#64748b", fontSize:14 }}>Vehículo sin foto</span>}
         </Link>
         <div style={{ display:"flex", flexDirection:"column", gap:16, padding:"clamp(22px,4vw,38px)", minWidth:0 }}>

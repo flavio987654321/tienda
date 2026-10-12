@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { datosDe, linkAVehiculos, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
 import { useEditContext } from "@/contexts/EditContext";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 function TarjetaTipo({ g, href, foto, campoFoto, editando, posX, posY, cambiarEncuadre }: {
   g: { valor: string; label: string; cuantos: number };
@@ -24,7 +25,7 @@ function TarjetaTipo({ g, href, foto, campoFoto, editando, posX, posY, cambiarEn
       <Link href={href} aria-label={`${g.label}, ${g.cuantos} vehículos`} style={{ position:"absolute", inset:0, display:"block", color:"#fff", textDecoration:"none" }}>
         {foto && (
           // eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda
-          <img src={foto} alt="" loading="lazy" className="tp-foto" onError={e => { e.currentTarget.style.display = "none"; }}
+          <img src={fotoLiviana(foto, 640)} alt="" loading="lazy" className="tp-foto" onError={e => { e.currentTarget.style.display = "none"; }}
             style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${posX}% ${posY}%`,
               borderRadius:4, ...(controlesAbiertos ? { transform:"none" } : {}) }} />
         )}

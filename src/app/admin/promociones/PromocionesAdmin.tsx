@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Loader2, Check, Megaphone, Link2, Trash2, ArrowLeft, ArrowRight } from "lucide-react";
 import { LUGARES } from "@/lib/orden-promociones";
+import { subirImagenDeDiseno } from "@/lib/subir-imagen-diseno";
 
 type Promotion = {
   id: string;
@@ -118,14 +119,8 @@ function PromotionSlot({
     setUploading(true);
     setError(null);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: form });
-      if (!uploadRes.ok) {
-        const data = await uploadRes.json().catch(() => ({}));
-        throw new Error(data.error || "Error al subir la imagen");
-      }
-      const { url } = await uploadRes.json();
+      // Achicada antes de subir: estos flyers los ve cada visitante de la home.
+      const url = await subirImagenDeDiseno(file);
 
       if (promotion) {
         const updated = await putJSON(`/api/admin/promociones/${promotion.id}`, { imageUrl: url });
