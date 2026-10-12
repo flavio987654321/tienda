@@ -105,7 +105,8 @@ export function EntrarConCodigo({
         ? ` Te quedan ${d.restantes} ${d.restantes === 1 ? "intento" : "intentos"}.`
         : "";
       setError((d.error ?? "No pudimos verificar el código.") + aviso);
-      setCodigo("");
+      // Con el servicio caído el código puede estar bien: se deja para reintentar.
+      if (r.status !== 503) setCodigo("");
     } catch {
       setError("Se cortó la conexión. Revisá tu internet y probá de nuevo.");
     }

@@ -180,6 +180,7 @@ export const ETIQUETAS_CATEGORIA: Record<string, string> = {
   "ropa-ninos": "Ropa niños",
   "ropa-bebe": "Ropa bebé",
   "escote-v": "Escote V", // la V va en mayúscula: es la forma del escote, no una palabra
+  cub: "CUB / Ciclomotor",
 };
 
 /** Cómo mostrar una categoría o subcategoría.
@@ -315,8 +316,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     categorias: ["autos", "camionetas", "motos", "camiones", "utilitarios", "maquinaria", "cuatriciclos", "repuestos", "accesorios"],
     subcategorias: {
       autos: ["sedán", "suv", "hatchback", "coupé", "convertible", "rural", "monovolumen"],
-      // "cuatriciclo", "van" y "utilitario" quedan por los vehículos que ya los tenían.
-      motos: ["naked", "enduro", "scooter", "trail", "deportiva", "custom", "cuatriciclo"],
+      // Las CUB (como la Gilera Smash) son motos urbanas; los cuatriciclos tienen
+      // su propia categoría y no deben aparecer como subcategoría de motos.
+      motos: ["cub", "naked", "enduro", "scooter", "trail", "deportiva", "custom"],
       camionetas: ["pickup", "suv", "van", "utilitario"],
       camiones: ["liviano", "mediano", "pesado", "tractor (semi)", "volcador", "chasis"],
       utilitarios: ["furgón", "combi", "chasis cabina", "minibús"],

@@ -1338,6 +1338,11 @@ function ProductoFormPage() {
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
+  const customSubcategoryPlaceholder = storeTypeConfig.id === "AUTOS"
+    ? form.category === "motos" ? "Ej.: touring, ciclomotor"
+      : form.category === "repuestos" || form.category === "accesorios" ? "Ej.: otra subcategoría"
+      : "Ej.: otro tipo de vehículo"
+    : storeTypeConfig.id === "ROPA" ? "Ej.: remeras, pantalones, camperas" : "Ej.: otra subcategoría";
   // Specs propias de lo que se está cargando (Pulgadas para TVs, Piedra para
   // joyas), sumadas a las genéricas del rubro. Si comparten nombre, gana la de
   // la categoría: un collar no pide "Material: Algodón, poliéster...".
@@ -1559,7 +1564,7 @@ function ProductoFormPage() {
                       value={customSubcategory}
                       onChange={setCustomSubcategory}
                       ariaLabel="Subcategoría nueva"
-                      placeholder="Ej: remeras, pantalones, camperas"
+                      placeholder={customSubcategoryPlaceholder}
                       className="mt-3 py-3"
                     />
                   )}

@@ -6,6 +6,7 @@ import { countFailures, recordFailure, failureCooldown, clearFailures, checkRate
 import { getClientIp } from "@/lib/request-ip";
 import { normalizarEmail, normalizarCodigo, INTENTOS_MAX, BLOQUEO_MS } from "@/lib/codigo-ingreso";
 import { esElAdmin, anularClaveYReabrir } from "@/lib/alta-google-servidor";
+import { esFallaDelServicio, MENSAJE_SERVICIO_CAIDO } from "@/lib/falla-servicio";
 
 /**
  * Entra con el código del mail. Ver `lib/codigo-ingreso`.
@@ -64,6 +65,14 @@ export async function POST(req: NextRequest) {
        solo intento a los ojos del contador: errar cuenta una vez. */
     let { data, error } = await supabase.auth.verifyOtp({ email, token: codigo, type: "email" });
     if (error) ({ data, error } = await supabase.auth.verifyOtp({ email, token: codigo, type: "magiclink" }));
+
+    /* Supabase caído o sin cuota: no es el código. Va antes del contador a
+       propósito — si no, en un corte cada intento contaba como error y la persona
+       terminaba bloqueada por algo que no hizo. */
+    if (error && esFallaDelServicio(error)) {
+      console.error("[codigo] Supabase no respondió al verificar:", error.status, error.message);
+      return NextResponse.json({ error: MENSAJE_SERVICIO_CAIDO }, { status: 503 });
+    }
 
     if (error || !data?.user) {
       let restantes: number | null = null;

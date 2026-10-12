@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import { useTurnstile } from "@/components/Turnstile";
+import { esFallaDelServicio, mensajeFallaDelServicio, MENSAJE_SERVICIO_CAIDO } from "@/lib/falla-servicio";
 
 /* Todo lo que hace un formulario de login, una sola vez.
  *
@@ -115,11 +116,23 @@ export function useLoginForm(alEntrar: () => void) {
         ...(captcha.token ? { options: { captchaToken: captcha.token } } : {}),
       }));
     } catch {
-      fallar("No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.");
+      fallar(mensajeFallaDelServicio());
       return;
     }
 
     if (loginError) {
+      /* Primero lo que NO es culpa de quien escribe: Supabase caído, sin cuota o
+         sin red. Antes salía "Email o contraseña incorrectos" para todo, y en el
+         corte de octubre la gente cambiaba contraseñas que estaban bien. */
+      if (esFallaDelServicio(loginError)) {
+        fallar(mensajeFallaDelServicio());
+        return;
+      }
+      if ((loginError as { status?: number }).status === 429) {
+        fallar("Demasiados intentos seguidos. Esperá unos minutos y probá de nuevo.");
+        return;
+      }
+
       /* El captcha necesita su propio mensaje. Con uno solo para todo, alguien
          con la contraseña bien pero el captcha caído leía "Email o contraseña
          incorrectos" y se ponía a cambiar la contraseña de una cuenta que estaba
@@ -169,11 +182,16 @@ export function useLoginForm(alEntrar: () => void) {
     try {
       // Mismo motivo que arriba: sin red, `fetch` rechaza y `resetting` se
       // quedaba en true, con el botón diciendo "Enviando..." para siempre.
-      await fetch("/api/auth/reset-password", {
+      const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
       });
+      // 503 es "se nos cayó a nosotros"; también cualquier 5xx de la plataforma.
+      if (res.status >= 500) {
+        setError(MENSAJE_SERVICIO_CAIDO);
+        return;
+      }
       setInfo("Te enviamos un link para recuperar tu contraseña. Revisá tu email.");
     } catch {
       setError("No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.");

@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendPasswordResetEmail } from "@/lib/resend";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { esFallaDelServicio, MENSAJE_SERVICIO_CAIDO } from "@/lib/falla-servicio";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -25,6 +26,14 @@ export async function POST(req: NextRequest) {
     email: email.trim().toLowerCase(),
     options: { redirectTo },
   });
+
+  /* Supabase caído o sin cuota sí se cuenta: no depende del correo que se
+     escribió (un correo sin cuenta da un 4xx, que cae en la respuesta genérica
+     de abajo), así que no revela nada. Sin esto, en un corte la persona leía
+     "te enviamos un link" y se quedaba esperando un mail que nunca iba a salir. */
+  if (error && esFallaDelServicio(error)) {
+    return NextResponse.json({ error: MENSAJE_SERVICIO_CAIDO }, { status: 503 });
+  }
 
   if (error || !data?.properties?.action_link) {
     // Respuesta genérica para no revelar si el email existe
