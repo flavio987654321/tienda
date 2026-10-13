@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { medidaPermitida } from "@/lib/medidas-icono";
 import { prisma } from "@/lib/prisma";
 import { urlDeDescargaPermitida } from "@/lib/url-utils";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 
@@ -95,7 +96,11 @@ async function logoComoDataUrl(url: string): Promise<string | null> {
       return null;
     }
 
-    return `data:${contentType};base64,${Buffer.from(buf).toString("base64")}`;
+    /* A PNG antes de dárselo a Satori, que NO lee WebP: con un logo WebP el ícono
+       salía en blanco, sin error. Y desde el 13/10/26 todo lo que se sube se
+       guarda en WebP (ver `achicar-imagen`). 512 es el ícono más grande que se pide. */
+    const png = await sharp(Buffer.from(buf)).rotate().resize({ width: 512, height: 512, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
   } catch (e) {
     // Con `catch {}` a secas, un logo que no carga se degradaba a la inicial sin
     // dejar rastro en ningún lado. Que quede escrito: el ícono es lo que se vende.

@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { sendPushToStore, pushConfigurado } from "@/lib/push";
 import { PUSH_CAMPAIGNS_PER_WEEK as CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
-import { enviarCampanaPorMail, contarSuscriptores } from "@/lib/newsletter";
+import { enviarCampanaPorMail, contarSuscriptores, urlLogoParaMail } from "@/lib/newsletter";
 import { recortar } from "@/lib/texto";
 
 const TITLE_MAX = 50;
@@ -143,7 +143,10 @@ export async function POST(req: NextRequest) {
         title,
         body: message,
         url: targetUrl,
-        icon: store.logo ?? undefined,
+        /* El ícono PNG ya compuesto y cacheado, no el logo de Supabase: cada
+           notificación lo pide una vez por seguidor, y desde el 13/10/26 el logo
+           se guarda en WebP. Ver /api/icons/tienda/[slug]. */
+        icon: store.logo ? `/api/icons/tienda/${store.slug}?size=192&purpose=any` : undefined,
         tag: `store-${store.id}`,
         storeName: store.name ?? undefined,
       });
@@ -182,7 +185,7 @@ export async function POST(req: NextRequest) {
       const r = await enviarCampanaPorMail(store.id, campaign.id, {
         storeName: store.name,
         storeUrl: targetUrl,
-        logo: store.logo,
+        logo: urlLogoParaMail(store.slug, store.logo),
         accent: store.accentColor,
         title,
         body: message,

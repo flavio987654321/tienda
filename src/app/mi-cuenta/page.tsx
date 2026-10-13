@@ -32,6 +32,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { AgregarContrasena } from "@/components/AgregarContrasena";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 type Tab = "pedidos" | "favoritos" | "tiendas" | "resenas" | "perfil";
 
@@ -751,7 +752,7 @@ export default function MiCuentaPage() {
                         <div className="flex items-center gap-3">
                           <div className="h-9 w-9 rounded-xl bg-gray-50 overflow-hidden flex items-center justify-center border border-gray-100 shrink-0">
                             {order.store.logo
-                              ? <img src={order.store.logo} alt={order.store.name} className="h-9 w-9 object-cover" />
+                              ? <img src={fotoLiviana(order.store.logo, 128)} alt={order.store.name} className="h-9 w-9 object-cover" />
                               : <Store className="h-4 w-4 text-gray-300" />}
                           </div>
                           <div>
@@ -922,7 +923,7 @@ export default function MiCuentaPage() {
                         style={{ backgroundColor: follow.store.primaryColor + "20" }}
                       >
                         {follow.store.logo ? (
-                          <img src={follow.store.logo} alt={follow.store.name} className="h-12 w-12 object-cover" />
+                          <img src={fotoLiviana(follow.store.logo, 128)} alt={follow.store.name} className="h-12 w-12 object-cover" />
                         ) : (
                           <Store className="h-6 w-6" style={{ color: follow.store.primaryColor }} />
                         )}

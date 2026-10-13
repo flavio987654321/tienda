@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
+import { imagenParaOg } from "@/lib/imagen-para-og";
 
 export const alt = "Vista previa de la tienda";
 export const size = { width: 1200, height: 630 };
@@ -63,6 +64,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
 
   // Prefer primaryColor (chosen by owner) over logoColor (auto-extracted from logo)
   // Always ensure it's dark enough for white text
+  /* El logo pasado a PNG: este motor no lee WebP y dibujaba la placa sin logo. */
+  const logo = await imagenParaOg(store?.logo, 400);
   const rawColor = safeColor(store?.primaryColor ?? store?.logoColor, "#6366f1");
   const bg = ensureDark(rawColor);
   const bgDark = darken(bg, 0.35);
@@ -135,14 +138,14 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             border: "3px solid rgba(255,255,255,0.25)",
           }}
         >
-          {store?.logo ? (
+          {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={store.logo}
+              src={logo}
               width={200}
               height={200}
               alt={storeName}
-              style={{ objectFit: "cover" }}
+              style={{ objectFit: "cover", borderRadius: 37 }}
             />
           ) : (
             <span style={{ fontSize: 80, fontWeight: 900, color: "#ffffff" }}>

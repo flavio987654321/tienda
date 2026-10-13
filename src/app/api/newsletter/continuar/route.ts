@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { enviarCampanaPorMail } from "@/lib/newsletter";
+import { enviarCampanaPorMail, urlLogoParaMail } from "@/lib/newsletter";
 
 /**
  * Retoma el envío por mail de una campaña que quedó a mitad de camino.
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   const { enviados, falta, enCurso } = await enviarCampanaPorMail(store.id, campaign.id, {
     storeName: store.name,
     storeUrl: campaign.url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`,
-    logo: store.logo,
+    logo: urlLogoParaMail(store.slug, store.logo),
     accent: store.accentColor,
     title: campaign.title,
     body: campaign.body,

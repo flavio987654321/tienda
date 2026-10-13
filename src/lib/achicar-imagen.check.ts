@@ -53,6 +53,13 @@ recorrer("src");
 const escriben = archivos.filter((f) => /fetch\(`\$\{[^}]+\}\/storage\/v1\/object\/\$\{/.test(readFileSync(f, "utf8"))).map((f) => f.replace(/\\/g, "/")).sort();
 chequear("sólo deposito-imagenes y deposito-digital escriben en el storage", JSON.stringify(escriben) === JSON.stringify(["src/lib/deposito-digital.ts", "src/lib/deposito-imagenes.ts"]), escriben);
 
+/* Lo que dibuja con next/og (Satori), que NO lee WebP: tiene que convertir antes. */
+const leer = (f: string) => readFileSync(f, "utf8");
+chequear("la vista previa de la tienda convierte el logo", leer("src/app/tienda/[slug]/opengraph-image.tsx").includes("imagenParaOg(store?.logo"));
+chequear("el ícono de la app pasa el logo a PNG", leer("src/app/api/icons/tienda/[slug]/route.tsx").includes(".png().toBuffer()"));
+chequear("el mail de novedades usa el logo en PNG de /api/logo-mail", !["src/app/api/push/send/route.ts", "src/app/api/newsletter/continuar/route.ts"].some((f) => leer(f).includes("logo: store.logo,")));
+chequear("la push usa el ícono cacheado, no el logo de Supabase", !leer("src/app/api/push/send/route.ts").includes("icon: store.logo ??"));
+
 /* Los videos. */
 chequear("tope de video de 20 MB o menos", MAX_VIDEO_MB <= 20, MAX_VIDEO_MB);
 chequear("tope de 1 minuto o menos", MAX_VIDEO_SEGUNDOS <= 60, MAX_VIDEO_SEGUNDOS);

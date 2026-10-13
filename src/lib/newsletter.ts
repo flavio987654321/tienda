@@ -288,3 +288,9 @@ export function contarSuscriptores(storeId: string) {
     where: { storeId, confirmed: true, bajaEn: null },
   });
 }
+
+/**
+ * El logo que va en el mail: PNG chico servido por nosotros y cacheado, no el
+ * archivo de Supabase. Ver `/api/logo-mail/[slug]`.
+ */
+export const urlLogoParaMail = (slug: string, logo: string | null) => (logo ? `${baseMails()}/api/logo-mail/${encodeURIComponent(slug)}` : null);
