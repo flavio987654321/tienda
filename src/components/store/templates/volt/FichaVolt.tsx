@@ -17,7 +17,7 @@
  * La LÓGICA es la de siempre (consulta, tasación, descargas, favoritos; ver
  * components/store/auto y lib/fichaVehiculo): cambia la cara, no lo que hace.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
@@ -34,7 +34,7 @@ import { usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, usaHoras, tipoDeFicha, leerFicha, bloquesDeFicha, controlDeFicha, urlFichaPdf, type CategoriaVehiculo, type FilaDeFicha } from "@/lib/fichaVehiculo";
 import { linkAVehiculo, linkAVehiculos } from "@/lib/filtroVehiculos";
-import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { linkWhatsApp, mensajeDeVehiculo } from "@/lib/whatsappTienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
 import { getContrastColor } from "@/contexts/EditContext";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -152,6 +152,8 @@ function Plegable({ acento, titulo, cuantos, children }: { acento: string; titul
   );
 }
 
+const sinCambios = () => () => {};
+
 function IconoPdf() {
   return (
     <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -203,7 +205,9 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
     try { const j = JSON.parse(attr(p, "Servicios") || "{}"); return j && typeof j === "object" ? j as Record<string, boolean> : {}; } catch { return {}; }
   }, [p]);
   const hayServices = Object.keys(services).length > 0;
-  const wa = whatsapp ? linkWhatsApp(whatsapp, `Hola! Me interesa el ${p.name}${anio ? ` (${anio})` : ""} de ${precio}. ¿Está disponible?`) : null;
+  /* El mismo mensaje que el botón de la consulta, con el link a esta página. */
+  const link = useSyncExternalStore(sinCambios, () => `${window.location.origin}${window.location.pathname}`, () => "");
+  const wa = whatsapp ? linkWhatsApp(whatsapp, mensajeDeVehiculo({ nombre: p.name, anio, precio: p.price > 0 ? precio : null, link })) : null;
 
   /* En el editor esta página es otra dirección: los links llevan `t=auto-volt`
      (si no, la ficha de al lado se dibujaba con el template GUARDADO) y

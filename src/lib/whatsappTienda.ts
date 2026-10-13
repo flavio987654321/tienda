@@ -37,3 +37,14 @@ export function linkWhatsApp(crudo: string | null | undefined, texto?: string | 
   if (!n) return null;
   return `https://wa.me/${n}${texto ? `?text=${encodeURIComponent(texto)}` : ""}`;
 }
+
+/**
+ * El mensaje de WhatsApp para consultar por un vehículo (13/10/26). Uno solo
+ * para todos los botones: la consulta, la barra fija de la ficha y el showroom
+ * de Auto Volt mandaban tres textos distintos, dos sin el link. Con el link la
+ * agencia abre la unidad exacta sin preguntar "¿cuál era?"; con el precio no hay
+ * malentendidos si después cambia. Sin precio cargado, no dice "de Consultar".
+ */
+export function mensajeDeVehiculo({ nombre, anio, precio, link }: { nombre: string; anio?: string | null; precio?: string | null; link?: string | null }): string {
+  return `Hola! Me interesa el ${nombre}${anio ? ` (${anio})` : ""}${precio ? ` de ${precio}` : ""}. ¿Está disponible?${link ? `\n${link}` : ""}`;
+}

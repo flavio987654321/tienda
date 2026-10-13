@@ -2,7 +2,7 @@
 import { useRef, useState, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
-import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { linkWhatsApp, mensajeDeVehiculo } from "@/lib/whatsappTienda";
 import CampoTelefono from "@/components/CampoTelefono";
 import CampoTrampa from "@/components/store/auto/CampoTrampa";
 import { CAMPO_TRAMPA } from "@/lib/trampaBots";
@@ -72,7 +72,7 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
      dirección actual sin lo de después del "?". Se arma con la dirección real
      para que sirva también en un dominio propio. */
   const link = useSyncExternalStore(sinCambios, () => `${window.location.origin}${window.location.pathname}`, () => "");
-  const texto = `Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""} de ${precioTexto}. ¿Está disponible?${link ? `\n${link}` : ""}`;
+  const texto = mensajeDeVehiculo({ nombre: product.name, anio: año, precio: product.price > 0 ? precioTexto : null, link });
   const waHref = whatsappEnabled ? linkWhatsApp(whatsappNumber, texto) : null;
 
   const [abierto, setAbierto] = useState(!waHref);

@@ -7,7 +7,7 @@ import { usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { datosDe, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
 import { NOMBRE_TIPO, usaHoras, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
-import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { linkWhatsApp, mensajeDeVehiculo } from "@/lib/whatsappTienda";
 import { getContrastColor } from "@/contexts/EditContext";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { conAlfa, MONO } from "./EscenaVolt";
@@ -127,7 +127,13 @@ export function EscenarioVolt({ productos, opciones, inicialId, acento, moneda, 
     { top: "8%", left: "max(-150px, -12vw)" }, { top: "8%", right: "max(-150px, -12vw)", flexDirection: "row-reverse" },
     { bottom: "14%", left: "max(-150px, -12vw)" }, { bottom: "14%", right: "max(-150px, -12vw)", flexDirection: "row-reverse" },
   ];
-  const wa = p && whatsapp.enabled ? linkWhatsApp(whatsapp.number, `Hola! Me interesa el ${p.name}. ¿Sigue disponible?`) : null;
+  /* El mismo mensaje que la consulta de la ficha: con año, precio y el link a la
+     página del vehículo, sin lo del editor (el que lo recibe no está en el editor).
+     Los vehículos llegan ya en el navegador, así que `window` está. */
+  const wa = p && whatsapp.enabled ? linkWhatsApp(whatsapp.number, mensajeDeVehiculo({
+    nombre: p.name, anio: attr(p, "Año"), precio: p.price > 0 ? fmtPrice(p.price, monedaDe(p, moneda)) : null,
+    link: typeof window === "undefined" ? null : `${window.location.origin}${hrefDe(p).split("?")[0]}`,
+  })) : null;
   const oferta = !!p?.comparePrice && p.comparePrice > p.price;
 
   const chip = (activo: boolean): React.CSSProperties => ({ minHeight: 38, padding: "0 14px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap",
