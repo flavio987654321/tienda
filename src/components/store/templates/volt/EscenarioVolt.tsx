@@ -11,6 +11,7 @@ import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { getContrastColor } from "@/contexts/EditContext";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { conAlfa, MONO } from "./EscenaVolt";
+import { TiraVolt } from "./TiraVolt";
 
 /**
  * El escenario de Auto Volt (13/10/26): la portada ES el showroom.
@@ -33,7 +34,7 @@ export const ESCENARIO_VOLT_CSS = `
   .esv-carta { position:absolute; left:50%; top:50%; width:min(600px, 74vw); aspect-ratio:16/10; border-radius:22px; overflow:hidden;
     transition: transform .75s cubic-bezier(.2,.8,.2,1), opacity .5s, filter .5s; will-change:transform; background:#03040a; padding:0; border:none; cursor:pointer }
   .esv-carta img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none }
-  .esv-frente { cursor:default; -webkit-box-reflect: below 10px linear-gradient(transparent 72%, rgba(0,0,0,.22)) }
+  .esv-frente { cursor:pointer; display:block; -webkit-box-reflect: below 10px linear-gradient(transparent 72%, rgba(0,0,0,.22)) }
   .esv-dato { position:absolute; z-index:3; display:flex; align-items:center; gap:10px; pointer-events:none; animation: esv-dato .6s .25s cubic-bezier(.2,.8,.2,1) both }
   @keyframes esv-dato { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
   .esv-datos-fila { display:none }
@@ -168,11 +169,12 @@ export function EscenarioVolt({ productos, opciones, inicialId, acento, moneda, 
                 ? <img src={fotoLiviana(foto, frente ? 1200 : 640)} alt="" style={{ filter: esReservado(q) ? "grayscale(.7)" : undefined }} />
                 : <span style={{ display: "grid", placeItems: "center", height: "100%", color: "rgba(232,236,246,0.5)", fontSize: 14 }}>Sin foto</span>;
               return frente ? (
-                <div key={q.id} className="esv-carta esv-frente" style={estilo} aria-label={`${q.name}, ${actual + 1} de ${n}`}>
+                // El del frente se toca y abre el vehículo (13/10/26: antes sólo el botón "Ver el vehículo").
+                <Link key={q.id} href={hrefDe(q)} className="esv-carta esv-frente" style={estilo} aria-label={`Ver ${q.name} (${actual + 1} de ${n})`} draggable={false}>
                   {img}
                   <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: `linear-gradient(120deg, ${conAlfa(acento, 0.16)}, transparent 40%)`, pointerEvents: "none" }} />
                   {esReservado(q) && <span style={{ position: "absolute", top: 14, left: 14, background: "#fbbf24", color: "#111", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, padding: "6px 12px", borderRadius: 999, textTransform: "uppercase" }}>Reservado</span>}
-                </div>
+                </Link>
               ) : (
                 <button key={q.id} type="button" className="esv-carta" style={estilo} onClick={() => ir(i)} aria-label={`Traer al frente: ${q.name}`} tabIndex={lejos === 1 ? 0 : -1}>
                   {img}
@@ -239,9 +241,10 @@ export function EscenarioVolt({ productos, opciones, inicialId, acento, moneda, 
             </div>
           </div>
 
-          {/* La tira de miniaturas: saltar directo a cualquiera. */}
+          {/* La tira de miniaturas: saltar directo a cualquiera. Sin barra de scroll: flechas a los costados. */}
           {n > 1 && (
-            <div role="group" aria-label="Elegir vehículo" style={{ display: "flex", gap: 8, overflowX: "auto", marginTop: 22, paddingBottom: 6, scrollbarWidth: "thin" }}>
+            <div style={{ marginTop: 22 }}>
+            <TiraVolt acento={acento} etiqueta="Elegir vehículo">
               {lista.map((q, i) => (
                 <button key={q.id} type="button" className="esv-mini" onClick={() => ir(i)} aria-label={q.name} aria-current={i === actual}
                   style={{ flex: "0 0 auto", width: 92, height: 60, padding: 0, borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "#03040a",
@@ -250,6 +253,7 @@ export function EscenarioVolt({ productos, opciones, inicialId, acento, moneda, 
                   {q.images[0] ? <img src={fotoLiviana(q.images[0], 256)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : null}
                 </button>
               ))}
+            </TiraVolt>
             </div>
           )}
         </>

@@ -47,6 +47,8 @@ import { ComparadorVolt, COMPARADOR_VOLT_CSS } from "@/components/store/template
 import { ServiciosVolt, ChatPreguntasVolt, BLOQUES_VOLT_CSS } from "@/components/store/templates/volt/BloquesVolt";
 import { VideosVolt, VIDEOS_VOLT_CSS } from "@/components/store/templates/volt/VideosVolt";
 import { CatalogoVolt, CATALOGO_VOLT_CSS } from "@/components/store/templates/volt/CatalogoVolt";
+import { PortadaVolt, PORTADA_VOLT_CSS } from "@/components/store/templates/volt/PortadaVolt";
+import { TIRA_VOLT_CSS } from "@/components/store/templates/volt/TiraVolt";
 
 /** La paleta: casi negro azulado, una superficie apenas más clara, y el acento de la dueña. */
 const VACIO = "#05070d";
@@ -278,6 +280,8 @@ export default function AutoVolt() {
         ${BLOQUES_VOLT_CSS}
         ${VIDEOS_VOLT_CSS}
         ${CATALOGO_VOLT_CSS}
+        ${PORTADA_VOLT_CSS}
+        ${TIRA_VOLT_CSS}
         /* El nombre: en el celular, más chico y sin espaciado, para que entre entero ("QRDREAMC / AR" se partía al medio). */
         .av-marca { font-size:13px; letter-spacing:.2px; word-break:normal; overflow-wrap:normal }
         @media(max-width:400px){ .av-marca { font-size:12px; letter-spacing:0 } .av-ico { width:34px !important } }
@@ -441,9 +445,12 @@ export default function AutoVolt() {
       )}
 
       {vista.enPortada && (<>
-      {/* ── EL SHOWROOM ── la portada es el escenario: los vehículos giran y el elegido muestra sus datos. */}
-      <section id="showroom" aria-label="Showroom" style={{ position: "relative", overflow: "hidden", background: VACIO,
-        paddingTop: isPreview ? 20 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 20 }}>
+      {/* ── PORTADA ── foto entera, título y buscador, como en los otros templates de autos (ver volt/PortadaVolt). */}
+      <PortadaVolt ov={iovr["heroBackground"]} acento={accent} opciones={opciones} principal={principal} cuantos={loadingProducts ? 0 : products.length} waLink={waLink}
+        arriba={isPreview ? 0 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H} onBuscar={f => abrirCatalogo(f)} onVerTodos={e => alClicTodos(e)} todosHref={todos} />
+
+      {/* ── EL SHOWROOM ── los vehículos giran y el elegido muestra sus datos. */}
+      <section id="showroom" aria-label="Showroom" style={{ position: "relative", overflow: "hidden", background: VACIO, paddingTop: "clamp(40px,6vw,72px)" }}>
         <EscenaVolt acento={accent} quieta={isPreview} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(12px,2.5vh,32px) clamp(16px,4vw,32px) clamp(48px,8vh,88px)", boxSizing: "border-box" }}>
           {loadingProducts ? (
@@ -458,14 +465,14 @@ export default function AutoVolt() {
                 <p className="av-entra" style={{ margin: "0 0 14px", display: "inline-flex", alignItems: "center", gap: 10, fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: "rgba(232,236,246,0.8)",
                   padding: "7px 12px", borderRadius: 999, border: `1px solid ${conAlfa(accent, 0.35)}`, background: conAlfa(accent, 0.08), maxWidth: "100%", boxSizing: "border-box", overflowWrap: "anywhere" }}>
                   <span aria-hidden="true" className="av-latido" style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: accent, boxShadow: `0 0 10px ${accent}`, animation: "av-latido 1.6s ease-in-out infinite" }} />
-                  <span style={{ minWidth: 0 }}><EditableZone field="heroKicker" label="Etiqueta de la portada">Showroom en línea</EditableZone></span>
+                  <span style={{ minWidth: 0 }}><EditableZone field="showroomKicker" label="Etiqueta del showroom">Showroom en línea</EditableZone></span>
                 </p>
-                <h1 className="av-entra" style={{ margin: "0 0 10px", fontSize: "clamp(30px,4.2vw,54px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 0.98, animationDelay: ".08s",
+                <h2 className="av-entra" style={{ margin: "0 0 10px", fontSize: "clamp(30px,4.2vw,54px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 0.98, animationDelay: ".08s",
                   backgroundImage: `linear-gradient(180deg, #ffffff 35%, ${conAlfa(accent, 0.95)} 150%)`, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "#fff" }}>
-                  <EditableZone field="heroHeading" label="Título de la portada">Tu próximo vehículo está acá</EditableZone>
-                </h1>
+                  <EditableZone field="showroomHeading" label="Título del showroom">Recorré el showroom</EditableZone>
+                </h2>
                 <p className="av-entra" style={{ margin: 0, fontSize: "clamp(14px,1.4vw,16px)", color: "rgba(232,236,246,0.65)", lineHeight: 1.6, animationDelay: ".16s" }}>
-                  <EditableZone field="heroSubtext" label="Subtítulo de la portada">Pasalos con las flechas o deslizando, y tocá el que te guste para ver todo.</EditableZone>
+                  <EditableZone field="showroomSubtext" label="Subtítulo del showroom">Pasalos con las flechas o deslizando, y tocá el que te guste para ver todo.</EditableZone>
                 </p>
               </>} />
           )}

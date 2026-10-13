@@ -40,6 +40,7 @@ import { getContrastColor } from "@/contexts/EditContext";
 import { CAPAS } from "@/lib/capas-tienda";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { EscenaVolt, ESCENA_VOLT_CSS, conAlfa, MONO } from "./EscenaVolt";
+import { TiraVolt, TIRA_VOLT_CSS } from "./TiraVolt";
 
 const VACIO = "#05070d";
 const TINTA = "#e8ecf6";
@@ -48,6 +49,7 @@ const LINEA = "rgba(255,255,255,0.09)";
 
 const CSS = `
   ${ESCENA_VOLT_CSS}
+  ${TIRA_VOLT_CSS}
   .fv-visor { position:relative; aspect-ratio:16/9; border-radius:24px; overflow:hidden; background:#000 }
   @media (max-width: 699px) { .fv-visor { aspect-ratio:4/3; border-radius:18px } }
   .fv-hud { position:absolute; z-index:3; display:flex; align-items:center; gap:10px; pointer-events:none; animation: fv-hud .6s .2s cubic-bezier(.2,.8,.2,1) both }
@@ -295,7 +297,9 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
             ))}
           </p>
           {fotos.length > 1 && (
-            <div role="group" aria-label="Fotos" style={{ display: "flex", gap: 8, overflowX: "auto", marginTop: 14, paddingBottom: 4, scrollbarWidth: "none" }}>
+            <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+            <TiraVolt acento={acento} etiqueta="Fotos">
               {fotos.map((f, i) => (
                 <button key={i} type="button" className="fv-mini" onClick={() => setFoto(i)} aria-label={`Ver foto ${i + 1}`} aria-current={i === foto}
                   style={{ flex: "0 0 auto", width: 88, height: 58, padding: 0, borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "#000",
@@ -304,7 +308,9 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
                   <img src={fotoLiviana(f, 256)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </button>
               ))}
-              <span aria-hidden="true" style={{ alignSelf: "center", marginLeft: 6, fontFamily: MONO, fontSize: 12, color: TENUE, whiteSpace: "nowrap" }}>
+            </TiraVolt>
+            </div>
+              <span aria-hidden="true" style={{ fontFamily: MONO, fontSize: 12, color: TENUE, whiteSpace: "nowrap", flexShrink: 0 }}>
                 {String(foto + 1).padStart(2, "0")} / {String(fotos.length).padStart(2, "0")}
               </span>
             </div>
