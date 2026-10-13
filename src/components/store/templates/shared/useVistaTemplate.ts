@@ -47,6 +47,8 @@ export type VistaTemplate = "portada" | "catalogo" | "contacto" | "nosotros" | "
 const RUTA_CONTACTO = /^\/tienda\/[^/]+\/contacto\/?$/;
 const RUTA_NOSOTROS = /^\/tienda\/[^/]+\/nosotros\/?$/;
 const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
+/* Los templates de autos tienen el catálogo en `/vehiculos` (Auto Volt, 13/10/26). */
+const RUTA_VEHICULOS = /^\/tienda\/[^/]+\/vehiculos\/?$/;
 /* Ésta además CAPTURA el id: de él sale QUÉ ficha dibujar. */
 export const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
 
@@ -107,12 +109,14 @@ function subirArriba() {
     n = n.parentElement;
   }
 }
-export function useVistaTemplate({ isPreview, slug, templateId }: {
+export function useVistaTemplate({ isPreview, slug, templateId, catalogo = "productos" }: {
   isPreview: boolean;
   slug: string | null | undefined;
   /** El id del template, para que el `?t=` de los links diga QUÉ diseño mostrar
    *  y no se cuele el guardado en la base. */
   templateId: string;
+  /** Dónde vive el catálogo: `/productos`, o `/vehiculos` en los de autos. */
+  catalogo?: "productos" | "vehiculos";
 }) {
   const rutaActual = usePathname() ?? "";
   const [vistaEnPreview, setVistaEnPreview] = useState<VistaTemplate>("portada");
@@ -121,7 +125,7 @@ export function useVistaTemplate({ isPreview, slug, templateId }: {
 
   const enContacto = isPreview ? vistaEnPreview === "contacto" : RUTA_CONTACTO.test(rutaActual);
   const enNosotros = isPreview ? vistaEnPreview === "nosotros" : RUTA_NOSOTROS.test(rutaActual);
-  const enCatalogo = isPreview ? vistaEnPreview === "catalogo" : RUTA_CATALOGO.test(rutaActual);
+  const enCatalogo = isPreview ? vistaEnPreview === "catalogo" : (catalogo === "vehiculos" ? RUTA_VEHICULOS : RUTA_CATALOGO).test(rutaActual);
   const productoAbierto = isPreview
     ? (vistaEnPreview === "producto" ? productoEnPreview : null)
     : (RUTA_PRODUCTO.exec(rutaActual)?.[1] ?? null);
@@ -176,7 +180,9 @@ export function useVistaTemplate({ isPreview, slug, templateId }: {
     cambiandoPantalla,
     irA,
     irALaPortada: () => irA("portada", urlTienda + sufijoEditor),
-    irAlCatalogo: () => irA("catalogo", `${urlTienda}/productos${sufijoEditor}`),
+    /** `consulta`: el filtro en la dirección (sólo en la tienda; en la previa no hay dirección).
+        Se mira que sea texto porque Aire la pasa directo a `onClick`, y llega el evento. */
+    irAlCatalogo: (consulta?: unknown) => irA("catalogo", `${urlTienda}/${catalogo}${isPreview ? sufijoEditor : typeof consulta === "string" && consulta ? `?${consulta}` : ""}`),
     irAContacto:  () => irA("contacto", `${urlTienda}/contacto${sufijoEditor}`),
     irANosotros:  () => irA("nosotros", `${urlTienda}/nosotros${sufijoEditor}`),
     irAlProducto: (id: string) => irA("producto", `${urlTienda}/producto/${id}${sufijoEditor}`, id),

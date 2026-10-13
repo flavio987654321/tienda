@@ -20,8 +20,9 @@ import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs, type ImageOverride } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useVistaTemplate } from "@/components/store/templates/shared/useVistaTemplate";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -35,7 +36,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
-import { opcionesDeFiltro, filtrarVehiculos, filtroVacio, linkAVehiculos, linkAVehiculo } from "@/lib/filtroVehiculos";
+import { opcionesDeFiltro, filtrarVehiculos, filtroVacio, filtroDesdeUrl, filtroAUrl, linkAVehiculos, linkAVehiculo, type FiltroVehiculos } from "@/lib/filtroVehiculos";
 import { CAPAS } from "@/lib/capas-tienda";
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
 import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
@@ -45,6 +46,7 @@ import { EscenarioVolt, ESCENARIO_VOLT_CSS } from "@/components/store/templates/
 import { ComparadorVolt, COMPARADOR_VOLT_CSS } from "@/components/store/templates/volt/ComparadorVolt";
 import { ServiciosVolt, ChatPreguntasVolt, BLOQUES_VOLT_CSS } from "@/components/store/templates/volt/BloquesVolt";
 import { VideosVolt, VIDEOS_VOLT_CSS } from "@/components/store/templates/volt/VideosVolt";
+import { CatalogoVolt, CATALOGO_VOLT_CSS } from "@/components/store/templates/volt/CatalogoVolt";
 
 /** La paleta: casi negro azulado, una superficie apenas más clara, y el acento de la dueña. */
 const VACIO = "#05070d";
@@ -205,6 +207,44 @@ export default function AutoVolt() {
   const alternarComparar = (id: string) => setComparando(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id].slice(-3));
   const todos = linkAVehiculos(slug, {}, isPreview);
 
+  /* ── Portada o catálogo ─────────────────────────────────────────────────────
+     El catálogo (ver volt/CatalogoVolt) lo dibuja el template en `/vehiculos`,
+     entre su barra y su pie: antes "Ver todos" llevaba a la página genérica,
+     clara y con la barra de Auto Motor. Cambiar de pantalla no recarga (ver
+     `useVistaTemplate`), y en el editor no se sale de Diseño. */
+  const vista = useVistaTemplate({ isPreview, slug, templateId: "auto-volt", catalogo: "vehiculos" });
+  const [filtroPedido, setFiltroPedido] = useState<FiltroVehiculos | null>(null);
+  /* Entrando por un link con filtro (`/vehiculos?tipo=motos`, del pie o
+     compartido). Se lee UNA vez, la de entrada: después la dirección la escribe
+     el propio catálogo, y si se la siguiera leyendo cada cambio de filtro lo
+     volvía a montar (se perdía el orden recién elegido). De `useSearchParams` y
+     no de `window.location`: la trae también el servidor (no hay diferencia al
+     hidratar) y, navegando sin recargar, `window.location` todavía puede tener
+     la dirección anterior en el primer dibujado. En la previa no cuenta: la
+     dirección es la del editor. */
+  const parametros = useSearchParams();
+  const [busquedaDeEntrada] = useState(() => isPreview ? "" : parametros?.toString() ?? "");
+  const filtroCatalogo = filtroPedido ?? filtroDesdeUrl(new URLSearchParams(busquedaDeEntrada), principal);
+  const abrirCatalogo = (c: Partial<FiltroVehiculos> = {}) => {
+    const f = { ...filtroVacio(principal), ...c };
+    setFiltroPedido(f);
+    vista.irAlCatalogo(filtroAUrl(f, principal).toString());
+  };
+  const alClicTodos = (e: React.MouseEvent, c?: Partial<FiltroVehiculos>) => { e.preventDefault(); abrirCatalogo(c); };
+  /* Ir a una sección de la portada desde el catálogo: primero vuelve, y la
+     sección se busca cuando ya está dibujada. */
+  const [seccionPendiente, setSeccionPendiente] = useState<string | null>(null);
+  const irA = (id: string) => {
+    if (vista.enPortada) { irASeccion(id); return; }
+    setSeccionPendiente(id);
+    vista.irALaPortada();
+  };
+  useEffect(() => {
+    if (!seccionPendiente || !vista.enPortada) return;
+    const t = setTimeout(() => { irASeccion(seccionPendiente); setSeccionPendiente(null); }, 80);
+    return () => clearTimeout(t);
+  }, [seccionPendiente, vista.enPortada]);
+
   /* Telemetría: lo que se cuenta sale de los datos; lo que es del negocio (años,
      clientes) se ve sólo si la dueña lo escribió (en el editor, siempre, para
      que lo pueda completar). Nada de "200+" de fábrica. */
@@ -224,7 +264,9 @@ export default function AutoVolt() {
   const ancho: React.CSSProperties = { position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto" };
 
   return (
-    <div style={{ background: VACIO, color: TINTA, fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh" }}>
+    <div data-template-raiz style={{ background: VACIO, color: TINTA, fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh",
+      // Ver el candado en useVistaTemplate: el segundo toque de un doble clic no cae en la pantalla nueva.
+      pointerEvents: vista.cambiandoPantalla ? "none" : undefined }}>
       <style>{`
         ${AM_MODAL_CSS}
         ${ESCENA_VOLT_CSS}
@@ -232,6 +274,7 @@ export default function AutoVolt() {
         ${COMPARADOR_VOLT_CSS}
         ${BLOQUES_VOLT_CSS}
         ${VIDEOS_VOLT_CSS}
+        ${CATALOGO_VOLT_CSS}
         /* El nombre: en el celular, más chico y sin espaciado, para que entre entero ("QRDREAMC / AR" se partía al medio). */
         .av-marca { font-size:13px; letter-spacing:.2px; word-break:normal; overflow-wrap:normal }
         @media(max-width:400px){ .av-marca { font-size:12px; letter-spacing:0 } .av-ico { width:34px !important } }
@@ -294,7 +337,7 @@ export default function AutoVolt() {
             </div>
             <div className="av-links" style={{ gap: 4, alignItems: "center" }}>
               {menuAncho.map(([lbl, id]) => (
-                <button key={id} type="button" onClick={() => irASeccion(id)} className="av-link"
+                <button key={id} type="button" onClick={() => irA(id)} className="av-link"
                   style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, minHeight: 40, padding: "0 12px", borderRadius: 10, color: navTenue, fontFamily: "inherit" }}>
                   {lbl}
                 </button>
@@ -346,9 +389,10 @@ export default function AutoVolt() {
                   </div>
                 )}
               </div>
-              <Link href={todos} className="av-solo-ancho" style={{ marginLeft: 6, background: accent, color: sobreAcento, textDecoration: "none", padding: "0 16px", minHeight: 40, alignItems: "center", fontSize: 13, fontWeight: 800, borderRadius: 10, boxShadow: `0 0 20px ${conAlfa(accent, 0.4)}` }}>
-                Ver vehículos
-              </Link>
+              <a href={vista.enCatalogo ? vista.urlTienda : todos} onClick={e => { if (vista.enCatalogo) { e.preventDefault(); vista.irALaPortada(); } else alClicTodos(e); }}
+                className="av-solo-ancho" style={{ marginLeft: 6, background: accent, color: sobreAcento, textDecoration: "none", padding: "0 16px", minHeight: 40, alignItems: "center", fontSize: 13, fontWeight: 800, borderRadius: 10, boxShadow: `0 0 20px ${conAlfa(accent, 0.4)}` }}>
+                {vista.enCatalogo ? "Showroom" : "Ver vehículos"}
+              </a>
               <button className="av-burger av-ico" type="button" onClick={() => setMenuOpen(m => !m)} aria-label={menuOpen ? "Cerrar el menú" : "Abrir el menú"} aria-expanded={menuOpen}
                 style={{ ...iconoBoton, border: `1px solid ${navLinea}`, color: navTinta, marginLeft: 4, fontSize: 18 }}>
                 {menuOpen ? "×" : "☰"}
@@ -358,19 +402,42 @@ export default function AutoVolt() {
           {menuOpen && (
             <div style={{ borderTop: `1px solid ${navLinea}`, padding: "6px 0 14px" }}>
               {menuCelu.map(([lbl, id]) => (
-                <button key={id} type="button" onClick={() => { irASeccion(id); setMenuOpen(false); }}
+                <button key={id} type="button" onClick={() => { irA(id); setMenuOpen(false); }}
                   style={{ display: "block", width: "100%", background: "none", border: "none", color: navTinta, cursor: "pointer", textAlign: "left", minHeight: 48, fontSize: 15, fontWeight: 600, fontFamily: "inherit", borderBottom: `1px solid ${navLinea}`, padding: "0 4px" }}>
                   {lbl}
                 </button>
               ))}
-              <Link href={todos} onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", minHeight: 48, color: accent, fontSize: 15, fontWeight: 800, textDecoration: "none", padding: "0 4px" }}>
-                Ver todos los vehículos →
-              </Link>
+              {!vista.enCatalogo && (
+                <a href={todos} onClick={e => { setMenuOpen(false); alClicTodos(e); }} style={{ display: "flex", alignItems: "center", minHeight: 48, color: accent, fontSize: 15, fontWeight: 800, textDecoration: "none", padding: "0 4px" }}>
+                  Ver todos los vehículos →
+                </a>
+              )}
             </div>
           )}
         </nav>
       </div>
 
+      {/* ── EL CATÁLOGO ── la ficha técnica de todo el stock (ver volt/CatalogoVolt). */}
+      {vista.enCatalogo && (
+        <section aria-label="Todos los vehículos" style={{ position: "relative", overflow: "hidden", background: VACIO, minHeight: "80vh",
+          paddingTop: isPreview ? 20 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 20 }}>
+          <EscenaVolt acento={accent} quieta />
+          <div style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(12px,2.5vh,32px) clamp(16px,4vw,32px) clamp(56px,8vw,96px)", boxSizing: "border-box" }}>
+            {loadingProducts ? (
+              <div role="status" aria-label="Cargando vehículos" style={{ minHeight: "50vh", display: "grid", placeItems: "center" }}>
+                <div style={{ width: 40, height: 40, border: `2px solid ${accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "av-spin 0.8s linear infinite" }} />
+              </div>
+            ) : (
+              <CatalogoVolt key={JSON.stringify(filtroPedido)} productos={products} opciones={opciones} filtroInicial={filtroCatalogo} escribirUrl={!isPreview && !!slug}
+                acento={accent} moneda={currency} hrefDe={paginaDe} favoritos={favorites} onFavorito={toggleFavorite}
+                comparando={comparando} onComparar={alternarComparar} onVolver={vista.irALaPortada}
+                storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
+            )}
+          </div>
+        </section>
+      )}
+
+      {vista.enPortada && (<>
       {/* ── EL SHOWROOM ── la portada es el escenario: los vehículos giran y el elegido muestra sus datos. */}
       <section id="showroom" aria-label="Showroom" style={{ position: "relative", overflow: "hidden", background: VACIO,
         paddingTop: isPreview ? 20 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 20 }}>
@@ -564,7 +631,7 @@ export default function AutoVolt() {
                   <EditableZone field="contactWhatsApp" label="Texto del botón de WhatsApp">Escribinos por WhatsApp</EditableZone>
                 </a>
               )}
-              <Link href={todos} style={{ display: "inline-flex", alignItems: "center", minHeight: 50, padding: "0 22px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.25)" : "rgba(255,255,255,0.22)"}`, color: fNosotros.tinta, textDecoration: "none", fontWeight: 700, fontSize: 15 }}>
+              <Link href={todos} onClick={e => alClicTodos(e)} style={{ display: "inline-flex", alignItems: "center", minHeight: 50, padding: "0 22px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.25)" : "rgba(255,255,255,0.22)"}`, color: fNosotros.tinta, textDecoration: "none", fontWeight: 700, fontSize: 15 }}>
                 Ver todos los vehículos
               </Link>
             </div>
@@ -573,6 +640,7 @@ export default function AutoVolt() {
       </section>
       </SectionBlock>
       </div>
+      </>)}
 
       {/* La barra de comparación: aparece cuando hay vehículos elegidos y lleva al comparador. */}
       {comparando.length > 0 && !editMode && !ocultas.includes("av-comparar") && (
@@ -580,7 +648,7 @@ export default function AutoVolt() {
           padding: "8px 8px 8px 14px", borderRadius: 16, background: "rgba(8,11,21,0.88)", backdropFilter: "blur(14px)", border: `1px solid ${conAlfa(accent, 0.45)}`,
           boxShadow: `0 18px 40px -16px ${conAlfa(accent, 0.7)}`, maxWidth: "calc(100vw - 104px)", boxSizing: "border-box" }}>
           <span style={{ fontFamily: MONO, fontSize: 12, color: "#fff", whiteSpace: "nowrap" }}><span style={{ color: accent }}>⇄</span> {comparando.length} para comparar</span>
-          <button type="button" onClick={() => irASeccion("comparar")} style={{ minHeight: 38, padding: "0 14px", borderRadius: 10, border: "none", background: accent, color: sobreAcento, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Ver</button>
+          <button type="button" onClick={() => irA("comparar")} style={{ minHeight: 38, padding: "0 14px", borderRadius: 10, border: "none", background: accent, color: sobreAcento, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Ver</button>
         </div>
       )}
 
@@ -633,7 +701,8 @@ export default function AutoVolt() {
                 ))}
               </div>
               {searchResults.length > 24 && (
-                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview)} style={{ display: "block", textAlign: "center", marginTop: 18, color: accent, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview)}
+                  onClick={e => { alClicTodos(e, { q: searchQuery.trim() }); setSearchOpen(false); setSearchQuery(""); }} style={{ display: "block", textAlign: "center", marginTop: 18, color: accent, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
                   Ver los {searchResults.length} resultados →
                 </Link>
               )}
