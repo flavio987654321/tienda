@@ -1,31 +1,20 @@
 -- Ejecutar en: Supabase Dashboard → SQL Editor
--- Corrige el error "row-level security policy" al subir imágenes
+--
+-- ⚠️ Este archivo CREABA cuatro permisos sobre el depósito `tienda-imagenes`
+-- (subir, reemplazar, borrar y listar) y ahora los QUITA. No los vuelvas a crear.
+--
+-- Existían para que el panel de Diseño subiera directo del navegador a Supabase.
+-- Pero no miraban de quién era cada archivo: cualquier cuenta —y el registro está
+-- abierto— podía subir archivos de cualquier tipo y tamaño sin límite, reemplazar
+-- o borrar los banners y flyers de cualquier otra tienda, y cualquiera sin cuenta
+-- podía listar todo el depósito.
+--
+-- Desde octubre de 2026 el panel de Diseño sube por `/api/upload` (sesión, tope
+-- por hora, tope de tamaño, revisión del tipo real). Nuestro servidor usa la clave
+-- de servicio, que no depende de estos permisos, y las fotos se siguen viendo
+-- porque el depósito es público: una URL pública no pasa por estas reglas.
 
--- 1. Crear el bucket si no existe (ignorar si ya existe)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('tienda-imagenes', 'tienda-imagenes', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
-
--- 2. Política: cualquier usuario autenticado puede subir imágenes
-CREATE POLICY "Authenticated users can upload images"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'tienda-imagenes');
-
--- 3. Política: lectura pública (para mostrar las imágenes en la tienda)
-CREATE POLICY "Public can read images"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'tienda-imagenes');
-
--- 4. Política: el dueño puede actualizar/reemplazar sus imágenes
-CREATE POLICY "Authenticated users can update images"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'tienda-imagenes');
-
--- 5. Política: el dueño puede eliminar imágenes
-CREATE POLICY "Authenticated users can delete images"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'tienda-imagenes');
+DROP POLICY IF EXISTS "Authenticated users can upload images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can update images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete images" ON storage.objects;
+DROP POLICY IF EXISTS "Public can read images" ON storage.objects;

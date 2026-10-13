@@ -16,7 +16,8 @@ import {
   sendVencimientoDigitalEmail,
 } from "@/lib/resend";
 import { CURRENT_TERMS_VERSION, CURRENT_TERMS_SUMMARY } from "@/lib/legal";
-import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
+import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail, sendCuotaSupabaseEmail } from "@/lib/email";
+import { medir, queAvisar, enGB } from "@/lib/cuota-supabase";
 import { limpiar } from "@/app/api/cron/cleanup/route";
 import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
@@ -1070,6 +1071,28 @@ export async function GET(req: NextRequest) {
     result.limpieza = await limpiar();
   } catch (e) {
     console.error("[cron] limpieza:", e);
+  }
+
+  // ── Topes del plan de Supabase ──
+  // Al final y en su propio try: son dos consultas baratas, y si fallan no
+  // pueden llevarse puesto nada de lo de arriba. Ver `lib/cuota-supabase`.
+  try {
+    const [[{ base }], [{ deposito }]] = await Promise.all([
+      prisma.$queryRaw<{ base: bigint }[]>`select pg_database_size(current_database()) as base`,
+      // `sum` de bigint da numeric (un Decimal en Prisma); el cast lo deja en bigint.
+      prisma.$queryRaw<{ deposito: bigint | null }[]>`select sum((metadata->>'size')::bigint)::bigint as deposito from storage.objects`,
+    ]);
+    const mediciones = medir(Number(base), Number(deposito ?? 0));
+    const { avisar, urgente, pasadas } = queAvisar(mediciones, dayOfWeek);
+    if (avisar) {
+      await sendCuotaSupabaseEmail({
+        urgente,
+        filas: pasadas.map((m) => ({ nombre: m.nombre, usado: enGB(m.usado), tope: enGB(m.tope), porcentaje: Math.round(m.proporcion * 100) })),
+      });
+    }
+    result.cuotaSupabase = Object.fromEntries(mediciones.map((m) => [m.nombre, `${Math.round(m.proporcion * 1000) / 10}%`]));
+  } catch (e) {
+    console.error("[cron] cuota de Supabase:", e);
   }
 
   return NextResponse.json(result);

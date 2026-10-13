@@ -1888,6 +1888,49 @@ export async function sendMpHealthAlertEmail({
   });
 }
 
+/** Aviso de que la base o el depósito se acercan al tope del plan de Supabase.
+ *  Ver `lib/cuota-supabase`. Va a la misma casilla que las alertas de MP. */
+export async function sendCuotaSupabaseEmail({
+  urgente,
+  filas,
+}: {
+  urgente: boolean;
+  filas: { nombre: string; usado: string; tope: string; porcentaje: number }[];
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const color = urgente ? "#7f1d1d" : "#9a3412";
+  await transporter.sendMail({
+    from: `"TiendaApps Alerta" <${FROM_ADDRESS}>`,
+    to: "marketplacemitienda@gmail.com",
+    subject: `${urgente ? "🚨" : "⚠️"} Supabase: ${filas.map((f) => `${f.nombre} al ${f.porcentaje}%`).join(", ")}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;">
+        <div style="background:${color};border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+          <h1 style="color:#fff;font-size:18px;margin:0;font-weight:700;">${urgente ? "Supabase está por llegar al tope" : "Supabase se acerca al tope"}</h1>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#374151;">
+          ${filas.map((f) => `
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;"><strong>${escapeHtml(f.nombre)}</strong></td>
+              <td style="padding:8px 0;border-bottom:1px solid #e5e7eb;text-align:right;">${escapeHtml(f.usado)} de ${escapeHtml(f.tope)} (${f.porcentaje}%)</td>
+            </tr>`).join("")}
+        </table>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px;margin-top:20px;">
+          <p style="font-size:13px;color:#9a3412;margin:0;line-height:1.6;">
+            Si llega al 100%, Supabase puede cortar la app y nadie puede entrar.
+            Entrá a Supabase con <strong>solteroflavio@gmail.com</strong> → Organization → <strong>Usage</strong>
+            y mirá también la <strong>transferencia (Egress y Cached Egress)</strong>: esa no se puede medir desde acá
+            y es la que se pasó el 12/10/26.
+          </p>
+        </div>
+        <p style="font-size:11px;color:#9ca3af;margin-top:20px;">
+          ${urgente ? "Este aviso sale todos los días mientras esté arriba del 90%." : "Este aviso sale los lunes mientras esté arriba del 70%."}
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendServiceInterruptionEmail({
   recipients,
   subject,
