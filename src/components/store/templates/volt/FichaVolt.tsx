@@ -41,6 +41,8 @@ import { CAPAS } from "@/lib/capas-tienda";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { EscenaVolt, ESCENA_VOLT_CSS, conAlfa, MONO } from "./EscenaVolt";
 import { TiraVolt, TIRA_VOLT_CSS } from "./TiraVolt";
+import { useDesplazamientoVolt, LineaDeProgreso } from "./desplazamientoVolt";
+import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
 
 const VACIO = "#05070d";
 const TINTA = "#e8ecf6";
@@ -77,12 +79,22 @@ const CSS = `
   @media (max-width: 479px) { .fv-barra-txt { display:none } }
   .product-rte, .product-rte * { color: inherit }
   @media (prefers-reduced-motion: reduce) { .fv-hud { animation:none } .fv-sim, .fv-mini { transition:none } }
+  /* Efectos al bajar (ver shared/efectosAutos): los bloques entran enfocándose y
+     los casilleros de la ficha se "encienden" de a uno, como un tablero al dar contacto. */
+  @keyframes fv-ef { from { opacity:0; transform:translateY(26px); filter:blur(8px) } to { opacity:1; transform:none; filter:none } }
+  .ef-listo [data-ef="sube"]:not(.ef-in) > *, .ef-listo [data-ef="grilla"]:not(.ef-in) > * { opacity:0 }
+  .ef-listo [data-ef="sube"].ef-in > *, .ef-listo [data-ef="grilla"].ef-in > * { animation: fv-ef .85s cubic-bezier(.16,.84,.3,1) backwards }
+  @keyframes fv-encender { 0% { opacity:.12; filter:grayscale(1) brightness(.5) } 55% { opacity:1; filter:brightness(1.6) } 100% { opacity:1; filter:none } }
+  .ef-listo [data-ef="encender"]:not(.ef-in) > * { opacity:.12 }
+  .ef-listo [data-ef="encender"].ef-in > * { animation: fv-encender .9s ease-out backwards }
+  ${Array.from({ length: 15 }, (_, k) => `.ef-listo [data-ef].ef-in > :nth-child(${k + 2}) { animation-delay:${((k + 1) * 0.06).toFixed(2)}s }`).join(" ")}
+  .ef-listo [data-ef].ef-ya > * { animation:none !important }
 `;
 
 /** Un bloque del tablero: título con su código y lo de adentro. */
 function Bloque({ acento, codigo, titulo, children }: { acento: string; codigo: string; titulo: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginTop: 34 }}>
+    <section data-ef="sube" style={{ marginTop: 34 }}>
       <p style={{ margin: "0 0 6px", fontFamily: MONO, fontSize: 10.5, letterSpacing: 2.5, color: acento, display: "flex", alignItems: "center", gap: 10 }}>
         <span aria-hidden="true" style={{ width: 20, height: 1, background: acento, boxShadow: `0 0 8px ${acento}` }} />{codigo}
       </p>
@@ -95,7 +107,7 @@ function Bloque({ acento, codigo, titulo, children }: { acento: string; codigo: 
 /** Los instrumentos: casilleros de tablero con su rótulo y el dato encendido. */
 function Instrumentos({ filas, acento }: { filas: FilaDeFicha[]; acento: string }) {
   return (
-    <dl className="fv-inst" style={{ margin: 0 }}>
+    <dl className="fv-inst" data-ef="encender" style={{ margin: 0 }}>
       {filas.map(f => (
         <div key={f.label} style={{ position: "relative", padding: "14px 14px 16px", borderRadius: 14, minWidth: 0, overflow: "hidden",
           background: "linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))", border: `1px solid ${LINEA}` }}>
@@ -155,6 +167,9 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
   const pasar = (d: number) => setFoto(i => (i + d + fotos.length) % fotos.length);
   const swipe = useTouchSwipe(() => pasar(1), () => pasar(-1));
   const fav = useFavoritosVehiculos(isPreview);
+  useEfectosAlBajar(true);
+  const raizRef = useRef<HTMLDivElement>(null);
+  const { barraOculta } = useDesplazamientoVolt(raizRef, { activo: true, puedeEsconder: true });
   const [copiado, setCopiado] = useState(false);
 
   const moneda = monedaDe(p, currency);
@@ -219,12 +234,15 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
     border: "1px solid rgba(255,255,255,0.16)", background: "transparent", color: "#fff", fontSize: 13.5, fontWeight: 600, textDecoration: "none", cursor: "pointer", fontFamily: "inherit" };
 
   return (
-    <div style={{ background: VACIO, color: TINTA, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", paddingBottom: 84,
+    <div ref={raizRef} style={{ background: VACIO, color: TINTA, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", paddingBottom: 84,
       ...({ "--fv-acento": acento } as React.CSSProperties) }}>
       <style>{CSS}</style>
 
       {/* ── Barra ── flota arriba, como en la portada. */}
-      <div style={{ position: "sticky", top: 0, zIndex: CAPAS.encabezadoListado, padding: "10px clamp(10px,2vw,20px) 0" }}>
+      <LineaDeProgreso acento={acento} enPanel={false} capa={CAPAS.encabezadoListado + 1} />
+      {/* Bajando se esconde; subiendo vuelve (ver volt/desplazamientoVolt). */}
+      <div style={{ position: "sticky", top: 0, zIndex: CAPAS.encabezadoListado, padding: "10px clamp(10px,2vw,20px) 0",
+        transform: barraOculta ? "translateY(-110%)" : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)" }}>
         <header style={{ maxWidth: 1240, margin: "0 auto", height: 60, borderRadius: 18, padding: "0 10px", display: "flex", alignItems: "center", gap: 10,
           background: "rgba(8,11,21,0.7)", backdropFilter: "blur(18px) saturate(1.4)", border: `1px solid ${LINEA}`, boxShadow: "0 18px 50px -24px rgba(0,0,0,0.7)" }}>
           <Link href={volver} className="fv-link" aria-label={isPreview ? "Volver al editor" : "Volver a los vehículos"}
@@ -412,7 +430,7 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
 
         {similares.length > 0 && (
           <Bloque acento={acento} codigo="// MÁS EN EL SHOWROOM" titulo="También te pueden interesar">
-            <div className="fv-similares">
+            <div className="fv-similares" data-ef="grilla">
               {similares.map((s: StorefrontProduct) => (
                 <Link key={s.id} href={aVehiculo(s.id)} className="fv-sim"
                   style={{ display: "block", borderRadius: 18, overflow: "hidden", textDecoration: "none", color: "#fff", background: "#0a0e19", border: `1px solid ${LINEA}` }}>

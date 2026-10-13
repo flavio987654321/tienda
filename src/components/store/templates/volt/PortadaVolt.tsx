@@ -90,8 +90,9 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
   return (
     <section aria-label="Portada" style={{ position: "relative", overflow: "hidden", minHeight: "min(100svh, 920px)", display: "flex", flexDirection: "column", justifyContent: "center",
       background: "#05070d", paddingTop: arriba, boxSizing: "border-box", ...({ "--pv-acento": acento } as React.CSSProperties) }}>
+      {/* Profundidad al bajar: la foto va más lento que la página (`--av-y` lo escribe volt/desplazamientoVolt). */}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, backgroundImage: `url(${fotoLiviana(url, 1920)})`, backgroundSize: "cover",
-        backgroundPosition: `${ov?.posX ?? 50}% ${ov?.posY ?? 50}%` }} />
+        backgroundPosition: `${ov?.posX ?? 50}% ${ov?.posY ?? 50}%`, transform: "translate3d(0, calc(var(--av-y, 0) * 0.35px), 0)", willChange: "transform" }} />
       {velo !== "none" && (
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: velo === "light"
           ? `rgba(255,255,255,${opacidad})`
@@ -109,7 +110,9 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
       {esquina({ bottom: margen, right: margen }, "0 2px 2px 0")}
       <EditableImageButton field="heroBackground" label="Imagen de fondo de la portada" />
 
+      {/* ...y el contenido sube un poco y se desvanece, como alejándose del visor. */}
       <div style={{ position: "relative", zIndex: 2, maxWidth: 1100, width: "100%", margin: "0 auto", boxSizing: "border-box", textAlign: "center",
+        transform: "translate3d(0, calc(var(--av-y, 0) * -0.12px), 0)", opacity: "calc(1 - var(--av-y, 0) / 700)" as unknown as number,
         padding: "clamp(48px,10vh,110px) clamp(16px,5vw,48px) clamp(40px,8vh,80px)" }}>
         <p className="pv-entra" style={{ margin: "0 0 20px", display: "inline-flex", alignItems: "center", gap: 10, fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
           color: "rgba(232,236,246,0.85)", padding: "7px 14px", borderRadius: 999, border: `1px solid ${conAlfa(acento, 0.4)}`, background: "rgba(5,7,13,0.45)", backdropFilter: "blur(8px)",
@@ -175,7 +178,7 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
         {datos.length > 0 && (
           <ul className="pv-entra" style={{ listStyle: "none", margin: "30px auto 0", padding: 0, display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "10px clamp(18px,4vw,44px)", animationDelay: ".32s" }}>
             {datos.map(d => (
-              <li key={d.etiqueta} style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+              <li key={d.etiqueta} data-ef-contar style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
                 <span style={{ fontFamily: MONO, fontSize: "clamp(18px,2.2vw,24px)", fontWeight: 700, color: "#fff", textShadow: `0 0 16px ${conAlfa(acento, 0.7)}`, whiteSpace: "nowrap" }}>{d.valor}</span>
                 <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: 2, textTransform: "uppercase", color: "rgba(232,236,246,0.6)" }}>{d.etiqueta}</span>
               </li>

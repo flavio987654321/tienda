@@ -49,6 +49,7 @@ import { VideosVolt, VIDEOS_VOLT_CSS } from "@/components/store/templates/volt/V
 import { CatalogoVolt, CATALOGO_VOLT_CSS } from "@/components/store/templates/volt/CatalogoVolt";
 import { PortadaVolt, PORTADA_VOLT_CSS } from "@/components/store/templates/volt/PortadaVolt";
 import { TIRA_VOLT_CSS } from "@/components/store/templates/volt/TiraVolt";
+import { useDesplazamientoVolt, LineaDeProgreso } from "@/components/store/templates/volt/desplazamientoVolt";
 
 /** La paleta: casi negro azulado, una superficie apenas más clara, y el acento de la dueña. */
 const VACIO = "#05070d";
@@ -107,7 +108,9 @@ export default function AutoVolt() {
   const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", "av-nosotros"]].filter(([, , b]) => !b || !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview = !!config?.previewFill;
-  useEfectosAlBajar(!isPreview);
+  /* Los efectos al bajar se ven también en la vista previa (para probarlos
+     antes de guardar), salvo editando: ahí no se esconde nada. */
+  useEfectosAlBajar(!editMode);
   const enEditor = isPreview && !config?.demoPublica;
   const isOwner = !!config?.isOwner;
   const accent = config?.colors.accent ?? "#22d3ee";
@@ -156,6 +159,9 @@ export default function AutoVolt() {
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  /* Bajando se esconde la barra; subiendo vuelve. No con un menú abierto. Ver volt/desplazamientoVolt. */
+  const raizRef = useRef<HTMLDivElement>(null);
+  const { barraOculta } = useDesplazamientoVolt(raizRef, { activo: !editMode, puedeEsconder: !menuOpen && !cuentaOpen && !searchOpen });
 
   // Si la dueña no escribió su barra: sólo lo que la tienda HACE, sin prometer nada que no ofrece.
   const DEFAULTS = ["Ficha técnica de cada vehículo", "Tasá tu usado online", "Te avisamos si entra lo que buscás"];
@@ -277,7 +283,7 @@ export default function AutoVolt() {
   const ancho: React.CSSProperties = { position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto" };
 
   return (
-    <div data-template-raiz style={{ background: VACIO, color: TINTA, fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh",
+    <div ref={raizRef} data-template-raiz style={{ background: VACIO, color: TINTA, fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh",
       // Ver el candado en useVistaTemplate: el segundo toque de un doble clic no cae en la pantalla nueva.
       pointerEvents: vista.cambiandoPantalla ? "none" : undefined }}>
       <style>{`
@@ -318,14 +324,25 @@ export default function AutoVolt() {
         ${[2, 3, 4, 5, 6, 7, 8].map(n => `.ef-listo [data-ef].ef-in > :nth-child(${n}) { animation-delay:${((n - 1) * 0.07).toFixed(2)}s }`).join("\n        ")}
         .ef-listo [data-ef="titulo"] .ef-raya { transform-origin:left; transition: transform .9s .2s cubic-bezier(.16,.84,.3,1) }
         .ef-listo [data-ef="titulo"]:not(.ef-in) .ef-raya { transform:scaleX(0) }
+        /* El showroom entra desde la profundidad; las filas del catálogo, de a una. */
+        @keyframes av-profundo { from { opacity:0; transform:perspective(1400px) translateZ(-260px) rotateX(10deg) } to { opacity:1; transform:none } }
+        .ef-listo [data-ef="profundo"]:not(.ef-in) > * { opacity:0 }
+        .ef-listo [data-ef="profundo"].ef-in > * { animation: av-profundo 1.2s cubic-bezier(.16,.84,.3,1) backwards }
+        @keyframes av-fila { from { opacity:0; transform:translateX(-28px); filter:blur(6px) } to { opacity:1; transform:none; filter:none } }
+        .ef-listo [data-ef="fila"]:not(.ef-in) { opacity:0 }
+        .ef-listo [data-ef="fila"].ef-in { animation: av-fila .7s cubic-bezier(.16,.84,.3,1) backwards }
         .ef-listo [data-ef].ef-ya > *, .ef-listo [data-ef].ef-ya .ef-raya { animation:none !important; transition:none !important }
+        .ef-listo [data-ef].ef-ya { animation:none !important }
         @media (prefers-reduced-motion: reduce) { .av-entra { animation:none } .av-latido { animation:none } .av-incl { transition:none } .av-incl:hover { transform:none } }
       `}</style>
+
+      <LineaDeProgreso acento={accent} enPanel={isPreview} capa={isPreview ? CAPAS.previaNavAlto + 1 : 120} />
 
       {/* ── BARRA DE AVISOS ── */}
       {showAnn && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
           zIndex: isPreview ? CAPAS.previaNavAlto : 110, height: PROMO_H, background: "#03040a", borderBottom: `1px solid ${conAlfa(accent, 0.3)}`,
+          transform: barraOculta ? "translateY(-100%)" : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)",
           display: "flex", alignItems: "center", justifyContent: "center", padding: "0 44px", gap: 10 }}>
           <span aria-hidden="true" className="av-latido" style={{ width: 6, height: 6, borderRadius: "50%", background: accent, boxShadow: `0 0 10px ${accent}`, animation: "av-latido 1.6s ease-in-out infinite", flexShrink: 0 }} />
           <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "rgba(232,236,246,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -338,7 +355,8 @@ export default function AutoVolt() {
 
       {/* ── BARRA ── flota sobre la escena, no toca los bordes. */}
       <div style={{ position: isPreview ? "sticky" : "fixed", top: (showAnn ? PROMO_H : 0) + (isPreview ? 0 : NAV_TOP), left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
-        zIndex: isPreview ? CAPAS.previaNav : 100, padding: isPreview ? `${NAV_TOP}px clamp(10px,2vw,20px) 0` : "0 clamp(10px,2vw,20px)", pointerEvents: "none" }}>
+        zIndex: isPreview ? CAPAS.previaNav : 100, padding: isPreview ? `${NAV_TOP}px clamp(10px,2vw,20px) 0` : "0 clamp(10px,2vw,20px)", pointerEvents: "none",
+        transform: barraOculta ? `translateY(-${(showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 24}px)` : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)" }}>
         <nav aria-label="Principal" style={{ pointerEvents: "auto", maxWidth: 1240, margin: "0 auto", borderRadius: 18,
           background: navOscura ? "rgba(8,11,21,0.62)" : navBg, backdropFilter: "blur(18px) saturate(1.4)",
           border: `1px solid ${navLinea}`, boxShadow: "0 18px 50px -24px rgba(0,0,0,0.7)", padding: "0 clamp(10px,1.6vw,16px)" }}>
@@ -461,7 +479,7 @@ export default function AutoVolt() {
       {/* ── EL SHOWROOM ── los vehículos giran y el elegido muestra sus datos. */}
       <section id="showroom" aria-label="Showroom" style={{ position: "relative", overflow: "hidden", background: VACIO, paddingTop: "clamp(40px,6vw,72px)" }}>
         <EscenaVolt acento={accent} quieta={isPreview} />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(12px,2.5vh,32px) clamp(16px,4vw,32px) clamp(48px,8vh,88px)", boxSizing: "border-box" }}>
+        <div data-ef="profundo" style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(12px,2.5vh,32px) clamp(16px,4vw,32px) clamp(48px,8vh,88px)", boxSizing: "border-box" }}>
           {loadingProducts ? (
             <div role="status" aria-label="Cargando vehículos" style={{ minHeight: "50vh", display: "grid", placeItems: "center" }}>
               <div style={{ width: 40, height: 40, border: `2px solid ${accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "av-spin 0.8s linear infinite", boxShadow: `0 0 18px ${conAlfa(accent, 0.5)}` }} />
@@ -605,7 +623,7 @@ export default function AutoVolt() {
       <SectionBlock id="av-nosotros" label="La agencia" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
       <section id="nosotros" style={{ padding: pad, position: "relative", ...fNosotros.estilo, borderTop: `1px solid ${fNosotros.linea}` }}>
         {capa("bgNosotros", "Fondo de la agencia", fNosotros.ov)}
-        <div id="contacto" className="av-about" style={{ ...ancho, scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16 }}>
+        <div id="contacto" data-ef="sube" className="av-about" style={{ ...ancho, scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16 }}>
           <div className="av-incl" style={{ borderRadius: 26, padding: 1, background: `linear-gradient(160deg, ${conAlfa(accent, 0.7)}, transparent 45%, ${conAlfa(accent, 0.3)})` }}>
             <div style={{ position: "relative", borderRadius: 25, overflow: "hidden", aspectRatio: "5/4", background: "#03040a" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por la dueña */}
@@ -632,7 +650,7 @@ export default function AutoVolt() {
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "0 0 26px" }}>
                 {stats.map((s, i) => (
                   <div key={s.fv} style={{ padding: "12px 16px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.12)" : conAlfa(accent, 0.3)}`, background: fNosotros.claro ? "rgba(11,16,32,0.03)" : conAlfa(accent, 0.07), minWidth: 0 }}>
-                    <p style={{ margin: 0, fontFamily: MONO, fontSize: 24, fontWeight: 700, lineHeight: 1, color: fNosotros.claro ? fNosotros.tinta : "#fff", textShadow: fNosotros.claro ? "none" : `0 0 16px ${conAlfa(accent, 0.55)}` }}>
+                    <p data-ef-contar style={{ margin: 0, fontFamily: MONO, fontSize: 24, fontWeight: 700, lineHeight: 1, color: fNosotros.claro ? fNosotros.tinta : "#fff", textShadow: fNosotros.claro ? "none" : `0 0 16px ${conAlfa(accent, 0.55)}` }}>
                       <EditableZone field={s.fv} label={`Número ${i + 1}`}>{s.n}</EditableZone>
                     </p>
                     <p style={{ margin: "6px 0 0", fontSize: 12, color: fNosotros.tenue }}>

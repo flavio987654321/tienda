@@ -37,7 +37,7 @@ export const CATALOGO_VOLT_CSS = `
     transition: border-color .2s, background .2s, box-shadow .25s, transform .25s }
   .ctv-fila:hover { border-color: var(--ctv-acento); background: rgba(14,19,34,0.92); box-shadow: 0 18px 46px -26px var(--ctv-acento); transform: translateX(3px) }
   .ctv-fila::before { content:""; position:absolute; left:-1px; top:18%; bottom:18%; width:2px; border-radius:2px; background:var(--ctv-acento); opacity:0; transition:opacity .2s; box-shadow:0 0 10px var(--ctv-acento) }
-  .ctv-fila:hover::before, .ctv-fila.ctv-comp::before { opacity:1 }
+  .ctv-fila:hover::before, .ctv-fila[data-comp]::before { opacity:1 }
   .ctv-ir::after { content:""; position:absolute; inset:0; border-radius:16px }
   .ctv-ir:focus-visible { outline:none }
   .ctv-ir:focus-visible::after { outline:2px solid var(--ctv-acento); outline-offset:2px }
@@ -335,7 +335,7 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
             <span />
           </div>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-            {lista.slice(0, cuantos).map(p => {
+            {lista.slice(0, cuantos).map((p, i) => {
               const tipo = NOMBRE_TIPO[(p.category ?? "").toLowerCase() as CategoriaVehiculo]?.uno;
               const lugar = vehicleLocation(p);
               const comp = comparando.includes(p.id);
@@ -343,7 +343,10 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
               const oferta = !!p.comparePrice && p.comparePrice > p.price;
               const celdas: [string, string][] = [["AÑO", attr(p, "Año")], [usaHoras(p.category) ? "HORAS" : "KM", usoDe(p)], ["MOTOR", attr(p, "Motor")], ["CAJA", attr(p, "Transmisión")]];
               return (
-                <li key={p.id} className={`ctv-cols ctv-fila${comp ? " ctv-comp" : ""}`} style={comp ? { borderColor: conAlfa(acento, 0.55) } : undefined}>
+                // La clase no cambia nunca: el efecto al bajar le suma `ef-in`, y si React la reescribiera
+                // (al marcarla para comparar) la fila quedaba invisible. Lo de comparar va en `data-comp`.
+                <li key={p.id} data-ef="fila" data-comp={comp || undefined} className="ctv-cols ctv-fila"
+                  style={{ animationDelay: `${(i % 6) * 0.06}s`, ...(comp ? { borderColor: conAlfa(acento, 0.55) } : {}) }}>
                   <div className="ctv-foto" style={{ position: "relative", aspectRatio: "16/10", borderRadius: 10, overflow: "hidden", background: "#03040a" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- foto de la tienda */}
                     {p.images[0] ? <img src={fotoLiviana(p.images[0], 256)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: esReservado(p) ? "grayscale(.7)" : undefined }} /> : null}
