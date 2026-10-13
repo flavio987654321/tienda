@@ -39,11 +39,13 @@ export function TiraVolt({ acento, gap = 8, etiqueta, children }: {
     const el = pista.current;
     if (!el) return;
     medir();
+    // Cambia el ancho de la pantalla, o cambian las miniaturas (filtrar por tipo): se vuelve a medir.
     const ro = new ResizeObserver(medir);
     ro.observe(el);
-    for (const h of Array.from(el.children)) ro.observe(h);
-    return () => ro.disconnect();
-  }, [medir, children]);
+    const mo = new MutationObserver(medir);
+    mo.observe(el, { childList: true });
+    return () => { ro.disconnect(); mo.disconnect(); };
+  }, [medir]);
 
   const mover = (lado: 1 | -1) => {
     const el = pista.current;
