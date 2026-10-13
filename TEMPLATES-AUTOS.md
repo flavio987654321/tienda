@@ -89,7 +89,7 @@ Reglas que valen para todos (de la memoria):
 Decidido el 12/10/26: son **tres**, no cuatro, para que autos quede con 5 como moda
 (Auto Motor + Auto Drive + 3). Y no todos oscuros: autos queda con 2 oscuros y 3 claros.
 
-- [x] ~~Futurista (tipo Aurora) — **oscuro**: luces, vidrio, profundidad; bloques propios.~~ Hecho el 12/10/26: **Auto Volt** (`auto-volt`, carpeta `templates/volt/`). Escena de luz que sigue al puntero, piso de grilla, consola de búsqueda que cuenta antes de buscar, escáner en el vehículo en foco. Probado en 360/768/1280, en la tienda y en el editor. **Falta que Flavio lo vea** antes de arrancar el siguiente.
+- [x] ~~Futurista (tipo Aurora) — **oscuro**: luces, vidrio, profundidad; bloques propios.~~ Hecho el 12/10/26: **Auto Volt** (`auto-volt`, carpeta `templates/volt/`). El 13/10 Flavio lo vio y dijo que era "lo mismo con otro color" (misma página larga de Motor y Drive); se rehízo con estructura propia elegida por él, **showroom giratorio**: la portada es un carrusel 3D de vehículos con los datos flotando alrededor del elegido (flechas, teclado, deslizar, miniaturas, filtro por tipo), un **comparador** de hasta 3 lado a lado que marca el mejor de cada fila, tasación, videos chicos, preguntas como **chat**, novedades y "la agencia" (nosotros + números + contacto). Probado en 360/768/1280, en la tienda y en el editor. **Falta que Flavio lo vea.** Lección: un template nuevo tiene que cambiar la ESTRUCTURA, no sólo el aspecto.
 - [ ] Ruta / pesado — **claro**: industrial, blanco y gris cemento con amarillo de señal vial; datos técnicos al frente.
 - [ ] Moto / deportivo — **claro**: blanco con un color fuerte, diagonales, energía.
 - ~~Showroom premium~~ — descartado el 12/10/26: es el que más se parecía a Auto Motor.

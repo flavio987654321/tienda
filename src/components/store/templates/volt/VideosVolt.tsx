@@ -6,8 +6,7 @@ import { fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import type { VideoDeVehiculo } from "@/components/store/auto/videosDeVehiculos";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { fotoLiviana } from "@/lib/foto-liviana";
-import { conAlfa } from "./EscenaVolt";
-import { MONO } from "./TarjetaVolt";
+import { conAlfa, MONO } from "./EscenaVolt";
 
 /**
  * "Transmisiones" de Auto Volt (12/10/26): los videos que la agencia subió en

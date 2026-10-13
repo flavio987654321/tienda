@@ -40,11 +40,10 @@ import { CAPAS } from "@/lib/capas-tienda";
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
 import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
 import { fotoLiviana } from "@/lib/foto-liviana";
-import { EscenaVolt, ESCENA_VOLT_CSS, conAlfa } from "@/components/store/templates/volt/EscenaVolt";
-import { TarjetaVolt, VOLT_TARJETA_CSS, MONO } from "@/components/store/templates/volt/TarjetaVolt";
-import { BuscadorVolt } from "@/components/store/templates/volt/BuscadorVolt";
-import { FocoVolt, FOCO_VOLT_CSS } from "@/components/store/templates/volt/FocoVolt";
-import { TiposVolt, ServiciosVolt, PreguntasVolt, BLOQUES_VOLT_CSS } from "@/components/store/templates/volt/BloquesVolt";
+import { EscenaVolt, ESCENA_VOLT_CSS, conAlfa, MONO } from "@/components/store/templates/volt/EscenaVolt";
+import { EscenarioVolt, ESCENARIO_VOLT_CSS } from "@/components/store/templates/volt/EscenarioVolt";
+import { ComparadorVolt, COMPARADOR_VOLT_CSS } from "@/components/store/templates/volt/ComparadorVolt";
+import { ServiciosVolt, ChatPreguntasVolt, BLOQUES_VOLT_CSS } from "@/components/store/templates/volt/BloquesVolt";
 import { VideosVolt, VIDEOS_VOLT_CSS } from "@/components/store/templates/volt/VideosVolt";
 
 /** La paleta: casi negro azulado, una superficie apenas más clara, y el acento de la dueña. */
@@ -54,7 +53,7 @@ const TINTA = "#e8ecf6";
 const TINTA_CLARA = "#0b1020"; // el texto cuando la dueña le pone un fondo claro a un bloque
 const LINEA = "rgba(255,255,255,0.08)";
 
-const AV_SECTION_IDS = ["av-tipos", "av-catalogo", "av-foco", "av-tasar", "av-videos", "av-stats", "av-servicios", "av-nosotros", "av-preguntas", "av-novedades", "av-contacto"];
+const AV_SECTION_IDS = ["av-comparar", "av-tasar", "av-videos", "av-preguntas", "av-novedades", "av-nosotros"];
 
 /** El fondo de un bloque: color o foto elegidos por la dueña, y el color de letra que le corresponde. */
 function fondoDe(ov: ImageOverride | undefined, color: string) {
@@ -101,7 +100,7 @@ export default function AutoVolt() {
   // El menú sólo lleva a bloques que se ven; en el celular, tampoco a los ocultos ahí.
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Vehículos", "catálogo", "av-catalogo"], ["Tasá tu usado", "tasar", "av-tasar"], ["Nosotros", "nosotros", "av-nosotros"], ["Contacto", "contacto", "av-contacto"]].filter(([, , b]) => !ocultas.includes(b));
+  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", "av-nosotros"]].filter(([, , b]) => !b || !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview = !!config?.previewFill;
   useEfectosAlBajar(!isPreview);
@@ -122,21 +121,14 @@ export default function AutoVolt() {
   const iovr = config?.imageOverrides ?? {};
   const sc = config?.sectionColors ?? {};
   const fondo = (campo: string, def: string) => ({ ...fondoDe(iovr[`sectionbg_${campo}`], sc[campo] ?? def), ov: iovr[`sectionbg_${campo}`] });
-  const fTipos = fondo("bgTipos", VACIO);
-  const fCatalogo = fondo("bgCatalogo", VACIO);
-  const fFoco = fondo("bgFoco", SUPERFICIE);
+  const fComparar = fondo("bgComparar", SUPERFICIE);
   const fTasar = fondo("bgTasar", VACIO);
   const fVideos = fondo("bgVideos", SUPERFICIE);
-  const fStats = fondo("bgStats", VACIO);
-  const fServicios = fondo("bgServicios", VACIO);
-  const fNosotros = fondo("bgNosotros", SUPERFICIE);
   const fPreguntas = fondo("bgPreguntas", VACIO);
   const fNovedades = fondo("bgNovedades", VACIO);
-  const fContacto = fondo("bgContacto", SUPERFICIE);
+  const fNosotros = fondo("bgNosotros", SUPERFICIE);
   const fPie = fondo("bgFooter", "#03040a");
 
-  const heroOv = iovr["heroBackground"];
-  const heroFoto = heroOv?.url ?? foco?.images[0] ?? "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1600&q=80";
   const nosotrosUrl = iovr["nosotrosImage"]?.url ?? "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=80";
 
   const navBg = sc["navBg"] ?? VACIO;
@@ -205,7 +197,12 @@ export default function AutoVolt() {
     return () => window.removeEventListener("keydown", onKey);
   }, [searchOpen, favoritesOpen]);
 
-  const recientes = products.filter(p => p.id !== foco?.id || products.length <= 4).slice(0, 6);
+  /* Lo que se compara. Mientras el comprador no eligió nada, se muestran los
+     dos primeros, así el bloque nunca está vacío; al tocar "Comparar" en el
+     showroom pasa a mandar su elección (tres como mucho: el cuarto saca al primero). */
+  const [comparando, setComparando] = useState<string[]>([]);
+  const idsComparados = (comparando.length ? comparando : products.slice(0, 2).map(p => p.id)).filter(id => products.some(p => p.id === id));
+  const alternarComparar = (id: string) => setComparando(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id].slice(-3));
   const todos = linkAVehiculos(slug, {}, isPreview);
 
   /* Telemetría: lo que se cuenta sale de los datos; lo que es del negocio (años,
@@ -231,13 +228,10 @@ export default function AutoVolt() {
       <style>{`
         ${AM_MODAL_CSS}
         ${ESCENA_VOLT_CSS}
-        ${VOLT_TARJETA_CSS}
-        ${FOCO_VOLT_CSS}
+        ${ESCENARIO_VOLT_CSS}
+        ${COMPARADOR_VOLT_CSS}
         ${BLOQUES_VOLT_CSS}
         ${VIDEOS_VOLT_CSS}
-        .av-grid { display:grid; gap:16px; grid-template-columns:minmax(0,1fr) }
-        @media(min-width:600px){ .av-grid { grid-template-columns:repeat(2,minmax(0,1fr)) } }
-        @media(min-width:1040px){ .av-grid { grid-template-columns:repeat(3,minmax(0,1fr)) } }
         /* El nombre: en el celular, más chico y sin espaciado, para que entre entero ("QRDREAMC / AR" se partía al medio). */
         .av-marca { font-size:13px; letter-spacing:.2px; word-break:normal; overflow-wrap:normal }
         @media(max-width:400px){ .av-marca { font-size:12px; letter-spacing:0 } .av-ico { width:34px !important } }
@@ -245,19 +239,13 @@ export default function AutoVolt() {
         .av-links { display:none }
         .av-solo-ancho { display:none }
         @media(min-width:920px){ .av-links { display:flex } .av-burger { display:none !important } .av-solo-ancho { display:inline-flex } }
-        .av-hero { display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(28px,4vw,56px); align-items:center }
-        @media(min-width:980px){ .av-hero { grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr) } }
-        .bv-campos { grid-template-columns:minmax(0,1fr) }
-        @media(min-width:640px){ .bv-campos { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto } }
-        .av-pasos { display:grid; gap:14px; grid-template-columns:minmax(0,1fr); list-style:none; margin:0; padding:0; position:relative }
-        @media(min-width:900px){ .av-pasos { grid-template-columns:repeat(4,minmax(0,1fr)) } }
-        .av-linea-pasos { position:absolute; left:23px; top:24px; bottom:24px; width:1px }
-        @media(min-width:900px){ .av-linea-pasos { left:24px; right:24px; top:23px; bottom:auto; width:auto; height:1px } }
         .av-about { display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(28px,5vw,64px); align-items:center }
         @media(min-width:880px){ .av-about { grid-template-columns:minmax(0,1fr) minmax(0,1fr) } }
         .av-faq { display:grid; grid-template-columns:minmax(0,1fr); gap:24px clamp(28px,5vw,64px) }
         @media(min-width:960px){ .av-faq { grid-template-columns:minmax(0,0.8fr) minmax(0,1.3fr); align-items:start } .av-faq-lado { position:sticky; top:110px } }
-        .av-stats { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) }
+        /* La foto de la agencia se inclina un poco con el mouse, como una pieza en una vitrina. */
+        .av-incl { transition: transform .6s cubic-bezier(.2,.8,.2,1) }
+        @media (hover:hover) { .av-incl:hover { transform: perspective(900px) rotateY(-5deg) rotateX(2deg) } }
         .av-link { transition: color .15s }
         .av-link:hover { color:${accent} !important }
         @keyframes av-spin { to { transform:rotate(360deg) } }
@@ -273,7 +261,7 @@ export default function AutoVolt() {
         .ef-listo [data-ef="titulo"] .ef-raya { transform-origin:left; transition: transform .9s .2s cubic-bezier(.16,.84,.3,1) }
         .ef-listo [data-ef="titulo"]:not(.ef-in) .ef-raya { transform:scaleX(0) }
         .ef-listo [data-ef].ef-ya > *, .ef-listo [data-ef].ef-ya .ef-raya { animation:none !important; transition:none !important }
-        @media (prefers-reduced-motion: reduce) { .av-entra { animation:none } .av-latido { animation:none } }
+        @media (prefers-reduced-motion: reduce) { .av-entra { animation:none } .av-latido { animation:none } .av-incl { transition:none } .av-incl:hover { transform:none } }
       `}</style>
 
       {/* ── BARRA DE AVISOS ── */}
@@ -383,121 +371,52 @@ export default function AutoVolt() {
         </nav>
       </div>
 
-      {/* ── PORTADA ── la escena de luz, el título, la consola de búsqueda y el vehículo. */}
-      <section aria-label="Portada" style={{ position: "relative", overflow: "hidden", background: VACIO,
-        paddingTop: isPreview ? 24 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 24 }}>
+      {/* ── EL SHOWROOM ── la portada es el escenario: los vehículos giran y el elegido muestra sus datos. */}
+      <section id="showroom" aria-label="Showroom" style={{ position: "relative", overflow: "hidden", background: VACIO,
+        paddingTop: isPreview ? 20 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 20 }}>
         <EscenaVolt acento={accent} quieta={isPreview} />
-        <div className="av-hero" style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(28px,6vh,72px) clamp(16px,4vw,32px) clamp(56px,9vh,104px)", boxSizing: "border-box" }}>
-          <div style={{ minWidth: 0 }}>
-            <p className="av-entra" style={{ margin: "0 0 18px", display: "inline-flex", alignItems: "center", gap: 10, fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: "rgba(232,236,246,0.8)",
-              padding: "7px 12px", borderRadius: 999, border: `1px solid ${conAlfa(accent, 0.35)}`, background: conAlfa(accent, 0.08),
-              maxWidth: "100%", boxSizing: "border-box", overflowWrap: "anywhere" }}>
-              <span aria-hidden="true" className="av-latido" style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: accent, boxShadow: `0 0 10px ${accent}`, animation: "av-latido 1.6s ease-in-out infinite" }} />
-              <span style={{ minWidth: 0 }}><EditableZone field="heroKicker" label="Etiqueta de la portada">{storeName}</EditableZone></span>
-            </p>
-            <h1 className="av-entra" style={{ margin: "0 0 18px", fontSize: "clamp(40px,7vw,92px)", fontWeight: 800, letterSpacing: "-0.045em", lineHeight: 0.95, color: "#fff", animationDelay: ".08s",
-              backgroundImage: `linear-gradient(180deg, #ffffff 30%, ${conAlfa(accent, 0.95)} 140%)`, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              <EditableZone field="heroHeading" label="Título de la portada">Tu próximo vehículo está acá</EditableZone>
-            </h1>
-            <p className="av-entra" style={{ margin: "0 0 30px", fontSize: "clamp(15px,1.6vw,18px)", color: "rgba(232,236,246,0.72)", maxWidth: 540, lineHeight: 1.65, animationDelay: ".16s" }}>
-              <EditableZone field="heroSubtext" label="Subtítulo de la portada">Autos, camionetas, motos y más, con la ficha técnica completa y el precio a la vista.</EditableZone>
-            </p>
-            <div className="av-entra" style={{ animationDelay: ".24s" }}>
-              <BuscadorVolt slug={slug} productos={products} opciones={opciones} principal={principal} acento={accent} enEditor={isPreview} />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(12px,2.5vh,32px) clamp(16px,4vw,32px) clamp(48px,8vh,88px)", boxSizing: "border-box" }}>
+          {loadingProducts ? (
+            <div role="status" aria-label="Cargando vehículos" style={{ minHeight: "50vh", display: "grid", placeItems: "center" }}>
+              <div style={{ width: 40, height: 40, border: `2px solid ${accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "av-spin 0.8s linear infinite", boxShadow: `0 0 18px ${conAlfa(accent, 0.5)}` }} />
             </div>
-            {waLink && (
-              <a href={waLink} target="_blank" rel="noopener noreferrer" className="av-link"
-                style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 44, marginTop: 14, color: "rgba(232,236,246,0.8)", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
-                <WaIcon size={16} /> Hablar con un asesor
-              </a>
-            )}
-          </div>
-          {/* El vehículo: la foto de la dueña, o la del vehículo en foco, en un marco de vidrio con lecturas. */}
-          <div className="av-entra" style={{ position: "relative", minWidth: 0, animationDelay: ".2s" }}>
-            <div style={{ position: "relative", borderRadius: 26, padding: 1, background: `linear-gradient(140deg, ${conAlfa(accent, 0.8)}, rgba(255,255,255,0.08) 40%, ${conAlfa(accent, 0.25)})`,
-              boxShadow: `0 50px 120px -50px ${conAlfa(accent, 0.9)}` }}>
-              <div style={{ position: "relative", borderRadius: 25, overflow: "hidden", aspectRatio: "4/3", background: "#03040a" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por la dueña o de su vehículo */}
-                <img src={fotoLiviana(heroFoto, 1200)} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
-                  objectPosition: `${heroOv?.posX ?? 50}% ${heroOv?.posY ?? 50}%` }} />
-                <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(5,7,13,0.7), transparent 50%), linear-gradient(120deg, ${conAlfa(accent, 0.18)}, transparent 50%)` }} />
-                <EditableImageButton field="heroBackground" label="Foto de la portada" />
-              </div>
-            </div>
-            {!loadingProducts && products.length > 0 && (
-              <div style={{ position: "absolute", left: "clamp(-8px,-1vw,0px)", bottom: -18, display: "flex", gap: 8, flexWrap: "wrap", paddingRight: 12 }}>
-                {[[String(products.length).padStart(2, "0"), products.length === 1 ? "vehículo" : "vehículos"], ...(opciones.marcas.length > 1 ? [[String(opciones.marcas.length).padStart(2, "0"), "marcas"]] : [])].map(([n, l]) => (
-                  <span key={l} style={{ display: "inline-flex", alignItems: "baseline", gap: 8, padding: "10px 14px", borderRadius: 14, background: "rgba(8,11,21,0.82)", backdropFilter: "blur(12px)",
-                    border: `1px solid ${conAlfa(accent, 0.35)}`, boxShadow: "0 14px 30px -12px rgba(0,0,0,0.7)" }}>
-                    <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 700, color: accent, textShadow: `0 0 14px ${conAlfa(accent, 0.6)}` }}>{n}</span>
-                    <span style={{ fontSize: 12, color: "rgba(232,236,246,0.7)" }}>{l}</span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          ) : (
+            <EscenarioVolt productos={products} opciones={opciones} inicialId={foco?.id} acento={accent} moneda={currency} whatsapp={whatsapp} hrefDe={paginaDe}
+              favoritos={favorites} onFavorito={toggleFavorite} comparando={comparando} onComparar={alternarComparar}
+              selector={enEdicion ? <div style={{ marginBottom: 16 }}><SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} oscuro onChange={setFeaturedVehicleId} /></div> : undefined}
+              cabecera={<>
+                <p className="av-entra" style={{ margin: "0 0 14px", display: "inline-flex", alignItems: "center", gap: 10, fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: "rgba(232,236,246,0.8)",
+                  padding: "7px 12px", borderRadius: 999, border: `1px solid ${conAlfa(accent, 0.35)}`, background: conAlfa(accent, 0.08), maxWidth: "100%", boxSizing: "border-box", overflowWrap: "anywhere" }}>
+                  <span aria-hidden="true" className="av-latido" style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: accent, boxShadow: `0 0 10px ${accent}`, animation: "av-latido 1.6s ease-in-out infinite" }} />
+                  <span style={{ minWidth: 0 }}><EditableZone field="heroKicker" label="Etiqueta de la portada">Showroom en línea</EditableZone></span>
+                </p>
+                <h1 className="av-entra" style={{ margin: "0 0 10px", fontSize: "clamp(30px,4.2vw,54px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 0.98, animationDelay: ".08s",
+                  backgroundImage: `linear-gradient(180deg, #ffffff 35%, ${conAlfa(accent, 0.95)} 150%)`, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "#fff" }}>
+                  <EditableZone field="heroHeading" label="Título de la portada">Tu próximo vehículo está acá</EditableZone>
+                </h1>
+                <p className="av-entra" style={{ margin: 0, fontSize: "clamp(14px,1.4vw,16px)", color: "rgba(232,236,246,0.65)", lineHeight: 1.6, animationDelay: ".16s" }}>
+                  <EditableZone field="heroSubtext" label="Subtítulo de la portada">Pasalos con las flechas o deslizando, y tocá el que te guste para ver todo.</EditableZone>
+                </p>
+              </>} />
+          )}
         </div>
       </section>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
 
-      {/* ── TIPOS ── */}
-      <SectionBlock id="av-tipos" label="Explorá por tipo" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      {(opciones.tipos.length > 1 || opciones.marcas.length > 1) ? (
-        <section style={{ padding: "clamp(48px,7vw,88px) clamp(16px,4vw,32px) clamp(24px,4vw,40px)", position: "relative", ...fTipos.estilo }}>
-          {capa("bgTipos", "Fondo de los tipos", fTipos.ov)}
+      {/* ── COMPARADOR ── hasta tres lado a lado (ver volt/ComparadorVolt). */}
+      <SectionBlock id="av-comparar" label="Comparador" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
+      {products.length >= 2 ? (
+        <section id="comparar" style={{ padding: pad, position: "relative", ...fComparar.estilo, borderTop: `1px solid ${fComparar.linea}` }}>
+          {capa("bgComparar", "Fondo del comparador", fComparar.ov)}
           <div data-ef="sube" style={ancho}>
-            <TiposVolt opciones={opciones} slug={slug} enEditor={isPreview} acento={accent} tinta={fTipos.tinta} tenue={fTipos.tenue}
-              titulo={<EditableZone field="tiposHeading" label="Título de los tipos">{opciones.tipos.length > 1 ? "Elegí qué buscás" : "Elegí la marca"}</EditableZone>} />
-          </div>
-        </section>
-      ) : null}
-      </SectionBlock>
-
-      {/* ── RECIÉN INGRESADOS ── */}
-      <SectionBlock id="av-catalogo" label="Recién ingresados" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      <section id="catálogo" style={{ padding: pad, position: "relative", ...fCatalogo.estilo }}>
-        {capa("bgCatalogo", "Fondo de recién ingresados", fCatalogo.ov)}
-        <div data-ef="sube" style={ancho}>
-          <Titulo acento={accent} tinta={fCatalogo.tinta}
-            codigo={<EditableZone field="catalogKicker" label="Etiqueta del catálogo">Stock en línea</EditableZone>}
-            titulo={<EditableZone field="catalogHeading" label="Título del catálogo">Recién ingresados</EditableZone>}
-            derecha={products.length > recientes.length ? (
-              <Link href={todos} className="av-link" style={{ color: fCatalogo.tenue, fontSize: 14, fontWeight: 700, textDecoration: "none", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
-                Ver los {products.length} →
-              </Link>
-            ) : undefined} />
-          {loadingProducts ? (
-            <div role="status" aria-label="Cargando vehículos" style={{ textAlign: "center", padding: "60px 0" }}>
-              <div style={{ width: 36, height: 36, border: `2px solid ${accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "av-spin 0.8s linear infinite", margin: "0 auto", boxShadow: `0 0 18px ${conAlfa(accent, 0.5)}` }} />
-            </div>
-          ) : recientes.length > 0 ? (
-            <div className="av-grid" data-ef="grilla">
-              {recientes.map(p => (
-                <TarjetaVolt key={p.id} p={p} acento={accent} moneda={currency} href={paginaDe(p)} favorito={favorites.includes(p.id)} onFavorito={() => toggleFavorite(p.id)} />
-              ))}
-            </div>
-          ) : (
-            <div style={{ textAlign: "center", padding: "56px 16px", border: `1px dashed ${fCatalogo.linea}`, borderRadius: 18 }}>
-              <p style={{ margin: 0, color: fCatalogo.tenue, fontSize: 15 }}>Todavía no hay vehículos publicados.</p>
-            </div>
-          )}
-        </div>
-      </section>
-      </SectionBlock>
-
-      {/* ── VEHÍCULO EN FOCO ── el escáner. */}
-      <SectionBlock id="av-foco" label="Vehículo en foco" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      {(foco || enEdicion) ? (
-        <section style={{ padding: pad, position: "relative", ...fFoco.estilo, borderTop: `1px solid ${fFoco.linea}` }}>
-          {capa("bgFoco", "Fondo de la vidriera", fFoco.ov)}
-          <div data-ef="sube" style={ancho}>
-            {enEdicion && <div style={{ marginBottom: 16 }}>
-              <SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} oscuro onChange={setFeaturedVehicleId} />
-            </div>}
-            {foco ? <FocoVolt p={foco} acento={accent} moneda={currency} whatsapp={whatsapp} enPrevia={isPreview} href={paginaDe(foco)}
-              kicker={<EditableZone field="focoKicker" label="Etiqueta del vehículo en foco">En foco</EditableZone>} />
-              : <p style={{ margin: 0, padding: 24, color: fFoco.tinta, border: `1px dashed ${fFoco.linea}`, borderRadius: 18, textAlign: "center" }}>Todavía no hay vehículos para mostrar en la vidriera.</p>}
+            <Titulo acento={accent} tinta={fComparar.tinta}
+              codigo={<EditableZone field="compararKicker" label="Etiqueta del comparador">Comparador</EditableZone>}
+              titulo={<EditableZone field="compararHeading" label="Título del comparador">Ponelos lado a lado</EditableZone>}
+              derecha={<p style={{ margin: 0, maxWidth: 340, fontSize: 14, lineHeight: 1.55, color: fComparar.tenue }}>Sumá vehículos con <strong style={{ color: fComparar.tinta }}>⇄ Comparar</strong> en el showroom, o elegilos acá.</p>} />
+            <ComparadorVolt productos={products} ids={idsComparados} acento={accent} moneda={currency} hrefDe={paginaDe}
+              onQuitar={id => setComparando(idsComparados.filter(x => x !== id))}
+              onAgregar={id => setComparando([...idsComparados, id].slice(-3))} />
           </div>
         </section>
       ) : null}
@@ -505,7 +424,7 @@ export default function AutoVolt() {
 
       {/* ── TASÁ TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="av-tasar" label="Tasá tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      <section id="tasar" style={{ padding: pad, position: "relative", ...fTasar.estilo }}>
+      <section id="tasar" style={{ padding: pad, position: "relative", ...fTasar.estilo, borderTop: `1px solid ${fTasar.linea}` }}>
         {capa("bgTasar", "Fondo de tasación", fTasar.ov)}
         <div data-ef="sube" style={ancho}>
           <Titulo acento={accent} tinta={fTasar.tinta}
@@ -522,7 +441,7 @@ export default function AutoVolt() {
       </section>
       </SectionBlock>
 
-      {/* ── VIDEOS ── los que la agencia subió en sus vehículos. */}
+      {/* ── VIDEOS ── los que la agencia subió en sus vehículos, en tarjetas chicas. */}
       <SectionBlock id="av-videos" label="Videos" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
       {(videos.length > 0 || enEditor) ? (
         <section style={{ padding: pad, position: "relative", ...fVideos.estilo, borderTop: `1px solid ${fVideos.linea}` }}>
@@ -540,125 +459,26 @@ export default function AutoVolt() {
       ) : null}
       </SectionBlock>
 
-      {/* ── TELEMETRÍA ── los números. */}
-      <SectionBlock id="av-stats" label="Números" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      {stats.length > 0 ? (
-        <div style={{ position: "relative", padding: `${enEdicion ? "52px" : "clamp(40px,6vw,64px)"} clamp(16px,4vw,32px) clamp(40px,6vw,64px)`, ...fStats.estilo }}>
-          {capa("bgStats", "Fondo de los números", fStats.ov)}
-          <div className="av-stats" data-ef="grilla" style={ancho}>
-            {stats.map((s, i) => (
-              <div key={s.fv} style={{ padding: "22px 20px", borderRadius: 18, border: `1px solid ${fStats.claro ? "rgba(11,16,32,0.1)" : LINEA}`,
-                background: fStats.claro ? "rgba(11,16,32,0.03)" : `linear-gradient(160deg, ${conAlfa(accent, 0.1)}, rgba(255,255,255,0.02) 55%)` }}>
-                <p style={{ margin: 0, fontFamily: MONO, fontSize: "clamp(32px,4.4vw,52px)", fontWeight: 700, lineHeight: 1, color: fStats.claro ? fStats.tinta : "#fff",
-                  textShadow: fStats.claro ? "none" : `0 0 24px ${conAlfa(accent, 0.55)}`, fontVariantNumeric: "tabular-nums" }}>
-                  <EditableZone field={s.fv} label={`Número ${i + 1}`}>{s.n}</EditableZone>
-                </p>
-                <p style={{ margin: "12px 0 0", fontSize: 13, color: fStats.tenue }}>
-                  <EditableZone field={s.fl} label={`Texto del número ${i + 1}`}>{s.l}</EditableZone>
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      </SectionBlock>
-
-      {/* ── CÓMO COMPRAR ── una secuencia de cuatro pasos unidos por una línea de luz. */}
-      <SectionBlock id="av-servicios" label="Cómo comprar" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      <section id="servicios" style={{ padding: pad, position: "relative", ...fServicios.estilo }}>
-        {capa("bgServicios", "Fondo de cómo comprar", fServicios.ov)}
-        <div data-ef="sube" style={ancho}>
-          <Titulo acento={accent} tinta={fServicios.tinta}
-            codigo={<EditableZone field="serviciosKicker" label="Etiqueta de cómo comprar">Cómo comprar</EditableZone>}
-            titulo={<EditableZone field="serviciosHeading" label="Título de cómo comprar">Cuatro pasos y es tuyo</EditableZone>} />
-          <div style={{ position: "relative" }}>
-          <span aria-hidden="true" className="av-linea-pasos" style={{ background: `linear-gradient(90deg, ${accent}, ${conAlfa(accent, 0.15)})`, boxShadow: `0 0 10px ${conAlfa(accent, 0.5)}` }} />
-          <ol className="av-pasos">
-            {[
-              { fv: "svc1Title", fl: "svc1Desc", t: "Elegí", d: "Filtrá por tipo, marca, año y precio, y guardá los que te gusten." },
-              { fv: "svc2Title", fl: "svc2Desc", t: "Mirá la ficha", d: "Equipamiento, motor y medidas de cada vehículo, con la ficha en PDF para compartir." },
-              { fv: "svc3Title", fl: "svc3Desc", t: "Consultá", d: "Escribinos desde el vehículo: el mensaje ya sale con cuál es." },
-              { fv: "svc4Title", fl: "svc4Desc", t: "Coordiná la visita", d: "Acordamos día y hora para que lo veas en persona." },
-            ].map((s, i) => (
-              <li key={s.fv} style={{ position: "relative", display: "flex", gap: 16 }}>
-                <span aria-hidden="true" style={{ position: "relative", zIndex: 1, flexShrink: 0, width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: MONO, fontSize: 15, fontWeight: 700, color: accent, background: fServicios.claro ? "#fff" : VACIO, border: `1px solid ${accent}`, boxShadow: `0 0 18px ${conAlfa(accent, 0.45)}` }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div style={{ minWidth: 0, paddingTop: 2 }}>
-                  <h3 style={{ margin: "10px 0 8px", fontSize: 19, fontWeight: 800, color: fServicios.tinta, letterSpacing: -0.3 }}>
-                    <EditableZone field={s.fv} label={`Paso ${i + 1} — título`}>{s.t}</EditableZone>
-                  </h3>
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.65, color: fServicios.tenue }}>
-                    <EditableZone field={s.fl} label={`Paso ${i + 1} — texto`}>{s.d}</EditableZone>
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          </div>
-        </div>
-      </section>
-      </SectionBlock>
-
-      {/* ── NOSOTROS ── */}
-      <SectionBlock id="av-nosotros" label="Nosotros" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      <section id="nosotros" style={{ padding: pad, position: "relative", ...fNosotros.estilo, borderTop: `1px solid ${fNosotros.linea}` }}>
-        {capa("bgNosotros", "Fondo de nosotros", fNosotros.ov)}
-        <div className="av-about" style={ancho}>
-          <div style={{ borderRadius: 26, padding: 1, background: `linear-gradient(160deg, ${conAlfa(accent, 0.7)}, transparent 45%, ${conAlfa(accent, 0.3)})` }}>
-            <div style={{ position: "relative", borderRadius: 25, overflow: "hidden", aspectRatio: "5/4", background: "#03040a" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por la dueña */}
-              <img src={fotoLiviana(nosotrosUrl, 1200)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              {(() => {
-                const ov = iovr["nosotrosImage"];
-                if (!ov?.overlayType || ov.overlayType === "none") return null;
-                return <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
-              })()}
-              <EditableImageButton field="nosotrosImage" label="Foto de nosotros" />
-            </div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: "0 0 12px", fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: accent }}>
-              <EditableZone field="nosotrosKicker" label="Etiqueta de nosotros">Quiénes somos</EditableZone>
-            </p>
-            <h2 style={{ margin: "0 0 20px", fontSize: "clamp(28px,4.2vw,48px)", fontWeight: 800, letterSpacing: -1.4, lineHeight: 1.04, color: fNosotros.tinta }}>
-              <EditableZone field="nosotrosHeading" label="Título de nosotros">Vehículos elegidos uno por uno</EditableZone>
-            </h2>
-            <p style={{ margin: "0 0 14px", fontSize: 16, lineHeight: 1.8, color: fNosotros.tenue }}>
-              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos especialistas en compra y venta de vehículos usados y a estrenar. Trabajamos con transparencia y seriedad para que tu experiencia sea única.</EditableZone>
-            </p>
-            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.8, color: fNosotros.tenue }}>
-              <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo tiene fotos reales, su ficha técnica y el precio a la vista. Escribinos por cualquiera y te contamos todo.</EditableZone>
-            </p>
-          </div>
-        </div>
-      </section>
-      </SectionBlock>
-
-      {/* ── PREGUNTAS ── contestadas con lo que la tienda tiene (lib/preguntasFrecuentes). */}
+      {/* ── PREGUNTAS ── una conversación, no un acordeón (ver volt/BloquesVolt). */}
       <SectionBlock id="av-preguntas" label="Preguntas frecuentes" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      <section id="preguntas" style={{ padding: pad, position: "relative", ...fPreguntas.estilo }}>
+      <section id="preguntas" style={{ padding: pad, position: "relative", ...fPreguntas.estilo, borderTop: `1px solid ${fPreguntas.linea}` }}>
         {capa("bgPreguntas", "Fondo de preguntas", fPreguntas.ov)}
         <div data-ef="sube" className="av-faq" style={ancho}>
           <div className="av-faq-lado" style={{ minWidth: 0 }}>
             <Titulo acento={accent} tinta={fPreguntas.tinta}
               codigo={<EditableZone field="faqKicker" label="Etiqueta de preguntas">Preguntas</EditableZone>}
-              titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Lo que todos nos preguntan</EditableZone>} />
-            <div style={{ padding: "22px 22px 24px", borderRadius: 20, background: "#0a0e19", border: `1px solid ${conAlfa(accent, 0.3)}` }}>
-              <p style={{ margin: "0 0 6px", fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>
-                <EditableZone field="faqOtraTitulo" label="Título de la tarjeta de preguntas">¿Te quedó otra duda?</EditableZone>
-              </p>
-              <p style={{ margin: "0 0 16px", fontSize: 14, color: "rgba(232,236,246,0.7)", lineHeight: 1.6 }}>
-                <EditableZone field="faqOtraTexto" label="Texto de la tarjeta de preguntas">Preguntanos lo que quieras: te contesta una persona, no un robot.</EditableZone>
-              </p>
-              <a href={waLink ?? "#contacto"} {...(waLink ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={isPreview ? e => e.preventDefault() : undefined}
-                style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 18px", borderRadius: 12, background: accent, color: sobreAcento, fontSize: 14, fontWeight: 800, textDecoration: "none" }}>
-                {waLink ? <><WaIcon size={16} /> Escribinos</> : "Contactanos →"}
-              </a>
-            </div>
+              titulo={<EditableZone field="faqTitulo" label="Título de preguntas">Preguntanos lo que quieras</EditableZone>} />
+            <p style={{ margin: "-10px 0 0", maxWidth: 380, fontSize: 15, lineHeight: 1.65, color: fPreguntas.tenue }}>
+              <EditableZone field="faqOtraTexto" label="Texto de preguntas">Tocá una pregunta y te contestamos al toque. Si la tuya no está, escribinos: te contesta una persona, no un robot.</EditableZone>
+            </p>
           </div>
-          <PreguntasVolt acento={accent} tinta={fPreguntas.tinta} preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })} />
+          <ChatPreguntasVolt acento={accent} nombreTienda={storeName} enEdicion={enEdicion}
+            preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })}
+            otraDuda={
+              <a href={waLink ?? "#nosotros"} {...(waLink ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={isPreview ? e => e.preventDefault() : undefined}
+                style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 40, padding: "0 16px", borderRadius: 999, background: accent, color: sobreAcento, fontSize: 13.5, fontWeight: 800, textDecoration: "none" }}>
+                {waLink ? <><WaIcon size={15} /> Otra pregunta</> : "Otra pregunta →"}
+              </a>} />
         </div>
       </section>
       </SectionBlock>
@@ -695,37 +515,74 @@ export default function AutoVolt() {
       </section>
       </SectionBlock>
 
-      {/* ── CONTACTO ── */}
-      <SectionBlock id="av-contacto" label="Contacto" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
-      <section id="contacto" style={{ padding: "clamp(72px,11vw,136px) clamp(16px,4vw,32px)", position: "relative", overflow: "hidden", ...fContacto.estilo, borderTop: `1px solid ${fContacto.linea}` }}>
-        {capa("bgContacto", "Fondo de contacto", fContacto.ov)}
-        {!fContacto.ov?.url && !fContacto.claro && (
-          <span aria-hidden="true" style={{ position: "absolute", left: "50%", top: "50%", width: "min(720px,120vw)", aspectRatio: "1", transform: "translate(-50%,-50%)", borderRadius: "50%",
-            background: `radial-gradient(circle, ${conAlfa(accent, 0.22)}, transparent 62%)`, pointerEvents: "none" }} />
-        )}
-        <div style={{ ...ancho, maxWidth: 860, textAlign: "center" }}>
-          <h2 style={{ margin: "0 0 18px", fontSize: "clamp(34px,6.4vw,78px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 0.98, color: fContacto.tinta }}>
-            <EditableZone field="contactHeading" label="Título de contacto">¿Encontraste el tuyo?</EditableZone>
-          </h2>
-          <p style={{ margin: "0 auto 34px", fontSize: 16, lineHeight: 1.7, maxWidth: 480, color: fContacto.tenue }}>
-            <EditableZone field="contactSubtext" label="Texto de contacto">Escribinos y coordinamos para que lo veas, sin compromiso.</EditableZone>
-          </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            {waLink && (
-              <a href={waLink} target="_blank" rel="noopener noreferrer"
-                style={{ display: "inline-flex", alignItems: "center", gap: 10, minHeight: 52, padding: "0 26px", borderRadius: 14, background: "#25d366", color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: 15, boxShadow: "0 12px 34px -12px rgba(37,211,102,0.7)" }}>
-                <WaIcon size={20} />
-                <EditableZone field="contactWhatsApp" label="Texto del botón de WhatsApp">Escribinos por WhatsApp</EditableZone>
-              </a>
+      {/* ── LA AGENCIA ── nosotros, los números y el contacto en un solo panel. */}
+      <SectionBlock id="av-nosotros" label="La agencia" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
+      <section id="nosotros" style={{ padding: pad, position: "relative", ...fNosotros.estilo, borderTop: `1px solid ${fNosotros.linea}` }}>
+        {capa("bgNosotros", "Fondo de la agencia", fNosotros.ov)}
+        <div id="contacto" className="av-about" style={{ ...ancho, scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16 }}>
+          <div className="av-incl" style={{ borderRadius: 26, padding: 1, background: `linear-gradient(160deg, ${conAlfa(accent, 0.7)}, transparent 45%, ${conAlfa(accent, 0.3)})` }}>
+            <div style={{ position: "relative", borderRadius: 25, overflow: "hidden", aspectRatio: "5/4", background: "#03040a" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por la dueña */}
+              <img src={fotoLiviana(nosotrosUrl, 1200)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              {(() => {
+                const ov = iovr["nosotrosImage"];
+                if (!ov?.overlayType || ov.overlayType === "none") return null;
+                return <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
+              })()}
+              <EditableImageButton field="nosotrosImage" label="Foto de la agencia" />
+            </div>
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: "0 0 12px", fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: accent }}>
+              <EditableZone field="nosotrosKicker" label="Etiqueta de la agencia">La agencia</EditableZone>
+            </p>
+            <h2 style={{ margin: "0 0 18px", fontSize: "clamp(28px,4.2vw,48px)", fontWeight: 800, letterSpacing: -1.4, lineHeight: 1.04, color: fNosotros.tinta }}>
+              <EditableZone field="nosotrosHeading" label="Título de la agencia">Vehículos elegidos uno por uno</EditableZone>
+            </h2>
+            <p style={{ margin: "0 0 22px", fontSize: 16, lineHeight: 1.8, color: fNosotros.tenue }}>
+              <EditableZone field="nosotrosP1" label="Párrafo de la agencia">Somos especialistas en compra y venta de vehículos usados y a estrenar. Cada uno tiene fotos reales, su ficha técnica y el precio a la vista.</EditableZone>
+            </p>
+            {stats.length > 0 && (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "0 0 26px" }}>
+                {stats.map((s, i) => (
+                  <div key={s.fv} style={{ padding: "12px 16px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.12)" : conAlfa(accent, 0.3)}`, background: fNosotros.claro ? "rgba(11,16,32,0.03)" : conAlfa(accent, 0.07), minWidth: 0 }}>
+                    <p style={{ margin: 0, fontFamily: MONO, fontSize: 24, fontWeight: 700, lineHeight: 1, color: fNosotros.claro ? fNosotros.tinta : "#fff", textShadow: fNosotros.claro ? "none" : `0 0 16px ${conAlfa(accent, 0.55)}` }}>
+                      <EditableZone field={s.fv} label={`Número ${i + 1}`}>{s.n}</EditableZone>
+                    </p>
+                    <p style={{ margin: "6px 0 0", fontSize: 12, color: fNosotros.tenue }}>
+                      <EditableZone field={s.fl} label={`Texto del número ${i + 1}`}>{s.l}</EditableZone>
+                    </p>
+                  </div>
+                ))}
+              </div>
             )}
-            <Link href={todos} style={{ display: "inline-flex", alignItems: "center", minHeight: 52, padding: "0 26px", borderRadius: 14, border: `1px solid ${fContacto.claro ? "rgba(11,16,32,0.25)" : "rgba(255,255,255,0.22)"}`, color: fContacto.tinta, textDecoration: "none", fontWeight: 700, fontSize: 15 }}>
-              Ver todos los vehículos
-            </Link>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {waLink && (
+                <a href={waLink} target="_blank" rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 10, minHeight: 50, padding: "0 22px", borderRadius: 14, background: "#25d366", color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: 15, boxShadow: "0 12px 34px -12px rgba(37,211,102,0.7)" }}>
+                  <WaIcon size={19} />
+                  <EditableZone field="contactWhatsApp" label="Texto del botón de WhatsApp">Escribinos por WhatsApp</EditableZone>
+                </a>
+              )}
+              <Link href={todos} style={{ display: "inline-flex", alignItems: "center", minHeight: 50, padding: "0 22px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.25)" : "rgba(255,255,255,0.22)"}`, color: fNosotros.tinta, textDecoration: "none", fontWeight: 700, fontSize: 15 }}>
+                Ver todos los vehículos
+              </Link>
+            </div>
           </div>
         </div>
       </section>
       </SectionBlock>
       </div>
+
+      {/* La barra de comparación: aparece cuando hay vehículos elegidos y lleva al comparador. */}
+      {comparando.length > 0 && !editMode && !ocultas.includes("av-comparar") && (
+        <div role="status" style={{ position: "fixed", left: 16, bottom: 24, zIndex: isPreview ? CAPAS.previaModal : CAPAS.panel, display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 8px 8px 14px", borderRadius: 16, background: "rgba(8,11,21,0.88)", backdropFilter: "blur(14px)", border: `1px solid ${conAlfa(accent, 0.45)}`,
+          boxShadow: `0 18px 40px -16px ${conAlfa(accent, 0.7)}`, maxWidth: "calc(100vw - 104px)", boxSizing: "border-box" }}>
+          <span style={{ fontFamily: MONO, fontSize: 12, color: "#fff", whiteSpace: "nowrap" }}><span style={{ color: accent }}>⇄</span> {comparando.length} para comparar</span>
+          <button type="button" onClick={() => irASeccion("comparar")} style={{ minHeight: 38, padding: "0 14px", borderRadius: 10, border: "none", background: accent, color: sobreAcento, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Ver</button>
+        </div>
+      )}
 
       {/* ── PIE ── */}
       <footer style={{ position: "relative", padding: "clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", ...fPie.estilo, borderTop: `1px solid ${conAlfa(accent, 0.25)}` }}>

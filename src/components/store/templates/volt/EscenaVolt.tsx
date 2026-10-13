@@ -38,6 +38,9 @@ export const ESCENA_VOLT_CSS = `
   @media (prefers-reduced-motion: reduce) { .ev-piso, .ev-luz { animation:none } }
 `;
 
+/** La letra de tablero de Auto Volt: datos, códigos y contadores. */
+export const MONO = "ui-monospace,'SFMono-Regular','JetBrains Mono',Menlo,Consolas,monospace";
+
 /** `#22d3ee` + alfa → `rgba(...)`. Si no es un hex, cae a un cian. */
 export function conAlfa(hex: string, a: number): string {
   const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim());

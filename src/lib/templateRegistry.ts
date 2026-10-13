@@ -49,7 +49,7 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     templates: [
       { id: "auto-motor", name: "Auto Motor", desc: "Oscuro · Premium · Concesionaria", blurb: "Estética de concesionaria premium en fondo oscuro, para autos y motos de alta gama.", palette: ["#0a0a0a", "#e8a020", "#1a1a1a"], component: AutoMotor, tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-motor"] },
       { id: "auto-drive", name: "Auto Drive", desc: "Claro · Moderno · Marketplace",    blurb: "Un marketplace de vehículos claro y moderno, fácil de navegar.", palette: ["#f0f4f8", "#2563eb", "#0f172a"], component: AutoDrive,  tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-drive"]  },
-      { id: "auto-volt",  name: "Auto Volt",  desc: "Oscuro · Futurista · Luz",         blurb: "Escena de luz que sigue al cursor, vidrio y datos de tablero. Para agencias que quieren verse de otra época.", palette: ["#05070d", "#22d3ee", "#e8ecf6"], component: AutoVolt,   tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-volt"]   },
+      { id: "auto-volt",  name: "Auto Volt",  desc: "Oscuro · Futurista · Showroom 3D", blurb: "Los vehículos giran en un showroom 3D, con sus datos flotando alrededor, y se comparan lado a lado. Para agencias que quieren verse de otra época.", palette: ["#05070d", "#22d3ee", "#e8ecf6"], component: AutoVolt,   tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-volt"]   },
     ],
   },
   {
