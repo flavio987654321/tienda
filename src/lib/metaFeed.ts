@@ -19,3 +19,13 @@ export function parseFirstImage(images: string): string | null {
     return null;
   }
 }
+
+/**
+ * La dirección de una foto para un catálogo de Meta: las de nuestro depósito
+ * pasan por /api/feed-foto, que las entrega en JPG (Meta no acepta WebP). Las
+ * de afuera van como están.
+ */
+export function fotoParaMeta(url: string, urlBase: string): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  return base && url.startsWith(`${base}/storage/v1/object/public/`) ? `${urlBase}/api/feed-foto?u=${encodeURIComponent(url)}` : url;
+}

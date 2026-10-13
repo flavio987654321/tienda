@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
+import { escapeXml, fotoParaMeta, parseFirstImage } from "@/lib/metaFeed";
 import { aTextoPlano } from "@/lib/structured-data";
 import { getClientIp } from "@/lib/request-ip";
 // El feed lo lee Meta desde afuera: los links de producto tienen que apuntar al
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       <g:title><![CDATA[${p.name}]]></g:title>
       <g:description><![CDATA[${description}]]></g:description>
       <g:link>${escapeXml(link)}</g:link>
-      <g:image_link>${escapeXml(img)}</g:image_link>
+      <g:image_link>${escapeXml(fotoParaMeta(img, APP_URL))}</g:image_link>
       ${priceTags}
       <g:availability>in stock</g:availability>
       <g:condition>new</g:condition>
