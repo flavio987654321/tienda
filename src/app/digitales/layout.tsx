@@ -23,6 +23,7 @@ import { puedeVer } from "@/lib/estadisticas-digitales";
 import SondaDePantalla from "./SondaDePantalla";
 import BarraDeAtajos from "./BarraDeAtajos";
 import AvisoSinConexion from "@/components/digitales/AvisoSinConexion";
+import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
@@ -271,6 +272,9 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           {/* Y desde el 03/10/26 no va sola: es la barra de atajos (crear un
               producto, la campanita, claro/oscuro y la cuenta). */}
           <BarraDeAtajos userId={user.id} tier={tier} productosLlenos={productosLlenos} />
+          {/* El aviso de términos nuevos. Hasta el 12/10/26 este panel no lo
+              tenía: quien entraba a digitales nunca podía aceptar desde acá. */}
+          <TermsUpdateBanner className="mx-4 mt-3 lg:mx-6" />
           {children}
         </main>
         {/* Sasha. Va afuera del `main` porque es `fixed` y no tiene que

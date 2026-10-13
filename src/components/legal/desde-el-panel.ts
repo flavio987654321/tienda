@@ -8,7 +8,7 @@ import type { Metadata } from "next";
  * dejaba a la persona en una pantalla cuyo encabezado es una puerta al sitio
  * comercial: el logo va a la home y al lado hay un "Volver al registro".
  *
- * Con `?panel=dashboard` (o `afiliados`) el documento se dibuja sin esas
+ * Con `?panel=dashboard` (o `afiliados`, o `digitales`) el documento se dibuja sin esas
  * salidas y con un "Volver al panel" que apunta adentro del `scope`.
  *
  * ── Por qué una lista blanca y no la ruta directa ────────────────────────────
@@ -16,11 +16,12 @@ import type { Metadata } from "next";
  * redirect abierto de manual: cualquiera podría mandar un link a nuestros
  * términos —una página nuestra, con nuestro dominio y toda la confianza que eso
  * da— con un botón "Volver al panel" apuntando a su propio sitio. Acá sólo
- * existen dos destinos posibles y los dos están escritos en este archivo.
+ * existen los destinos escritos en este archivo.
  */
 const PANELES = {
   dashboard: "/dashboard",
   afiliados: "/afiliados",
+  digitales: "/digitales",
 } as const;
 
 export type PanelId = keyof typeof PANELES;

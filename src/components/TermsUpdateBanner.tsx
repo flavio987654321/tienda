@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FileText, X, Loader2 } from "lucide-react";
 
-export default function TermsUpdateBanner() {
+/** `className` es para el margen de afuera: el cartel no dibuja nada cuando no
+ *  hace falta, y un contenedor con padding dejaba un hueco vacío arriba siempre. */
+export default function TermsUpdateBanner({ className = "" }: { className?: string } = {}) {
   const [visible, setVisible] = useState(false);
   const [accepting, setAccepting] = useState(false);
 
@@ -24,7 +26,9 @@ export default function TermsUpdateBanner() {
     ? "afiliados"
     : pathname.startsWith("/dashboard")
       ? "dashboard"
-      : null;
+      : pathname.startsWith("/digitales")
+        ? "digitales"
+        : null;
   const desdePanel = panel ? `?panel=${panel}` : "";
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export default function TermsUpdateBanner() {
   if (!visible) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-200 panel-oscuro:border-indigo-500/30 text-indigo-900 panel-oscuro:text-indigo-200 px-4 py-3 rounded-xl mb-4 text-sm">
+    <div className={`${className} flex flex-wrap items-center gap-3 bg-indigo-50 panel-oscuro:bg-indigo-500/10 border border-indigo-200 panel-oscuro:border-indigo-500/30 text-indigo-900 panel-oscuro:text-indigo-200 px-4 py-3 rounded-xl mb-4 text-sm`}>
       <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
       <p className="flex-1 min-w-[200px]">
         Actualizamos nuestros{" "}

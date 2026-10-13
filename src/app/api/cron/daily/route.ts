@@ -942,6 +942,9 @@ export async function GET(req: NextRequest) {
     const acceptPath =
       u.role === "OWNER" ? "/dashboard?terminos=1"
       : u.role === "SELLER" ? "/afiliados?terminos=1"
+      // Hasta el 12/10/26 las cuentas de digitales caían en /mi-cuenta, la
+      // pantalla del comprador, porque su panel no tenía el cartel.
+      : u.role === "DIGITAL" ? "/digitales?terminos=1"
       : "/mi-cuenta?terminos=1";
 
     try {
