@@ -27,6 +27,7 @@ import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/
 import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
 import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
 import FichaTecnicaForm from "./FichaTecnicaForm";
+import { revisarVehiculo, type AvisoVehiculo } from "@/lib/revisarVehiculo";
 import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, esVehiculo as esCategoriaVehiculo, type FichaVehiculo } from "@/lib/fichaVehiculo";
 import { CLAVE_MONEDA, conPuntos, sinPuntos, esMoneda, precioEn, type Moneda } from "@/lib/monedaVehiculo";
 
@@ -425,6 +426,10 @@ function ProductoFormPage() {
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [storeLoaded, setStoreLoaded] = useState(false);
   const [error, setError] = useState("");
+  /* Lo que parece mal en la ficha de un vehículo: avisa y deja "guardar igual".
+     Ver lib/revisarVehiculo. */
+  const [avisosFicha, setAvisosFicha] = useState<AvisoVehiculo[]>([]);
+  const guardarIgual = useRef(false);
   const [store, setStore] = useState<StoreConfig>({
     primaryColor: "#6366f1",
     accentColor: "#f59e0b",
@@ -1218,6 +1223,22 @@ function ProductoFormPage() {
         setLoading(false);
         return;
       }
+      /* Lo que está cargado pero parece mal (13/10/26): marca mal escrita, la
+         descripción que contradice la ficha, lo que pide el catálogo de Meta.
+         Una vez: si después de verlo eligió "guardar igual", no se vuelve a frenar. */
+      if (!guardarIgual.current) {
+        const avisos = revisarVehiculo({
+          valor: valorDe, campos: activeExtraFields.map((f) => f.label), categoria: category, condicion, descripcion: form.description,
+        });
+        if (avisos.length > 0) {
+          setAvisosFicha(avisos);
+          setLoading(false);
+          requestAnimationFrame(() => document.getElementById("avisos-ficha")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+          return;
+        }
+      }
+      guardarIgual.current = false;
+      setAvisosFicha([]);
     }
     if (!isHideVariants && preparedVariants.some((variant) => !variant.value)) {
       setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
@@ -1484,6 +1505,20 @@ function ProductoFormPage() {
 
         {error && (
           <div className="bg-red-50 panel-oscuro:bg-red-500/10 text-red-700 panel-oscuro:text-red-300 px-4 py-3 rounded-xl text-sm mb-4">{error}</div>
+        )}
+        {avisosFicha.length > 0 && (
+          <div id="avisos-ficha" role="alert" className="bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-200 panel-oscuro:border-amber-500/30 text-amber-900 panel-oscuro:text-amber-200 px-4 py-3 rounded-xl text-sm mb-4">
+            <p className="font-semibold mb-1.5">Antes de guardar, revisá esto:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              {avisosFicha.map((a, i) => <li key={i}><strong>{a.campo}:</strong> {a.texto}</li>)}
+            </ul>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <button type="button" onClick={() => setAvisosFicha([])}
+                className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-700">Lo corrijo</button>
+              <button type="button" onClick={() => { guardarIgual.current = true; void handleSubmit(); }} disabled={loading}
+                className="px-3 py-1.5 rounded-lg border border-amber-300 panel-oscuro:border-amber-500/40 font-semibold hover:bg-amber-100 panel-oscuro:hover:bg-amber-500/10">Está bien, guardar igual</button>
+            </div>
+          </div>
         )}
 
         <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
