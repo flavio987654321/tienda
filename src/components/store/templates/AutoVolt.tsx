@@ -105,7 +105,9 @@ export default function AutoVolt() {
   // El menú sólo lleva a bloques que se ven; en el celular, tampoco a los ocultos ahí.
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", "av-nosotros"]].filter(([, , b]) => !b || !ocultas.includes(b));
+  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", "av-nosotros"]].filter(([, , b]) => !b || !ocultas.includes(b))
+    // El comparador sólo se dibuja con dos vehículos o más: con uno, "Comparar" era un botón que no hacía nada.
+    .filter(([, id]) => id !== "comparar" || products.length >= 2);
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview = !!config?.previewFill;
   /* Los efectos al bajar se ven también en la vista previa (para probarlos
