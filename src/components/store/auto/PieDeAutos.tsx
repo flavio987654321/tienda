@@ -26,7 +26,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 export const FRASE_PIE = "Vehículos seleccionados, con la ficha completa de cada unidad.";
 
 export type ColoresPie = { fondo: string; tinta: string; suave: string; linea: string };
-export type EstiloPie = "motor" | "drive";
+export type EstiloPie = "motor" | "drive" | "volt";
 
 /** Los tipos que la tienda tiene publicados, con cuántos hay, para la columna "Vehículos". */
 export function tiposParaPie(products: StorefrontProduct[], slug: string, enEditor: boolean) {
@@ -38,7 +38,7 @@ export function tiposParaPie(products: StorefrontProduct[], slug: string, enEdit
   return [...cuenta.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([c, n]) => ({ label: NOMBRE_TIPO[c as CategoriaVehiculo].varios, n, href: linkAVehiculos(slug, { tipo: c }, enEditor) }));
+    .map(([c, n]) => ({ label: NOMBRE_TIPO[c as CategoriaVehiculo].varios, n, href: linkAVehiculos(slug, { tipo: c }, enEditor), tipo: c }));
 }
 
 /** Sólo links web de verdad: lo escribe el dueño, y un `javascript:` en un href es un agujero. */
@@ -53,7 +53,7 @@ const ICONOS: Record<string, ReactNode> = {
 const REDES: [string, string][] = [["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"]];
 
 export function ContenidoPieAutos({
-  slug, storeName, descripcion, whatsapp, redes, products, legales, enEditor, colores, acento, estilo, onReportar, copyright,
+  slug, storeName, descripcion, whatsapp, redes, products, legales, enEditor, colores, acento, estilo, onReportar, copyright, onVerVehiculos,
 }: {
   slug: string;
   storeName: string;
@@ -70,16 +70,22 @@ export function ContenidoPieAutos({
   onReportar?: () => void;
   /** El "© año tienda". En la portada llega editable. */
   copyright?: ReactNode;
+  /** Un template con catálogo propio (Auto Volt) lo abre él, sin ir a la página
+      genérica de /vehiculos: si no, el pie llevaba a otro template. `tipo` vacío = todos. */
+  onVerVehiculos?: (tipo: string) => void;
 }) {
   const motor = estilo === "motor";
-  const radio = motor ? 2 : 999;
+  const volt = estilo === "volt";
+  const radio = motor ? 2 : volt ? 12 : 999;
   const wa = linkWhatsApp(whatsapp, `Hola ${storeName}, vi los vehículos en la tienda y quería consultar.`);
   const susRedes = REDES.map(([k, label]) => ({ k, label, href: linkSeguro(redes?.[k]) })).filter((r) => r.href);
   const tipos = tiposParaPie(products, slug, enEditor);
   const inicio = `/tienda/${slug}${enEditor ? "?from=editor" : ""}`;
   const legal = linksLegales(slug, legales, { esAutos: true, enEditor });
 
-  const titulo = { margin: "0 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: motor ? 2.5 : 1.2, textTransform: "uppercase" as const, color: colores.tinta };
+  const titulo = { margin: "0 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: motor || volt ? 2.5 : 1.2, textTransform: "uppercase" as const, color: volt ? acento : colores.tinta,
+    ...(volt ? { fontFamily: "ui-monospace,'SF Mono','Cascadia Code',Menlo,Consolas,monospace", fontWeight: 600 } : {}) };
+  const alClic = (tipo: string) => onVerVehiculos ? (e: React.MouseEvent) => { e.preventDefault(); onVerVehiculos(tipo); } : undefined;
   const link = { color: colores.suave, textDecoration: "none", fontSize: 14, lineHeight: 1.4, minHeight: 34, display: "inline-flex", alignItems: "center", gap: 8 };
 
   return (
@@ -132,7 +138,7 @@ export function ContenidoPieAutos({
               {susRedes.map((r) => (
                 <li key={r.k}>
                   <a href={r.href!} target="_blank" rel="noopener noreferrer" aria-label={r.label} className="pda-red"
-                    style={{ width: 42, height: 42, borderRadius: motor ? 2 : "50%", border: `1px solid ${colores.linea}`, color: colores.tinta,
+                    style={{ width: 42, height: 42, borderRadius: motor ? 2 : volt ? 12 : "50%", border: `1px solid ${colores.linea}`, color: colores.tinta,
                       display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONOS[r.k]}</svg>
                   </a>
@@ -147,13 +153,13 @@ export function ContenidoPieAutos({
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {tipos.map((t) => (
               <li key={t.href}>
-                <Link href={t.href} className="pda-link" style={link}>
+                <Link href={t.href} onClick={alClic(t.tipo)} className="pda-link" style={link}>
                   {t.label} <span style={{ fontSize: 12, opacity: 0.6 }}>({t.n})</span>
                 </Link>
               </li>
             ))}
             <li>
-              <Link href={linkAVehiculos(slug, {}, enEditor)} className="pda-link" style={{ ...link, color: colores.tinta, fontWeight: 600 }}>
+              <Link href={linkAVehiculos(slug, {}, enEditor)} onClick={alClic("")} className="pda-link" style={{ ...link, color: colores.tinta, fontWeight: 600 }}>
                 Ver todos <span aria-hidden="true">→</span>
               </Link>
             </li>

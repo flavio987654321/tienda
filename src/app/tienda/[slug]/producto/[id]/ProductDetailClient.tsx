@@ -25,6 +25,7 @@ import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerr
 import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPulseDetail";
 import AireDetail from "@/components/store/templates/productDetail/AireDetail";
 import { VehiculoDetailOscuro, VehiculoDetailClaro } from "@/components/store/templates/productDetail/VehiculoDetail";
+import { VehiculoDetailVolt } from "@/components/store/templates/volt/FichaVolt";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
@@ -41,7 +42,7 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   // Autos (07/10/26): cada vehículo en su página, no en una ventana sobre la portada.
   "auto-motor": VehiculoDetailOscuro,
   "auto-drive": VehiculoDetailClaro,
-  "auto-volt": VehiculoDetailOscuro,
+  "auto-volt": VehiculoDetailVolt,
   // El id viejo de Aire: hay tiendas cuyo JSON todavia lo dice.
   "fashion-noir": AireDetail,
 };
@@ -331,8 +332,10 @@ export default function ProductDetailClient({
 
   // Un vehículo SIEMPRE va a su página de autos, aunque la tienda no haya
   // elegido template (la de fábrica es de ropa): oscura con Auto Motor, clara si no.
+  // Auto Volt tiene la suya (13/10/26): antes caía en "si no" y mostraba la
+  // ficha CLARA de Auto Drive adentro de un template oscuro.
   const ThemedDetail = esAutos
-    ? (template === "auto-motor" ? VehiculoDetailOscuro : VehiculoDetailClaro)
+    ? (template === "auto-volt" ? VehiculoDetailVolt : template === "auto-motor" ? VehiculoDetailOscuro : VehiculoDetailClaro)
     : template ? THEMED_DETAIL[template] : undefined;
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {

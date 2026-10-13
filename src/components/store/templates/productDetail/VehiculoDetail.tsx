@@ -42,10 +42,10 @@ const COLORES: Record<Tema, { fondo: string; superficie: string; linea: string; 
 const CON_MOUSE = "(hover: hover) and (pointer: fine)";
 const escucharMouse = (f: () => void) => { const m = window.matchMedia(CON_MOUSE); m.addEventListener("change", f); return () => m.removeEventListener("change", f); };
 
-const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=80";
+export const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=80";
 
 /** Lo parecido: misma marca, después mismo tipo, después el resto. Nunca el mismo. */
-function parecidos(p: StorefrontProduct, todos: StorefrontProduct[]): StorefrontProduct[] {
+export function parecidos(p: StorefrontProduct, todos: StorefrontProduct[]): StorefrontProduct[] {
   const otros = todos.filter(x => x.id !== p.id);
   const marca = attr(p, "Marca").toLowerCase().trim();
   const mismaMarca = marca ? otros.filter(x => attr(x, "Marca").toLowerCase().trim() === marca) : [];
@@ -55,7 +55,7 @@ function parecidos(p: StorefrontProduct, todos: StorefrontProduct[]): Storefront
 }
 
 /** La foto ampliada. Escape o "atrás" la cierran; las flechas pasan de foto. */
-function FotoAmpliada({ fotos, inicial, nombre, onClose }: { fotos: string[]; inicial: number; nombre: string; onClose: () => void }) {
+export function FotoAmpliada({ fotos, inicial, nombre, onClose }: { fotos: string[]; inicial: number; nombre: string; onClose: () => void }) {
   const [i, setI] = useState(inicial);
   useCerrarConAtras(onClose);
   const cerrarRef = useRef<HTMLButtonElement>(null);

@@ -7,6 +7,7 @@ import CampoTrampa from "@/components/store/auto/CampoTrampa";
 import { CAMPO_TRAMPA } from "@/lib/trampaBots";
 import { errorDeTelefono } from "@/lib/caracteristicas";
 import { useTurnstile } from "@/components/Turnstile";
+import { paletaFormulario } from "./paletaFormulario";
 
 /* "Avisame si entra" (06/10/26): la persona deja qué busca y su teléfono, y
    la concesionaria le avisa cuando entra. Va en /vehiculos (botón arriba y
@@ -15,14 +16,17 @@ import { useTurnstile } from "@/components/Turnstile";
 
 type Estado = "idle" | "enviando" | "listo";
 
-export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, marcaInicial = "" }: {
+export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, marcaInicial = "", oscuro }: {
   storeId?: string;
   accent: string;
   isOwner?: boolean;
   isPreview?: boolean;
   /** Lo que estaba escrito en el buscador, para no hacérselo tipear de nuevo. */
   marcaInicial?: string;
+  /** Sobre fondo oscuro (Auto Volt). Ver paletaFormulario. */
+  oscuro?: boolean;
 }) {
+  const c = paletaFormulario(oscuro);
   const [trampa, setTrampa] = useState("");
   const [f, setF] = useState({ categoria: "", marca: marcaInicial.slice(0, 40), modelo: "", anioDesde: "", precioHasta: "", nombre: "", telefono: "" });
   const [estado, setEstado] = useState<Estado>("idle");
@@ -63,27 +67,27 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   }
 
   const campo: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box", border: "1px solid #dcdcdc", borderRadius: 6,
-    padding: "10px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff", marginTop: 4,
+    width: "100%", boxSizing: "border-box", border: `1px solid ${c.campoBorde}`, borderRadius: 6,
+    padding: "10px 12px", fontSize: 14, fontFamily: "inherit", color: c.tinta, background: c.campoFondo, marginTop: 4,
   };
-  const etiqueta: React.CSSProperties = { fontSize: 12, color: "#555", minWidth: 0 };
-  const opcional = <span style={{ color: "#999" }}>(opcional)</span>;
+  const etiqueta: React.CSSProperties = { fontSize: 12, color: c.etiqueta, minWidth: 0 };
+  const opcional = <span style={{ color: c.tenue }}>(opcional)</span>;
   const dos: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 };
 
   if (estado === "listo") {
     return (
-      <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5, overflowWrap: "anywhere" }}>
+      <div role="status" style={{ border: `1px solid ${c.okBorde}`, background: c.okFondo, borderRadius: 6, padding: "12px 14px", fontSize: 13, color: c.okTinta, lineHeight: 1.5, overflowWrap: "anywhere" }}>
         <strong>¡Listo, {f.nombre.trim().split(/\s+/)[0]}!</strong> Cuando entre algo así te avisamos al {f.telefono.trim()}. La búsqueda queda guardada 90 días.
       </div>
     );
   }
 
   return (
-    <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+    <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: `1px solid ${c.cajaBorde}`, borderRadius: 8, padding: 14, background: c.cajaFondo }}>
       <CampoTrampa value={trampa} onChange={setTrampa} />
       {captcha.widget}
-      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a2744" }}>Avisame si entra</p>
-      <p style={{ margin: "0 0 2px", fontSize: 12, color: "#777", lineHeight: 1.45 }}>Contanos qué buscás y te escribimos apenas entre uno. No hace falta completar todo.</p>
+      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.tinta }}>Avisame si entra</p>
+      <p style={{ margin: "0 0 2px", fontSize: 12, color: oscuro ? c.etiqueta : "#777", lineHeight: 1.45 }}>Contanos qué buscás y te escribimos apenas entre uno. No hace falta completar todo.</p>
       <label style={etiqueta}>Tipo {opcional}
         <select value={f.categoria} onChange={cambiar("categoria")} style={campo}>
           <option value="">Cualquiera</option>{CATEGORIAS_BUSQUEDA.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -104,7 +108,7 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
           <CampoTelefono id="bv-tel" value={f.telefono} onChange={(v) => setF((x) => ({ ...x, telefono: v }))} estiloCampo={campo} acento={accent} />
         </div>
       </div>
-      {error && <p role="alert" style={{ margin: 0, fontSize: 12, color: "#b91c1c" }}>{error}</p>}
+      {error && <p role="alert" style={{ margin: 0, fontSize: 12, color: c.error }}>{error}</p>}
       <button type="submit" disabled={estado === "enviando" || !captcha.ready}
         style={{ background: accent, color: getContrastColor(accent) === "dark" ? "#111" : "#fff", border: "none", borderRadius: 6, padding: "12px 16px", minHeight: 44,
           fontSize: 14, fontWeight: 700, cursor: estado === "enviando" ? "default" : "pointer", opacity: estado === "enviando" ? 0.7 : 1, fontFamily: "inherit" }}>

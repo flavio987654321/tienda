@@ -12,6 +12,7 @@ import { filtrarVehiculos, filtroAUrl, filtroVacio, cuantosFiltros, type FiltroV
 import { getContrastColor } from "@/contexts/EditContext";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { conAlfa, MONO } from "./EscenaVolt";
+import { PANEL_VOLT } from "./BloquesVolt";
 
 /**
  * El catálogo completo de Auto Volt (13/10/26): una FICHA TÉCNICA, no una
@@ -387,8 +388,8 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
         </>
       )}
 
-      <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={cerrarAvisame}>
-        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} marcaInicial={marcaActiva?.label ?? filtro.q.trim()} />
+      <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={cerrarAvisame} panel={PANEL_VOLT}>
+        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} marcaInicial={marcaActiva?.label ?? filtro.q.trim()} oscuro />
       </VentanaAuto>
     </div>
   );

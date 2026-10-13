@@ -144,7 +144,10 @@ export default function AutoVolt() {
   const [cuentaOpen, setCuentaOpen] = useState(false);
   const cuentaRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, isPreview);
+  /* La página del vehículo. Desde el editor lleva `t=auto-volt`: si no, se
+     dibujaba con el template GUARDADO (Motor o Drive) y Volt se mezclaba. */
+  const paginaDeId = (id: string) => `${linkAVehiculo(slug, id, isPreview)}${isPreview ? "&t=auto-volt" : ""}`;
+  const paginaDe = (p: StorefrontProduct) => paginaDeId(p.id);
   const [showReport, setShowReport] = useState(false);
   const [annIdx, setAnnIdx] = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
@@ -173,7 +176,7 @@ export default function AutoVolt() {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
     // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página del vehículo.
-    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, isPreview));
+    if (id && products.some(pr => pr.id === id)) router.replace(`${linkAVehiculo(slug, id, isPreview)}${isPreview ? "&t=auto-volt" : ""}`);
   }, [products, router, slug, isPreview]);
 
   useEffect(() => {
@@ -517,7 +520,7 @@ export default function AutoVolt() {
             <Titulo acento={accent} tinta={fVideos.tinta}
               codigo={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
               titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos andar</EditableZone>} />
-            <VideosVolt videos={videos} acento={accent} moneda={currency} tinta={fVideos.tinta} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
+            <VideosVolt videos={videos} acento={accent} moneda={currency} tinta={fVideos.tinta} hrefDe={paginaDeId}
               vacio={<p style={{ margin: 0, padding: "24px 20px", border: `1px dashed ${fVideos.linea}`, borderRadius: 18, color: fVideos.tenue, fontSize: 14, lineHeight: 1.6 }}>
                 Acá aparecen los videos que subas en cada vehículo (en Productos → el vehículo → Videos). Cada uno lleva a su vehículo. Mientras no haya ninguno, este bloque no se muestra en la tienda.
               </p>} />
@@ -657,7 +660,7 @@ export default function AutoVolt() {
         {capa("bgFooter", "Fondo del pie", fPie.ov, "Pie de la tienda")}
         <div style={ancho}>
           <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
-            whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="drive"
+            whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="volt" onVerVehiculos={tipo => abrirCatalogo(tipo ? { tipo } : {})}
             colores={fPie.claro ? { tinta: TINTA_CLARA, suave: fPie.tenue, linea: "rgba(11,16,32,0.12)" } : { tinta: "#ffffff", suave: fPie.tenue, linea: "rgba(255,255,255,0.1)" }}
             descripcion={<EditableZone field="footerFrase" label="Frase del pie">{FRASE_PIE}</EditableZone>}
             copyright={<EditableZone field="footerCopyright" label="Copyright">{`© ${new Date().getFullYear()} ${storeName}.`}</EditableZone>}

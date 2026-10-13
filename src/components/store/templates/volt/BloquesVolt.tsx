@@ -19,6 +19,9 @@ export const BLOQUES_VOLT_CSS = `
   @media (prefers-reduced-motion: reduce) { .cpv-msj { animation:none } }
 `;
 
+/** La ventana de los formularios, oscura: la de fábrica es blanca (Motor y Drive). */
+export const PANEL_VOLT: React.CSSProperties = { background: "#0a0e19", color: "#f1f4fb", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 40px 90px -30px rgba(0,0,0,0.8)" };
+
 /* ── Tasá tu usado / Avisame si entra ─────────────────────────────────────── */
 export function ServiciosVolt({ storeId, acento, isOwner, isPreview, textos }: {
   storeId?: string;
@@ -57,11 +60,11 @@ export function ServiciosVolt({ storeId, acento, isOwner, isPreview, textos }: {
         {consola("tasar", "// TASACIÓN", textos.tasarTitulo, textos.tasarTexto, "Tasar mi usado", true)}
         {consola("avisame", "// ALERTA DE INGRESO", textos.avisameTitulo, textos.avisameTexto, "Dejar mi búsqueda", false)}
       </div>
-      <VentanaAuto abierta={abierto === "tasar"} titulo="Tasá tu usado" onClose={cerrar}>
-        <TasacionVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} abiertoDeEntrada />
+      <VentanaAuto abierta={abierto === "tasar"} titulo="Tasá tu usado" onClose={cerrar} panel={PANEL_VOLT}>
+        <TasacionVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} abiertoDeEntrada oscuro />
       </VentanaAuto>
-      <VentanaAuto abierta={abierto === "avisame"} titulo="Avisame si entra" onClose={cerrar}>
-        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} />
+      <VentanaAuto abierta={abierto === "avisame"} titulo="Avisame si entra" onClose={cerrar} panel={PANEL_VOLT}>
+        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} oscuro />
       </VentanaAuto>
     </>
   );

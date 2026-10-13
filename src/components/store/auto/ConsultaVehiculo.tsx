@@ -10,6 +10,7 @@ import { errorDeTelefono } from "@/lib/caracteristicas";
 import { getContrastColor } from "@/contexts/EditContext";
 import { useTurnstile } from "@/components/Turnstile";
 import { useSessionDraft } from "@/hooks/useSessionDraft";
+import { paletaFormulario } from "./paletaFormulario";
 
 /* ══════════════════════════════════════════════════════════════════════════
    CÓMO CONSULTA EL COMPRADOR POR UN VEHÍCULO (06/10/26)
@@ -52,7 +53,7 @@ type Estado = "idle" | "enviando" | "listo";
 /** La dirección no cambia mientras se mira la página: nada que escuchar. */
 const sinCambios = () => () => {};
 
-export default function ConsultaVehiculo({ product, accent, precioTexto, whatsappNumber, whatsappEnabled, storeId, isOwner, isPreview, año }: {
+export default function ConsultaVehiculo({ product, accent, precioTexto, whatsappNumber, whatsappEnabled, storeId, isOwner, isPreview, año, oscuro }: {
   product: StorefrontProduct;
   accent: string;
   /** El precio ya formateado (lo arma el modal con `fmtPrice`). */
@@ -63,7 +64,10 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
   isOwner?: boolean;
   isPreview?: boolean;
   año?: string;
+  /** Sobre fondo oscuro (Auto Volt). Ver paletaFormulario. */
+  oscuro?: boolean;
 }) {
+  const c = paletaFormulario(oscuro);
   /* El link va a la página del vehículo (07/10/26), que es donde está esto: la
      dirección actual sin lo de después del "?". Se arma con la dirección real
      para que sirva también en un dominio propio. */
@@ -149,8 +153,8 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
   }
 
   const campo: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box", border: "1px solid #dcdcdc", borderRadius: 6,
-    padding: "11px 12px", fontSize: 14, fontFamily: "inherit", color: "#1a2744", background: "#fff",
+    width: "100%", boxSizing: "border-box", border: `1px solid ${c.campoBorde}`, borderRadius: 6,
+    padding: "11px 12px", fontSize: 14, fontFamily: "inherit", color: c.tinta, background: c.campoFondo,
   };
 
   return (
@@ -167,37 +171,37 @@ export default function ConsultaVehiculo({ product, accent, precioTexto, whatsap
       )}
 
       {estado === "listo" ? (
-        <div role="status" style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 6, padding: "12px 14px", fontSize: 13, color: "#166534", lineHeight: 1.5, overflowWrap: "anywhere" }}>
+        <div role="status" style={{ border: `1px solid ${c.okBorde}`, background: c.okFondo, borderRadius: 6, padding: "12px 14px", fontSize: 13, color: c.okTinta, lineHeight: 1.5, overflowWrap: "anywhere" }}>
           <strong>¡Listo, {nombre.trim().split(/\s+/)[0]}!</strong> Recibimos tu consulta y te vamos a contactar al {telefono.trim()}.
         </div>
       ) : !mostrarFormulario ? (
         <button type="button" onClick={() => setAbierto(true)}
-          style={{ background: "none", border: "1px solid #dcdcdc", borderRadius: 6, padding: "12px 16px", minHeight: 44,
-            fontSize: 13, fontWeight: 600, color: "#1a2744", cursor: "pointer", fontFamily: "inherit" }}>
+          style={{ background: "none", border: `1px solid ${c.campoBorde}`, borderRadius: 6, padding: "12px 16px", minHeight: 44,
+            fontSize: 13, fontWeight: 600, color: c.tinta, cursor: "pointer", fontFamily: "inherit" }}>
           ¿Preferís que te llamen? Dejá tus datos
         </button>
       ) : (
-        <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: "1px solid #ececec", borderRadius: 8, padding: 14, background: "#fafafa" }}>
+        <form onSubmit={enviar} noValidate style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, border: `1px solid ${c.cajaBorde}`, borderRadius: 8, padding: 14, background: c.cajaFondo }}>
           <CampoTrampa value={trampa} onChange={setTrampa} />
           {captcha.widget}
-          <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "#1a2744" }}>
+          <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: c.tinta }}>
             {waHref ? "Dejá tus datos y te contactamos" : "Consultá por este vehículo"}
           </p>
-          <label style={{ fontSize: 12, color: "#555" }}>
+          <label style={{ fontSize: 12, color: c.etiqueta }}>
             Nombre
             <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={80} autoComplete="name" required style={{ ...campo, marginTop: 4 }} />
           </label>
-          <div style={{ fontSize: 12, color: "#555" }}>
+          <div style={{ fontSize: 12, color: c.etiqueta }}>
             <label htmlFor={`cv-tel-${product.id}`}>Teléfono</label>
             <div style={{ marginTop: 4 }}>
               <CampoTelefono id={`cv-tel-${product.id}`} value={telefono} onChange={setTelefono} required estiloCampo={campo} acento={accent} />
             </div>
           </div>
-          <label style={{ fontSize: 12, color: "#555" }}>
-            Mensaje <span style={{ color: "#999" }}>(opcional)</span>
+          <label style={{ fontSize: 12, color: c.etiqueta }}>
+            Mensaje <span style={{ color: c.tenue }}>(opcional)</span>
             <textarea value={mensaje} onChange={(e) => setMensaje(e.target.value)} maxLength={1000} rows={2} placeholder="Ej: ¿Aceptan permuta? ¿Tiene financiación?" style={{ ...campo, marginTop: 4, resize: "vertical" }} />
           </label>
-          {error && <div role="alert" style={{ margin: 0, fontSize: 12, color: "#b91c1c" }}>
+          {error && <div role="alert" style={{ margin: 0, fontSize: 12, color: c.error }}>
             <p style={{ margin: "0 0 5px" }}>{error} Tus datos se conservaron; podés reintentar.</p>
             <button type="button" onClick={() => { borrador.clearDraft(); borrador.setValue(BORRADOR_VACIO); setError(""); }}
               style={{ border: 0, padding: 0, background: "none", color: "inherit", textDecoration: "underline", cursor: "pointer", font: "inherit" }}>

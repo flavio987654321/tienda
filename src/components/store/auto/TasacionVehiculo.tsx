@@ -37,9 +37,12 @@ const COLOR_ESTADO: Record<(typeof ESTADOS_DEL_USADO)[number], string> = {
   "Excelente": "#16a34a", "Muy bueno": "#65a30d", "Bueno": "#ca8a04", "Regular": "#ea580c", "Para reparar": "#dc2626",
 };
 
-const TINTA = "#141a26";
-const SUAVE = "#6b7385";
-const RAYA = "#e3e6ec";
+/* Los colores: claros (Motor, Drive) u oscuros (Auto Volt, 13/10/26; ver
+   paletaFormulario). Los claros son los de siempre. */
+const TEMA_CLARO = { tinta: "#141a26", suave: "#6b7385", raya: "#e3e6ec", fondo: "#fff", texto: "#3d4556", tenue: "#9aa1b0",
+  caja: "#f6f7f9", okFondo: "#f6fbf7", okBorde: "#c9ead3", error: "#b91c1c" };
+const TEMA_OSCURO = { tinta: "#f1f4fb", suave: "rgba(232,236,246,0.6)", raya: "rgba(255,255,255,0.14)", fondo: "#0a0e19", texto: "rgba(232,236,246,0.78)", tenue: "rgba(232,236,246,0.45)",
+  caja: "rgba(255,255,255,0.04)", okFondo: "rgba(34,197,94,0.08)", okBorde: "rgba(34,197,94,0.35)", error: "#fb7185" };
 
 const CSS = `
   @keyframes tv-entra { from { opacity:0; transform: translateX(18px) } to { opacity:1; transform:none } }
@@ -69,7 +72,7 @@ function Icono({ cual, color, tam = 22 }: { cual: "cambio" | "plata" | "auto" | 
 /** La hora, para los clicks. Afuera del componente: nunca se llama al dibujar. */
 const ahora = () => Date.now();
 
-export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false }: {
+export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false, oscuro }: {
   storeId?: string;
   accent: string;
   /** El vehículo de la tienda por el que lo entregaría (desde la página del vehículo). */
@@ -77,7 +80,10 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   isOwner?: boolean;
   isPreview?: boolean;
   abiertoDeEntrada?: boolean;
+  /** Sobre fondo oscuro (Auto Volt). */
+  oscuro?: boolean;
 }) {
+  const pal = oscuro ? TEMA_OSCURO : TEMA_CLARO;
   const [abierto, setAbierto] = useState(abiertoDeEntrada);
   const [trampa, setTrampa] = useState("");
   const borrador = useSessionDraft(
@@ -177,22 +183,22 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
     }
   }
 
-  const raiz: React.CSSProperties = { color: TINTA, fontFamily: "inherit", ...({ "--tv-acento": accent } as React.CSSProperties) };
+  const raiz: React.CSSProperties = { color: pal.tinta, fontFamily: "inherit", ...({ "--tv-acento": accent } as React.CSSProperties) };
   const campo: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box", border: `1.5px solid ${RAYA}`, borderRadius: 10, minHeight: 48,
-    padding: "11px 14px", fontSize: 15, fontFamily: "inherit", color: TINTA, background: "#fff", marginTop: 6,
+    width: "100%", boxSizing: "border-box", border: `1.5px solid ${pal.raya}`, borderRadius: 10, minHeight: 48,
+    padding: "11px 14px", fontSize: 15, fontFamily: "inherit", color: pal.tinta, background: pal.fondo, marginTop: 6,
   };
-  const etiqueta: React.CSSProperties = { display: "block", fontSize: 12.5, fontWeight: 600, color: "#3d4556", minWidth: 0 };
-  const opcional = <span style={{ color: "#9aa1b0", fontWeight: 400 }}>(opcional)</span>;
+  const etiqueta: React.CSSProperties = { display: "block", fontSize: 12.5, fontWeight: 600, color: pal.texto, minWidth: 0 };
+  const opcional = <span style={{ color: pal.tenue, fontWeight: 400 }}>(opcional)</span>;
   const chip = (activo: boolean): React.CSSProperties => ({
     minHeight: 40, padding: "0 14px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600,
-    border: `1.5px solid ${activo ? accent : RAYA}`, background: activo ? `${accent}18` : "#fff", color: TINTA,
+    border: `1.5px solid ${activo ? accent : pal.raya}`, background: activo ? `${accent}18` : pal.fondo, color: pal.tinta,
   });
 
   /* ── Listo ── */
   if (estado === "listo") {
     return (
-      <div style={{ ...raiz, textAlign: "center", padding: "28px 18px", borderRadius: 14, background: "#f6fbf7", border: "1px solid #c9ead3" }}>
+      <div style={{ ...raiz, textAlign: "center", padding: "28px 18px", borderRadius: 14, background: pal.okFondo, border: `1px solid ${pal.okBorde}` }}>
         <style>{CSS}</style>
         <svg width={64} height={64} viewBox="0 0 52 52" aria-hidden="true" style={{ animation: "tv-pop .5s cubic-bezier(.2,.7,.2,1) both" }}>
           <circle cx="26" cy="26" r="24" fill="#16a34a" />
@@ -202,7 +208,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         <h3 ref={titulo} tabIndex={-1} role="status" style={{ margin: "14px 0 6px", fontSize: 20, fontWeight: 800, outline: "none" }}>
           ¡Listo, {f.nombre.trim().split(/\s+/)[0]}!
         </h3>
-        <p style={{ margin: "0 auto", maxWidth: 380, fontSize: 14, lineHeight: 1.6, color: "#3d4556", overflowWrap: "anywhere" }}>
+        <p style={{ margin: "0 auto", maxWidth: 380, fontSize: 14, lineHeight: 1.6, color: pal.texto, overflowWrap: "anywhere" }}>
           Recibimos los datos de tu <strong>{f.marca} {f.modelo}</strong>. Te vamos a contactar al <strong>{f.telefono.trim()}</strong> con una oferta.
           Tené a mano unas fotos: te las vamos a pedir por WhatsApp.
         </p>
@@ -215,7 +221,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
     return (
       <button type="button" onClick={() => setAbierto(true)} className="tv-cta"
         style={{ ...raiz, display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", cursor: "pointer",
-          background: `linear-gradient(135deg, ${accent}14, ${accent}05), #fff`, border: `1.5px solid ${accent}55`, borderRadius: 14,
+          background: `linear-gradient(135deg, ${accent}14, ${accent}05), ${pal.fondo}`, border: `1.5px solid ${accent}55`, borderRadius: 14,
           padding: "16px 18px", fontFamily: "inherit" }}>
         <style>{CSS}</style>
         <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 12, background: accent, flexShrink: 0,
@@ -226,7 +232,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
           <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>
             {producto ? "¿Tenés un usado? Te lo tomamos" : "Tasá tu usado en 1 minuto"}
           </span>
-          <span style={{ display: "block", fontSize: 12.5, color: SUAVE, marginTop: 2 }}>Cuatro preguntas cortas y te pasamos una oferta.</span>
+          <span style={{ display: "block", fontSize: 12.5, color: pal.suave, marginTop: 2 }}>Cuatro preguntas cortas y te pasamos una oferta.</span>
         </span>
         <span aria-hidden="true" style={{ fontSize: 22, color: accent, fontWeight: 700 }}>→</span>
       </button>
@@ -238,7 +244,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   return (
     <form onSubmit={enviar} noValidate aria-label="Tasá tu usado"
       style={{ ...raiz, position: "relative", display: "flex", flexDirection: "column", gap: 14, borderRadius: 14, padding: "clamp(16px,3vw,22px)",
-        background: "#fff", border: `1px solid ${RAYA}`, boxShadow: "0 1px 2px rgba(20,26,38,.04), 0 12px 32px rgba(20,26,38,.06)" }}>
+        background: pal.fondo, border: `1px solid ${pal.raya}`, boxShadow: "0 1px 2px rgba(20,26,38,.04), 0 12px 32px rgba(20,26,38,.06)" }}>
       <style>{CSS}</style>
       <CampoTrampa value={trampa} onChange={setTrampa} />
       {paso === 4 && captcha.widget}
@@ -248,11 +254,11 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.6, textTransform: "uppercase", color: accent }}>Tasá tu usado</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 12, color: SUAVE }}>Paso {paso} de 4</span>
+            <span style={{ fontSize: 12, color: pal.suave }}>Paso {paso} de 4</span>
             {/* Metida en la página no tenía cómo cerrarse (08/10/26). Lo cargado queda: si la vuelve a abrir, sigue donde estaba. */}
             {!abiertoDeEntrada && (
               <button type="button" onClick={() => { setError(""); setAbierto(false); }} aria-label="Cerrar la tasación"
-                style={{ width: 32, height: 32, marginRight: -6, borderRadius: "50%", border: "none", background: "transparent", color: SUAVE,
+                style={{ width: 32, height: 32, marginRight: -6, borderRadius: "50%", border: "none", background: "transparent", color: pal.suave,
                   fontSize: 20, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             )}
           </span>
@@ -260,8 +266,8 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         <ol aria-label="Pasos" style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
           {([1, 2, 3, 4] as Paso[]).map((n) => (
             <li key={n} aria-current={n === paso ? "step" : undefined}>
-              <span style={{ display: "block", height: 5, borderRadius: 99, background: n <= paso ? accent : RAYA, transition: "background .3s" }} />
-              <span style={{ display: "block", marginTop: 6, fontSize: 11, fontWeight: n === paso ? 700 : 500, color: n === paso ? TINTA : "#9aa1b0",
+              <span style={{ display: "block", height: 5, borderRadius: 99, background: n <= paso ? accent : pal.raya, transition: "background .3s" }} />
+              <span style={{ display: "block", marginTop: 6, fontSize: 11, fontWeight: n === paso ? 700 : 500, color: n === paso ? pal.tinta : pal.tenue,
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{NOMBRES[n]}</span>
             </li>
           ))}
@@ -273,7 +279,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         {paso === 1 && (
           <>
             <h3 ref={titulo} tabIndex={-1} style={{ margin: 0, fontSize: 19, fontWeight: 800, outline: "none" }}>¿Qué querés hacer con tu usado?</h3>
-            {producto && <p style={{ margin: 0, fontSize: 13, color: SUAVE }}>Para el <strong style={{ color: TINTA }}>{producto.name}</strong>.</p>}
+            {producto && <p style={{ margin: 0, fontSize: 13, color: pal.suave }}>Para el <strong style={{ color: pal.tinta }}>{producto.name}</strong>.</p>}
             <div role="radiogroup" aria-label="Qué querés hacer" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
               {([["PERMUTA", "Entregarlo en parte de pago", "Lo tomamos y pagás la diferencia.", "cambio"], ["VENTA", "Venderlo", "Te lo compramos.", "plata"]] as const).map(([m, t, d, ic]) => {
                 const activo = modalidad === m;
@@ -281,13 +287,13 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
                   <button key={m} type="button" role="radio" aria-checked={activo} className="tv-opcion"
                     onClick={() => { if (recienCambio()) return; setModalidad(m); setError(""); setHaciaAtras(false); pasoCambioEn.current = ahora(); setPaso(2); }}
                     style={{ textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 16, borderRadius: 12, minHeight: 104,
-                      border: `1.5px solid ${activo ? accent : RAYA}`, background: activo ? `${accent}12` : "#fff", color: TINTA,
+                      border: `1.5px solid ${activo ? accent : pal.raya}`, background: activo ? `${accent}12` : pal.fondo, color: pal.tinta,
                       display: "flex", flexDirection: "column", gap: 8 }}>
                     <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 10, background: `${accent}1c`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Icono cual={ic} color={accent} />
                     </span>
                     <span style={{ fontSize: 15, fontWeight: 800 }}>{t}</span>
-                    <span style={{ fontSize: 12.5, color: SUAVE }}>{d}</span>
+                    <span style={{ fontSize: 12.5, color: pal.suave }}>{d}</span>
                   </button>
                 );
               })}
@@ -330,7 +336,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
                   return (
                     <button key={e} type="button" role="radio" aria-checked={activo} className="tv-opcion" onClick={() => elegir("estado", activo ? "" : e)}
                       style={{ cursor: "pointer", fontFamily: "inherit", padding: "10px 4px", borderRadius: 10, minHeight: 64,
-                        border: `1.5px solid ${activo ? color : RAYA}`, background: activo ? `${color}14` : "#fff", color: TINTA,
+                        border: `1.5px solid ${activo ? color : pal.raya}`, background: activo ? `${color}14` : pal.fondo, color: pal.tinta,
                         display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                       <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: "50%", background: color, boxShadow: activo ? `0 0 0 4px ${color}33` : "none", transition: "box-shadow .2s" }} />
                       <span style={{ fontSize: 11.5, fontWeight: 700, lineHeight: 1.2, textAlign: "center" }}>{e}</span>
@@ -369,13 +375,13 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
           <>
             <h3 ref={titulo} tabIndex={-1} style={{ margin: 0, fontSize: 19, fontWeight: 800, outline: "none" }}>¿A quién le pasamos la oferta?</h3>
             {/* Lo que va a recibir la agencia, para que lo revise antes de mandar. */}
-            <div style={{ display: "flex", gap: 12, alignItems: "center", padding: 12, borderRadius: 12, background: "#f6f7f9", border: `1px solid ${RAYA}` }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", padding: 12, borderRadius: 12, background: pal.caja, border: `1px solid ${pal.raya}` }}>
               <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 10, background: `${accent}1c`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Icono cual="auto" color={accent} />
               </span>
               <span style={{ minWidth: 0, flex: 1 }}>
                 <span style={{ display: "block", fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{f.marca} {f.modelo}{f.version ? ` ${f.version}` : ""}</span>
-                <span style={{ display: "block", fontSize: 12.5, color: SUAVE }}>
+                <span style={{ display: "block", fontSize: 12.5, color: pal.suave }}>
                   {[f.anio, f.km ? `${conPuntos(f.km)} km` : "", f.estado, modalidad === "VENTA" ? "Para vender" : "En parte de pago"].filter(Boolean).join(" · ")}
                 </span>
               </span>
@@ -396,13 +402,13 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         )}
       </div>
 
-      {error && <p role="alert" style={{ margin: 0, fontSize: 13, color: "#b91c1c", fontWeight: 600 }}>{error}</p>}
+      {error && <p role="alert" style={{ margin: 0, fontSize: 13, color: pal.error, fontWeight: 600 }}>{error}</p>}
 
       {/* ── Navegación ── El paso 1 avanza solo al elegir. */}
       {paso > 1 && (
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button type="button" onClick={() => { if (!recienCambio()) irA((paso - 1) as Paso); }}
-            style={{ minHeight: 48, padding: "0 16px", borderRadius: 10, border: `1.5px solid ${RAYA}`, background: "#fff", color: TINTA, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+            style={{ minHeight: 48, padding: "0 16px", borderRadius: 10, border: `1.5px solid ${pal.raya}`, background: pal.fondo, color: pal.tinta, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
             ← Atrás
           </button>
           <button type="submit" disabled={estado === "enviando" || (paso === 4 && !captcha.ready)}
