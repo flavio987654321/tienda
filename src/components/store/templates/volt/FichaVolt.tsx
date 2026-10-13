@@ -399,7 +399,7 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
 
             {p.reelUrls && p.reelUrls.length > 0 && (
               <Bloque acento={acento} codigo="05 // VIDEO" titulo="Miralo andar">
-                <StoreProductReels reelUrls={p.reelUrls} theme={{ accent: acento, text: TENUE, border: LINEA, radius: 14 }} />
+                <StoreProductReels reelUrls={p.reelUrls} tapa={p.images[0]} theme={{ accent: acento, text: TENUE, border: LINEA, radius: 14 }} />
               </Bloque>
             )}
 

@@ -43,7 +43,8 @@ export function VideosDrive({ videos, acento, moneda, hrefDe, vacio }: {
   const enTienda = videos.map(v => v.url).filter(u => parseReel(u)?.kind !== "link");
   const tapaGrande = (
     <>
-      {reel.kind === "video"
+      {/* Con foto del vehículo, la foto de tapa: el fotograma del video costaba 9 MB por visita (13/10/26). */}
+      {reel.kind === "video" && !p.images[0]
         ? <video key={actual.url} src={`${actual.url}#t=0.5`} preload="metadata" muted playsInline className="vd-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         // eslint-disable-next-line @next/next/no-img-element -- foto del vehículo o miniatura de YouTube
         : <img src={fotoLiviana(tapaDe(actual), 1200)} alt="" className="vd-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}

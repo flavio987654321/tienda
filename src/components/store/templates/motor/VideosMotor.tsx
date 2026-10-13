@@ -44,7 +44,9 @@ export function VideosMotor({ videos, acento, moneda, hrefDe, vacio, tinta = "#f
           const portada = p.images[0] ?? (reel.kind === "youtube" ? `https://img.youtube.com/vi/${reel.id}/hqdefault.jpg` : null);
           const tapa = (
             <>
-              {reel.kind === "video"
+              {/* Un video propio va con la foto del vehículo de tapa: para sacar un fotograma, el
+                  navegador bajaba 9 MB de un video de 17 en cada visita (13/10/26, Supabase). */}
+              {reel.kind === "video" && !p.images[0]
                 ? <video src={`${url}#t=0.5`} preload="metadata" muted playsInline className="vm-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
                 // eslint-disable-next-line @next/next/no-img-element -- miniatura de YouTube o foto del vehículo
                 : <img src={fotoLiviana(portada, 828)} alt="" className="vm-foto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}

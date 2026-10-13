@@ -428,8 +428,24 @@ export function parsePromotions(raw: unknown): ActivePromotion[] {
 
 export { isDemoProductId } from "@/lib/demoProducts";
 
+/**
+ * Un video de ejemplo para que el bloque "Videos" de los templates de autos no
+ * quede vacío al probar un diseño (13/10/26). Es de Pexels (licencia libre, sin
+ * crédito obligatorio: un auto blanco en una ruta de montaña, sin gente ni
+ * marcas), recortado a 15 s y 1,2 MB. Vive en /public y lo sirve Vercel: que NO
+ * pase por Supabase, que cobra el tráfico de salida. El reproductor sólo acepta
+ * direcciones completas, y los productos se arman en el navegador: de ahí el origin.
+ */
+const VIDEO_DEMO_AUTOS = "/demo/auto-en-ruta.mp4";
+
+function conVideoDeEjemplo(lista: StorefrontProduct[]): StorefrontProduct[] {
+  if (typeof window === "undefined") return lista;
+  const url = window.location.origin + VIDEO_DEMO_AUTOS;
+  return lista.map((p) => (p.id === "auto-1" ? { ...p, reelUrls: [url] } : p));
+}
+
 export function getDemoPool(tipoTienda?: string | null): StorefrontProduct[] {
-  return tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : tipoTienda === "HOGAR_TECH" ? DEMO_PRODUCTS_HOGAR_TECH : DEMO_PRODUCTS;
+  return tipoTienda === "AUTOS" ? conVideoDeEjemplo(DEMO_PRODUCTS_AUTOS) : tipoTienda === "HOGAR_TECH" ? DEMO_PRODUCTS_HOGAR_TECH : DEMO_PRODUCTS;
 }
 
 export function fillTargetFor(tipoTienda?: string | null): number {

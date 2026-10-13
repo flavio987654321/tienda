@@ -33,6 +33,8 @@ export function VideosVolt({ videos, acento, moneda, hrefDe, vacio, tinta }: {
   tinta: string;
 }) {
   const [abierto, setAbierto] = useState<string | null>(null);
+  /** El video que está bajo el mouse. Sólo con mouse de verdad: en el celular no hay vista previa. */
+  const [mirando, setMirando] = useState<string | null>(null);
   if (!videos.length) return vacio ? <>{vacio}</> : null;
   const reproducibles = videos.map(v => v.url).filter(u => parseReel(u)?.kind !== "link");
 
@@ -44,12 +46,18 @@ export function VideosVolt({ videos, acento, moneda, hrefDe, vacio, tinta }: {
           const portada = p.images[0] ?? (reel.kind === "youtube" ? `https://img.youtube.com/vi/${reel.id}/hqdefault.jpg` : null);
           const tapa = (
             <>
-              {reel.kind === "video"
-                ? <video src={`${url}#t=0.5`} preload="metadata" muted playsInline loop
-                    onMouseEnter={e => { e.currentTarget.play().catch(() => {}); }} onMouseLeave={e => { e.currentTarget.pause(); }}
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+              {/* De tapa, la foto del vehículo. El video recién se pide al pasar el mouse: dejarlo
+                  puesto para sacar un fotograma bajaba 9 MB de 17 en cada visita (13/10/26, Supabase). */}
+              {/* Sin clics en la foto ni en el video: si el que recibe el "apretar" se cambia por
+                  otro antes de soltar (la foto por el video, al entrar el mouse), el clic se pierde. */}
+              {portada && (
                 // eslint-disable-next-line @next/next/no-img-element -- miniatura de YouTube o foto del vehículo
-                : <img src={fotoLiviana(portada, 384)} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+                <img src={fotoLiviana(portada, 384)} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
+              )}
+              {reel.kind === "video" && (!portada || mirando === url) && (
+                <video src={portada ? url : `${url}#t=0.5`} preload={portada ? "auto" : "metadata"} autoPlay={!!portada} muted playsInline loop
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
+              )}
               <span aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to top, rgba(5,7,13,0.8), transparent 50%)" }} />
               <span aria-hidden="true" style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, fontFamily: MONO, fontSize: 10,
                 letterSpacing: 1.5, color: "#fff", background: "rgba(5,7,13,0.6)", borderRadius: 999, padding: "4px 9px", pointerEvents: "none" }}>
@@ -70,7 +78,8 @@ export function VideosVolt({ videos, acento, moneda, hrefDe, vacio, tinta }: {
             <li key={`${p.id}-${url}`} style={{ minWidth: 0 }}>
               {reel.kind === "link"
                 ? <a href={url} target="_blank" rel="noopener noreferrer" className="vv-caja" aria-label={`Ver el video de ${p.name} en ${reel.platform}`} style={caja}>{tapa}</a>
-                : <button type="button" className="vv-caja" onClick={() => setAbierto(url)} aria-label={`Ver el video de ${p.name}`} style={caja}>{tapa}</button>}
+                : <button type="button" className="vv-caja" onClick={() => setAbierto(url)}
+                    onPointerEnter={e => { if (e.pointerType === "mouse") setMirando(url); }} onPointerLeave={() => setMirando(m => (m === url ? null : m))} aria-label={`Ver el video de ${p.name}`} style={caja}>{tapa}</button>}
               <Link href={hrefDe(p.id)} style={{ display: "block", marginTop: 8, color: tinta, textDecoration: "none" }}>
                 <span style={{ display: "block", fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                 <span style={{ display: "block", marginTop: 2, fontFamily: MONO, fontSize: 12, color: acento }}>{p.price > 0 ? fmtPrice(p.price, monedaDe(p, moneda)) : "Consultar"}</span>

@@ -367,7 +367,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
         {p.reelUrls && p.reelUrls.length > 0 && (
           <section style={{ marginTop: 40 }}>
             {tituloBloque("Videos")}
-            <StoreProductReels reelUrls={p.reelUrls} theme={{ accent: acento, text: c.suave, border: c.linea, radius: 6 }} />
+            <StoreProductReels reelUrls={p.reelUrls} tapa={p.images[0]} theme={{ accent: acento, text: c.suave, border: c.linea, radius: 6 }} />
           </section>
         )}
 

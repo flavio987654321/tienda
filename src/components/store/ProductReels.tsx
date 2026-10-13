@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { CAPAS } from "@/lib/capas-tienda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 // Miniatura + modal de reels, uno solo para toda la tienda. Antes esto estaba
 // escrito 6 veces (la pagina de detalle, los 4 modales de Moda y autos), cada
@@ -74,7 +75,7 @@ function PlayBadge() {
   );
 }
 
-function ReelThumb({ reel, theme, onOpen, ancho = THUMB_W }: { reel: Reel; theme: ReelTheme; onOpen: () => void; ancho?: number }) {
+function ReelThumb({ reel, theme, onOpen, ancho = THUMB_W, tapa }: { reel: Reel; theme: ReelTheme; onOpen: () => void; ancho?: number; tapa?: string }) {
   const box: React.CSSProperties = {
     position: "relative",
     width: ancho,
@@ -104,7 +105,12 @@ function ReelThumb({ reel, theme, onOpen, ancho = THUMB_W }: { reel: Reel; theme
 
   return (
     <button type="button" onClick={onOpen} style={box} aria-label="Ver video del producto">
-      {reel.kind === "video" ? (
+      {reel.kind === "video" && tapa ? (
+        // Con foto de tapa no se toca el video hasta que lo abran: "metadata" llegó a
+        // bajar 9 MB de un video de 17 sólo para el fotograma (13/10/26, Supabase).
+        // eslint-disable-next-line @next/next/no-img-element -- la foto ya pasa por fotoLiviana
+        <img src={fotoLiviana(tapa, Math.max(ancho * 2, 256))} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : reel.kind === "video" ? (
         // preload=metadata: baja solo el primer fotograma, no el video entero.
         <video src={reel.url} preload="metadata" muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       ) : (
@@ -283,7 +289,8 @@ function FlechaTira({ lado, theme, onClick }: { lado: "izq" | "der"; theme: Reel
   );
 }
 
-export default function ProductReels({ reelUrls, theme, ancho }: { reelUrls: string[]; theme: ReelTheme; ancho?: number }) {
+/** `tapa`: una foto para mostrar en vez del primer fotograma (los vehículos usan la suya). */
+export default function ProductReels({ reelUrls, theme, ancho, tapa }: { reelUrls: string[]; theme: ReelTheme; ancho?: number; tapa?: string }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   // Identidad estable de la lista. Como dependencia de efectos, `reelUrls` a secas
   // es un array nuevo en cada render y rearmaría los observers todo el tiempo.
@@ -357,6 +364,7 @@ export default function ProductReels({ reelUrls, theme, ancho }: { reelUrls: str
                 reel={reel}
                 theme={theme}
                 ancho={ancho}
+                tapa={tapa}
                 onOpen={() => setOpenIdx(playIdx)}
               />
             );
