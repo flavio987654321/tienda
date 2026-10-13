@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
-import { attr, vehicleLocation, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { attr, vehicleLocation, fmtPrice, useLinkAVehiculo } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
-import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { linkWhatsApp, mensajeDeVehiculo } from "@/lib/whatsappTienda";
 import { fotoLiviana } from "@/lib/foto-liviana";
 
 export function FocoDrive({ p, acento, moneda, href, whatsapp }: {
@@ -15,7 +15,11 @@ export function FocoDrive({ p, acento, moneda, href, whatsapp }: {
 }) {
   const datos = [["Año", attr(p, "Año")], ["Kilómetros", attr(p, "Kilómetros")], ["Ubicación", vehicleLocation(p)]]
     .filter((item): item is [string, string] => !!item[1]);
-  const wa = whatsapp.enabled ? linkWhatsApp(whatsapp.number, `Hola! Me interesa el ${p.name}. ¿Sigue disponible?`) : null;
+  // El mismo mensaje que la consulta de la ficha: año, precio y link.
+  const link = useLinkAVehiculo(href);
+  const wa = whatsapp.enabled ? linkWhatsApp(whatsapp.number, mensajeDeVehiculo({
+    nombre: p.name, anio: attr(p, "Año"), precio: p.price > 0 ? fmtPrice(p.price, monedaDe(p, moneda)) : null, link,
+  })) : null;
 
   return (
     <>

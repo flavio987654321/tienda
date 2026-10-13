@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { esOpcionDeColor } from "@/lib/opciones";
@@ -199,4 +199,17 @@ export function VehicleCard({ product, accent, currency, theme = "light", href, 
       </div>
     </div>
   );
+}
+
+const sinCambios = () => () => {};
+/**
+ * El link absoluto a la página de un vehículo, para el mensaje de WhatsApp
+ * (13/10/26). Con la dirección real (sirve en un dominio propio) y sin lo de
+ * después del "?" —lo del editor no le sirve al que recibe el mensaje—. En el
+ * servidor da "" y el mensaje sale sin link, igual que la primera vez que se
+ * dibuja en el navegador: así no hay diferencia entre los dos.
+ */
+export function useLinkAVehiculo(href: string): string {
+  const origen = useSyncExternalStore(sinCambios, () => window.location.origin, () => "");
+  return origen ? `${origen}${href.split("?")[0]}` : "";
 }

@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
-import { attr, fmtPrice, vehicleLocation, WaIcon } from "@/components/store/auto/AutoVehicleShared";
+import { attr, fmtPrice, vehicleLocation, WaIcon, useLinkAVehiculo } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { urlFichaPdf, NOMBRE_TIPO, usaHoras, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
-import { linkWhatsApp } from "@/lib/whatsappTienda";
+import { linkWhatsApp, mensajeDeVehiculo } from "@/lib/whatsappTienda";
 import { getContrastColor } from "@/contexts/EditContext";
 import { usoDe } from "./TarjetaMotor";
 import { fotoLiviana } from "@/lib/foto-liviana";
@@ -35,7 +35,11 @@ export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, href, kicker 
     ["Combustible", attr(p, "Combustible")],
     ["Ubicación", vehicleLocation(p)],
   ] as [string, string][]).filter(([, v]) => v);
-  const wa = whatsapp.enabled ? linkWhatsApp(whatsapp.number, `Hola! Me interesa el ${p.name}. ¿Sigue disponible?`) : null;
+  // El mismo mensaje que la consulta de la ficha: año, precio y link.
+  const link = useLinkAVehiculo(href);
+  const wa = whatsapp.enabled ? linkWhatsApp(whatsapp.number, mensajeDeVehiculo({
+    nombre: p.name, anio: attr(p, "Año"), precio: p.price > 0 ? fmtPrice(p.price, monedaDe(p, moneda)) : null, link,
+  })) : null;
   const sobreAcento = getContrastColor(acento) === "dark" ? "#111" : "#fff";
 
   return (
