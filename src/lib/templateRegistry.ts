@@ -7,6 +7,7 @@ import ChicParis from "@/components/store/templates/ChicParis";
 import Aurora from "@/components/store/templates/Aurora";
 import AutoMotor from "@/components/store/templates/AutoMotor";
 import AutoDrive from "@/components/store/templates/AutoDrive";
+import AutoVolt from "@/components/store/templates/AutoVolt";
 import ElectroPrime from "@/components/store/templates/ElectroPrime";
 import TechNova from "@/components/store/templates/TechNova";
 import HomeStudio from "@/components/store/templates/HomeStudio";
@@ -48,6 +49,7 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     templates: [
       { id: "auto-motor", name: "Auto Motor", desc: "Oscuro · Premium · Concesionaria", blurb: "Estética de concesionaria premium en fondo oscuro, para autos y motos de alta gama.", palette: ["#0a0a0a", "#e8a020", "#1a1a1a"], component: AutoMotor, tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-motor"] },
       { id: "auto-drive", name: "Auto Drive", desc: "Claro · Moderno · Marketplace",    blurb: "Un marketplace de vehículos claro y moderno, fácil de navegar.", palette: ["#f0f4f8", "#2563eb", "#0f172a"], component: AutoDrive,  tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-drive"]  },
+      { id: "auto-volt",  name: "Auto Volt",  desc: "Oscuro · Futurista · Luz",         blurb: "Escena de luz que sigue al cursor, vidrio y datos de tablero. Para agencias que quieren verse de otra época.", palette: ["#05070d", "#22d3ee", "#e8ecf6"], component: AutoVolt,   tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-volt"]   },
     ],
   },
   {

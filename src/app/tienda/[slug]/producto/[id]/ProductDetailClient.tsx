@@ -41,6 +41,7 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   // Autos (07/10/26): cada vehículo en su página, no en una ventana sobre la portada.
   "auto-motor": VehiculoDetailOscuro,
   "auto-drive": VehiculoDetailClaro,
+  "auto-volt": VehiculoDetailOscuro,
   // El id viejo de Aire: hay tiendas cuyo JSON todavia lo dice.
   "fashion-noir": AireDetail,
 };

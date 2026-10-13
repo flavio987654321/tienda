@@ -173,7 +173,8 @@ export function ContenidoPieAutos({
       {/* 3. La línea de abajo */}
       <div style={{ marginTop: 40, paddingTop: 20, borderTop: `1px solid ${colores.linea}`, display: "flex", flexWrap: "wrap", gap: "8px 20px",
         alignItems: "center", justifyContent: "space-between", fontSize: 12, color: colores.suave }}>
-        <p style={{ margin: 0 }}>{copyright ?? `© ${new Date().getFullYear()} ${storeName}`}</p>
+        {/* `minWidth: 0` + `anywhere`: un nombre largo sin espacios empujaba la página a lo ancho en el celular. */}
+        <p style={{ margin: 0, minWidth: 0, maxWidth: "100%", overflowWrap: "anywhere" }}>{copyright ?? `© ${new Date().getFullYear()} ${storeName}`}</p>
         {onReportar && (
           <button type="button" onClick={onReportar} className="pda-link"
             style={{ fontSize: 12, color: colores.suave, background: "none", border: "none", padding: 0, minHeight: 32, cursor: "pointer", fontFamily: "inherit" }}>

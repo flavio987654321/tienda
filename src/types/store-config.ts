@@ -1,6 +1,6 @@
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 
-export type TemplateId = "aire" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
+export type TemplateId = "aire" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "auto-volt" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
 /** Los topes del control de segundos del editor. Viven acá para que la prueba
  *  pueda comprobar que todos los valores de fábrica caen adentro. */
@@ -117,6 +117,7 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   "aurora":        ["bgHero"],
   "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFoco", "bgFooter", "bgHero", "bgNovedades", "bgNosotros", "bgPresupuesto", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgVideos"],
   "auto-motor":    ["bgCatalogo", "bgContacto", "bgFoco", "bgFooter", "bgNovedades", "bgNosotros", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgTipos", "bgVideos"],
+  "auto-volt":     ["bgCatalogo", "bgContacto", "bgFoco", "bgFooter", "bgNovedades", "bgNosotros", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgTipos", "bgVideos"],
   "boho-terra":    ["bgNewsletter"],
   "casa-clara":    ["bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
   "chic-paris":    [],
@@ -439,6 +440,7 @@ export const TEMPLATE_NAV_BG: Partial<Record<TemplateId, string>> = {
   "aurora":        "#06070d", // el fondo de la escena, casi negro
   "auto-motor":    "#0b0c0e", // casi negro (rehecho el 06/10/26)
   "auto-drive":    "#ffffff",
+  "auto-volt":     "#05070d", // casi negro azulado (creado el 12/10/26)
   "casa-clara":    "#ffffff",
   "electro-prime": "#ffffff",
   "home-studio":   "#faf8f4",
@@ -453,6 +455,7 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
   "aurora":       { accent: "#8b5cf6", storeName: "AURORA"       },
   "auto-motor":   { accent: "#e8a020", storeName: "AUTO MOTOR"   },
   "auto-drive":   { accent: "#2563eb", storeName: "AUTO DRIVE"   },
+  "auto-volt":    { accent: "#22d3ee", storeName: "AUTO VOLT"    },
   "electro-prime": { accent: "#ea580c", storeName: "ELECTRO PRIME" },
   "tech-nova":     { accent: "#7c3aed", storeName: "TECH NOVA"     },
   "home-studio":   { accent: "#b5652a", storeName: "HOME STUDIO"   },
@@ -469,6 +472,7 @@ export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
   "aurora":       ["ROPA", "GASTRONOMIA", "GENERAL"],
   "auto-motor":   ["AUTOS"],
   "auto-drive":   ["AUTOS"],
+  "auto-volt":    ["AUTOS"],
   "electro-prime": ["HOGAR_TECH"],
   "tech-nova":     ["HOGAR_TECH"],
   "home-studio":   ["HOGAR_TECH"],

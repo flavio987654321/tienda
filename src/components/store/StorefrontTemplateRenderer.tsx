@@ -9,6 +9,7 @@ import ChicParis from "./templates/ChicParis";
 import Aurora from "./templates/Aurora";
 import AutoMotor from "./templates/AutoMotor";
 import AutoDrive from "./templates/AutoDrive";
+import AutoVolt from "./templates/AutoVolt";
 import ElectroPrime from "./templates/ElectroPrime";
 import TechNova from "./templates/TechNova";
 import HomeStudio from "./templates/HomeStudio";
@@ -37,6 +38,7 @@ const TEMPLATES: Record<string, React.ComponentType> = {
   "aurora":       Aurora,
   "auto-motor":   AutoMotor,
   "auto-drive":   AutoDrive,
+  "auto-volt":    AutoVolt,
   "electro-prime": ElectroPrime,
   "tech-nova":     TechNova,
   "home-studio":   HomeStudio,

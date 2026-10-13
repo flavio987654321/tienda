@@ -86,7 +86,12 @@ Reglas que valen para todos (de la memoria):
 
 ## Fase 3 — Templates nuevos (de a uno, mostrándolo antes del siguiente)
 
-- [ ] Futurista (tipo Aurora).
-- [ ] Showroom premium.
-- [ ] Ruta / pesado.
-- [ ] Moto / deportivo.
+Decidido el 12/10/26: son **tres**, no cuatro, para que autos quede con 5 como moda
+(Auto Motor + Auto Drive + 3). Y no todos oscuros: autos queda con 2 oscuros y 3 claros.
+
+- [x] ~~Futurista (tipo Aurora) — **oscuro**: luces, vidrio, profundidad; bloques propios.~~ Hecho el 12/10/26: **Auto Volt** (`auto-volt`, carpeta `templates/volt/`). Escena de luz que sigue al puntero, piso de grilla, consola de búsqueda que cuenta antes de buscar, escáner en el vehículo en foco. Probado en 360/768/1280, en la tienda y en el editor. **Falta que Flavio lo vea** antes de arrancar el siguiente.
+- [ ] Ruta / pesado — **claro**: industrial, blanco y gris cemento con amarillo de señal vial; datos técnicos al frente.
+- [ ] Moto / deportivo — **claro**: blanco con un color fuerte, diagonales, energía.
+- ~~Showroom premium~~ — descartado el 12/10/26: es el que más se parecía a Auto Motor.
+
+Después de autos: Hogar y tecnología tiene 4 templates y le falta uno para llegar a 5.
