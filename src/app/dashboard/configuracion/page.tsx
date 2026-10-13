@@ -18,6 +18,7 @@ import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import TourGuide from "@/components/TourGuide";
 import MarcoCelular, { SelectorAncho, type Ancho } from "./MarcoCelular";
 import IndiceCelular from "./IndiceCelular";
+import { TemplateSeguro } from "@/components/store/TemplateSeguro";
 import type { Edicion, ItemIndice, Llamada } from "@/app/preview/celular/avisos";
 import { GUION_PREVIEW, GUION_EDITOR, TOUR_PREVIEW_KEY, TOUR_EDITOR_KEY } from "@/components/tours";
 
@@ -70,6 +71,7 @@ const THUMB_H = 162;
 const VIRTUAL_H = THUMB_H / SCALE;
 
 function TemplateThumbnail({ component: Component }: { component: React.ComponentType }) {
+  // Una miniatura rota no se lleva puesta la galería entera.
   return (
     <div style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", position: "relative",
       borderRadius: "10px 10px 0 0", background: "#f8fafc" }}>
@@ -79,7 +81,7 @@ function TemplateThumbnail({ component: Component }: { component: React.Componen
         transform: `scale(${SCALE})`, transformOrigin: "top left",
         pointerEvents: "none", userSelect: "none",
       }}>
-        <Component />
+        <TemplateSeguro template="miniatura" modo="editor"><Component /></TemplateSeguro>
       </div>
     </div>
   );
@@ -2808,6 +2810,8 @@ export default function ConfiguracionPage() {
     try {
       const res = await fetch("/api/configuracion", {
         method: "POST",
+        // Sin tope, si el servidor no contesta queda "Guardando…" para siempre y no se puede reintentar.
+        signal: AbortSignal.timeout(30_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeConfig: config }),
       });
@@ -2832,7 +2836,9 @@ export default function ConfiguracionPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch (err) {
-      const msg = err instanceof Error && err.message ? err.message : "No se pudo guardar. Intentá de nuevo.";
+      const msg = err instanceof DOMException && err.name === "TimeoutError"
+        ? "El guardado está tardando más de lo normal. Tus cambios siguen acá: probá de nuevo en un momento."
+        : err instanceof Error && err.message ? err.message : "No se pudo guardar. Intentá de nuevo.";
       setSaveError(msg);
       // Un error explicativo necesita más tiempo en pantalla que un "reintentá".
       setTimeout(() => setSaveError(null), msg.length > 45 ? 8000 : 3000);
@@ -3123,7 +3129,10 @@ export default function ConfiguracionPage() {
               transform: "translateZ(0)" }}>
               <StoreConfigContext.Provider value={configPrevia}>
                 <BrowserFrame storeName={config.storeName}>
-                  <TemplateComponent />
+                  {/* Un template roto no tumba el editor: ver TemplateSeguro. */}
+                  <TemplateSeguro template={config.template} modo="editor" reintentarCon={configPrevia}>
+                    <TemplateComponent />
+                  </TemplateSeguro>
                 </BrowserFrame>
               </StoreConfigContext.Provider>
             </div>
@@ -3303,7 +3312,10 @@ export default function ConfiguracionPage() {
               transform: "translateZ(0)" }}>
               <StoreConfigContext.Provider value={configPrevia}>
                 <BrowserFrame storeName={config.storeName}>
-                  <TemplateComponent />
+                  {/* Un template roto no tumba el editor: ver TemplateSeguro. */}
+                  <TemplateSeguro template={config.template} modo="editor" reintentarCon={configPrevia}>
+                    <TemplateComponent />
+                  </TemplateSeguro>
                 </BrowserFrame>
               </StoreConfigContext.Provider>
             </div>

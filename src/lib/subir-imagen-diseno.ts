@@ -25,7 +25,15 @@ export async function subirImagenDeDiseno(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", archivo);
   form.append("purpose", "image");
-  const res = await fetch("/api/upload", { method: "POST", body: form });
+  // Con tope: sin él, si la subida se cuelga el editor queda "subiendo" para siempre.
+  let res: Response;
+  try {
+    res = await fetch("/api/upload", { method: "POST", body: form, signal: AbortSignal.timeout(60_000) });
+  } catch (e) {
+    throw new Error(e instanceof DOMException && e.name === "TimeoutError"
+      ? "La subida está tardando demasiado. Probá con otra foto o de nuevo en un momento."
+      : "No pudimos conectarnos. Revisá tu internet y probá de nuevo.");
+  }
   const datos = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
   if (!res.ok || !datos.url) throw new Error(datos.error ?? "No se pudo subir la imagen. Probá de nuevo.");
   return datos.url;

@@ -111,6 +111,8 @@ export function NewsletterForm({
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
+        // Sin tope, si el servidor no contesta el botón queda en "Enviando…" para siempre.
+        signal: AbortSignal.timeout(25_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, email: limpio, website: trampa, turnstileToken: captcha.token }),
       });
@@ -125,8 +127,8 @@ export function NewsletterForm({
       setEstado("hecho");
       setEmail("");
       draft.clearDraft();
-    } catch {
-      setError("No pudimos conectarnos. Revisá tu conexión y probá de nuevo.");
+    } catch (e) {
+      setError(e instanceof DOMException && e.name === "TimeoutError" ? "Está tardando más de lo normal. Probá de nuevo en un momento." : "No pudimos conectarnos. Revisá tu conexión y probá de nuevo.");
       setEstado("listo");
     } finally {
       // El servidor pudo consumir el token aunque el navegador no recibiera

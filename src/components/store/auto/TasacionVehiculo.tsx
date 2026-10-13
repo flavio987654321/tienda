@@ -171,6 +171,8 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
       if (!borrador.value.submissionKey) borrador.setValue((d) => ({ ...d, submissionKey }));
       const res = await fetch("/api/tasaciones", {
         method: "POST",
+        // Sin tope, si el servidor no contesta el botón queda en "Enviando…" para siempre.
+        signal: AbortSignal.timeout(25_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeId, ...f, modalidad: modalidad ?? "PERMUTA", productoId: producto?.id, submissionKey, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa }),
       });
@@ -178,9 +180,9 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo enviar. Probá de nuevo en un momento."); return; }
       borrador.clearDraft();
       setEstado("listo");
-    } catch {
+    } catch (e) {
       setEstado("idle");
-      setError("Sin conexión. Revisá internet y probá de nuevo.");
+      setError(e instanceof DOMException && e.name === "TimeoutError" ? "Está tardando más de lo normal. Probá de nuevo en un momento." : "Sin conexión. Revisá internet y probá de nuevo.");
     } finally {
       enviando.current = false;
       captcha.reset();

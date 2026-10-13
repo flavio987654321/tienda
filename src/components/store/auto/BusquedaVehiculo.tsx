@@ -52,14 +52,16 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
     try {
       const res = await fetch("/api/busquedas", {
         method: "POST", headers: { "Content-Type": "application/json" },
+        // Sin tope, si el servidor no contesta el botón queda en "Enviando…" para siempre.
+        signal: AbortSignal.timeout(25_000),
         body: JSON.stringify({ storeId, ...f, categoria: f.categoria || null, turnstileToken: captcha.token, [CAMPO_TRAMPA]: trampa }),
       });
       const data = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setEstado("idle"); setError(data.error ?? "No se pudo guardar. Probá de nuevo en un momento."); return; }
       setEstado("listo");
-    } catch {
+    } catch (e) {
       setEstado("idle");
-      setError("Sin conexión. Revisá internet y probá de nuevo.");
+      setError(e instanceof DOMException && e.name === "TimeoutError" ? "Está tardando más de lo normal. Probá de nuevo en un momento." : "Sin conexión. Revisá internet y probá de nuevo.");
     } finally {
       enviando.current = false;
       captcha.reset();

@@ -359,11 +359,14 @@ export default function AutoVolt() {
         </div>
       )}
 
-      {/* ── BARRA ── flota sobre la escena, no toca los bordes. */}
+      {/* ── BARRA ── flota sobre la escena, no toca los bordes. Sus clics se prenden a
+          mano ("auto") y eso le ganaba al candado de la raíz: con doble clic en "Ver
+          vehículos" el segundo caía en "Showroom", que aparece en el mismo lugar, y
+          volvía a la portada. Por eso también se apagan acá mientras cambia la pantalla. */}
       <div style={{ position: isPreview ? "sticky" : "fixed", top: (showAnn ? PROMO_H : 0) + (isPreview ? 0 : NAV_TOP), left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
         zIndex: isPreview ? CAPAS.previaNav : 100, padding: isPreview ? `${NAV_TOP}px clamp(10px,2vw,20px) 0` : "0 clamp(10px,2vw,20px)", pointerEvents: "none",
         transform: barraOculta ? `translateY(-${(showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 24}px)` : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)" }}>
-        <nav aria-label="Principal" style={{ pointerEvents: "auto", maxWidth: 1240, margin: "0 auto", borderRadius: 18,
+        <nav aria-label="Principal" style={{ pointerEvents: vista.cambiandoPantalla ? "none" : "auto", maxWidth: 1240, margin: "0 auto", borderRadius: 18,
           background: navOscura ? "rgba(8,11,21,0.62)" : navBg, backdropFilter: "blur(18px) saturate(1.4)",
           border: `1px solid ${navLinea}`, boxShadow: "0 18px 50px -24px rgba(0,0,0,0.7)", padding: "0 clamp(10px,1.6vw,16px)" }}>
           <div style={{ height: NAV_H, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>

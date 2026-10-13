@@ -15,6 +15,7 @@ import TechNova from "./templates/TechNova";
 import HomeStudio from "./templates/HomeStudio";
 import CasaClara from "./templates/CasaClara";
 import FlyerPopup from "./FlyerPopup";
+import { TemplateSeguro } from "./TemplateSeguro";
 import GamificationWidget from "./GamificationWidget";
 import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 
@@ -92,7 +93,11 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         moveSection: () => {},
         setFeaturedVehicleId: () => {},
       }}>
-        <Template />
+        {/* Si el template se rompe, el error queda acá adentro (ver TemplateSeguro). */}
+        <TemplateSeguro template={config.template} modo={config.previewFill ? "editor" : "tienda"} reintentarCon={config}
+          nombreTienda={config.storeName} whatsapp={config.whatsapp?.enabled ? config.whatsapp.number : null}>
+          <Template />
+        </TemplateSeguro>
         {!config.isOwner && config.flyerConfig?.enabled && (config.flyerConfig.images?.length ?? 0) > 0 && (
           <FlyerPopup flyer={config.flyerConfig} />
         )}
