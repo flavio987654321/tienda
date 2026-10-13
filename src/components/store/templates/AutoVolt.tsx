@@ -261,6 +261,14 @@ export default function AutoVolt() {
   ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0"));
 
   const enEdicion = editMode && isPreview;
+  /* Las lecturas de la portada: salen del stock, nada inventado. El "desde" es
+     el más barato en la moneda principal (pesos y dólares no se comparan). */
+  const masBarato = products.filter(p => p.price > 0 && monedaDe(p, currency) === principal).reduce<number | null>((m, p) => m == null || p.price < m ? p.price : m, null);
+  const datosPortada = loadingProducts || !products.length ? [] : [
+    { valor: String(products.length), etiqueta: products.length === 1 ? "vehículo" : "vehículos" },
+    ...(opciones.marcas.length > 1 ? [{ valor: String(opciones.marcas.length), etiqueta: "marcas" }] : []),
+    ...(masBarato != null ? [{ valor: fmtPrice(masBarato, principal), etiqueta: "desde" }] : []),
+  ];
   const iconoBoton: React.CSSProperties = { background: "none", border: "none", color: navTenue, cursor: "pointer", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, position: "relative" };
   const capa = (campo: string, etiqueta: string, ov: ImageOverride | undefined, nombreBloque?: string) => (
     <><BgDragHandle imgKey={`sectionbg_${campo}`} /><Velo ov={ov} /><EditableSectionBg field={campo} label={etiqueta} {...(nombreBloque ? { nombreBloque } : {})} /></>
@@ -447,6 +455,7 @@ export default function AutoVolt() {
       {vista.enPortada && (<>
       {/* ── PORTADA ── foto entera, título y buscador, como en los otros templates de autos (ver volt/PortadaVolt). */}
       <PortadaVolt ov={iovr["heroBackground"]} acento={accent} opciones={opciones} principal={principal} cuantos={loadingProducts ? 0 : products.length} waLink={waLink}
+        datos={datosPortada}
         arriba={isPreview ? 0 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H} onBuscar={f => abrirCatalogo(f)} onVerTodos={e => alClicTodos(e)} todosHref={todos} />
 
       {/* ── EL SHOWROOM ── los vehículos giran y el elegido muestra sus datos. */}
