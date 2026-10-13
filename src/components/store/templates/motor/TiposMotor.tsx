@@ -1,23 +1,50 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { datosDe, linkAVehiculos, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
 import { useEditContext } from "@/contexts/EditContext";
 import { fotoLiviana } from "@/lib/foto-liviana";
+import { subirImagenDeDiseno } from "@/lib/subir-imagen-diseno";
 
-function TarjetaTipo({ g, href, foto, campoFoto, editando, posX, posY, cambiarEncuadre }: {
+function TarjetaTipo({ g, href, foto, fotoPropia, campoFoto, editando, posX, posY, cambiarEncuadre }: {
   g: { valor: string; label: string; cuantos: number };
   href: string;
   foto?: string;
+  /** La foto la eligió la dueña (no es la del primer vehículo de ese grupo). */
+  fotoPropia: boolean;
   campoFoto: string;
   editando: boolean;
   posX: number;
   posY: number;
-  cambiarEncuadre: (campo: string, cambios: { posX?: number; posY?: number }) => void;
+  cambiarEncuadre: (campo: string, cambios: { url?: string; posX?: number; posY?: number }) => void;
 }) {
   const [ajustando, setAjustando] = useState(false);
   const controlesAbiertos = editando && ajustando;
+  /* Elegir la foto de la tarjeta (12/10/26). Antes salía siempre la del primer
+     vehículo de esa marca o tipo, y lo único que se podía era moverle el
+     encuadre: si esa foto era un interior o un detalle, la tarjeta quedaba así.
+     Candado sincrónico como en las otras subidas de Diseño. */
+  const archivo = useRef<HTMLInputElement>(null);
+  const subiendo = useRef(false);
+  const [cargando, setCargando] = useState(false);
+  const [errorFoto, setErrorFoto] = useState("");
+  async function subirFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const elegido = e.target.files?.[0];
+    if (!elegido || subiendo.current) return;
+    subiendo.current = true;
+    setCargando(true);
+    setErrorFoto("");
+    try {
+      cambiarEncuadre(campoFoto, { url: await subirImagenDeDiseno(elegido), posX: 50, posY: 50 });
+    } catch (err) {
+      setErrorFoto(err instanceof Error ? err.message : "No se pudo subir la foto.");
+    } finally {
+      subiendo.current = false;
+      setCargando(false);
+      if (archivo.current) archivo.current.value = "";
+    }
+  }
   return (
     <div className="tp-item" style={{ position:"relative", overflow:controlesAbiertos ? "visible" : "hidden", borderRadius:4, background:"#141619", minHeight:140,
       aspectRatio:"16 / 10", border:"1px solid rgba(255,255,255,0.08)",
@@ -50,6 +77,20 @@ function TarjetaTipo({ g, href, foto, campoFoto, editando, posX, posY, cambiarEn
             <input aria-label={`Encuadre vertical de ${g.label}`} type="range" min={0} max={100} value={posY}
               onChange={e => cambiarEncuadre(campoFoto, { posY:Number(e.target.value) })} style={{ display:"block", width:"100%", accentColor:"#e8a020" }} />
           </label>
+          <input ref={archivo} type="file" accept="image/*" onChange={subirFoto} style={{ display:"none" }} />
+          <button type="button" disabled={cargando} onClick={() => archivo.current?.click()}
+            style={{ display:"block", width:"100%", minHeight:36, marginTop:10, border:"1px solid rgba(255,255,255,.4)", borderRadius:7,
+              background:"transparent", color:"white", fontSize:11, fontWeight:700, cursor:cargando ? "wait" : "pointer", opacity:cargando ? 0.6 : 1 }}>
+            {cargando ? "Subiendo…" : "Cambiar foto"}
+          </button>
+          {fotoPropia && !cargando && (
+            <button type="button" onClick={() => cambiarEncuadre(campoFoto, { url:"", posX:50, posY:50 })}
+              style={{ display:"block", width:"100%", minHeight:32, marginTop:6, border:"none", background:"transparent",
+                color:"rgba(255,255,255,.75)", fontSize:11, fontWeight:600, textDecoration:"underline", cursor:"pointer" }}>
+              Usar la de un vehículo
+            </button>
+          )}
+          {errorFoto && <p role="alert" style={{ margin:"6px 0 0", fontSize:11, lineHeight:1.4, color:"#fca5a5", overflowWrap:"anywhere" }}>{errorFoto}</p>}
         </div>}
       </div>}
     </div>
@@ -93,7 +134,7 @@ export function TiposMotor({ productos, opciones, moneda, slug, enEditor, titulo
           const encuadre = imageOverrides[campoFoto];
           return <TarjetaTipo key={g.valor} g={g}
             href={linkAVehiculos(slug, porTipo ? { tipo:g.valor } : { marca:g.valor }, enEditor)}
-            foto={fotoDe(g.valor)} campoFoto={campoFoto} editando={editMode && enEditor}
+            foto={encuadre?.url || fotoDe(g.valor)} fotoPropia={!!encuadre?.url} campoFoto={campoFoto} editando={editMode && enEditor}
             posX={encuadre?.posX ?? 50} posY={encuadre?.posY ?? 50} cambiarEncuadre={setImageOverride} />;
         })}
       </div>
