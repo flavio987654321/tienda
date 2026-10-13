@@ -46,6 +46,20 @@ export const ESCENARIO_VOLT_CSS = `
   .esv-flecha:focus-visible, .esv-mini:focus-visible, .esv-carta:focus-visible { outline:2px solid var(--esv-acento); outline-offset:3px }
   /* En el celular la tarjeta deja lugar a las flechas: si no, la tapaban (se pasa igual deslizando). */
   @media (max-width: 600px) { .esv-carta { width:66vw !important } .esv-flecha { width:34px !important; height:44px !important; border-radius:10px !important } }
+  /* En el celular: los tipos en un desplegable (los botones ocupaban tres renglones) y los botones
+     del vehículo en una sola fila, con íconos en vez de texto. */
+  .esv-select { display:none }
+  .esv-ico-txt { display:inline }
+  @media (max-width: 600px) {
+    .esv-chips { display:none !important }
+    .esv-select { display:block; width:100% }
+    .esv-cabeza > * { width:100% }
+    .esv-compra { width:100% }
+    .esv-acciones { flex-wrap:nowrap !important; width:100% }
+    .esv-acciones .esv-ver { flex:1 1 auto; min-width:0 }
+    .esv-ico-txt { display:none }
+    .esv-ico { width:48px; padding:0 !important; flex:0 0 48px }
+  }
   @media (prefers-reduced-motion: reduce) { .esv-carta { transition:none } .esv-dato { animation:none } }
 `;
 
@@ -125,16 +139,27 @@ export function EscenarioVolt({ productos, opciones, inicialId, acento, moneda, 
   return (
     <div style={{ ...({ "--esv-acento": acento, "--esv-fondo": conAlfa(acento, 0.16) } as React.CSSProperties) }}>
       {/* Cabecera: el título a la izquierda, el filtro por tipo a la derecha. */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "18px 24px", flexWrap: "wrap", marginBottom: "clamp(18px,3vw,28px)" }}>
+      <div className="esv-cabeza" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "18px 24px", flexWrap: "wrap", marginBottom: "clamp(18px,3vw,28px)" }}>
         <div style={{ minWidth: 0, maxWidth: 640 }}>{cabecera}</div>
         {opciones.tipos.length > 1 && (
-          <div role="group" aria-label="Filtrar por tipo" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <>
+          <label className="esv-select">
+            <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Filtrar por tipo</span>
+            <select value={tipo} onChange={e => setTipo(e.target.value)}
+              style={{ width: "100%", minHeight: 48, borderRadius: 12, border: `1px solid ${conAlfa(acento, 0.45)}`, background: "rgba(5,7,13,0.7)", color: "#fff", padding: "0 14px", fontSize: 15, fontFamily: "inherit" }}>
+              {[{ valor: "", label: "Todos los tipos", cuantos: productos.length }, ...opciones.tipos].map(t => (
+                <option key={t.valor || "todos"} value={t.valor} style={{ background: "#0a0e19" }}>{t.label} ({t.cuantos})</option>
+              ))}
+            </select>
+          </label>
+          <div role="group" aria-label="Filtrar por tipo" className="esv-chips" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[{ valor: "", label: "Todos", cuantos: productos.length }, ...opciones.tipos].map(t => (
               <button key={t.valor || "todos"} type="button" aria-pressed={tipo === t.valor} onClick={() => setTipo(t.valor)} style={chip(tipo === t.valor)}>
                 {t.label} <span style={{ fontFamily: MONO, fontSize: 11, opacity: 0.7 }}>{t.cuantos}</span>
               </button>
             ))}
           </div>
+          </>
         )}
       </div>
       {selector}
@@ -217,24 +242,25 @@ export function EscenarioVolt({ productos, opciones, inicialId, acento, moneda, 
                 {datosDelActual.filter(([, v]) => v).map(([k, v]) => <span key={k}>{v}</span>).reduce<React.ReactNode[]>((acc, el, i) => i ? [...acc, <span key={`s${i}`} aria-hidden="true">·</span>, el] : [el], [])}
               </p>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, flex: "0 1 auto", minWidth: 0 }}>
+            <div className="esv-compra" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12, flex: "0 1 auto", minWidth: 0 }}>
               <div>
                 {oferta && <p style={{ margin: 0, fontSize: 14, color: "rgba(232,236,246,0.45)", textDecoration: "line-through" }}>{fmtPrice(p.comparePrice!, monedaDe(p, moneda))}</p>}
                 <p style={{ margin: 0, fontSize: "clamp(26px,3.4vw,38px)", fontWeight: 800, letterSpacing: -1, color: "#fff", textShadow: `0 0 28px ${conAlfa(acento, 0.5)}` }}>
                   {p.price > 0 ? fmtPrice(p.price, monedaDe(p, moneda)) : "Consultar"}
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Link href={hrefDe(p)} style={{ ...boton, background: acento, color: sobreAcento, fontWeight: 800, boxShadow: `0 10px 30px -10px ${conAlfa(acento, 0.85)}` }}>Ver el vehículo</Link>
-                {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ ...boton, border: "1px solid rgba(255,255,255,0.2)", color: "#fff" }}><WaIcon size={16} /> Consultar</a>}
+              <div className="esv-acciones" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Link href={hrefDe(p)} className="esv-ver" style={{ ...boton, background: acento, color: sobreAcento, fontWeight: 800, boxShadow: `0 10px 30px -10px ${conAlfa(acento, 0.85)}` }}>Ver el vehículo</Link>
+                {wa && <a href={wa} target="_blank" rel="noopener noreferrer" aria-label="Consultar por WhatsApp" className="esv-ico" style={{ ...boton, border: "1px solid rgba(255,255,255,0.2)", color: "#fff" }}><WaIcon size={16} /><span className="esv-ico-txt" aria-hidden="true">Consultar</span></a>}
                 <button type="button" onClick={() => onFavorito(p.id)} aria-pressed={favoritos.includes(p.id)} aria-label={favoritos.includes(p.id) ? "Quitar de favoritos" : "Guardar en favoritos"}
                   style={{ ...boton, width: 48, padding: 0, border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: favoritos.includes(p.id) ? acento : "#fff" }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill={favoritos.includes(p.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </button>
                 {productos.length > 1 && (
-                  <button type="button" onClick={() => onComparar(p.id)} aria-pressed={comparando.includes(p.id)}
+                  <button type="button" onClick={() => onComparar(p.id)} aria-pressed={comparando.includes(p.id)} className="esv-ico"
+                    aria-label={comparando.includes(p.id) ? "Sacar de la comparación" : "Comparar"}
                     style={{ ...boton, border: `1px solid ${comparando.includes(p.id) ? acento : "rgba(255,255,255,0.2)"}`, background: comparando.includes(p.id) ? conAlfa(acento, 0.16) : "transparent", color: "#fff" }}>
-                    <span aria-hidden="true" style={{ fontFamily: MONO }}>⇄</span> {comparando.includes(p.id) ? "Comparando" : "Comparar"}
+                    <span aria-hidden="true" style={{ fontFamily: MONO, fontSize: 17 }}>⇄</span><span className="esv-ico-txt" aria-hidden="true">{comparando.includes(p.id) ? "Comparando" : "Comparar"}</span>
                   </button>
                 )}
               </div>

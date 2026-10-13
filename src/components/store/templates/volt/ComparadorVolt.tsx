@@ -23,8 +23,10 @@ export const COMPARADOR_VOLT_CSS = `
   .cmv-tabla { overflow-x:auto; scrollbar-width:thin; border-radius:22px }
   .cmv-grilla { display:grid }
   .cmv-etq { position:sticky; left:0; z-index:2 }
-  .cmv-pista { display:none }
-  @media (max-width: 600px) { .cmv-pista { display:block } }
+  /* En el celular la tabla no entraba (había que deslizarla y se perdía la columna de los
+     nombres): ahí va otro armado, los vehículos arriba y cada dato con su nombre encima. */
+  .cmv-celu { display:none }
+  @media (max-width: 640px) { .cmv-escritorio { display:none } .cmv-celu { display:block } }
 `;
 
 const MAX = 3;
@@ -74,8 +76,8 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
 
   return (
     <>
-    {columnas > 1 && <p className="cmv-pista" style={{ margin: "0 0 10px", fontFamily: MONO, fontSize: 11, letterSpacing: 1.5, color: "rgba(232,236,246,0.55)" }}>DESLIZÁ PARA VER LOS DEMÁS →</p>}
-    <div className="cmv-tabla" style={{ background: "#0a0e19", border: `1px solid ${conAlfa(acento, 0.25)}` }}>
+    <ComparadorCelu elegidos={elegidos} libres={libres} filas={filas} acento={acento} hrefDe={hrefDe} onQuitar={onQuitar} onAgregar={onAgregar} />
+    <div className="cmv-tabla cmv-escritorio" style={{ background: "#0a0e19", border: `1px solid ${conAlfa(acento, 0.25)}` }}>
       <div className="cmv-grilla" role="table" aria-label="Comparación de vehículos" style={{ gridTemplateColumns: plantilla, width: "100%",
         // Ancho del contenedor, salvo que no entren: recién ahí se desliza de costado (en el celular).
         minWidth: 120 + columnas * 190 }}>
@@ -128,5 +130,62 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
       </div>
     </div>
     </>
+  );
+}
+
+/** El comparador en el celular: hasta tres columnas parejas, sin deslizar de costado. */
+function ComparadorCelu({ elegidos, libres, filas, acento, hrefDe, onQuitar, onAgregar }: {
+  elegidos: StorefrontProduct[];
+  libres: StorefrontProduct[];
+  filas: { etiqueta: string; valor: (p: StorefrontProduct) => string; mejor?: number }[];
+  acento: string;
+  hrefDe: (p: StorefrontProduct) => string;
+  onQuitar: (id: string) => void;
+  onAgregar: (id: string) => void;
+}) {
+  const cols = `repeat(${Math.max(1, elegidos.length)}, minmax(0, 1fr))`;
+  return (
+    <div className="cmv-celu" style={{ borderRadius: 20, padding: 12, background: "#0a0e19", border: `1px solid ${conAlfa(acento, 0.25)}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: cols, gap: 8 }}>
+        {elegidos.map(p => (
+          <div key={p.id} style={{ minWidth: 0 }}>
+            <div style={{ position: "relative", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: "#03040a" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- foto de la tienda */}
+              {p.images[0] && <img src={fotoLiviana(p.images[0], 256)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+              <button type="button" onClick={() => onQuitar(p.id)} aria-label={`Sacar ${p.name} de la comparación`}
+                style={{ position: "absolute", top: 4, right: 4, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(5,7,13,0.75)", color: "#fff", fontSize: 16, cursor: "pointer", padding: 0 }}>×</button>
+            </div>
+            <Link href={hrefDe(p)} style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginTop: 6, color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: 12.5, lineHeight: 1.3 }}>{p.name}</Link>
+          </div>
+        ))}
+      </div>
+      {elegidos.length < 3 && libres.length > 0 && (
+        <select value="" onChange={e => e.target.value && onAgregar(e.target.value)} aria-label="Sumar otro vehículo a la comparación"
+          style={{ width: "100%", minHeight: 44, marginTop: 12, borderRadius: 12, background: "#05070d", color: "#fff", border: `1px dashed ${conAlfa(acento, 0.5)}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14 }}>
+          <option value="">+ Sumar otro vehículo</option>
+          {libres.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      )}
+      <dl style={{ margin: "12px 0 0" }}>
+        {filas.map(f => (
+          <div key={f.etiqueta} style={{ padding: "10px 0", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <dt style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "rgba(232,236,246,0.5)", marginBottom: 6 }}>{f.etiqueta}</dt>
+            <dd style={{ margin: 0, display: "grid", gridTemplateColumns: cols, gap: 8 }}>
+              {elegidos.map((p, i) => {
+                const v = f.valor(p);
+                const gana = f.mejor === i;
+                return (
+                  <span key={p.id} style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: 13.5, fontWeight: gana ? 800 : 500, color: v ? "#fff" : "rgba(232,236,246,0.35)",
+                    padding: gana ? "4px 6px" : "4px 0", borderRadius: 8, background: gana ? conAlfa(acento, 0.14) : undefined }}>
+                    {v || "—"}
+                    {gana && <span style={{ display: "block", fontFamily: MONO, fontSize: 8.5, letterSpacing: 1.5, color: acento, marginTop: 2 }}>● MEJOR</span>}
+                  </span>
+                );
+              })}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }

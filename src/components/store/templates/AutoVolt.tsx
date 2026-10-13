@@ -310,6 +310,12 @@ export default function AutoVolt() {
         /* La foto de la agencia se inclina un poco con el mouse, como una pieza en una vitrina. */
         .av-incl { transition: transform .6s cubic-bezier(.2,.8,.2,1) }
         @media (hover:hover) { .av-incl:hover { transform: perspective(900px) rotateY(-5deg) rotateX(2deg) } }
+        /* La agencia en el celular: los números en dos columnas parejas y los botones a todo el ancho (quedaban corridos a un costado). */
+        @media(max-width:640px){
+          .av-stats { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) }
+          .av-ctas { flex-direction:column }
+          .av-ctas > * { width:100%; justify-content:center; box-sizing:border-box }
+        }
         .av-link { transition: color .15s }
         .av-link:hover { color:${accent} !important }
         @keyframes av-spin { to { transform:rotate(360deg) } }
@@ -647,7 +653,7 @@ export default function AutoVolt() {
               <EditableZone field="nosotrosP1" label="Párrafo de la agencia">Somos especialistas en compra y venta de vehículos usados y a estrenar. Cada uno tiene fotos reales, su ficha técnica y el precio a la vista.</EditableZone>
             </p>
             {stats.length > 0 && (
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "0 0 26px" }}>
+              <div className="av-stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "0 0 26px" }}>
                 {stats.map((s, i) => (
                   <div key={s.fv} style={{ padding: "12px 16px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.12)" : conAlfa(accent, 0.3)}`, background: fNosotros.claro ? "rgba(11,16,32,0.03)" : conAlfa(accent, 0.07), minWidth: 0 }}>
                     <p data-ef-contar style={{ margin: 0, fontFamily: MONO, fontSize: 24, fontWeight: 700, lineHeight: 1, color: fNosotros.claro ? fNosotros.tinta : "#fff", textShadow: fNosotros.claro ? "none" : `0 0 16px ${conAlfa(accent, 0.55)}` }}>
@@ -660,7 +666,7 @@ export default function AutoVolt() {
                 ))}
               </div>
             )}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div className="av-ctas" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {waLink && (
                 <a href={waLink} target="_blank" rel="noopener noreferrer"
                   style={{ display: "inline-flex", alignItems: "center", gap: 10, minHeight: 50, padding: "0 22px", borderRadius: 14, background: "#25d366", color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: 15, boxShadow: "0 12px 34px -12px rgba(37,211,102,0.7)" }}>
