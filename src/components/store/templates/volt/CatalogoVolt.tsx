@@ -5,6 +5,9 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, fmtPrice, esReservado, vehicleLocation } from "@/components/store/auto/AutoVehicleShared";
 import { usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
+import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
+import { getBrandLogoUrl, brandAbbr } from "@/components/store/auto/marcasLogos";
+import { TiraVolt } from "./TiraVolt";
 import { VentanaAuto } from "@/components/store/auto/VentanaAuto";
 import { monedaDe, monedaDeTienda, precioEn, conPuntos, sinPuntos } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, usaHoras, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
@@ -105,6 +108,10 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
   const [verFiltros, setVerFiltros] = useState(false);
   const [avisame, setAvisame] = useState(false);
   const cerrarAvisame = useCallback(() => setAvisame(false), []);
+  const [tasar, setTasar] = useState(false);
+  const cerrarTasar = useCallback(() => setTasar(false), []);
+  /* Logos de marca que no cargaron: va la sigla. */
+  const [sinLogo, setSinLogo] = useState<Record<string, boolean>>({});
   const principal = monedaDeTienda({ currency: moneda });
   const sobreAcento = getContrastColor(acento) === "dark" ? "#05070d" : "#fff";
 
@@ -198,6 +205,17 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
         </p>
       </div>
 
+      {/* ── ACCIONES ── como en el catálogo de Motor y Drive: avisame y tasar
+          a mano siempre, no sólo cuando la búsqueda no encuentra nada. */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+        <button type="button" onClick={() => setAvisame(true)} style={{ ...chip(false), minHeight: 42, borderRadius: 12 }}>
+          <span aria-hidden="true" style={{ color: acento, marginRight: 6 }}>◉</span>Avisame si entra
+        </button>
+        <button type="button" onClick={() => setTasar(true)} style={{ ...chip(false), minHeight: 42, borderRadius: 12 }}>
+          <span aria-hidden="true" style={{ color: acento, marginRight: 6 }}>⇄</span>Tasá tu usado
+        </button>
+      </div>
+
       {/* ── BUSCAR, TIPO Y FILTROS ── */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
         <div style={{ position: "relative", flex: "1 1 260px", minWidth: 0 }}>
@@ -228,6 +246,31 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* ── MARCAS ── con su logo, como en Motor y Drive. Tocar una filtra; tocarla
+          de nuevo la saca. Las que no tienen logo conocido van con la sigla. */}
+      {opciones.marcas.length > 1 && (
+        <div style={{ marginBottom: 14 }}>
+          <TiraVolt acento={acento} etiqueta="Marcas" gap={8}>
+            {opciones.marcas.map(m => {
+              const activa = filtro.marca === m.valor;
+              const logo = sinLogo[m.valor] ? null : getBrandLogoUrl(m.label);
+              return (
+                <button key={m.valor} type="button" aria-pressed={activa} onClick={() => cambiar({ marca: activa ? null : m.valor })}
+                  style={{ ...chip(activa), flexShrink: 0, minHeight: 46, padding: "0 14px 0 6px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                    {logo
+                      // eslint-disable-next-line @next/next/no-img-element -- logo de marca de un sitio externo, chico
+                      ? <img src={logo} alt="" width={20} height={20} loading="lazy" onError={() => setSinLogo(e => ({ ...e, [m.valor]: true }))} style={{ objectFit: "contain" }} />
+                      : <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, color: "#05070d" }}>{brandAbbr(m.label)}</span>}
+                  </span>
+                  {m.label} <span style={{ fontFamily: MONO, fontSize: 11, opacity: 0.7 }}>{m.cuantos}</span>
+                </button>
+              );
+            })}
+          </TiraVolt>
         </div>
       )}
 
@@ -391,6 +434,9 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
         </>
       )}
 
+      <VentanaAuto abierta={tasar} titulo="Tasá tu usado" onClose={cerrarTasar} panel={PANEL_VOLT}>
+        <TasacionVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} abiertoDeEntrada oscuro />
+      </VentanaAuto>
       <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={cerrarAvisame} panel={PANEL_VOLT}>
         <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} marcaInicial={marcaActiva?.label ?? filtro.q.trim()} oscuro />
       </VentanaAuto>

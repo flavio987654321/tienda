@@ -85,6 +85,10 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 }) {
   const pal = oscuro ? TEMA_OSCURO : TEMA_CLARO;
   const [abierto, setAbierto] = useState(abiertoDeEntrada);
+  /* Cerrado con la X. Sin esto la X no cerraba nada (13/10/26): un borrador con
+     algo elegido reabre el formulario solo —para retomar al volver a la página—,
+     y eso también le ganaba a la X. El borrador queda: al abrir, sigue donde iba. */
+  const [cerradoAMano, setCerradoAMano] = useState(false);
   const [trampa, setTrampa] = useState("");
   const borrador = useSessionDraft(
     storeId && !isOwner && !isPreview ? `tienda:tasacion:${storeId}:${producto?.id ?? "general"}` : null,
@@ -110,7 +114,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   const pasoCambioEn = useRef(0);
   const recienCambio = () => ahora() - pasoCambioEn.current < 400;
   const soloMirando = !storeId || isOwner || isPreview;
-  const formularioAbierto = abierto || (borrador.loaded && hayTasacion(borrador.value));
+  const formularioAbierto = abierto || (!cerradoAMano && borrador.loaded && hayTasacion(borrador.value));
   const sobreAcento = getContrastColor(accent) === "dark" ? "#111" : "#fff";
 
   // Al cambiar de paso, el foco va al título: el lector de pantalla anuncia dónde está.
@@ -219,7 +223,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   /* ── Cerrada: una invitación, no un botón perdido ── */
   if (!formularioAbierto) {
     return (
-      <button type="button" onClick={() => setAbierto(true)} className="tv-cta"
+      <button type="button" onClick={() => { setCerradoAMano(false); setAbierto(true); }} className="tv-cta"
         style={{ ...raiz, display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", cursor: "pointer",
           background: `linear-gradient(135deg, ${accent}14, ${accent}05), ${pal.fondo}`, border: `1.5px solid ${accent}55`, borderRadius: 14,
           padding: "16px 18px", fontFamily: "inherit" }}>
@@ -257,7 +261,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
             <span style={{ fontSize: 12, color: pal.suave }}>Paso {paso} de 4</span>
             {/* Metida en la página no tenía cómo cerrarse (08/10/26). Lo cargado queda: si la vuelve a abrir, sigue donde estaba. */}
             {!abiertoDeEntrada && (
-              <button type="button" onClick={() => { setError(""); setAbierto(false); }} aria-label="Cerrar la tasación"
+              <button type="button" onClick={() => { setError(""); setAbierto(false); setCerradoAMano(true); }} aria-label="Cerrar la tasación"
                 style={{ width: 32, height: 32, marginRight: -6, borderRadius: "50%", border: "none", background: "transparent", color: pal.suave,
                   fontSize: 20, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             )}

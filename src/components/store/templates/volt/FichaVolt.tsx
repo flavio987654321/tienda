@@ -152,6 +152,14 @@ function Plegable({ acento, titulo, cuantos, children }: { acento: string; titul
   );
 }
 
+function IconoPdf() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M12 18v-6" /><path d="m9 15 3 3 3-3" />
+    </svg>
+  );
+}
+
 export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
   const { slug, storeName, currency, whatsapp, product: p, products, isPreview, isOwner, legales, accentOverride, storeId, socialLinks, footerBg, fraseDelPie } = view;
   const acento = accentOverride ?? "#22d3ee";
@@ -382,13 +390,6 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
                 <Control items={AUTO_SERVICES.map(s => ({ label: s.label, tiene: !!services[s.key] }))} acento={acento} />
               </Plegable>
             )}
-            {tipoFicha && !isPreview && (
-              <p style={{ margin: "16px 0 0", display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <a href={urlFichaPdf(p.id)} target="_blank" rel="noopener" style={botonLinea}>Ver la ficha en PDF</a>
-                <a href={urlFichaPdf(p.id, true)} download style={botonLinea}>Descargar</a>
-                {ficha?.folleto && <a href={ficha.folleto.url} target="_blank" rel="noopener noreferrer" style={botonLinea}>Folleto de la concesionaria</a>}
-              </p>
-            )}
 
             {p.description && (
               <Bloque acento={acento} codigo="04 // NOTAS" titulo="Descripción">
@@ -424,6 +425,28 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
               )}
               <ConsultaVehiculo product={p} accent={acento} precioTexto={precio} whatsappNumber={whatsapp ?? ""} whatsappEnabled={!!whatsapp}
                 storeId={storeId ?? undefined} isOwner={isOwner} isPreview={isPreview} año={anio} oscuro />
+              {/* La ficha técnica para llevarse, al lado de consultar como en Motor y Drive
+                  (13/10/26: abajo de los plegables no la encontraba nadie). En el editor se
+                  ve pero no baja: los vehículos de muestra no existen y el PDF daría 404. */}
+              {tipoFicha && (
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${LINEA}` }}>
+                  <p style={{ margin: "0 0 10px", fontFamily: MONO, fontSize: 10.5, letterSpacing: 2.5, color: acento }}>{"// FICHA TÉCNICA"}</p>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {isPreview ? (
+                      <>
+                        <span aria-disabled="true" style={{ ...botonLinea, opacity: 0.55, cursor: "default" }}><IconoPdf /> Descargar ficha (PDF)</span>
+                        <span style={{ fontSize: 12, color: TENUE }}>En la tienda publicada se descarga con los datos de cada vehículo.</span>
+                      </>
+                    ) : (
+                      <>
+                        <a href={urlFichaPdf(p.id, true)} download style={botonLinea}><IconoPdf /> Descargar ficha (PDF)</a>
+                        <a href={urlFichaPdf(p.id)} target="_blank" rel="noopener" style={botonLinea}>Ver la ficha en PDF</a>
+                        {ficha?.folleto && <a href={ficha.folleto.url} target="_blank" rel="noopener noreferrer" style={botonLinea}><IconoPdf /> Folleto de la concesionaria</a>}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
         </div>
