@@ -46,7 +46,7 @@ function TarjetaTipo({ g, href, foto, fotoPropia, campoFoto, editando, posX, pos
     }
   }
   return (
-    <div className="tp-item" style={{ position:"relative", overflow:controlesAbiertos ? "visible" : "hidden", borderRadius:4, background:"#141619", minHeight:140,
+    <div className="tp-item" style={{ position:"relative", overflow:controlesAbiertos ? "visible" : "hidden", borderRadius:4, background:"#141619", minHeight:140, width:"100%",
       aspectRatio:"16 / 10", border:"1px solid rgba(255,255,255,0.08)",
       zIndex:controlesAbiertos ? 5 : undefined }}>
       <Link href={href} aria-label={`${g.label}, ${g.cuantos} vehículos`} style={{ position:"absolute", inset:0, display:"block", color:"#fff", textDecoration:"none" }}>

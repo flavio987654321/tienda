@@ -319,7 +319,7 @@ export default function AutoMotor() {
         .tp-foto { transition: transform .8s cubic-bezier(.2,.7,.2,1) }
         .tp-item:hover .tp-foto { transform: scale(1.05) }
         .tp-item:focus-visible { outline:2px solid ${accent}; outline-offset:3px }
-        .fm-grilla { grid-template-columns:1fr }
+        .fm-grilla { grid-template-columns:minmax(0,1fr) }
         @media(min-width:900px){ .fm-grilla { grid-template-columns:1.25fr 1fr } }
         .fm-foto { aspect-ratio: 16/11 }
         @media(min-width:900px){ .fm-foto { aspect-ratio:auto } }

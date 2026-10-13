@@ -41,7 +41,7 @@ export function FocoMotor({ p, acento, moneda, whatsapp, enPrevia, href, kicker 
   return (
     <div className="fm-grilla" style={{ display: "grid", gap: 0, background: "#141619", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
       <Link href={href} aria-label={`Ver ${p.name}`}
-        style={{ position: "relative", display: "block", minHeight: 280, background: "#0b0c0e" }} className="fm-foto">
+        style={{ position: "relative", display: "block", minHeight: 280, width: "100%", background: "#0b0c0e" }} className="fm-foto">
         {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la tienda */}
         <img src={fotoLiviana(p.images[0], 1200)} alt="" onError={e => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         {p.images.length > 1 && (
