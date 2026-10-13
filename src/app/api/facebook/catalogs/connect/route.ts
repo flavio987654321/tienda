@@ -66,7 +66,9 @@ export async function POST(req: NextRequest) {
         // Meta no habilita los catálogos de vehículos en todos los países. Si lo
         // rechaza, que se entienda y quede la salida del catálogo común.
         // Un token vencido o un permiso faltante no es eso: siguen su camino.
-        if (deVehiculos && traducirErrorGraph(err, "catalogos").status === 502) {
+        // Que Meta tarde tampoco: eso no dice nada sobre los vehículos.
+        const porTiempo = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+        if (deVehiculos && !porTiempo && traducirErrorGraph(err, "catalogos").status === 502) {
           console.error("Facebook /catalogs/connect: Meta rechazó el catálogo de vehículos:", err);
           return NextResponse.json({
             error: "Meta no nos dejó crear un catálogo de vehículos en tu portfolio. Podés crear uno común: tus autos entran como productos, con foto, precio y link.",

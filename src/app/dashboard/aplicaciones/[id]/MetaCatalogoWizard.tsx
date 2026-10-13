@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2, ChevronRight, ExternalLink, Unlink, Plus, AlertCircle, RefreshCw } from "lucide-react";
 import {
@@ -305,6 +305,7 @@ function CatalogStep({ done, catalogId, autos }: { done: boolean; catalogId: str
   // Meta no deja crear catálogos de vehículos en todos lados. Si lo rechazó,
   // queda a mano el común (los autos entran como productos).
   const [sinVehiculos, setSinVehiculos] = useState(false);
+  const enCurso = useRef(false);
   const [changing, setChanging] = useState(false);
   const [intento, setIntento] = useState(0);
 
@@ -326,6 +327,9 @@ function CatalogStep({ done, catalogId, autos }: { done: boolean; catalogId: str
   }, [picking, intento]);
 
   async function choose(body: { catalogId: string } | { name: string; tipo?: "vehiculos" }) {
+    // El `disabled` tarda un render: dos clics pegados creaban dos catálogos en Meta.
+    if (enCurso.current) return;
+    enCurso.current = true;
     setBusyId("catalogId" in body ? body.catalogId : "nuevo");
     setActionError(null);
     const err = await postJson("/api/facebook/catalogs/connect", body);
@@ -333,9 +337,13 @@ function CatalogStep({ done, catalogId, autos }: { done: boolean; catalogId: str
     // porque al "Cambiar" un catálogo ya conectado el paso sigue estando hecho,
     // así que el estado no cambia solo y no hay nada que desmonte el spinner.
     setBusyId(null);
+    enCurso.current = false;
     if (err) {
       setActionError(err);
-      if ("tipo" in body && body.tipo === "vehiculos") setSinVehiculos(true);
+      if (err.includes("catálogo de vehículos")) setSinVehiculos(true);
+      // Si la respuesta se cortó por tiempo, Meta puede haberlo creado igual:
+      // se vuelve a traer la lista para que aparezca y no se cree otro.
+      if ("name" in body) reintentar();
       return;
     }
     setChanging(false);
@@ -512,7 +520,7 @@ function ResumenVehiculos({ autos }: { autos: NonNullable<Autos> }) {
   useEffect(() => {
     if (!autos.publicada) return;
     let cancelado = false;
-    fetch(`/api/store/feed-vehiculos?store=${encodeURIComponent(autos.slug)}&ver=1`, { cache: "no-store" })
+    fetch(`/api/store/feed-vehiculos?store=${encodeURIComponent(autos.slug)}&ver=1`, { cache: "no-store", signal: AbortSignal.timeout(30_000) })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: Resumen | null) => { if (!cancelado && d) setResumen(d); })
       .catch(() => {});
@@ -558,13 +566,17 @@ function FeedStep({ done, catalogId, autos }: { done: boolean; catalogId: string
   // Sólo para el reenvío: el paso ya estaba en verde antes de tocar, así que sin
   // esto no cambia nada en pantalla y no hay forma de saber si pasó algo.
   const [reenviado, setReenviado] = useState(false);
+  const enCurso = useRef(false);
 
   async function connectFeed() {
+    if (enCurso.current) return;
+    enCurso.current = true;
     setConnecting(true);
     setError(null);
     setReenviado(false);
     const err = await postJson("/api/facebook/feed/connect");
     setConnecting(false);
+    enCurso.current = false;
     if (err) {
       setError(err);
       return;

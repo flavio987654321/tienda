@@ -31,9 +31,13 @@ export function getOAuthUrl(state: string) {
   return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
 }
 
+// Si Meta se cuelga, que la llamada falle con un error en vez de dejar el botón
+// del panel girando hasta que Vercel corte la función.
+const GRAPH_TIMEOUT_MS = 20_000;
+
 async function graphGet<T>(path: string, token: string, extraParams?: Record<string, string>): Promise<T> {
   const params = new URLSearchParams({ access_token: token, ...extraParams });
-  const res = await fetch(`${GRAPH_URL}${path}?${params.toString()}`);
+  const res = await fetch(`${GRAPH_URL}${path}?${params.toString()}`, { signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message ?? `Graph API error en ${path}`);
   return data as T;
@@ -41,7 +45,7 @@ async function graphGet<T>(path: string, token: string, extraParams?: Record<str
 
 async function graphPost<T>(path: string, token: string, body: Record<string, string>): Promise<T> {
   const params = new URLSearchParams({ access_token: token, ...body });
-  const res = await fetch(`${GRAPH_URL}${path}`, { method: "POST", body: params });
+  const res = await fetch(`${GRAPH_URL}${path}`, { method: "POST", body: params, signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message ?? `Graph API error en ${path}`);
   return data as T;
@@ -49,7 +53,7 @@ async function graphPost<T>(path: string, token: string, body: Record<string, st
 
 async function graphDelete<T>(path: string, token: string): Promise<T> {
   const params = new URLSearchParams({ access_token: token });
-  const res = await fetch(`${GRAPH_URL}${path}?${params.toString()}`, { method: "DELETE" });
+  const res = await fetch(`${GRAPH_URL}${path}?${params.toString()}`, { method: "DELETE", signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message ?? `Graph API error borrando ${path}`);
   return data as T;

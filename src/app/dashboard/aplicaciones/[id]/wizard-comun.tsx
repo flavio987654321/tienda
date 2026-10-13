@@ -29,10 +29,19 @@ export const statusOf = (done: boolean, prevDone: boolean): StepStatus =>
  * apaga el spinner nunca corre. Así quedaban los botones girando para siempre,
  * sin forma de destrabarlos salvo recargando la página entera.
  */
+function mensajeDeRed(e: unknown) {
+  return e instanceof DOMException && e.name === "TimeoutError"
+    ? "Meta está tardando en contestar. Esperá un minuto y probá de nuevo."
+    : "No pudimos conectarnos. Revisá tu internet y probá de nuevo.";
+}
+
 export async function postJson(url: string, body?: unknown): Promise<string | null> {
   try {
     const res = await fetch(url, {
       method: "POST",
+      // Un paso de Meta no puede quedar girando para siempre: a los 45 s se corta
+      // y se muestra el error con la opción de reintentar.
+      signal: AbortSignal.timeout(45_000),
       ...(body === undefined
         ? {}
         : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
@@ -40,8 +49,8 @@ export async function postJson(url: string, body?: unknown): Promise<string | nu
     if (res.ok) return null;
     const d = await res.json().catch(() => ({}));
     return typeof d?.error === "string" ? d.error : "No se pudo completar la acción. Probá de nuevo.";
-  } catch {
-    return "No pudimos conectarnos. Revisá tu internet y probá de nuevo.";
+  } catch (e) {
+    return mensajeDeRed(e);
   }
 }
 
@@ -55,9 +64,9 @@ export async function postJson(url: string, body?: unknown): Promise<string | nu
 export async function getJson<T>(url: string, fallback: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url);
-  } catch {
-    throw new Error("No pudimos conectarnos. Revisá tu internet y probá de nuevo.");
+    res = await fetch(url, { signal: AbortSignal.timeout(45_000) });
+  } catch (e) {
+    throw new Error(mensajeDeRed(e));
   }
   const d = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof d?.error === "string" ? d.error : fallback);
