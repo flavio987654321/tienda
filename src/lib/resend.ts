@@ -1338,13 +1338,13 @@ export async function sendTermsUpdatedEmail({
         <ul style="margin:0 0 24px;padding-left:20px;">${items}</ul>
         <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:16px 18px;margin-bottom:24px;">
           <p style="margin:0;font-size:14px;color:#3730a3;line-height:1.6;">
-            Para seguir usando tu cuenta necesitamos que los aceptes. Entrá y vas a ver un cartel arriba
-            con el botón para hacerlo — te lleva menos de un segundo.
+            La próxima vez que entres a tu cuenta vas a ver un aviso arriba para confirmar que los
+            leíste. Es un solo clic.
           </p>
         </div>
         ${APP_URL ? `
         <div style="text-align:center;margin-bottom:24px;">
-          <a href="${APP_URL}${acceptPath}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Entrar y aceptar</a>
+          <a href="${APP_URL}${acceptPath}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Ir a mi cuenta</a>
         </div>
         <p style="font-size:13px;color:#9ca3af;text-align:center;margin-bottom:24px;">
           También podés leerlos completos en
