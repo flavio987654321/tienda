@@ -43,6 +43,7 @@ import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import { CAPAS } from "@/lib/capas-tienda";
 import { esAtributoInterno } from "@/lib/fichaVehiculo";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -1995,7 +1996,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                       {img && (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+                          <img src={fotoLiviana(img, 640)} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
                           <div style={{ position:"absolute", inset:0, background: isActive ? `${G}55` : "linear-gradient(to top, rgba(0,0,0,0.55), transparent 60%)" }} />
                         </>
                       )}
@@ -3063,7 +3064,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
               Pasarla por `next/image` la redimensionaría al alto de la pantalla,
               que es lo contrario de lo que la persona pidió al abrirla. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxSrc} alt="" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <img src={fotoLiviana(lightboxSrc, 1920)} alt="" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}

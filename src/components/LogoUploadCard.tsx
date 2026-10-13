@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Upload, Trash2, Image as ImageIcon, Loader2, Check, X, Play } from "lucide-react";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 interface LogoUploadCardProps {
   storeName: string;
@@ -84,6 +86,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
       setError("Solo se permiten imágenes (JPG, PNG, WEBP)");
       return;
     }
+    file = await achicarAntesDeSubir(file);
     if (file.size > 4 * 1024 * 1024) {
       setError("La imagen no puede superar los 4 MB");
       return;
@@ -164,7 +167,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
           <div className="relative shrink-0">
             {logo ? (
               <img
-                src={logo}
+                src={fotoLiviana(logo, 256)}
                 alt={storeName}
                 className="h-20 w-20 rounded-xl object-cover ring-2 ring-slate-200 panel-oscuro:ring-gray-700 shadow-md"
               />
@@ -285,7 +288,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                   onClick={() => setShowShareModal(true)}
                 >
                   <div className="h-14 bg-gradient-to-r from-purple-50 to-indigo-50 flex items-center gap-3 px-3">
-                    <img src={logo} alt={storeName} className="h-9 w-9 rounded-lg object-cover" />
+                    <img src={fotoLiviana(logo, 256)} alt={storeName} className="h-9 w-9 rounded-lg object-cover" />
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-gray-900 truncate">{storeName}</p>
                       <p className="text-[10px] text-gray-400 truncate">tiendaapps.com</p>
@@ -310,7 +313,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                       style={{ background: splashBg }}
                       onClick={() => setShowSplashModal(true)}
                     >
-                      <img src={logo} alt={storeName} className="h-10 w-10 rounded-xl object-cover shadow-md" />
+                      <img src={fotoLiviana(logo, 256)} alt={storeName} className="h-10 w-10 rounded-xl object-cover shadow-md" />
                       <p className="text-xs font-bold text-white truncate px-4" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
                         {storeName}
                       </p>
@@ -374,7 +377,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
               <div className="bg-[#ECE5DD] rounded-xl p-3">
                 <div className="bg-white rounded-lg overflow-hidden shadow-sm">
                   <div className="h-36 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
-                    <img src={logo} alt={storeName} className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+                    <img src={fotoLiviana(logo, 256)} alt={storeName} className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
                   </div>
                   <div className="p-3">
                     <p className="text-xs font-bold text-gray-900">{storeName}</p>
@@ -390,7 +393,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Telegram / otros</p>
               <div className="rounded-xl border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-3 px-3 py-3 border-l-4 border-purple-500 bg-purple-50/40">
-                  <img src={logo} alt={storeName} className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                  <img src={fotoLiviana(logo, 256)} alt={storeName} className="h-10 w-10 rounded-lg object-cover shrink-0" />
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-gray-900 truncate">{storeName}</p>
                     <p className="text-[11px] text-gray-500 truncate">Comprá en {storeName} — Envíos a todo el país</p>
@@ -436,7 +439,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                 {/* Store content placeholder */}
                 <div className="p-3 pt-8">
                   <div className="flex items-center gap-2 mb-4">
-                    <img src={logo} alt={storeName} className="h-8 w-8 rounded-lg object-cover" />
+                    <img src={fotoLiviana(logo, 256)} alt={storeName} className="h-8 w-8 rounded-lg object-cover" />
                     <div className="h-3 bg-gray-200 rounded-full flex-1" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -462,7 +465,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                     }}
                   >
                     <img
-                      src={logo}
+                      src={fotoLiviana(logo, 256)}
                       alt={storeName}
                       className="h-16 w-16 rounded-2xl object-cover shadow-xl"
                     />

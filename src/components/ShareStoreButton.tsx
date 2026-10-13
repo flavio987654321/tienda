@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Share2, Copy, Check, X, Smartphone } from "lucide-react";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ── Platform SVG icons ── */
 function WaIcon() {
@@ -173,7 +174,7 @@ export default function ShareStoreButton({
             <div className="rounded-xl border border-gray-200 overflow-hidden mb-4 shadow-sm">
               <div className="h-28 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
                 {storeLogo ? (
-                  <img src={storeLogo} alt={storeName} className="h-16 w-16 rounded-2xl object-cover shadow-lg" />
+                  <img src={fotoLiviana(storeLogo, 256)} alt={storeName} className="h-16 w-16 rounded-2xl object-cover shadow-lg" />
                 ) : (
                   <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
                     <span className="text-xl font-black text-white">{initials}</span>

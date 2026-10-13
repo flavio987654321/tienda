@@ -60,14 +60,19 @@ export const BUCKET_VIDEOS = "store-videos";
    contesta 413 "The object exceeded the maximum allowed size" y el bucket
    directamente no se crea, con lo cual la subida falla sin explicar por qué.
    Probado: 50 entra, 100 no. Para subirlo hay que levantar el límite global en
-   el panel de Supabase, y eso depende del plan. */
-export const MAX_VIDEO_MB = 50;
+   el panel de Supabase, y eso depende del plan.
+   13/10/26: bajado a 20 MB y 1 minuto. Los 50 eran el techo de Supabase, no lo
+   que conviene: cada vez que alguien abre un video se baja entero desde Supabase,
+   que cobra el tráfico de salida, y un video de 17 MB ya había hecho gastar más
+   de 1 GB en un día. Un video de tienda de un minuto a 720p entra en 20 MB. */
+export const MAX_VIDEO_MB = 20;
+export const MAX_VIDEO_SEGUNDOS = 60;
 export const MAX_VIDEO_BYTES = MAX_VIDEO_MB * 1024 * 1024;
 
 /* Arriba de esto conviene avisar aunque entre: un video de tienda que pesa 30 MB
    lo va a mirar muy poca gente desde el celular, y el que lo mire lo va a pagar
    con sus datos. No bloquea. */
-export const VIDEO_PESADO_MB = 20;
+export const VIDEO_PESADO_MB = 12;
 
 export const TIPOS_VIDEO = new Set([
   "video/mp4",

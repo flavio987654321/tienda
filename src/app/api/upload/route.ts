@@ -9,6 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
    pedido adelante: los topes, los tipos permitidos y el freno por cuenta.
    `CACHE_DE_UN_ANIO` se fue con el guardado, que es quien la usa. */
 import { configDeImagenes, guardarImagen, guardarImagenEnDisco } from "@/lib/deposito-imagenes";
+import { LADO_MAXIMO_LOGO } from "@/lib/achicar-imagen";
 
 export const runtime = "nodejs";
 
@@ -157,6 +158,7 @@ export async function POST(req: NextRequest) {
         extension: extensionFor(file),
         tipo: file.type,
         carpeta,
+        ...(esLogo ? { ladoMaximo: LADO_MAXIMO_LOGO } : {}),
         /* Los documentos de identidad NO van con las fotos de producto: ese
            depósito es público a propósito —las fotos tienen que verse en la
            tienda sin sesión— y un DNI ahí queda legible para cualquiera que

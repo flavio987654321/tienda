@@ -1,3 +1,4 @@
+import { fotoLiviana } from "@/lib/foto-liviana";
 export default function ComingSoonPage({
   name,
   logo,
@@ -67,7 +68,7 @@ export default function ComingSoonPage({
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={logo}
+            src={fotoLiviana(logo, 256)}
             alt={name}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />

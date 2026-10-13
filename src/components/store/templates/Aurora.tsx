@@ -49,6 +49,7 @@ import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 
 const announcementMessages_DEFAULT = [
@@ -1454,7 +1455,7 @@ export default function Aurora() {
             <VolverAurora onClick={vista.irALaPortada} tinta={T} linea={LINEA_FUERTE} />
           </div>
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid ${LINEA}`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
+      <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid ${LINEA}`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${fotoLiviana(contactoBgImg.url, 1920)})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (
@@ -1510,7 +1511,7 @@ export default function Aurora() {
         </div>
       )}
 
-      <footer style={{ borderTop:`1px solid ${LINEA}`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
+      <footer style={{ borderTop:`1px solid ${LINEA}`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${fotoLiviana(footerBgImg.url, 1920)})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
@@ -1808,7 +1809,7 @@ export default function Aurora() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModalAlto : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
-          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <img src={fotoLiviana(lightboxSrc, 1920)} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}

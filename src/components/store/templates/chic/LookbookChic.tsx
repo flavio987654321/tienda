@@ -3,6 +3,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import { EditableZone, EditableImageButton, textoSobre, getReadableAccentText } from "@/contexts/EditContext";
 import { useLookbook, MAX_PUNTOS } from "@/components/store/templates/shared/useLookbook";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ══════════════════════════════════════════════════════════════════════════
    COMPRÁ EL LOOK (el lookbook de Chic Paris)
@@ -74,7 +75,7 @@ export function LookbookChic({
       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod); } }}
       style={{ position:"relative", pointerEvents:"auto", width:"100%", maxWidth:330, boxSizing:"border-box", display:"flex", alignItems:"center", gap:12,
         padding:8, paddingRight:16, cursor:"pointer", background:"rgba(255,255,255,0.97)", borderRadius:4, boxShadow:"0 12px 30px rgba(0,0,0,0.18)", color:"#111" }}>
-      <div style={{ width:42, height:56, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${JSON.stringify(prod.images[0])}) center/cover` }} />
+      <div style={{ width:42, height:56, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${JSON.stringify(fotoLiviana(prod.images[0], 128))}) center/cover` }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 3px", fontSize:13, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13 }}>{precio(prod)}</p>
@@ -107,7 +108,7 @@ export function LookbookChic({
                 <div key={look.n} onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
                   style={{ position:"relative", aspectRatio:"4/5", width:"100%", overflow:"hidden", background:"#f0ebe5",
                     outline: marcando ? `1px dashed ${ACC}` : "none", outlineOffset:-8, cursor: marcando ? "crosshair" : "default" }}>
-                  <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(look.url)}) center/cover` }} />
+                  <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(fotoLiviana(look.url, 1200))}) center/cover` }} />
 
                   {puntosVisibles.map((pt, i) => {
                     const prod = porId.get(pt.id);
@@ -222,7 +223,7 @@ export function LookbookChic({
                       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(p); } }}
                       style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", borderBottom:`1px solid ${linea}`, cursor:"pointer", color:tinta }}>
                       <span aria-hidden style={{ flexShrink:0, width:20, fontFamily:PLAYFAIR, fontStyle:"italic", fontSize:17, color: resaltado ? acento : suave, transition:"color .25s" }}>{i + 1}</span>
-                      <div style={{ width:54, height:72, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${JSON.stringify(p.images[0])}) center/cover` }} />
+                      <div style={{ width:54, height:72, flexShrink:0, borderRadius:2, background:`#f5f5f5 url(${JSON.stringify(fotoLiviana(p.images[0], 256))}) center/cover` }} />
                       <div style={{ minWidth:0, flex:1 }}>
                         <p style={{ margin:"0 0 4px", fontSize:14, fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{p.name}</p>
                         <p style={{ margin:0, fontSize:14, color: ocultarPrecios ? suave : tinta }}>{precio(p)}</p>

@@ -18,6 +18,7 @@ import { instruccionesParaClaude, pedidoDeConversion, pedidoDeCambios, INDICACIO
 import { tieneTraba } from "@/lib/landing-revision";
 import ConsejoDeUso from "../../../ConsejoDeUso";
 import { useAvisoSinGuardar } from "../../../useAvisoSinGuardar";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 export type VersionEnPantalla = {
   id: string;
@@ -190,6 +191,7 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
 
   async function subirFoto(clave: string, file: File) {
     if (!file.type.startsWith("image/")) return setError("Eso no es una imagen.");
+    file = await achicarAntesDeSubir(file);
     if (file.size > MAX_FOTO_MB * 1024 * 1024) return setError(`La imagen no puede pesar más de ${MAX_FOTO_MB} MB. Exportala más chica y probá de nuevo.`);
     setGuardando(clave);
     try {

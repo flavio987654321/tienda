@@ -2,6 +2,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
 import { CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
+import { achicarImagen } from "@/lib/achicar-imagen";
 
 /**
  * Dónde se guardan las imágenes, en un solo lugar.
@@ -91,15 +92,29 @@ async function asegurarDeposito(
  */
 export async function guardarImagen(
   bytes: ArrayBuffer | Buffer,
-  { extension, tipo, carpeta = "products", deposito, publico = true }: {
+  { extension, tipo, carpeta = "products", deposito, publico = true, ladoMaximo }: {
     extension: string;
     /** El `content-type` con el que se va a servir. */
     tipo: string;
     carpeta?: string;
     deposito?: string;
     publico?: boolean;
+    /** Para achicar la imagen: el logo usa menos. Ver `achicar-imagen`. */
+    ladoMaximo?: number;
   },
 ): Promise<string> {
+  /* Toda imagen PÚBLICA se achica acá, venga de donde venga (13/10/26): cada
+     visita la baja de Supabase, que cobra el tráfico. Las privadas —el DNI de
+     un afiliado— quedan como vinieron: no se sirven a nadie más. */
+  if (publico && tipo.startsWith("image/")) {
+    const achicada = await achicarImagen(bytes, { ladoMaximo });
+    if (achicada) {
+      bytes = achicada.bytes;
+      extension = achicada.extension;
+      tipo = achicada.tipo;
+    }
+  }
+
   const config = configDeImagenes();
   if (!config) {
     throw new Error("Falta configurar Supabase Storage en Vercel para subir archivos.");

@@ -9,6 +9,7 @@ import {
   type ClaveLegal, type ClaveDePagina,
 } from "@/lib/politicas-tienda";
 import ArrepentimientoForm from "@/components/ArrepentimientoForm";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-4 sm:px-8">
           {store.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={store.logo} alt={store.name} className="h-7 w-auto object-contain" />
+            <img src={fotoLiviana(store.logo, 256)} alt={store.name} className="h-7 w-auto object-contain" />
           ) : (
             <span className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: acc }}>
               <ShoppingBag className="h-3.5 w-3.5 text-white" />

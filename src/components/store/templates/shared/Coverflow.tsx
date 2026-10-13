@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Coverflow: paneles en perspectiva real.
@@ -192,7 +193,7 @@ export function Coverflow({
           aria-hidden="true"
           style={{
             position: "absolute", inset: -40,
-            backgroundImage: `url(${p.imagen})`, backgroundSize: "cover", backgroundPosition: "center",
+            backgroundImage: `url(${fotoLiviana(p.imagen, 828)})`, backgroundSize: "cover", backgroundPosition: "center",
             filter: "blur(38px) saturate(130%) brightness(.42)",
             opacity: i === activo ? 1 : 0,
             transition: "opacity .7s ease",
@@ -301,7 +302,7 @@ export function Coverflow({
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- fondo decorativo del carrusel, ya viene optimizado del storefront */}
-                <img src={p.imagen} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <img src={fotoLiviana(p.imagen, 828)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 {/* Las de los costados van apagadas: sin esto compiten con la del
                     centro y la fila se lee como cinco cosas, no como una elegida. */}
                 <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: base, opacity: centro ? 0 : 0.42 + (abs - 1) * 0.16, transition: "opacity .62s ease" }} />

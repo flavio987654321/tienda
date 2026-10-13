@@ -6,6 +6,7 @@ import { pedirTurno } from "@/lib/interrupcion-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 import { esIOS } from "@/lib/pwa";
 import { X, Download, Share } from "lucide-react";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* `esIOS` vivía acá. Se movió a `lib/pwa` cuando el panel necesitó hacer la
    misma pregunta —en iPhone las notificaciones piden la app instalada—, para no
@@ -228,7 +229,7 @@ export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
               >
                 {logo ? (
                   <img
-                    src={logo}
+                    src={fotoLiviana(logo, 128)}
                     alt={name}
                     className="h-9 w-9 object-contain"
                     draggable={false}

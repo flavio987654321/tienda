@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Upload, Loader2, Check, HeartHandshake, Plus, X, Trash2, Pencil } from "lucide-react";
 import { useSavedNumberField, useSavedTextField } from "./useSavedNumberField";
 import { calculateGoalAmount } from "@/lib/canasta";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 type Product = {
   id: string;
@@ -93,7 +94,7 @@ function ProductRow({
     setUploadError(null);
     try {
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", await achicarAntesDeSubir(file));
       const uploadRes = await fetch("/api/upload", { method: "POST", body: form });
       if (!uploadRes.ok) {
         const data = await uploadRes.json().catch(() => ({}));
@@ -254,7 +255,7 @@ function AddProductCard({ campaignId, onAdded }: { campaignId: string; onAdded: 
     setError(null);
     try {
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", await achicarAntesDeSubir(file));
       const uploadRes = await fetch("/api/upload", { method: "POST", body: form });
       if (!uploadRes.ok) {
         const data = await uploadRes.json().catch(() => ({}));

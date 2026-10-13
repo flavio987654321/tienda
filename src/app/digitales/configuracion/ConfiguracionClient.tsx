@@ -15,6 +15,7 @@ import TabPagos from "./TabPagos";
 import TabMeta from "./TabMeta";
 import TabLegales, { type ClaveDoc, type Politica } from "./TabLegales";
 import { aplicarTema, temaGuardado, EVENTO_TEMA, type Tema } from "@/lib/tema-digitales";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 type Props = {
   tier: TierDigital;
@@ -212,6 +213,7 @@ export default function ConfiguracionClient(p: Props) {
       setError("Eso no es una imagen.");
       return;
     }
+    file = await achicarAntesDeSubir(file);
     if (file.size > MAX_LOGO_MB * 1024 * 1024) {
       setError(`El logo no puede pesar más de ${MAX_LOGO_MB} MB.`);
       return;

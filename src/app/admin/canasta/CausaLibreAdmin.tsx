@@ -4,6 +4,7 @@ import CampoTelefono from "@/components/CampoTelefono";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, HeartHandshake, Upload, Plus, Trash2 } from "lucide-react";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 type Campaign = {
   id: string;
@@ -17,7 +18,7 @@ type Campaign = {
 
 async function uploadFile(file: File) {
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", await achicarAntesDeSubir(file));
   const res = await fetch("/api/upload", { method: "POST", body: form });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "No se pudo subir el archivo");

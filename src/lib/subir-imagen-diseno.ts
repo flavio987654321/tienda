@@ -30,3 +30,21 @@ export async function subirImagenDeDiseno(file: File): Promise<string> {
   if (!res.ok || !datos.url) throw new Error(datos.error ?? "No se pudo subir la imagen. Probá de nuevo.");
   return datos.url;
 }
+
+/**
+ * Achicar en el navegador ANTES de mandar, para cualquier formulario (13/10/26).
+ *
+ * El servidor achica igual todo lo público (`lib/achicar-imagen`), así que esto
+ * no es lo que protege el depósito: es lo que deja pasar la foto del celular de
+ * 6 MB, que si no choca con el techo de 4,5 MB del pedido y rebota. Lo que no es
+ * imagen (un PDF) o es GIF vuelve tal cual. Si el navegador no puede, también.
+ */
+export async function achicarAntesDeSubir(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+  try {
+    const { optimizeImage } = await import("@/lib/image-optimizer");
+    return await optimizeImage(file, { maxSidePx: LADO_MAXIMO, maxBytes: PESO_MAXIMO, startQuality: 0.85 });
+  } catch {
+    return file;
+  }
+}

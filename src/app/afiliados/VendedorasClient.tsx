@@ -11,6 +11,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { textoPlano, textoPlanoCorto } from "@/lib/texto-plano";
 import { esAppInstalada } from "@/lib/pwa";
 import AvisoDelPanel from "@/components/AvisoDelPanel";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 import {
   dibujarPlaca, fuentesListas, familiaDeMarca, money,
   FORMAT_SIZES, FORMAT_LABELS, PLACA_TEMPLATES,
@@ -1089,7 +1090,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
     setCvError("");
 
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", await achicarAntesDeSubir(file));
     fd.append("purpose", "affiliate-doc");
 
     const res = await fetch("/api/upload", { method: "POST", body: fd });
@@ -1340,7 +1341,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
     if (!file) return;
     setUploading(true);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", await achicarAntesDeSubir(file));
     const res = await fetch("/api/upload", { method: "POST", body: fd });
     const data = await res.json();
     if (data.url) upd("image", data.url);

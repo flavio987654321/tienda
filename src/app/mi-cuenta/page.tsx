@@ -31,6 +31,7 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { AgregarContrasena } from "@/components/AgregarContrasena";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 type Tab = "pedidos" | "favoritos" | "tiendas" | "resenas" | "perfil";
 
@@ -419,7 +420,7 @@ export default function MiCuentaPage() {
     setUploadError("");
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", await achicarAntesDeSubir(file));
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) { setUploadError(data.error || "Error al subir la foto"); return; }
@@ -444,7 +445,7 @@ export default function MiCuentaPage() {
     setUploadBannerError("");
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", await achicarAntesDeSubir(file));
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) { setUploadBannerError(data.error || "Error al subir la imagen"); return; }

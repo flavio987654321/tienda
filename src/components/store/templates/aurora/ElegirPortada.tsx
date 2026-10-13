@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { useEditContext } from "@/contexts/EditContext";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ══════════════════════════════════════════════════════════════════════════
    LA PORTADA, EN EL EDITOR: productos O foto propia
@@ -146,7 +147,7 @@ export function ElegirPortada({ productos, elegidos, modo, foto, tinta, acento, 
                           boxShadow: n >= 0 ? `0 0 16px ${acento}88` : "none" }}>
                         {/* <img> con lazy, y no fondo: carga sólo las que se ven en la caja. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.images[0]} alt="" loading="lazy" decoding="async" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+                        <img src={fotoLiviana(p.images[0], 256)} alt="" loading="lazy" decoding="async" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
                         {/* El nombre: con muchos productos parecidos, la foto sola no alcanza. */}
                         <span style={{ position:"absolute", left:0, right:0, bottom:0, padding:"14px 5px 4px", fontSize:9.5, lineHeight:1.2, color:"#fff", textAlign:"left",
                           background:"linear-gradient(to top, rgba(0,0,0,.8), transparent)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
@@ -191,7 +192,7 @@ export function ElegirPortada({ productos, elegidos, modo, foto, tinta, acento, 
             </button>
             {modo === "foto" && (
               <div style={{ display:"flex", alignItems:"center", gap:10, padding:"2px 4px 4px" }}>
-                {foto && <span aria-hidden style={{ width:56, height:40, flexShrink:0, borderRadius:8, backgroundImage:`url(${foto})`, backgroundSize:"cover", backgroundPosition:"center", border:`1px solid ${linea}` }} />}
+                {foto && <span aria-hidden style={{ width:56, height:40, flexShrink:0, borderRadius:8, backgroundImage:`url(${fotoLiviana(foto, 128)})`, backgroundSize:"cover", backgroundPosition:"center", border:`1px solid ${linea}` }} />}
                 <div style={{ minWidth:0 }}>
                   <button type="button" onClick={abrirPanelFoto} style={{ ...chip, background:acento, color:textoAcento, border:"none" }}>
                     {foto ? "Cambiar o acomodar la foto" : "Subir la foto"}

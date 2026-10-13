@@ -3,6 +3,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import { EditableZone, EditableImageButton, textoSobre } from "@/contexts/EditContext";
 import { useLookbook, MAX_PUNTOS } from "@/components/store/templates/shared/useLookbook";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ══════════════════════════════════════════════════════════════════════════
    COMPRÁ EL LOOK (el lookbook de Urban Pulse)
@@ -75,7 +76,7 @@ export function LookbookUrban({
       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod); } }}
       style={{ position:"relative", pointerEvents:"auto", width:"100%", maxWidth:340, boxSizing:"border-box", display:"flex", alignItems:"center", gap:12,
         padding:8, paddingRight:14, cursor:"pointer", background:"#fff", border:`3px solid ${NEGRO}`, color:NEGRO }}>
-      <div style={{ width:44, height:58, flexShrink:0, background:`#eee url(${JSON.stringify(prod.images[0])}) center/cover` }} />
+      <div style={{ width:44, height:58, flexShrink:0, background:`#eee url(${JSON.stringify(fotoLiviana(prod.images[0], 128))}) center/cover` }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 4px", fontSize:11.5, fontWeight:900, textTransform:"uppercase", letterSpacing:0.5, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13, fontWeight:900 }}>{precio(prod)}</p>
@@ -110,7 +111,7 @@ export function LookbookUrban({
                 style={{ position:"relative", aspectRatio:"4/5", width:"100%", overflow:"hidden", background:"#ddd", border:`3px solid ${NEGRO}`,
                   boxShadow:`${sombra}px ${sombra}px 0 ${ACC}`, boxSizing:"border-box", cursor: marcando ? "crosshair" : "default",
                   outline: marcando ? `3px dashed ${NEGRO}` : "none", outlineOffset:4 }}>
-                <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(look.url)}) center/cover` }} />
+                <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(fotoLiviana(look.url, 1200))}) center/cover` }} />
 
                 {puntosVisibles.map((pt, i) => {
                   const prod = porId.get(pt.id);
@@ -220,7 +221,7 @@ export function LookbookUrban({
                       style={{ display:"flex", alignItems:"center", gap: isMobile ? 12 : 16, padding:"14px 0", borderBottom:`2px solid ${tinta}`, cursor:"pointer", color:tinta }}>
                       <span aria-hidden style={{ flexShrink:0, width: isMobile ? 34 : 44, fontSize: isMobile ? 20 : 26, fontWeight:900, letterSpacing:"-1px",
                         color: resaltado ? acentoTexto : tinta, transition:"color .2s" }}>{dos(i + 1)}</span>
-                      <div style={{ width:54, height:70, flexShrink:0, background:`#ddd url(${JSON.stringify(p.images[0])}) center/cover`, border:`2px solid ${NEGRO}` }} />
+                      <div style={{ width:54, height:70, flexShrink:0, background:`#ddd url(${JSON.stringify(fotoLiviana(p.images[0], 256))}) center/cover`, border:`2px solid ${NEGRO}` }} />
                       <div style={{ minWidth:0, flex:1 }}>
                         <p style={{ margin:"0 0 5px", fontSize:12.5, fontWeight:900, textTransform:"uppercase", letterSpacing:0.5, lineHeight:1.25, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{p.name}</p>
                         <p style={{ margin:0, fontSize:14, fontWeight:900, color: ocultarPrecios ? suave : tinta }}>{precio(p)}</p>

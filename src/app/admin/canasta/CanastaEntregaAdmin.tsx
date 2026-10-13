@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, Users, Mail, HeartHandshake, Upload, Trash2 } from "lucide-react";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 type Donor = {
   id: string;
@@ -113,7 +114,7 @@ function CompletarCampanaForm({ campaign, type }: { campaign: Campaign; type: "C
     setError(null);
     try {
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", await achicarAntesDeSubir(file));
       const res = await fetch("/api/upload", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo subir el archivo");
@@ -248,7 +249,7 @@ function TestimonialEditor({ campaignId, defaultDonorName, existing }: { campaig
     setError(null);
     try {
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", await achicarAntesDeSubir(file));
       const res = await fetch("/api/upload", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo subir el archivo");

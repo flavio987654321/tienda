@@ -30,6 +30,7 @@ import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
 import { descripcionLegible } from "@/lib/descripcionLegible";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
@@ -368,7 +369,7 @@ export default function ProductDetailClient({
               ) : null}
               {product.images[activeImg] ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.images[activeImg]} alt={product.name} className="w-full h-full object-cover" />
+                <img src={fotoLiviana(product.images[activeImg], 1200)} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300">Sin imagen</div>
               )}
@@ -379,7 +380,7 @@ export default function ProductDetailClient({
                   <button key={url + i} onClick={() => setActiveImg(i)}
                     className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${i === activeImg ? "border-indigo-500" : "border-transparent"}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <img src={fotoLiviana(url, 256)} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -521,7 +522,7 @@ export default function ProductDetailClient({
                   <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden mb-2">
                     {p.images[0] && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <img src={fotoLiviana(p.images[0], 640)} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     )}
                   </div>
                   <p className="text-xs text-gray-700 line-clamp-2">{p.name}</p>

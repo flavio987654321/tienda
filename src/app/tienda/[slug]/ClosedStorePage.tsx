@@ -1,3 +1,4 @@
+import { fotoLiviana } from "@/lib/foto-liviana";
 /**
  * Lo que ve un visitante cuando entra al link de una tienda cerrada.
  *
@@ -63,7 +64,7 @@ export default function ClosedStorePage({
       >
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={fotoLiviana(logo, 256)} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <span style={{ fontSize: 30, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>
             {initials}

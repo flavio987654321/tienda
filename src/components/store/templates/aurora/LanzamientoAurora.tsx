@@ -5,6 +5,7 @@ import { EditableZone, EditableImageButton, useEditContext } from "@/contexts/Ed
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
 import { CampoFecha } from "@/components/CampoFecha";
 import type { EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ══════════════════════════════════════════════════════════════════════════
    LANZAMIENTO (B-6 de AURORA.md)
@@ -193,7 +194,7 @@ export function LanzamientoAurora({ products, imagen, fmt, ocultarPrecios, onAbr
               border:`1px solid ${lanzado ? luz(0.6) : LINEA_FUERTE}`, background:"#0e0f1a",
               boxShadow:`0 40px 90px rgba(0,0,0,0.55), 0 0 ${lanzado ? 90 : 60}px ${luz(lanzado ? 0.35 : 0.18)}`, transition:"box-shadow 1s, border-color 1s" }}>
             {foto ? (
-              <div data-foto aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${foto})`, backgroundSize:"cover", backgroundPosition:"center",
+              <div data-foto aria-hidden style={{ position:"absolute", inset:0, backgroundImage:`url(${fotoLiviana(foto, 1920)})`, backgroundSize:"cover", backgroundPosition:"center",
                 filter: velado || !montado ? "blur(22px) brightness(0.45) saturate(0.6)" : "none", transform: velado || !montado ? "scale(1.15)" : "scale(1)",
                 transition:"filter 1.6s ease, transform 1.6s cubic-bezier(.2,.8,.2,1)" }} />
             ) : (

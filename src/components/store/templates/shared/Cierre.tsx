@@ -1,6 +1,7 @@
 "use client";
 import { canto, Inclinable, sombra, vidrio } from "./Materia";
 import { PiezaQueLlega } from "./GrillaProfunda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // El cierre: de las garantías al pie, una sola escena.
@@ -252,7 +253,7 @@ export function Nosotros({
                   que scrollear una pantalla entera de foto para llegar al resto. */}
               <div style={{ borderRadius: 22, overflow: "hidden", boxShadow: sombra("oscuro", 3), aspectRatio: "4 / 5", maxHeight: 560 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- la foto la sube cada tienda, el dominio es arbitrario */}
-                <img src={foto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <img src={fotoLiviana(foto, 1200)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
             </Inclinable>
           </PiezaQueLlega>

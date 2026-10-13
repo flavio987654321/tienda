@@ -4,6 +4,7 @@ import type { ActivePromotion } from "@/lib/pricing";
 import { EditableZone, EditableImageButton, textoSobre } from "@/contexts/EditContext";
 import { useLookbook, MAX_PUNTOS } from "@/components/store/templates/shared/useLookbook";
 import { Ramita } from "@/components/store/templates/boho/PreguntasBoho";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ══════════════════════════════════════════════════════════════════════════
    EL LOOK (el lookbook de Boho Terra)
@@ -77,7 +78,7 @@ export function LookbookBoho({
       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(prod); } }}
       style={{ position:"relative", pointerEvents:"auto", width:"100%", maxWidth:340, boxSizing:"border-box", display:"flex", alignItems:"center", gap:12,
         padding:8, paddingRight:16, cursor:"pointer", background:panel, border:"1px solid rgba(44,34,24,0.12)", boxShadow:"0 16px 36px rgba(44,34,24,0.22)", color:"#2c2218" }}>
-      <div style={{ width:44, height:58, flexShrink:0, background:`#f0e9df url(${JSON.stringify(prod.images[0])}) center/cover` }} />
+      <div style={{ width:44, height:58, flexShrink:0, background:`#f0e9df url(${JSON.stringify(fotoLiviana(prod.images[0], 128))}) center/cover` }} />
       <div style={{ minWidth:0, flex:1 }}>
         <p style={{ margin:"0 0 4px", fontFamily:SERIF, fontStyle:"italic", fontSize:14.5, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{prod.name}</p>
         <p style={{ margin:0, fontSize:13, fontWeight:700 }}>{precio(prod)}</p>
@@ -118,7 +119,7 @@ export function LookbookBoho({
             <div key={look.n} onClick={e => { if (marcando) marcar(e); else setPuntoAbierto(null); }}
               style={{ position:"relative", aspectRatio:"4/5", width:"100%", borderRadius:ARCO, overflow:"hidden", background:"#f0e9df",
                 outline: marcando ? `2px dashed ${A}` : "none", outlineOffset:-6, cursor: marcando ? "crosshair" : "default" }}>
-              <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(look.url)}) center/cover` }} />
+              <div aria-hidden style={{ position:"absolute", inset:0, background:`url(${JSON.stringify(fotoLiviana(look.url, 1200))}) center/cover` }} />
 
               {puntosVisibles.map((pt, i) => {
                 const prod = porId.get(pt.id);
@@ -231,7 +232,7 @@ export function LookbookBoho({
                     <div key={p.id} role="button" tabIndex={0} className="bt-look-fila" onClick={() => onAbrir(p)}
                       onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrir(p); } }}
                       style={{ display:"flex", alignItems:"center", gap:16, padding:"14px 0", borderBottom:`1px solid ${linea}`, cursor:"pointer", color:tinta }}>
-                      <div style={{ width:56, height:72, flexShrink:0, background:`#f0e9df url(${JSON.stringify(p.images[0])}) center/cover`,
+                      <div style={{ width:56, height:72, flexShrink:0, background:`#f0e9df url(${JSON.stringify(fotoLiviana(p.images[0], 256))}) center/cover`,
                         outline: resaltado ? `2px solid ${A}` : "none", outlineOffset:2, transition:"outline-color .2s" }} />
                       <div style={{ minWidth:0, flex:1 }}>
                         <p style={{ margin:"0 0 4px", fontSize:9.5, letterSpacing:2.5, textTransform:"uppercase", color:A }}>{p.category}</p>

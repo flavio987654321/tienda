@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import { CAPAS } from "@/lib/capas-tienda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 function ComingSoonMini({
   name,
@@ -54,7 +55,7 @@ function ComingSoonMini({
       >
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={fotoLiviana(logo, 128)} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <span style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{initials}</span>
         )}

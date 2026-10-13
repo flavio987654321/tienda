@@ -19,6 +19,7 @@ import {
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
 import PieDeAutos from "@/components/store/auto/PieDeAutos";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 type RawVehicle = {
   id: string;
@@ -606,7 +607,7 @@ function VehiculosPageInner() {
                     {logo ? (
                       /* Logo flotando sin fondo — drop-shadow sigue el contorno */
                       // eslint-disable-next-line @next/next/no-img-element -- logos de un CDN externo, chicos
-                      <img src={logo} alt="" width={56} height={56}
+                      <img src={fotoLiviana(logo, 128)} alt="" width={56} height={56}
                         style={{ objectFit:"contain", display:"block", borderRadius:10,
                           filter: shadow, transform: tf,
                           transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}

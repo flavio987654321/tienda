@@ -17,7 +17,7 @@ import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, camposOcultos, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
-import { MAX_VIDEO_MB, MAX_VIDEO_BYTES, VIDEO_PESADO_MB, CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
+import { MAX_VIDEO_MB, MAX_VIDEO_BYTES, MAX_VIDEO_SEGUNDOS, VIDEO_PESADO_MB, CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -383,6 +383,20 @@ async function optimizeImageForUpload(file: File) {
     maxSidePx: MAX_IMAGE_SIDE,
     maxBytes: MAX_UPLOAD_IMAGE_SIZE_BYTES,
     startQuality: 0.92,
+  });
+}
+
+/** Cuánto dura un video, leyendo sólo su encabezado. `null` si el navegador no puede. */
+function duracionDeVideo(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    const listo = (d: number | null) => { URL.revokeObjectURL(url); resolve(d); };
+    const espera = setTimeout(() => listo(null), 8000);
+    v.preload = "metadata";
+    v.onloadedmetadata = () => { clearTimeout(espera); listo(Number.isFinite(v.duration) ? v.duration : null); };
+    v.onerror = () => { clearTimeout(espera); listo(null); };
+    v.src = url;
   });
 }
 
@@ -1062,6 +1076,15 @@ function ProductoFormPage() {
     if (file.size > MAX_VIDEO_BYTES) {
       const pesa = (file.size / (1024 * 1024)).toFixed(1);
       setError(`El video pesa ${pesa} MB y el máximo es ${MAX_VIDEO_MB} MB. Probá recortarlo o bajarle la calidad.`);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+      return;
+    }
+    /* Y lo que dura: un video largo es un video pesado para el que lo mira. Si
+       el navegador no puede leer la duración (un formato raro), se deja pasar:
+       el tope de peso sigue mandando. */
+    const segundos = await duracionDeVideo(file);
+    if (segundos != null && segundos > MAX_VIDEO_SEGUNDOS + 1) {
+      setError(`El video dura ${Math.round(segundos)} segundos y el máximo es ${MAX_VIDEO_SEGUNDOS}. Recortalo y probá de nuevo.`);
       if (videoFileInputRef.current) videoFileInputRef.current.value = "";
       return;
     }

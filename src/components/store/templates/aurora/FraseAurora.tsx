@@ -2,6 +2,7 @@
 import { TITULO } from "@/components/store/templates/aurora/fuentes";
 import { colorRepresentativo } from "@/lib/section-bg";
 import type { EscenaCatalogo } from "@/components/store/templates/aurora/CatalogoAurora";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 /* ══════════════════════════════════════════════════════════════════════════
    FRASE DE MARCA (rediseño del bloque heredado, ver AURORA.md)
@@ -35,7 +36,7 @@ export function FraseAurora({ texto, fondo, foto, velo, tinta, conLuz, escena, i
 
   return (
     <section data-reveal className="au-frase" style={{ position:"relative", overflow:"hidden", textAlign:"center",
-      ...(foto ? { backgroundImage:`url(${foto.url})`, backgroundSize:"cover", backgroundPosition:foto.posicion } : { background:fondo }) }}>
+      ...(foto ? { backgroundImage:`url(${fotoLiviana(foto.url, 1920)})`, backgroundSize:"cover", backgroundPosition:foto.posicion } : { background:fondo }) }}>
       <style>{`
         @keyframes au-destello-frase { from { background-position: 120% 0 } to { background-position: -20% 0 } }
         @keyframes au-horizonte { 0%,100% { opacity: .8 } 50% { opacity: 1 } }

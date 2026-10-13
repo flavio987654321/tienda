@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // El hero: una foto a sangre, el texto a la izquierda.
@@ -167,11 +168,11 @@ export function HeroFoto({
             inset: 0,
             // La foto y el encuadre van en variables: la regla de `globals.css`
             // elige entre las de PC y las de celular según el ancho.
-            ["--hf-foto" as string]: `url(${src})`,
+            ["--hf-foto" as string]: `url(${fotoLiviana(src, 1920)})`,
             // El encuadre elegido es el de la foto propia, que siempre va primera.
             // Las de productos van centradas.
             ["--hf-pos" as string]: i === 0 ? posicion : "center",
-            ...(i === 0 && imagenCelular ? { ["--hf-foto-cel" as string]: `url(${imagenCelular})` } : null),
+            ...(i === 0 && imagenCelular ? { ["--hf-foto-cel" as string]: `url(${fotoLiviana(imagenCelular, 1200)})` } : null),
             ...(i === 0 && posicionCelular ? { ["--hf-pos-cel" as string]: posicionCelular } : null),
             backgroundSize: "cover",
             opacity: i === activa ? 1 : 0,
@@ -320,7 +321,7 @@ export function HeroFoto({
                   transition: "opacity .35s, transform .35s, box-shadow .35s, border-color .35s",
                   background: base,
                 }}>
-                <span aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${src})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                <span aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${fotoLiviana(src, 1920)})`, backgroundSize: "cover", backgroundPosition: "center" }} />
                 {/* La línea de luz. La `key` la reinicia cada vez que le toca. */}
                 {es && !quieto && (
                   <span key={`${activa}`} aria-hidden onAnimationEnd={() => ir(1)}
@@ -349,7 +350,7 @@ export function HeroFoto({
             animation: quieto ? undefined : "hf-entra .7s cubic-bezier(.16,.84,.32,1) both",
           }}>
           <div data-foto style={{ position: "relative", width: 60, height: 80, flexShrink: 0, borderRadius: 12, overflow: "hidden",
-            backgroundImage: `url(${imagenes[activa]})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+            backgroundImage: `url(${fotoLiviana(imagenes[activa], 1920)})`, backgroundSize: "cover", backgroundPosition: "center" }} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ margin: "0 0 4px", fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase", color: acento, fontWeight: 700 }}>En portada</p>
             <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pieza.titulo}</p>

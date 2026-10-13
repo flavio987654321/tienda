@@ -12,6 +12,7 @@ import { useCallback, useRef, useState } from "react";
 import { ImageIcon, Loader2, Search, Check, RotateCcw, X, Upload } from "lucide-react";
 import CampoAuto from "@/components/CampoAuto";
 import { LARGO_FOTO, type FotoElegida } from "@/lib/ebook-ia";
+import { achicarAntesDeSubir } from "@/lib/subir-imagen-diseno";
 
 /**
  * Cuánto puede pesar una foto propia.
@@ -144,6 +145,7 @@ export default function ElegirFoto({
   const subir = useCallback(async (file: File) => {
     if (enVuelo.current) return;
 
+    file = await achicarAntesDeSubir(file);
     if (file.size > MAX_FOTO_MB * 1024 * 1024) {
       setError(`La foto no puede pesar más de ${MAX_FOTO_MB} MB. Exportala más chica y probá de nuevo.`);
       return;

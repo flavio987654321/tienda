@@ -22,12 +22,13 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
-  if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
+  if (ov?.url) return { backgroundImage: `url(${fotoLiviana(ov.url, 1920)})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
 }
 function secText(ov: ImageOverride | undefined, bg: string): string {

@@ -27,6 +27,7 @@ import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 import { descripcionLegible } from "@/lib/descripcionLegible";
+import { fotoLiviana } from "@/lib/foto-liviana";
 
 // `maximumFractionDigits: 0` y no el valor de fábrica, que son TRES decimales.
 // Casi todo lo que llega acá ya viene entero —`pricing.ts` redondea a peso en
@@ -1103,7 +1104,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
         <div style={{ position: "fixed", inset: 0, zIndex: CAPAS.panel, background: "rgba(10,10,10,0.92)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxSrc} alt="" style={{ maxWidth: "94vw", maxHeight: "94vh", objectFit: "contain", touchAction: "pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <img src={fotoLiviana(lightboxSrc, 1920)} alt="" style={{ maxWidth: "94vw", maxHeight: "94vh", objectFit: "contain", touchAction: "pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar"
             style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>

@@ -239,7 +239,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
                   onError={e => { (e.currentTarget as HTMLImageElement).src = FOTO_VACIA; }} />
                 {lupa && (
                   <span aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundColor: tema === "oscuro" ? "#000" : "#e9ebef",
-                    backgroundImage: `url("${fotos[foto].replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundSize: "250%",
+                    backgroundImage: `url("${fotoLiviana(fotos[foto], 1920).replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundSize: "250%",
                     backgroundPosition: `${lupa.x * 100}% ${lupa.y * 100}%` }} />
                 )}
               </button>
