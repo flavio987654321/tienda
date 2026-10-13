@@ -9,7 +9,9 @@ import {
 } from "./wizard-comun";
 
 type Business = { id: string; name: string };
-type Catalog = { id: string; name: string };
+type Catalog = { id: string; name: string; vertical?: string };
+/** Sólo en tiendas de autos: el catálogo se crea como "Vehículos" de Meta. */
+type Autos = { slug: string; nombre: string; publicada: boolean } | null;
 
 type Props = {
   fbConnected: boolean;
@@ -19,9 +21,10 @@ type Props = {
   fbStatus?: "connected" | "error";
   /** El token de Meta ya venció: los pasos de abajo no van a funcionar. */
   fbVencido?: boolean;
+  autos?: Autos;
 };
 
-export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalogId, fbFeedId, fbStatus, fbVencido }: Props) {
+export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalogId, fbFeedId, fbStatus, fbVencido, autos = null }: Props) {
   const step1Done = fbConnected;
   const step2Done = !!fbBusinessId;
   const step3Done = step2Done && !!fbCatalogId;
@@ -34,10 +37,10 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
   const steps: { key: string; title: string; status: StepStatus }[] = [
     { key: "account",  title: "Cuenta de Facebook",       status: statusOf(step1Done, true) },
     { key: "business", title: "Portfolio comercial",      status: statusOf(step2Done, step1Done) },
-    { key: "catalog",  title: "Catálogo de productos",    status: statusOf(step3Done, step2Done) },
+    { key: "catalog",  title: autos ? "Catálogo de vehículos" : "Catálogo de productos", status: statusOf(step3Done, step2Done) },
     { key: "data",     title: "Uso compartido de datos",  status: statusOf(step4Done, step3Done) },
     { key: "terms",    title: "Condiciones",              status: statusOf(step5Done, step4Done) },
-    { key: "feed",     title: "Sincronizar tus productos", status: statusOf(step6Done, step5Done) },
+    { key: "feed",     title: autos ? "Sincronizar tus vehículos" : "Sincronizar tus productos", status: statusOf(step6Done, step5Done) },
   ];
 
   return (
@@ -66,7 +69,7 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
             <BusinessStep done={step2Done} businessId={fbBusinessId} />
           )}
           {step.key === "catalog" && step.status !== "locked" && (
-            <CatalogStep done={step3Done} catalogId={fbCatalogId} />
+            <CatalogStep done={step3Done} catalogId={fbCatalogId} autos={autos} />
           )}
           {step.key === "data" && step.status !== "locked" && (
             <DataSharingStep done={step4Done} onConfirm={() => setDataSharingOk(true)} />
@@ -75,7 +78,7 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
             <TermsStep done={step5Done} onConfirm={() => setTermsOk(true)} />
           )}
           {step.key === "feed" && step.status !== "locked" && (
-            <FeedStep done={step6Done} catalogId={fbCatalogId} />
+            <FeedStep done={step6Done} catalogId={fbCatalogId} autos={autos} />
           )}
         </StepCard>
       ))}
@@ -289,14 +292,19 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   );
 }
 
-function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | null }) {
+function CatalogStep({ done, catalogId, autos }: { done: boolean; catalogId: string | null; autos: Autos }) {
   const router = useRouter();
   const [catalogs, setCatalogs] = useState<Catalog[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
+  // En autos el nombre viene puesto: es un paso menos para alguien que ya
+  // viene peleado con Meta.
+  const [newName, setNewName] = useState(autos ? `Vehículos – ${autos.nombre}` : "");
+  // Meta no deja crear catálogos de vehículos en todos lados. Si lo rechazó,
+  // queda a mano el común (los autos entran como productos).
+  const [sinVehiculos, setSinVehiculos] = useState(false);
   const [changing, setChanging] = useState(false);
   const [intento, setIntento] = useState(0);
 
@@ -317,7 +325,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
     return () => { cancelado = true; };
   }, [picking, intento]);
 
-  async function choose(body: { catalogId: string } | { name: string }) {
+  async function choose(body: { catalogId: string } | { name: string; tipo?: "vehiculos" }) {
     setBusyId("catalogId" in body ? body.catalogId : "nuevo");
     setActionError(null);
     const err = await postJson("/api/facebook/catalogs/connect", body);
@@ -327,6 +335,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
     setBusyId(null);
     if (err) {
       setActionError(err);
+      if ("tipo" in body && body.tipo === "vehiculos") setSinVehiculos(true);
       return;
     }
     setChanging(false);
@@ -357,22 +366,36 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
     return <div className="flex items-center gap-2 text-sm text-slate-400 panel-oscuro:text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando catálogos…</div>;
   }
 
+  // En autos se muestran primero los de vehículos: si ya hay uno, es ese.
+  const lista = autos
+    ? [...catalogs].sort((a, b) => Number(b.vertical === "vehicles") - Number(a.vertical === "vehicles"))
+    : catalogs;
+  const hayDeVehiculos = catalogs.some((c) => c.vertical === "vehicles");
+  const crearDeVehiculos = !!autos && !sinVehiculos;
+
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
       <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-3">
-        {catalogs.length > 0
-          ? "Elegí el catálogo de productos donde vamos a sincronizar tu tienda."
-          : "Tu portfolio comercial todavía no tiene ningún catálogo de productos. Creá uno para empezar."}
+        {autos
+          ? hayDeVehiculos
+            ? "Elegí tu catálogo de vehículos. En Facebook e Instagram tus autos se muestran con marca, año, km y ubicación."
+            : "Vamos a crear un catálogo de vehículos en tu portfolio. En Facebook e Instagram tus autos se muestran con marca, año, km y ubicación."
+          : catalogs.length > 0
+            ? "Elegí el catálogo de productos donde vamos a sincronizar tu tienda."
+            : "Tu portfolio comercial todavía no tiene ningún catálogo de productos. Creá uno para empezar."}
       </p>
 
-      {catalogs.length > 0 && (
+      {lista.length > 0 && (
         <div className="space-y-2 mb-3">
-          {catalogs.map((c) => (
+          {lista.map((c) => (
             <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-800 panel-oscuro:text-gray-200 truncate">{c.name}</p>
-                <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 font-mono truncate">ID: {c.id}</p>
+                <p className="text-xs text-slate-400 panel-oscuro:text-gray-500 truncate">
+                  {autos && <span className="font-semibold">{c.vertical === "vehicles" ? "De vehículos" : "De productos comunes"} · </span>}
+                  <span className="font-mono">ID: {c.id}</span>
+                </p>
               </div>
               <button
                 onClick={() => choose({ catalogId: c.id })}
@@ -387,21 +410,21 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
         </div>
       )}
 
-      {creating || catalogs.length === 0 ? (
-        <div className="flex items-center gap-2">
+      {creating || catalogs.length === 0 || (crearDeVehiculos && !hayDeVehiculos) ? (
+        <div className="flex flex-wrap items-center gap-2">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nombre del catálogo nuevo"
-            className="flex-1 min-w-0 border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm text-slate-800 panel-oscuro:text-gray-200 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 panel-oscuro:focus:ring-indigo-500/30 focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
+            className="flex-1 min-w-[180px] border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-3 py-2 text-sm text-slate-800 panel-oscuro:text-gray-200 placeholder:text-slate-400 panel-oscuro:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 panel-oscuro:focus:ring-indigo-500/30 focus:border-indigo-300 panel-oscuro:focus:border-indigo-500/40"
           />
           <button
-            onClick={() => choose({ name: newName.trim() })}
+            onClick={() => choose(crearDeVehiculos ? { name: newName.trim(), tipo: "vehiculos" } : { name: newName.trim() })}
             disabled={!newName.trim() || busyId !== null}
             className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white panel-oscuro:bg-gray-100 panel-oscuro:text-gray-900 panel-oscuro:hover:bg-white text-xs font-semibold px-3 py-2 rounded-md disabled:opacity-40 shrink-0"
           >
             {busyId === "nuevo" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-            Crear catálogo
+            {crearDeVehiculos ? "Crear catálogo de vehículos" : autos ? "Crear catálogo común" : "Crear catálogo"}
           </button>
         </div>
       ) : (
@@ -409,7 +432,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
           onClick={() => setCreating(true)}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 panel-oscuro:text-indigo-400 hover:text-indigo-700 panel-oscuro:hover:text-indigo-300"
         >
-          <Plus className="h-3.5 w-3.5" /> Crear un catálogo nuevo
+          <Plus className="h-3.5 w-3.5" /> {crearDeVehiculos ? "Crear otro catálogo de vehículos" : "Crear un catálogo nuevo"}
         </button>
       )}
     </div>
@@ -474,7 +497,59 @@ function catalogUrl(catalogId: string | null) {
     : "https://business.facebook.com/commerce_manager";
 }
 
-function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null }) {
+type Resumen = { van: number; salteados: { id: string; nombre: string; motivo: string }[] };
+// Lo que no es un error de carga no se muestra como aviso: un auto vendido o un
+// repuesto quedan afuera a propósito.
+const NO_SE_CORRIGE = new Set(["vendido", "no es un vehículo con km"]);
+
+/**
+ * Cuántos vehículos viajan a Meta y cuáles no, con el motivo y el link para
+ * corregirlo. Sin esto, a la concesionaria le falta un auto en Facebook y no
+ * tiene forma de saber por qué. Lee el mismo feed que lee Meta (`&ver=1`).
+ */
+function ResumenVehiculos({ autos }: { autos: NonNullable<Autos> }) {
+  const [resumen, setResumen] = useState<Resumen | null>(null);
+  useEffect(() => {
+    if (!autos.publicada) return;
+    let cancelado = false;
+    fetch(`/api/store/feed-vehiculos?store=${encodeURIComponent(autos.slug)}&ver=1`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: Resumen | null) => { if (!cancelado && d) setResumen(d); })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, [autos.slug, autos.publicada]);
+
+  if (!autos.publicada) {
+    return (
+      <p className="text-xs text-amber-700 panel-oscuro:text-amber-300 font-semibold mb-3 leading-relaxed">
+        Tu tienda todavía no está publicada: Meta no puede leer tus vehículos hasta que la publiques.
+      </p>
+    );
+  }
+  if (!resumen) return null;
+  const aCorregir = resumen.salteados.filter((s) => !NO_SE_CORRIGE.has(s.motivo));
+  return (
+    <div className="mb-3 rounded-lg border border-slate-200 panel-oscuro:border-gray-700 px-4 py-3">
+      <p className="text-sm font-semibold text-slate-700 panel-oscuro:text-gray-200 flex items-center gap-1.5">
+        <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+        {resumen.van === 1 ? "1 vehículo va a Facebook e Instagram" : `${resumen.van} vehículos van a Facebook e Instagram`}
+      </p>
+      {aCorregir.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {aCorregir.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-amber-800 panel-oscuro:text-amber-300">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0"><strong>{s.nombre}</strong> no va: {s.motivo}.</span>
+              <a href={`/dashboard/productos/nuevo?edit=${s.id}`} className="font-bold underline">Corregir</a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function FeedStep({ done, catalogId, autos }: { done: boolean; catalogId: string | null; autos: Autos }) {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
   // `null` = sin error. El texto viene del backend porque distingue entre "hay
@@ -502,6 +577,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
     return (
       <div>
         <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-1.5">Tu catálogo ya está sincronizando con Facebook e Instagram.</p>
+        {autos && <ResumenVehiculos autos={autos} />}
         {/* Antes decía sólo la línea de arriba, y la dueña entraba a Commerce Manager
             esperando ver sus productos ya. Meta tarda en procesar la carga aunque se
             la pidamos al toque, y de ahí en más viaja una vez por día: si eso no está
@@ -535,12 +611,12 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 panel-oscuro:text-gray-400 hover:text-slate-700 panel-oscuro:hover:text-gray-300 transition-colors disabled:opacity-50"
           >
             {connecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {connecting ? "Enviando…" : "Volver a enviar mis productos"}
+            {connecting ? "Enviando…" : autos ? "Volver a enviar mis vehículos" : "Volver a enviar mis productos"}
           </button>
         </div>
         {reenviado ? (
           <p className="text-[11px] text-emerald-600 panel-oscuro:text-emerald-400 font-semibold mt-2 leading-relaxed">
-            Listo, se lo pedimos a Meta. Tus productos deberían aparecer en unos minutos.
+            Listo, se lo pedimos a Meta. Tus {autos ? "vehículos" : "productos"} deberían aparecer en unos minutos.
           </p>
         ) : (
           <p className="text-[11px] text-slate-400 panel-oscuro:text-gray-500 mt-2 leading-relaxed">
@@ -557,6 +633,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
       <p className="text-sm text-slate-500 panel-oscuro:text-gray-400 mb-4">
         Último paso: enviamos tus productos al catálogo que elegiste y le pedimos a Meta que los vaya a buscar en el momento; de ahí en más se actualizan una vez por día. Meta puede tardar unos minutos en procesarlos y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
       </p>
+      {autos && <ResumenVehiculos autos={autos} />}
       {error && <AvisoError mensaje={error} />}
       <button
         onClick={connectFeed}
@@ -564,7 +641,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
         className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
       >
         {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-        Sincronizar mis productos
+        {autos ? "Sincronizar mis vehículos" : "Sincronizar mis productos"}
       </button>
     </div>
   );

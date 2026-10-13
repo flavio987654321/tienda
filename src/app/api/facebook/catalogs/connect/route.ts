@@ -10,9 +10,12 @@ import {
 // para que un campo sin límite no sea una vía de abuso barata.
 const MAX_NOMBRE = 100;
 
-// POST /api/facebook/catalogs/connect  { catalogId } | { name }
+// POST /api/facebook/catalogs/connect  { catalogId } | { name, tipo? }
 // `catalogId`: usa un catálogo que el dueño eligió de la lista.
 // `name`: crea uno nuevo en el portfolio conectado y lo deja elegido.
+// `tipo: "vehiculos"` (sólo tiendas de autos): lo crea como catálogo de
+// vehículos de Meta. El feed que se le engancha después sale del tipo del
+// catálogo (ver feed/connect), así que alcanza con crearlo bien acá.
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -30,8 +33,9 @@ export async function POST(req: NextRequest) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, fbAccessToken: true, fbBusinessId: true, fbUserId: true, fbCatalogId: true, fbFeedId: true },
+    select: { id: true, tipoTienda: true, fbAccessToken: true, fbBusinessId: true, fbUserId: true, fbCatalogId: true, fbFeedId: true },
   });
+  const deVehiculos = body.tipo === "vehiculos" && store?.tipoTienda === "AUTOS";
   if (!store?.fbAccessToken) {
     return NextResponse.json({ error: "Facebook no está conectado" }, { status: 400 });
   }
@@ -55,7 +59,22 @@ export async function POST(req: NextRequest) {
       }
       chosen = match;
     } else {
-      const created = await createCatalog(token, store.fbBusinessId, name);
+      let created: { id: string };
+      try {
+        created = await createCatalog(token, store.fbBusinessId, name, deVehiculos ? "vehicles" : undefined);
+      } catch (err) {
+        // Meta no habilita los catálogos de vehículos en todos los países. Si lo
+        // rechaza, que se entienda y quede la salida del catálogo común.
+        // Un token vencido o un permiso faltante no es eso: siguen su camino.
+        if (deVehiculos && traducirErrorGraph(err, "catalogos").status === 502) {
+          console.error("Facebook /catalogs/connect: Meta rechazó el catálogo de vehículos:", err);
+          return NextResponse.json({
+            error: "Meta no nos dejó crear un catálogo de vehículos en tu portfolio. Podés crear uno común: tus autos entran como productos, con foto, precio y link.",
+            sinVehiculos: true,
+          }, { status: 422 });
+        }
+        throw err;
+      }
       chosen = { id: created.id, name };
 
       // Sin esto el dueño no puede administrar en Meta el catálogo que acaba de

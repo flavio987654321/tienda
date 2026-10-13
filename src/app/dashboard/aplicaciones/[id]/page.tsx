@@ -67,6 +67,9 @@ export default async function AppDetailPage({
     select: {
       id: true,
       name: true,
+      slug: true,
+      tipoTienda: true,
+      isPublished: true,
       storeConfig: true,
       fbConnectedAt: true,
       fbBusinessId: true,
@@ -376,6 +379,7 @@ export default async function AppDetailPage({
                     fbFeedId={store?.fbFeedId ?? null}
                     fbStatus={fb === "connected" ? "connected" : fb === "error" ? "error" : undefined}
                     fbVencido={metaVencido}
+                    autos={store?.tipoTienda === "AUTOS" ? { slug: store.slug, nombre: store.name, publicada: store.isPublished } : null}
                   />
                 )}
                 {app.id === "google-analytics" && (

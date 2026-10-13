@@ -121,12 +121,24 @@ export async function listOwnedBusinesses(token: string): Promise<{ data: { id: 
   return graphGet("/me/businesses", token, { fields: "id,name,created_time" });
 }
 
-export async function listOwnedCatalogs(token: string, businessId: string): Promise<{ data: { id: string; name: string }[] }> {
-  return graphGet(`/${businessId}/owned_product_catalogs`, token, { fields: "id,name" });
+/**
+ * El tipo de catálogo de Meta. "commerce" es el de productos de siempre;
+ * "vehicles" es el de autos, que lleva otro feed (ver feedVehiculosMeta) y Meta
+ * lo muestra con marca, año y km. No se puede cambiar después de creado.
+ */
+export type VerticalCatalogo = "commerce" | "vehicles" | string;
+
+export async function listOwnedCatalogs(token: string, businessId: string): Promise<{ data: { id: string; name: string; vertical?: VerticalCatalogo }[] }> {
+  return graphGet(`/${businessId}/owned_product_catalogs`, token, { fields: "id,name,vertical" });
 }
 
-export async function createCatalog(token: string, businessId: string, name: string): Promise<{ id: string }> {
-  return graphPost(`/${businessId}/owned_product_catalogs`, token, { name });
+export async function createCatalog(token: string, businessId: string, name: string, vertical?: "vehicles"): Promise<{ id: string }> {
+  return graphPost(`/${businessId}/owned_product_catalogs`, token, vertical ? { name, vertical } : { name });
+}
+
+export async function verticalDeCatalogo(token: string, catalogId: string): Promise<VerticalCatalogo> {
+  const c = await graphGet<{ vertical?: string }>(`/${catalogId}`, token, { fields: "vertical" });
+  return c.vertical ?? "commerce";
 }
 
 // Un catálogo creado por API queda a nombre del negocio y sin ninguna persona
