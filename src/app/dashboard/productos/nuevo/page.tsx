@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import Tip from "@/components/Tip";
 import CampoAuto from "@/components/CampoAuto";
+import SugerenciasMarca from "@/components/SugerenciasMarca";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
   X, Star, ShoppingCart, MessageCircle, Heart, Tag, Package, Calendar, Film,
@@ -2860,11 +2861,14 @@ function ProductoFormPage() {
                             className="w-full border border-gray-200 panel-oscuro:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         ) : (
-                          <CampoAuto
-                            value={val}
-                            onChange={onChange}
-                            placeholder={field.placeholder || ""}
-                          />
+                          <>
+                            <CampoAuto
+                              value={val}
+                              onChange={onChange}
+                              placeholder={field.placeholder || ""}
+                            />
+                            {field.sugerirMarca && <SugerenciasMarca valor={val} elegir={onChange} />}
+                          </>
                         )}
                       </div>
                     );

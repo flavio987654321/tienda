@@ -26,6 +26,9 @@ export interface ExtraField {
   /** Sólo en `extraFieldsByCategory`: esta categoría NO lleva el campo del rubro
       con esa `key` (una cosechadora no tiene puertas ni kilómetros). */
   ocultar?: boolean;
+  /** Sugiere marcas de vehículos mientras se escribe y avisa de un error de
+      tipeo. Ver `lib/marcasVehiculos`. */
+  sugerirMarca?: boolean;
 }
 
 export interface StoreTypeConfig {
@@ -330,7 +333,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideGender: true,
     condicionOptions: ["0 km", "Casi nuevo", "Muy bueno", "Bueno", "Usado"],
     extraFields: [
-      { key: "marca",      label: "Marca",       placeholder: "Toyota, Ford, Honda, Yamaha..." },
+      { key: "marca",      label: "Marca",       placeholder: "Toyota, Ford, Honda, Yamaha...", sugerirMarca: true },
       { key: "modelo",     label: "Modelo",      placeholder: "Corolla, Ranger, CB 500..." },
       { key: "version",    label: "Versión",     placeholder: "XEI, LTZ, Sport, Full..." },
       { key: "año",        label: "Año",         placeholder: "2022", type: "number" },

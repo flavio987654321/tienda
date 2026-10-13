@@ -19,6 +19,7 @@
 import { CATEGORIAS_VEHICULO, NOMBRE_TIPO, esAtributoInterno, usaHoras, type CategoriaVehiculo } from "./fichaVehiculo";
 import { monedaDe, type Moneda } from "./monedaVehiculo";
 import { marcaCanonica, normalizar } from "./busquedas";
+import { marcaConocida } from "./marcasVehiculos";
 
 type Atributo = { key: string; value: string };
 export type VehiculoFiltrable = { id: string; name: string; price: number; category?: string | null; attributes?: Atributo[] | null };
@@ -233,7 +234,7 @@ export function opcionesDeFiltro(lista: VehiculoFiltrable[], principal: string):
   const anios = ds.map((d) => d.anio).filter((a): a is number => a != null);
   return {
     tipos,
-    marcas: agrupar(ds.map((d) => ({ clave: d.claveMarca, label: prolijo(d.marca) }))),
+    marcas: agrupar(ds.map((d) => ({ clave: d.claveMarca, label: marcaConocida(d.marca) ?? prolijo(d.marca) }))),
     combustibles: agrupar(ds.map((d) => ({ clave: normalizar(d.combustible), label: d.combustible }))),
     transmisiones: agrupar(ds.map((d) => ({ clave: d.transmision, label: d.transmision }))),
     ciudades: agrupar(ds.map((d) => ({ clave: normalizar(d.ciudad), label: d.ciudad }))),
