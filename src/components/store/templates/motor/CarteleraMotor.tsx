@@ -21,6 +21,9 @@ const CSS = `
   .cm-slide { position: absolute; inset: 0; transition: opacity .9s ease; }
   .cm-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .cm-placa { position: absolute; left: clamp(20px,4vw,56px); bottom: clamp(36px,5vw,64px); max-width: min(560px, calc(100% - 360px)); z-index: 2; }
+  /* Con un solo cartel no hay índice: el texto usa todo el ancho. */
+  .cm-cartel[data-solo] { grid-template-columns: minmax(0,1fr); }
+  .cm-cartel[data-solo] .cm-placa { max-width: min(560px, calc(100% - 40px)); }
   .cm-indice { position: relative; z-index: 3; grid-column: 2; align-self: center; margin-right: clamp(16px,3vw,40px); display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,.14); }
   .cm-cap { position: relative; display: flex; gap: 14px; align-items: baseline; padding: 14px 0 14px 18px; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; color: rgba(255,255,255,.45); transition: color .3s; }
   .cm-cap:hover, .cm-cap[aria-current="true"] { color: #fff; }
@@ -59,7 +62,7 @@ export function CarteleraMotor({ fotos, acento, intervalMs, editMode, ejemplosEn
   const progreso = (k: number, anim: string) => (k < pos ? { transform: "none" } : k === pos ? (corre ? { animation: `${anim} ${intervalMs}ms linear forwards` } : { transform: "none" }) : {});
 
   return (
-    <div className="cm-cartel" aria-label="Cartelera" {...contenedor}>
+    <div className="cm-cartel" aria-label="Cartelera" data-solo={n === 1 ? "" : undefined} {...contenedor}>
       <style>{CSS}</style>
       {visibles.map((ranura, k) => {
         const ov = fotos[ranura];
