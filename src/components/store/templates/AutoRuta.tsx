@@ -20,7 +20,7 @@ import { irASeccion } from "@/components/store/templates/shared/irASeccion";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
-import { barraMs, type ImageOverride } from "@/types/store-config";
+import { barraMs, carruselMs, type ImageOverride } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useVistaTemplate } from "@/components/store/templates/shared/useVistaTemplate";
 import Link from "next/link";
@@ -50,13 +50,14 @@ import { FONDO, PAPEL, TINTA, TENUE, LINEA, ASFALTO, TITULAR, CUERPO, ACENTO_RUT
 import { TARJETA_RUTA_CSS } from "@/components/store/templates/ruta/TarjetaRuta";
 import { SelectorRuta, SELECTOR_RUTA_CSS, type SeleccionRuta } from "@/components/store/templates/ruta/SelectorRuta";
 import { OrdenRuta } from "@/components/store/templates/ruta/OrdenRuta";
+import { CarteleraRuta } from "@/components/store/templates/ruta/CarteleraRuta";
 import { SelectorVehiculoFoco } from "@/components/store/auto/SelectorVehiculoFoco";
 import { elegirFoco } from "@/lib/vehiculoFoco";
 import { CatalogoRuta, CATALOGO_RUTA_CSS } from "@/components/store/templates/ruta/CatalogoRuta";
 import { AgenciaRuta, AGENCIA_RUTA_CSS } from "@/components/store/templates/ruta/AgenciaRuta";
 import { VideosRuta, VIDEOS_RUTA_CSS } from "@/components/store/templates/ruta/VideosRuta";
 
-const RT_SECTION_IDS = ["rt-foco", "rt-tasar", "rt-videos", "rt-preguntas", "rt-novedades", "rt-nosotros"];
+const RT_SECTION_IDS = ["rt-cartelera", "rt-foco", "rt-tasar", "rt-videos", "rt-preguntas", "rt-novedades", "rt-nosotros"];
 const HERO_DE_FABRICA = "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1920&q=80";
 const NOSOTROS_DE_FABRICA = "https://images.unsplash.com/photo-1591768793355-74d04bb6608f?auto=format&fit=crop&w=1200&q=80";
 
@@ -129,6 +130,7 @@ export default function AutoRuta() {
   const sc = config?.sectionColors ?? {};
   const fondo = (campo: string, def: string) => ({ ...fondoDe(iovr[`sectionbg_${campo}`], sc[campo] ?? def), ov: iovr[`sectionbg_${campo}`] });
   const fTrabajo = fondo("bgTrabajo", FONDO);
+  const fCartelera = fondo("bgCartelera", FONDO);
   const fFoco = fondo("bgFoco", ASFALTO);
   const fTasar = fondo("bgTasar", PAPEL);
   const fVideos = fondo("bgVideos", FONDO);
@@ -540,6 +542,17 @@ export default function AutoRuta() {
       </section>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
+
+      {/* ── CARTELERA ── tres carteles que pasan solos (ver ruta/CarteleraRuta). */}
+      <SectionBlock id="rt-cartelera" label="Cartelera" isPreview={isPreview} defaultOrder={RT_SECTION_IDS}>
+        <section id="cartelera" aria-label="Cartelera" style={{ position: "relative", padding: "clamp(28px,4vw,48px) clamp(16px,4vw,32px)", ...fCartelera.estilo }}>
+          {capa("bgCartelera", "Fondo de la cartelera", fCartelera.ov)}
+          <div data-ef="sube" style={ancho}>
+            <CarteleraRuta fotos={[iovr["promoBanner1"], iovr["promoBanner2"], iovr["promoBanner3"]]} acento={accent}
+              intervalMs={carruselMs("auto-ruta", config?.bannerInterval)} editMode={editMode && isPreview} hrefStock={todos} onStock={e => alClicTodos(e)} />
+          </div>
+        </section>
+      </SectionBlock>
 
       {/* ── UNIDAD DE LA SEMANA ── una orden de trabajo (ver ruta/OrdenRuta). */}
       <SectionBlock id="rt-foco" label="Unidad de la semana" isPreview={isPreview} defaultOrder={RT_SECTION_IDS}>
