@@ -7,7 +7,7 @@
  * state_of_vehicle) y no da error de nuestro lado: el vehículo simplemente no
  * aparece en el catálogo.
  */
-import { aCsv, bodyStyle, combustible, estadoDelVehiculo, filaDeVehiculo, tipoDeVehiculo, transmision, COLUMNAS, type ProductoParaFeed } from "./feedVehiculosMeta";
+import { aCsv, bodyStyle, combustible, estadoDelVehiculo, filaDeVehiculo, tipoDeVehiculo, transmision, traccion, COLUMNAS, type ProductoParaFeed } from "./feedVehiculosMeta";
 import { PROVINCIAS_ARGENTINA } from "./provincias";
 import { CENTRO_DE_PROVINCIA } from "./feedVehiculosMeta";
 
@@ -54,6 +54,12 @@ chequear("la maquinaria agrícola no va (se mide en horas)", "salteado" in filaD
 const csv = fila ? aCsv([fila]) : "";
 chequear("el CSV trae las columnas obligatorias", ["vehicle_id", "make", "model", "year", "mileage.value", "mileage.unit", "image[0].url", "body_style", "price", "exterior_color", "state_of_vehicle", "address", "latitude", "longitude"].every((c) => (COLUMNAS as readonly string[]).includes(c)));
 chequear("las comillas del texto se duplican en el CSV", csv.includes('""único dueño""'));
+
+chequear("tracción: 4x4 y doble van como 4X4", traccion("4x4") === "4X4" && traccion("Doble (4x4)") === "4X4");
+chequear("tracción: delantera es FWD y trasera RWD", traccion("Delantera") === "FWD" && traccion("Trasera") === "RWD");
+chequear("tracción: los ejes de camión van como OTHER", traccion("6x4") === "OTHER" && traccion("8x4") === "OTHER");
+chequear("tracción: sin cargar no va", traccion("") === null && traccion(undefined) === null);
+chequear("el CSV trae la tracción", (COLUMNAS as readonly string[]).includes("drivetrain"));
 
 console.log(fallos ? `\n${fallos} con problemas` : "\nTodo bien");
 if (fallos) process.exit(1);

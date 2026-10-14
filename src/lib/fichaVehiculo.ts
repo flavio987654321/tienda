@@ -52,7 +52,8 @@ export const NOMBRE_TIPO: Record<CategoriaVehiculo, { uno: string; varios: strin
   motos: { uno: "Moto", varios: "Motos" },
   camiones: { uno: "Camión", varios: "Camiones" },
   utilitarios: { uno: "Utilitario", varios: "Utilitarios" },
-  maquinaria: { uno: "Máquina agrícola", varios: "Maquinaria agrícola" },
+  // Sin "agrícola" desde el 15/10/26: también hay máquinas de obra.
+  maquinaria: { uno: "Máquina", varios: "Maquinaria" },
   cuatriciclos: { uno: "Cuatriciclo / UTV", varios: "Cuatris y UTV" },
 };
 

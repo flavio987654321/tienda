@@ -127,6 +127,23 @@ export function transmision(v: string | undefined): string | null {
   return null;
 }
 
+/**
+ * La tracción, en los valores de Meta (15/10/26, vistos en la referencia de
+ * auto-ads; no distingue mayúsculas): 4X2, 4X4, AWD, FWD, RWD u OTHER.
+ * Los ejes de camión (6x2, 6x4, 8x4) no tienen equivalente y
+ * van como OTHER; sin tracción cargada, no va (es opcional para Meta).
+ */
+export function traccion(v: string | undefined): string | null {
+  const c = sinAcentos(v ?? "").replace(/\s+/g, "");
+  if (!c) return null;
+  if (c === "4x2" || c.startsWith("simple")) return "4X2";
+  if (c === "4x4" || c.startsWith("doble")) return "4X4";
+  if (c === "awd") return "AWD";
+  if (c === "fwd" || c.startsWith("delantera")) return "FWD";
+  if (c === "rwd" || c.startsWith("trasera")) return "RWD";
+  return "OTHER";
+}
+
 /** "0 km" es nuevo; cualquier otra condición, usado. */
 export const estadoDelVehiculo = (condicion: string | undefined) => (/^0\s*km$/i.test((condicion ?? "").trim()) ? "NEW" : "USED");
 
@@ -141,7 +158,7 @@ export const COLUMNAS = [
   "vehicle_id", "title", "description", "url", "make", "model", "year", "trim",
   "mileage.value", "mileage.unit", "image[0].url", "image[1].url", "image[2].url", "image[3].url", "image[4].url",
   "body_style", "vehicle_type", "price", "sale_price", "exterior_color", "state_of_vehicle",
-  "transmission", "fuel_type", "availability", "address", "latitude", "longitude", "dealer_name",
+  "transmission", "fuel_type", "drivetrain", "availability", "address", "latitude", "longitude", "dealer_name",
 ] as const;
 
 /**
@@ -197,6 +214,7 @@ export function filaDeVehiculo(
     state_of_vehicle: estadoDelVehiculo(a["Condición"]),
     transmission: transmision(a["Transmisión"]) ?? "",
     fuel_type: combustible(a["Combustible"]) ?? "",
+    drivetrain: traccion(a["Tracción"]) ?? "",
     availability: p.vehicleStatus === "RESERVED" ? "not_available" : "available",
     address: `{${partes.join(", ")}}`,
     latitude: ubicacion.lat.toFixed(5),

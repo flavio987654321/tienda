@@ -323,9 +323,11 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       // su propia categoría y no deben aparecer como subcategoría de motos.
       motos: ["cub", "naked", "enduro", "scooter", "trail", "deportiva", "custom"],
       camionetas: ["pickup", "suv", "van", "utilitario"],
-      camiones: ["liviano", "mediano", "pesado", "tractor (semi)", "volcador", "chasis"],
+      // Sólo el tamaño (15/10/26): volcador, chasis o tractor van en Carrocería, que ya los tenía.
+      camiones: ["liviano", "mediano", "pesado"],
       utilitarios: ["furgón", "combi", "chasis cabina", "minibús"],
-      maquinaria: ["tractor", "cosechadora", "pulverizadora", "sembradora", "implemento"],
+      // Agro primero y después las de obra (15/10/26); ver MAQUINAS_DE_OBRA en lib/trabajoVehiculo.
+      maquinaria: ["tractor", "cosechadora", "pulverizadora", "sembradora", "implemento", "retroexcavadora", "excavadora", "pala cargadora", "minicargadora", "motoniveladora", "autoelevador"],
       cuatriciclos: ["cuatriciclo", "utv", "buggy"],
       repuestos: ["motor", "frenos", "suspensión", "eléctrico", "carrocería"],
       accesorios: ["audio", "seguridad", "limpieza", "interior"],
@@ -371,13 +373,11 @@ export const STORE_TYPES: StoreTypeConfig[] = [
         { key: "traccion",   label: "Tracción",   options: ["4x2", "6x2", "6x4", "8x4", "4x4"] },
         { key: "transmision",label: "Transmisión", options: ["Manual", "Automatizada", "Automática"] },
         { key: "puertas",    label: "Puertas",  ocultar: true },
-        // Opcional (15/10/26): Auto Ruta lo usa para el tamaño de la unidad; sin él, sale del subtipo.
-        { key: "capacidad",  label: "Capacidad de carga (kg)", placeholder: "8000", type: "number" },
+        { key: "cabina",     label: "Cabina",   options: ["Simple", "Dormitorio", "Dormitorio techo alto"] },
       ],
       utilitarios: [
         { key: "carroceria", label: "Carrocería", options: ["Furgón", "Furgón techo alto", "Combi / pasajeros", "Chasis cabina", "Minibús"] },
         { key: "traccion",   label: "Tracción",   options: ["Delantera", "Trasera", "4x4"] },
-        { key: "capacidad",  label: "Capacidad de carga (kg)", placeholder: "1500", type: "number" },
       ],
       maquinaria: [
         // Una máquina se mide en horas de uso, no en kilómetros.

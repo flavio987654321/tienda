@@ -11,10 +11,12 @@
  * reparto y ruta). Un auto o una moto no sirven para ninguno: en Ruta aparecen
  * en "Todo el stock", no en un trabajo.
  *
- * El TAMAÑO sale de la capacidad de carga si la cargaron (campo opcional desde
- * el 15/10/26) y, si no, del subtipo (liviano, mediano, pesado, semi).
+ * El TAMAÑO sale de la carga útil de la ficha técnica si la cargaron y, si no,
+ * del subtipo (liviano, mediano, pesado) o de la carrocería (un tractor para
+ * semi es pesado).
  */
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import { leerFicha } from "./fichaVehiculo";
 
 export const TRABAJOS = ["reparto", "ruta", "campo", "obra"] as const;
 export type Trabajo = (typeof TRABAJOS)[number];
@@ -23,7 +25,7 @@ export const NOMBRE_TRABAJO: Record<Trabajo, { titulo: string; bajada: string }>
   reparto: { titulo: "Reparto urbano", bajada: "Furgones, utilitarios y camiones livianos para moverse en la ciudad." },
   ruta: { titulo: "Ruta larga", bajada: "Camiones medianos, pesados y semis para hacer kilómetros con carga." },
   campo: { titulo: "Campo", bajada: "Tractores, maquinaria, pickups 4x4 y jaulas para el trabajo rural." },
-  obra: { titulo: "Obra", bajada: "Volcadores, playos y chasis para la construcción." },
+  obra: { titulo: "Obra", bajada: "Volcadores, playos, chasis y máquinas viales para la construcción." },
 };
 
 export const TAMANOS = ["liviano", "mediano", "pesado"] as const;
@@ -35,17 +37,23 @@ export const NOMBRE_TAMANO: Record<Tamano, { titulo: string; detalle: string }> 
   pesado: { titulo: "Pesado", detalle: "Más de 12 t" },
 };
 
-/** La clave con la que el formulario del panel guarda la capacidad. */
+/** Una clave suelta que se probó el 15/10/26 antes de ver que la ficha técnica
+    ya tenía "Carga útil". Nunca llegó a producción; se sigue leyendo por las dudas. */
 export const CLAVE_CAPACIDAD = "Capacidad de carga (kg)";
+
+/** Las máquinas de obra (subcategorías de maquinaria desde el 15/10/26). El
+    resto de la maquinaria es agrícola. */
+export const MAQUINAS_DE_OBRA = ["retroexcavadora", "excavadora", "pala cargadora", "minicargadora", "motoniveladora", "autoelevador"];
 
 type Vehiculo = Pick<StorefrontProduct, "category" | "subcategory" | "attributes">;
 
 const minus = (v: string | null | undefined) => (v ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 const dato = (p: Vehiculo, clave: string) => minus(p.attributes?.find((a) => minus(a.key) === minus(clave))?.value);
 
-/** Los kilos de carga, si los cargaron. "8.000", "8000 kg" y "8 t" dan 8000. */
+/** Los kilos de carga, si los cargaron: la "Carga útil" de la ficha técnica.
+    "8.000", "8000 kg" y "8 t" dan 8000. */
 export function capacidadDe(p: Vehiculo): number | null {
-  const crudo = dato(p, CLAVE_CAPACIDAD) || dato(p, "Capacidad de carga");
+  const crudo = minus(leerFicha(p.attributes).datos.cargaUtil) || dato(p, CLAVE_CAPACIDAD) || dato(p, "Capacidad de carga");
   if (!crudo) return null;
   const toneladas = /^\s*([\d.,]+)\s*(t|tn|ton|toneladas?)\s*$/.exec(crudo);
   if (toneladas) {
@@ -66,6 +74,8 @@ export function tamanoDe(p: Vehiculo): Tamano | null {
     if (sub.includes("liviano")) return "liviano";
     if (sub.includes("mediano")) return "mediano";
     if (sub.includes("pesado") || sub.includes("tractor") || sub.includes("semi")) return "pesado";
+    const carroceria = dato(p, "Carrocería");
+    if (carroceria.includes("tractor") || carroceria.includes("semi")) return "pesado";
     return null;
   }
   if (tipo === "utilitarios" || tipo === "camionetas") return "liviano";
@@ -79,7 +89,8 @@ export function trabajosDe(p: Vehiculo): Trabajo[] {
   const traccion = dato(p, "Tracción");
   const t = new Set<Trabajo>();
 
-  if (tipo === "maquinaria" || tipo === "cuatriciclos") t.add("campo");
+  if (tipo === "maquinaria") t.add(MAQUINAS_DE_OBRA.some((m) => sub.includes(m)) ? "obra" : "campo");
+  if (tipo === "cuatriciclos") t.add("campo");
 
   if (tipo === "camionetas") {
     if (sub.includes("van") || sub.includes("utilitario") || carroceria.includes("van")) t.add("reparto");
@@ -102,6 +113,7 @@ export function trabajosDe(p: Vehiculo): Trabajo[] {
     if (sub.includes("volcador") || carroceria.includes("volcador")) t.add("obra");
     if (sub.includes("chasis") || carroceria.includes("chasis") || carroceria.includes("playo")) t.add("obra");
     if (carroceria.includes("jaula")) t.add("campo");
+    if (dato(p, "Cabina").includes("dormitorio")) t.add("ruta");
     if (carroceria.includes("tanque") || carroceria.includes("semi") || sub.includes("semi")) t.add("ruta");
     if (carroceria.includes("termica") || carroceria.includes("refrigerad")) { t.add("reparto"); t.add("ruta"); }
     // Un camión del que no se sabe nada igual es de trabajo: va a ruta.

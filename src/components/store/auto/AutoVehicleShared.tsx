@@ -6,7 +6,6 @@ import { esOpcionDeColor } from "@/lib/opciones";
 import { getContrastColor } from "@/contexts/EditContext";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { fotoLiviana } from "@/lib/foto-liviana";
-import { capacidadDe } from "@/lib/trabajoVehiculo";
 
 export function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
@@ -111,8 +110,8 @@ export function datosDelVehiculo(product: StorefrontProduct): { label: string; v
     { label: "Combustible", value: attr(product, "Combustible") },
     { label: "Tracción",    value: attr(product, "Tracción") },
     { label: "Carrocería",  value: attr(product, "Carrocería") },
-    // Camiones y utilitarios (opcional desde el 15/10/26).
-    { label: "Capacidad de carga", value: capacidadDe(product) != null ? `${capacidadDe(product)!.toLocaleString("es-AR")} kg` : "" },
+    // Camiones (15/10/26). La carga útil no va acá: está en la ficha técnica.
+    { label: "Cabina",      value: attr(product, "Cabina") },
     { label: "Color",       value: attr(product, "Color") || (product.opciones.find(o => esOpcionDeColor(o.nombre))?.valores[0] ?? "") },
     { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);

@@ -37,6 +37,12 @@ caso("un semi es pesado", tamanoDe(v("camiones", "tractor (semi)")) === "pesado"
 caso("un utilitario es liviano", tamanoDe(v("utilitarios", "furgón")) === "liviano");
 caso("una máquina no tiene tamaño de carga", tamanoDe(v("maquinaria", "tractor")) === null);
 caso("con 13 t de capacidad un mediano pasa a ruta sola", igual(trabajosDe(v("camiones", "mediano", { [CLAVE_CAPACIDAD]: "13000" })), ["ruta"]));
+caso("la carga útil de la ficha técnica da el tamaño", tamanoDe(v("camiones", "", { "Ficha": JSON.stringify({ datos: { cargaUtil: "3000" } }) })) === "liviano");
+caso("un tractor para semi sin subtipo es pesado", tamanoDe(v("camiones", "", { "Carrocería": "Tractor (semi)" })) === "pesado");
+caso("una retroexcavadora es obra", igual(trabajosDe(v("maquinaria", "retroexcavadora")), ["obra"]));
+caso("una pala cargadora es obra", igual(trabajosDe(v("maquinaria", "pala cargadora")), ["obra"]));
+caso("una cosechadora sigue siendo campo", igual(trabajosDe(v("maquinaria", "cosechadora")), ["campo"]));
+caso("la cabina dormitorio suma ruta", trabajosDe(v("camiones", "liviano", { "Cabina": "Dormitorio" })).includes("ruta"));
 
 const c = cuantosPorTrabajo([v("utilitarios", "furgón"), v("camiones", "mediano"), v("autos")]);
 caso("el conteo por trabajo suma cada unidad en cada trabajo que sirve", c.reparto === 2 && c.ruta === 1 && c.campo === 0 && c.obra === 0);

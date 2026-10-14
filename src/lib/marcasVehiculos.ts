@@ -24,10 +24,12 @@ export const MARCAS_VEHICULOS: string[] = [
   "Guerrero", "Mondial", "TVS", "Kymco", "Brava", "Siambretta", "Hero", "Voge", "CFMoto",
   "Husqvarna", "Aprilia", "Vespa", "Jawa", "Okinoi", "Sym",
   // Camiones y utilitarios
-  "Scania", "Iveco", "Agrale", "Foton", "Shacman", "International", "DAF", "Hino", "Sinotruk",
+  "Scania", "Iveco", "Agrale", "Foton", "Shacman", "International", "DAF", "Hino", "Sinotruk", "Freightliner", "Kenworth", "MAN",
   // Maquinaria agrícola
   "John Deere", "Case IH", "New Holland", "Massey Ferguson", "Deutz-Fahr", "Pauny", "Claas",
   "Valtra", "Zanello", "Metalfor", "Pla", "Jacto", "Agrometal", "Apache",
+  // Maquinaria de obra (15/10/26)
+  "Caterpillar", "JCB", "Komatsu", "Case", "Bobcat", "XCMG", "SANY", "Liugong", "Doosan", "Michigan",
   // Cuatriciclos y UTV
   "Can-Am", "Polaris", "Arctic Cat", "Segway",
 ];
