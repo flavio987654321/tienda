@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { useCerrarConAtras } from "@/hooks/useCerrarConAtras";
 import { CAPAS } from "@/lib/capas-tienda";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 
 /**
  * La ventana de los formularios de autos (tasación, "Avisame si entra") que se
@@ -24,6 +25,8 @@ export function VentanaAuto({ titulo, onClose, panel, children, abierta = true }
   abierta?: boolean;
 }) {
   const tocoElFondo = useRef(false);
+  // En la vista previa de Diseño la barra del template va más arriba: la ventana tiene que taparla.
+  const enPrevia = !!useStoreConfig()?.previewFill;
   useCerrarConAtras(onClose, abierta);
 
   useEffect(() => {
@@ -44,7 +47,7 @@ export function VentanaAuto({ titulo, onClose, panel, children, abierta = true }
     <div role="dialog" aria-modal={abierta || undefined} aria-hidden={!abierta} aria-label={titulo}
       onMouseDown={e => { tocoElFondo.current = e.target === e.currentTarget; }}
       onClick={e => { if (tocoElFondo.current && e.target === e.currentTarget) onClose(); tocoElFondo.current = false; }}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: CAPAS.critico, display: abierta ? "flex" : "none",
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: enPrevia ? CAPAS.previaModal : CAPAS.critico, display: abierta ? "flex" : "none",
         alignItems: "flex-start", justifyContent: "center", padding: "20px 16px", overflowY: "auto" }}>
       <div style={{ background: "#fff", color: "#1a2744", borderRadius: 14, width: "100%", maxWidth: 520, margin: "auto 0",
         padding: "52px 12px 12px", position: "relative", ...panel }}>

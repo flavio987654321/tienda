@@ -36,7 +36,8 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
   waLink: string | null;
   todosHref: string;
   /** La foto de "Nosotros" de la portada, si todavía no hay fotos del salón. */
-  fotoDeRespaldo: string;
+  /** La de "Nosotros" si la subió; sin foto propia, ninguna (una de muestra parecería el salón). */
+  fotoDeRespaldo?: string;
   enPrevia: boolean;
 }) {
   const a = useAgencia();
@@ -58,8 +59,9 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
   return (
     <div style={{ display: "grid", gap: "clamp(48px,7vw,88px)" }}>
       {/* ── Presentación ── */}
-      <div className="agm-arriba" data-ef="sube">
-        <div style={{ position: "relative", overflow: "hidden", aspectRatio: "5/4", borderRadius: 4, background: "#141619" }}>
+      {/* Sin foto propia, el texto solo a todo el ancho: un recuadro vacío se veía a medio hacer. */}
+      <div className="agm-arriba" data-ef="sube" style={fotoPrincipal ? undefined : { gridTemplateColumns: "minmax(0,1fr)" }}>
+        {fotoPrincipal && <div style={{ position: "relative", overflow: "hidden", aspectRatio: "5/4", borderRadius: 4, background: "#141619" }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- foto de la agencia */}
           <img src={fotoLiviana(fotoPrincipal, 1200)} alt={`${nombreTienda}, la agencia`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           {estado && (
@@ -68,8 +70,14 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
               {estado.texto}
             </span>
           )}
-        </div>
-        <div style={{ minWidth: 0 }}>
+        </div>}
+        <div style={{ minWidth: 0, maxWidth: fotoPrincipal ? undefined : 820 }}>
+          {!fotoPrincipal && estado && (
+            <p role="status" style={{ margin: "0 0 18px", display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", color: estado.abierto ? "#4ade80" : p.tenue }}>
+              <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: estado.abierto ? "#4ade80" : "rgba(255,255,255,0.35)" }} />
+              {estado.texto}
+            </p>
+          )}
           {kicker("La agencia")}
           <h1 style={{ margin: "0 0 20px", fontSize: "clamp(36px,6vw,76px)", fontWeight: 900, color: "#fff", letterSpacing: "-0.045em", lineHeight: 0.92, overflowWrap: "anywhere" }}>
             {nombreTienda}

@@ -1,4 +1,5 @@
 "use client";
+import { FOTO_VACIA } from "@/lib/foto-vacia";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
@@ -31,7 +32,7 @@ export const DRIVE_TARJETA_CSS = `
   @media (prefers-reduced-motion: reduce) { .td-card, .td-foto img { transition:none } .td-card:hover { transform:none } }
 `;
 
-const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75";
+
 
 export function TarjetaDrive({ p, acento, moneda, href, favorito, onFavorito }: {
   p: StorefrontProduct;

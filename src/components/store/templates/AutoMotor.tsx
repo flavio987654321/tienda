@@ -112,7 +112,10 @@ export default function AutoMotor() {
   // Sin datos de agencia, "La agencia" baja al bloque "Nosotros": si ese bloque está oculto, no se ofrece.
   const conAgencia = hayAgenciaCargada(config);
   const menuAncho = [["Vehículos","catálogo","am-catalogo"],["Tasá tu usado","tasar","am-tasar"],["La agencia",MENU_AGENCIA,conAgencia ? "" : "am-nosotros"],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
-  const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
+  /* El menú desplegable se usa también en tablet (hasta 900-1100 px), pero un
+     bloque oculto "sólo en el celular" se esconde recién por debajo de 768: se
+     marca igual que el bloque, así el link se va y vuelve con él. */
+  const menuCelu = menuAncho.map(([lbl, id, b]) => [lbl, id, ocultasCelu.includes(b) ? "si" : ""]);
   const isPreview     = !!config?.previewFill;
   // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
   useEfectosAlBajar(!isPreview);
@@ -269,19 +272,20 @@ export default function AutoMotor() {
     ? filtrarVehiculos(products, { ...filtroVacio(), q: searchQuery }, currency)
     : [];
 
-  /* Escape cierra el buscador y los favoritos (5.6 de la auditoría: antes sólo
+  /* Escape cierra el buscador, los favoritos y el menú (5.6 de la auditoría: antes sólo
      el modal del vehículo lo escuchaba). El modal tiene el suyo: si está
      abierto, es de él. */
   useEffect(() => {
-    if (!searchOpen && !favoritesOpen) return;
+    if (!searchOpen && !favoritesOpen && !menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (searchOpen) { setSearchOpen(false); setSearchQuery(""); }
-      else setFavoritesOpen(false);
+      else if (favoritesOpen) setFavoritesOpen(false);
+      else setMenuOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, favoritesOpen]);
+  }, [searchOpen, favoritesOpen, menuOpen]);
 
   // Recién ingresados: los más nuevos, sin el que está en foco (no se repite dos bloques seguidos).
   const recientes = products.filter(p => p.id !== foco?.id || products.length <= 4).slice(0, 8);
@@ -318,7 +322,7 @@ export default function AutoMotor() {
         @media(max-width:479px){ .am-push { display:none !important } }
         .am-push-menu { display:none }
         @media(max-width:479px){ .am-push-menu { display:flex; flex-direction:column } }
-        @media(min-width:900px){ .am-nav-links { display:flex } .am-burger { display:none !important } .am-solo-ancho { display:inline-flex } }
+        @media(min-width:900px){ .am-nav-links { display:flex } .am-burger { display:none !important } .am-menu { display:none !important } .am-solo-ancho { display:inline-flex } }
         .am-about { grid-template-columns:1fr }
         @media(min-width:860px){ .am-about { grid-template-columns:1.05fr 1fr } }
         .am-pasos { grid-template-columns:1fr }
@@ -387,7 +391,7 @@ export default function AutoMotor() {
           display: "flex", alignItems: "center", justifyContent: "center", padding: "0 44px" }}>
           <span style={{ fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase",
             whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {annMessages[annIdx]}
+            {annMessages[annIdx % annMessages.length]}
           </span>
           <button type="button" onClick={() => setAnnVisible(false)} aria-label="Cerrar la barra de avisos"
             style={{ position:"absolute", right:4, top:"50%", transform:"translateY(-50%)", width:34, height:34,
@@ -429,10 +433,10 @@ export default function AutoMotor() {
               style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favorites.length ? ` (${favorites.length})` : ""}`}
+            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favoriteProducts.length ? ` (${favoriteProducts.length})` : ""}`}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              {favorites.length > 0 && <span aria-hidden="true" style={{ position:"absolute", top:2, right:2, background:accent, color:sobreAcento, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+              <svg width={20} height={20} viewBox="0 0 24 24" fill={favoriteProducts.length > 0 ? accent : "none"} stroke={favoriteProducts.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {favoriteProducts.length > 0 && <span aria-hidden="true" style={{ position:"absolute", top:2, right:2, background:accent, color:sobreAcento, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{favoriteProducts.length}</span>}
             </button>
             {pushBell && config?.showPushBell && !isPreview && (
               <span className="am-push"><StoreFollowButton storeSlug={slug} color={navTextMid} size={20} /></span>
@@ -519,9 +523,9 @@ export default function AutoMotor() {
           </div>
         </div>
         {menuOpen && (
-          <div style={{ borderTop:`1px solid ${navBorderColor}`, padding:"6px 0 18px" }}>
-            {menuCelu.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => { agenciaNav.ir(id); setMenuOpen(false); }}
+          <div className="am-menu" style={{ maxHeight:"calc(100dvh - 110px)", overflowY:"auto", overscrollBehavior:"contain", borderTop:`1px solid ${navBorderColor}`, padding:"6px 0 18px" }}>
+            {menuCelu.map(([lbl, id, celu]) => (
+              <button key={id} type="button" data-cel-bloque-oculto={celu ? "" : undefined} onClick={() => { agenciaNav.ir(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navText, cursor:"pointer", textAlign:"left", minHeight:48,
                   fontSize:13, fontWeight:700, textTransform:"uppercase", fontFamily:"inherit",
@@ -553,7 +557,7 @@ export default function AutoMotor() {
       {agenciaNav.enAgencia ? (
         <section aria-label="La agencia" style={{ background: NEGRO, padding: `${isPreview ? 40 : (showAnn ? PROMO_H : 0) + NAV_H + 40}px clamp(16px,4vw,32px) clamp(56px,8vw,96px)` }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-            <AgenciaMotor acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} fotoDeRespaldo={nosotrosUrl} enPrevia={isPreview} />
+            <AgenciaMotor acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} fotoDeRespaldo={iovr["nosotrosImage"]?.url ?? (isPreview ? nosotrosUrl : undefined)} enPrevia={isPreview} />
           </div>
         </section>
       ) : (<>
@@ -884,12 +888,14 @@ export default function AutoMotor() {
                 <p style={{ margin:"0 0 16px", fontSize:14, color:"rgba(255,255,255,0.72)", lineHeight:1.55 }}>
                   <EditableZone field="faqOtraTexto" label="Texto de la tarjeta de preguntas">Preguntanos lo que quieras: te contesta una persona, no un robot.</EditableZone>
                 </p>
-                <a href={waLink ?? "#contacto"} {...(waLink ? { target:"_blank", rel:"noopener noreferrer" } : {})}
+                {/* Sin WhatsApp lleva al bloque de contacto: si la dueña lo ocultó, no hay adónde ir. */}
+                {(waLink || !ocultas.includes("am-contacto")) && <a href={waLink ?? "#contacto"} {...(waLink ? { target:"_blank", rel:"noopener noreferrer" } : {})}
+                  data-cel-bloque-oculto={!waLink && ocultasCelu.includes("am-contacto") ? "" : undefined}
                   onClick={isPreview ? (e) => e.preventDefault() : undefined}
                   style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"12px 18px", borderRadius:2, background:accent, color:sobreAcento,
                     fontSize:13, fontWeight:800, letterSpacing:0.4, textDecoration:"none" }}>
                   {waLink ? <><WaIcon size={16} /> Escribinos</> : "Contactanos →"}
-                </a>
+                </a>}
               </div>
               <EditableImageButton field="faqImage" label="Foto de preguntas" />
             </div>
@@ -1016,7 +1022,7 @@ export default function AutoMotor() {
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, maxWidth:"100vw", background:"#111215", color:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid ${LINEA}` }}>
           <div style={{ padding:"16px 20px", borderBottom:`1px solid ${LINEA}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <p style={{ fontWeight:800, fontSize:16, margin:0, letterSpacing:-0.2 }}>Favoritos <span style={{ fontWeight:500, fontSize:13, color:"rgba(255,255,255,0.5)" }}>({favorites.length})</span></p>
+            <p style={{ fontWeight:800, fontSize:16, margin:0, letterSpacing:-0.2 }}>Favoritos <span style={{ fontWeight:500, fontSize:13, color:"rgba(255,255,255,0.5)" }}>({favoriteProducts.length})</span></p>
             <button type="button" onClick={() => setFavoritesOpen(false)} aria-label="Cerrar favoritos" style={{ background:"none", border:"none", color:"#fff", fontSize:24, cursor:"pointer", width:44, height:44, marginRight:-10 }}>×</button>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px" }}>
@@ -1048,7 +1054,8 @@ export default function AutoMotor() {
         </div>
       </div>
 
-      {!editMode && waLink && (
+      {/* Con el buscador abierto no va: tapaba el último resultado. */}
+      {!editMode && waLink && !searchOpen && (
         <a href={waLink} aria-label="Escribinos por WhatsApp"
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel,

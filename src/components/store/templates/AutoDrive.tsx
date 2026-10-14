@@ -21,7 +21,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { WaIcon, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { WaIcon, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
 import { opcionesDeFiltro, linkAVehiculo, filtrarVehiculos, filtroVacio, datosDe } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -70,13 +70,6 @@ function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   );
 }
 
-const SVC_ICON_SETS = [
-  ["📋","✅","🔍","📑","🏅","🔬","🛡️","🏆"],
-  ["🔁","💰","🤝","📊","💵","🏧","💸","📈"],
-  ["🔔","📣","🎯","📞","💬","🌟","🧑‍💼","🎓"],
-  ["💬","📱","📞","🤝","👋","🌟","🧑‍💼","✉️"],
-];
-
 /** Gris claro de fondo, tinta azul pizarra y la línea de las tarjetas. */
 const FONDO = "#f4f6f9";
 const TINTA = "#0f172a";
@@ -107,7 +100,7 @@ export default function AutoDrive() {
   const config       = useStoreConfig();
   const pushBell     = usePushBell();
   const { products, loadingProducts } = useStorefront();
-  const { editMode, overrides, setOverride, hiddenSections, setFeaturedVehicleId } = useEditContext();
+  const { editMode, overrides, hiddenSections, setFeaturedVehicleId } = useEditContext();
   /* El menú sólo a secciones que se ven (5.3 de la auditoría): un link a un
      bloque oculto no hacía nada. En el menú del celular, tampoco a las que el
      dueño ocultó sólo en el celular. */
@@ -116,7 +109,10 @@ export default function AutoDrive() {
   // Sin datos de agencia, "La agencia" baja al bloque "Nuestra historia": si ese bloque está oculto, no se ofrece.
   const conAgencia = hayAgenciaCargada(config);
   const menuAncho = [["Vehículos","catálogo","ad-catalogo"],["Vendé tu usado","tasar","ad-tasar"],["La agencia",MENU_AGENCIA,conAgencia ? "" : "ad-nosotros"],["Preguntas","preguntas","ad-preguntas"],["Contacto","contacto","ad-contacto"]].filter(([, , b]) => !ocultas.includes(b));
-  const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
+  /* El menú desplegable se usa también en tablet (hasta 900-1100 px), pero un
+     bloque oculto "sólo en el celular" se esconde recién por debajo de 768: se
+     marca igual que el bloque, así el link se va y vuelve con él. */
+  const menuCelu = menuAncho.map(([lbl, id, b]) => [lbl, id, ocultasCelu.includes(b) ? "si" : ""]);
   const isPreview    = !!config?.previewFill;
   // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
   useEfectosAlBajar(!isPreview);
@@ -237,7 +233,7 @@ export default function AutoDrive() {
   // Lo que se ve si el dueño no escribió su barra: sólo lo que la tienda HACE
   // (ficha, tasación, búsquedas). Antes prometía financiación, inspección y
   // envío a todo el país en nombre de agencias que no los ofrecen (5.2).
-  const DEFAULTS = ["📋 Ficha técnica de cada vehículo", "🔁 Tasá tu usado online", "🔔 Te avisamos si entra lo que buscás"];
+  const DEFAULTS = ["Ficha técnica de cada vehículo", "Tasá tu usado online", "Te avisamos si entra lo que buscás"];
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
   const annMessages        = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
@@ -290,28 +286,36 @@ export default function AutoDrive() {
     ? filtrarVehiculos(products, { ...filtroVacio(), q: searchQuery }, currency)
     : [];
 
-  /* Escape cierra el buscador y los favoritos (5.6 de la auditoría). */
+  /* Escape cierra el buscador, los favoritos y el menú (5.6 de la auditoría). */
   useEffect(() => {
-    if (!searchOpen && !favoritesOpen) return;
+    if (!searchOpen && !favoritesOpen && !menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (searchOpen) { setSearchOpen(false); setSearchQuery(""); }
-      else setFavoritesOpen(false);
+      else if (favoritesOpen) setFavoritesOpen(false);
+      else setMenuOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, favoritesOpen]);
+  }, [searchOpen, favoritesOpen, menuOpen]);
 
   // "Recién ingresados": hasta 8, del tipo elegido (con las pestañas de los tipos que hay).
   const tiposVista = opciones.tipos.length > 1 ? opciones.tipos.slice(0, 5) : [];
   const delTipo = tipoVista ? products.filter(p => datosDe(p, currency).tipo === tipoVista) : products;
-  const showcased = delTipo.filter(p => p.id !== foco?.id).slice(0, 8);
+  /* El destacado no se repite acá porque ya está en la vidriera; pero si la
+     dueña ocultó la vidriera (en todas las pantallas o en el celular), el mejor
+     auto desaparecía de la portada. Entonces se queda en la lista. */
+  const focoALaVista = !!foco && !ocultas.includes("ad-foco") && !ocultasCelu.includes("ad-foco");
+  const sinFoco = focoALaVista ? delTipo.filter(p => p.id !== foco?.id) : delTipo;
+  const showcased = sinFoco.slice(0, 8);
+  // Los reservados se ven en la lista, pero no son "disponibles".
+  const disponibles = products.filter(p => !esReservado(p)).length;
   const linkTodos = `/tienda/${slug}/vehiculos${isPreview ? "?from=editor" : ""}`;
 
   /* Números: vehículos y marcas se cuentan de verdad; años y satisfacción son
      del negocio, y se ven sólo si el dueño los escribió (en el editor, siempre). */
   const stats = [
-    { fv:"stat1", fl:"statLabel1", n:String(products.length), l:"Vehículos disponibles", propio:false },
+    { fv:"stat1", fl:"statLabel1", n:String(disponibles), l:"Vehículos disponibles", propio:false },
     { fv:"stat2", fl:"statLabel2", n:"15",   l:"Años en el mercado", propio:true },
     { fv:"stat3", fl:"statLabel3", n:"98%",  l:"Clientes conformes", propio:true },
     { fv:"stat4", fl:"statLabel4", n:String(opciones.marcas.length), l:"Marcas", propio:false },
@@ -334,7 +338,7 @@ export default function AutoDrive() {
         ${VIDEOS_DRIVE_CSS}
         ${VENDER_DRIVE_CSS}
         .ad-nav-links { display:none }
-        @media(min-width:960px){ .ad-nav-links { display:flex } .ad-burger { display:none } }
+        @media(min-width:960px){ .ad-nav-links { display:flex } .ad-burger { display:none } .ad-menu { display:none !important } }
         /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
         @media(max-width:479px){ .ad-push { display:none !important } }
         .ad-push-menu { display:none }
@@ -408,14 +412,14 @@ export default function AutoDrive() {
           zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:PROMO_H, background:TINTA,
           display:"flex", alignItems:"center", justifyContent:"center", padding:"0 40px" }}>
           <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:0.2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {annMessages[annIdx]}
+            {annMessages[annIdx % annMessages.length]}
           </span>
           {annMessages.length > 1 && (
             <div style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4 }}>
               {annMessages.map((_,i) => (
                 <button key={i} type="button" onClick={() => setAnnIdx(i)} aria-label={`Ver el aviso ${i + 1}`}
-                  style={{ width: i===annIdx ? 14 : 5, height:3, border:"none", borderRadius:2,
-                    background: i===annIdx ? accent : "rgba(255,255,255,0.35)", cursor:"pointer", padding:0, transition:"all 0.3s" }} />
+                  style={{ width: i===annIdx % annMessages.length ? 14 : 5, height:3, border:"none", borderRadius:2,
+                    background: i===annIdx % annMessages.length ? accent : "rgba(255,255,255,0.35)", cursor:"pointer", padding:0, transition:"all 0.3s" }} />
               ))}
             </div>
           )}
@@ -462,10 +466,10 @@ export default function AutoDrive() {
               style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:8, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favorites.length ? ` (${favorites.length})` : ""}`}
+            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favoriteProducts.length ? ` (${favoriteProducts.length})` : ""}`}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:8, display:"flex", alignItems:"center" }}>
-              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? "#ef4444" : "none"} stroke={favorites.length > 0 ? "#ef4444" : "currentColor"} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              {favorites.length > 0 && <span style={{ position:"absolute", top:2, right:0, background:"#ef4444", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+              <svg width={20} height={20} viewBox="0 0 24 24" fill={favoriteProducts.length > 0 ? "#ef4444" : "none"} stroke={favoriteProducts.length > 0 ? "#ef4444" : "currentColor"} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {favoriteProducts.length > 0 && <span style={{ position:"absolute", top:2, right:0, background:"#ef4444", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favoriteProducts.length}</span>}
             </button>
             {pushBell && config?.showPushBell && !isPreview && (
               <span className="ad-push"><StoreFollowButton storeSlug={slug} color={navTextMid} size={20} /></span>
@@ -552,9 +556,9 @@ export default function AutoDrive() {
           </div>
         </div>
         {menuOpen && (
-          <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px clamp(16px,3vw,28px) 18px" }}>
-            {menuCelu.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => { agenciaNav.ir(id); setMenuOpen(false); }}
+          <div className="ad-menu" style={{ maxHeight:"calc(100dvh - 110px)", overflowY:"auto", overscrollBehavior:"contain", background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px clamp(16px,3vw,28px) 18px" }}>
+            {menuCelu.map(([lbl, id, celu]) => (
+              <button key={id} type="button" data-cel-bloque-oculto={celu ? "" : undefined} onClick={() => { agenciaNav.ir(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navText, cursor:"pointer", textAlign:"left", fontFamily:"inherit",
                   padding:"14px 0", fontSize:15, fontWeight:600, borderBottom:`1px solid ${navBorderColor}` }}>
@@ -584,7 +588,7 @@ export default function AutoDrive() {
       {agenciaNav.enAgencia ? (
         <section aria-label="La agencia" style={{ background: FONDO, padding: `${isPreview ? 28 : (showAnn ? PROMO_H : 0) + NAV_H + 28}px clamp(16px,3vw,28px) clamp(56px,8vw,96px)` }}>
           <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-            <AgenciaDrive acento={accent} nombreTienda={storeName} waLink={waLink} todosHref={linkTodos} fotoDeRespaldo={nosotrosUrl} enPrevia={isPreview} />
+            <AgenciaDrive acento={accent} nombreTienda={storeName} waLink={waLink} todosHref={linkTodos} fotoDeRespaldo={iovr["nosotrosImage"]?.url ?? (isPreview ? nosotrosUrl : undefined)} enPrevia={isPreview} />
           </div>
         </section>
       ) : (<>
@@ -600,11 +604,11 @@ export default function AutoDrive() {
         <div className="ad-hero" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:"28px clamp(28px,4vw,56px)",
           alignItems:"center", padding:"clamp(28px,5vw,64px) clamp(16px,3vw,28px) clamp(40px,6vw,80px)" }}>
           <div className="ad-entra" style={{ minWidth:0 }}>
-            {!loadingProducts && products.length > 0 && (
+            {!loadingProducts && disponibles > 0 && (
               <p style={{ margin:"0 0 18px", display:"inline-flex", alignItems:"center", gap:8, background:"#fff", borderRadius:999, padding:"7px 14px 7px 10px",
                 boxShadow:"0 2px 10px rgba(15,23,42,0.06)", fontSize:13, fontWeight:700, color:TINTA }}>
                 <span aria-hidden="true" style={{ width:8, height:8, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 0 4px rgba(34,197,94,0.18)" }} />
-                {products.length} {products.length === 1 ? "vehículo disponible" : "vehículos disponibles"}
+                {disponibles} {disponibles === 1 ? "vehículo disponible" : "vehículos disponibles"}
               </p>
             )}
             <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:800, color:accent }}>
@@ -717,10 +721,10 @@ export default function AutoDrive() {
             </ul>
           ) : (
             <div style={{ textAlign:"center", padding:"56px 24px", border:`1.5px dashed #cbd5e1`, borderRadius:20, background:"#fff" }}>
-              <p style={{ margin:0, color:catMid, fontSize:15 }}>{foco ? "El vehículo destacado está en la vidriera de arriba." : "Todavía no hay vehículos publicados."}</p>
+              <p style={{ margin:0, color:catMid, fontSize:15 }}>{foco ? "El vehículo destacado está en la vidriera." : "Todavía no hay vehículos publicados."}</p>
             </div>
           )}
-          {delTipo.length > showcased.length && (
+          {sinFoco.length > showcased.length && (
             <div style={{ textAlign:"center", marginTop:28 }}>
               <Link href={linkTodos}
                 style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minHeight:52, padding:"0 32px", borderRadius:14,
@@ -869,35 +873,21 @@ export default function AutoDrive() {
             titulo={<EditableZone field="serviciosHeading" label="Título de por qué elegirnos">Comprá con confianza</EditableZone>} />
           <div className="ad-svc" data-ef="grilla" style={{ display:"grid", gap:14 }}>
             {[
-              { fv:"svc1Title", fl:"svc1Desc", fi:"svc1Icon", icon:"📋", t:"Ficha técnica completa", d:"Equipamiento, motor y medidas de cada vehículo, y la ficha en PDF para descargar o compartir." },
-              { fv:"svc2Title", fl:"svc2Desc", fi:"svc2Icon", icon:"🔁", t:"Tasá tu usado", d:"Mandanos los datos de tu vehículo y te respondemos con una oferta." },
-              { fv:"svc3Title", fl:"svc3Desc", fi:"svc3Icon", icon:"🔔", t:"Avisame si entra", d:"¿No está lo que buscás? Dejanos marca, modelo y presupuesto y te avisamos cuando entre." },
-              { fv:"svc4Title", fl:"svc4Desc", fi:"svc4Icon", icon:"💬", t:"Consultá por WhatsApp", d:"Escribinos desde cualquier vehículo y te respondemos con todos los detalles." },
+              { fv:"svc1Title", fl:"svc1Desc", t:"Ficha técnica completa", d:"Equipamiento, motor y medidas de cada vehículo, y la ficha en PDF para descargar o compartir." },
+              { fv:"svc2Title", fl:"svc2Desc", t:"Tasá tu usado", d:"Mandanos los datos de tu vehículo y te respondemos con una oferta." },
+              { fv:"svc3Title", fl:"svc3Desc", t:"Avisame si entra", d:"¿No está lo que buscás? Dejanos marca, modelo y presupuesto y te avisamos cuando entre." },
+              { fv:"svc4Title", fl:"svc4Desc", t:"Consultá por WhatsApp", d:"Escribinos desde cualquier vehículo y te respondemos con todos los detalles." },
             ].map((s,i) => (
               <div key={i} className="ad-svc-card"
                 style={{ padding:"26px 24px", borderRadius:22,
                   border:`1px solid ${svcText==="#ffffff"?"rgba(255,255,255,0.14)":LINEA}`,
                   background: svcText==="#ffffff" ? "rgba(255,255,255,0.06)" : FONDO }}>
-                <div style={{ width:56, height:56, borderRadius:16, background:"#fff", boxShadow:"0 4px 14px rgba(15,23,42,0.08)",
-                  display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, position:"relative", marginBottom:18 }}>
-                  {overrides[s.fi]?.text ?? s.icon}
-                  {editMode && (
-                    <button type="button" title="Cambiar ícono" aria-label="Cambiar ícono"
-                      onClick={e => {
-                        e.stopPropagation();
-                        const curr = overrides[s.fi]?.text ?? s.icon;
-                        const set  = SVC_ICON_SETS[i];
-                        const idx  = set.indexOf(curr);
-                        setOverride(s.fi, { text: set[(idx + 1) % set.length] });
-                      }}
-                      style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)",
-                        border:"none", borderRadius:16, cursor:"pointer",
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        color:"#fff", fontSize:14, opacity:0, transition:"opacity 0.15s" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="1")}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
-                  )}
-                </div>
+                {/* Número y no ícono: los emojis se veían de juguete en una concesionaria. */}
+                <p aria-hidden="true" style={{ margin:"0 0 18px", fontSize:13, fontWeight:800, letterSpacing:2, color:accent,
+                  display:"flex", alignItems:"center", gap:10 }}>
+                  {String(i+1).padStart(2,"0")}
+                  <span style={{ width:28, height:1, background:accent, opacity:0.6 }} />
+                </p>
                 <p style={{ margin:"0 0 8px", fontSize:17, fontWeight:800, color:svcText, letterSpacing:-0.3 }}>
                   <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
                 </p>
@@ -993,6 +983,8 @@ export default function AutoDrive() {
                 </li>
               ))}
             </ul>
+            {/* En fila que se parte con espacio: a 360 px los dos no entran y quedaban pegados. */}
+            <div style={{ display:"flex", flexWrap:"wrap", gap:10 }}>
             {waLink && (
               <a href={waLink} target="_blank" rel="noopener noreferrer"
                 style={{ display:"inline-flex", alignItems:"center", gap:8, minHeight:50, background:"#25d366", color:"#fff", textDecoration:"none",
@@ -1001,10 +993,11 @@ export default function AutoDrive() {
               </a>
             )}
             {agenciaNav.conPagina && <a href={agenciaNav.hrefAgencia} onClick={e => { e.preventDefault(); agenciaNav.irALaAgencia(); }}
-              style={{ display:"inline-flex", alignItems:"center", minHeight:50, marginLeft:waLink ? 10 : 0, padding:"0 22px", borderRadius:14, border:`1px solid ${accent}`, color:accent,
+              style={{ display:"inline-flex", alignItems:"center", minHeight:50, padding:"0 22px", borderRadius:14, border:`1px solid ${accent}`, color:accent,
                 textDecoration:"none", fontWeight:800, fontSize:15 }}>
               Conocé la agencia →
             </a>}
+            </div>
           </div>
         </div>
       </section>
@@ -1034,12 +1027,14 @@ export default function AutoDrive() {
                 <p style={{ margin:"0 0 16px", fontSize:14, color:"#475569", lineHeight:1.55 }}>
                   <EditableZone field="faqOtraTexto" label="Texto de la tarjeta de preguntas">Preguntanos lo que quieras: te contesta una persona, no un robot.</EditableZone>
                 </p>
-                <a href={waLink ?? "#contacto"} {...(waLink ? { target:"_blank", rel:"noopener noreferrer" } : {})}
+                {/* Sin WhatsApp lleva al bloque de contacto: si la dueña lo ocultó, no hay adónde ir. */}
+                {(waLink || !ocultas.includes("ad-contacto")) && <a href={waLink ?? "#contacto"} {...(waLink ? { target:"_blank", rel:"noopener noreferrer" } : {})}
+                  data-cel-bloque-oculto={!waLink && ocultasCelu.includes("ad-contacto") ? "" : undefined}
                   onClick={isPreview ? (e) => e.preventDefault() : undefined}
                   style={{ display:"inline-flex", alignItems:"center", gap:8, minHeight:46, padding:"0 20px", borderRadius:12,
                     background: waLink ? "#25d366" : accent, color: waLink ? "#fff" : sobreAcento, fontSize:14, fontWeight:800, textDecoration:"none" }}>
                   {waLink ? <><WaIcon size={16} /> Escribinos</> : "Contactanos →"}
-                </a>
+                </a>}
               </div>
             </div>
           </div>
@@ -1174,7 +1169,7 @@ export default function AutoDrive() {
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(15,23,42,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"18px 20px 14px", borderBottom:`1px solid ${LINEA}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <p style={{ fontWeight:800, fontSize:17, margin:0, color:TINTA }}>Favoritos <span style={{ fontWeight:500, fontSize:14, color:"#64748b" }}>({favorites.length})</span></p>
+            <p style={{ fontWeight:800, fontSize:17, margin:0, color:TINTA }}>Favoritos <span style={{ fontWeight:500, fontSize:14, color:"#64748b" }}>({favoriteProducts.length})</span></p>
             <button type="button" onClick={() => setFavoritesOpen(false)} aria-label="Cerrar favoritos" style={{ background:FONDO, border:"none", borderRadius:"50%", color:TINTA, fontSize:22, cursor:"pointer", width:40, height:40 }}>×</button>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"12px 20px" }}>
@@ -1207,7 +1202,8 @@ export default function AutoDrive() {
         </div>
       </div>
 
-      {!editMode && waLink && (
+      {/* Con el buscador abierto no va: tapaba el último resultado. */}
+      {!editMode && waLink && !searchOpen && (
         <a href={waLink} target="_blank" rel="noopener noreferrer" aria-label="Escribinos por WhatsApp"
           style={{ position:"fixed", bottom:20, right:20, zIndex:CAPAS.panel,
             background:"#25d366", color:"white", width:56, height:56,

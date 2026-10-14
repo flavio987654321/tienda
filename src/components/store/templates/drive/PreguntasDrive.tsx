@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { EditableZone } from "@/contexts/EditContext";
+import { EditableZone, getContrastColor } from "@/contexts/EditContext";
 import type { PreguntaDeAutos } from "@/lib/preguntasFrecuentes";
 
 /**
@@ -9,6 +9,8 @@ import type { PreguntaDeAutos } from "@/lib/preguntasFrecuentes";
  * y mismas respuestas (lib/preguntasFrecuentes → armarPreguntasAutos).
  */
 export function PreguntasDrive({ preguntas, acento }: { preguntas: PreguntaDeAutos[]; acento: string }) {
+  // Letra sobre el acento: blanca sobre amarillo o lima no se leía.
+  const sobre = getContrastColor(acento) === "dark" ? "#111" : "#fff";
   const [abierta, setAbierta] = useState<number | null>(0);
   return (
     <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10 }}>
@@ -26,7 +28,7 @@ export function PreguntasDrive({ preguntas, acento }: { preguntas: PreguntaDeAut
                   <EditableZone field={`faqP${i + 1}`} label={`Pregunta ${i + 1}`}>{it.p}</EditableZone>
                 </span>
                 <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0, background: open ? acento : "#f1f5f9",
-                  color: open ? "#fff" : "#0f172a", display: "flex", alignItems: "center", justifyContent: "center",
+                  color: open ? sobre : "#0f172a", display: "flex", alignItems: "center", justifyContent: "center",
                   transform: open ? "rotate(180deg)" : "none", transition: "transform .3s, background .25s, color .25s" }}>
                   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
                 </span>

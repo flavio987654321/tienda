@@ -29,6 +29,16 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   const c = paletaFormulario(oscuro);
   const [trampa, setTrampa] = useState("");
   const [f, setF] = useState({ categoria: "", marca: marcaInicial.slice(0, 40), modelo: "", anioDesde: "", precioHasta: "", nombre: "", telefono: "" });
+  /* La ventana queda montada (para no perder el borrador), así que la marca de
+     entrada se leía una sola vez, con el catálogo recién abierto y sin buscar
+     nada: "Avisame si entra un Hilux" abría la marca vacía. Si cambia y la
+     marca sigue siendo la que se puso sola, se actualiza; lo que escribió el
+     comprador no se toca. */
+  const [marcaPuesta, setMarcaPuesta] = useState(marcaInicial);
+  if (marcaInicial !== marcaPuesta) {
+    setMarcaPuesta(marcaInicial);
+    if (f.marca === marcaPuesta.slice(0, 40)) setF((p) => ({ ...p, marca: marcaInicial.slice(0, 40) }));
+  }
   const [estado, setEstado] = useState<Estado>("idle");
   const [error, setError] = useState("");
   const enviando = useRef(false);

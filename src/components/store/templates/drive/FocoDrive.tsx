@@ -1,4 +1,5 @@
 "use client";
+import { getContrastColor } from "@/contexts/EditContext";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, vehicleLocation, fmtPrice, useLinkAVehiculo } from "@/components/store/auto/AutoVehicleShared";
@@ -13,6 +14,8 @@ export function FocoDrive({ p, acento, moneda, href, whatsapp }: {
   href: string;
   whatsapp: { enabled: boolean; number: string };
 }) {
+  // Letra sobre el acento: blanca sobre amarillo o lima no se leía.
+  const sobre = getContrastColor(acento) === "dark" ? "#111" : "#fff";
   const datos = [["Año", attr(p, "Año")], ["Kilómetros", attr(p, "Kilómetros")], ["Ubicación", vehicleLocation(p)]]
     .filter((item): item is [string, string] => !!item[1]);
   // El mismo mensaje que la consulta de la ficha: año, precio y link.
@@ -38,7 +41,7 @@ export function FocoDrive({ p, acento, moneda, href, whatsapp }: {
             {datos.map(([label, value]) => <div key={label} style={{ minWidth:0 }}><dt style={{ color:"#64748b", fontSize:10, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>{label}</dt><dd style={{ margin:"4px 0 0", color:"#0f172a", fontSize:14, fontWeight:700, overflowWrap:"anywhere" }}>{value}</dd></div>)}
           </dl>}
           <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginTop:"auto" }}>
-            <Link href={href} style={{ minHeight:46, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 22px", borderRadius:12, background:acento, color:"#fff", textDecoration:"none", fontWeight:800 }}>Ver vehículo</Link>
+            <Link href={href} style={{ minHeight:46, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 22px", borderRadius:12, background:acento, color:sobre, textDecoration:"none", fontWeight:800 }}>Ver vehículo</Link>
             {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ minHeight:46, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 18px", borderRadius:12, background:"#25d366", color:"#fff", textDecoration:"none", fontWeight:800 }}>Consultar</a>}
           </div>
         </div>

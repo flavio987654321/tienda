@@ -1,4 +1,5 @@
 "use client";
+import { getContrastColor } from "@/contexts/EditContext";
 import Link from "next/link";
 import { linkAVehiculos, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
 import { IconoTipo } from "./IconoTipo";
@@ -19,7 +20,7 @@ export function TiposDrive({ opciones, slug, enEditor, acento }: {
   if (grupos.length < 2) return null;
 
   return (
-    <ul className="tdr-lista" style={{ listStyle: "none", margin: 0, padding: 0, ...({ "--tdr-acento": acento } as React.CSSProperties) }}>
+    <ul className="tdr-lista" style={{ listStyle: "none", margin: 0, padding: 0, ...({ "--tdr-acento": acento, "--tdr-sobre": getContrastColor(acento) === "dark" ? "#111" : "#fff" } as React.CSSProperties) }}>
       {grupos.map(g => (
         <li key={g.valor}>
           <Link href={linkAVehiculos(slug, { [porTipo ? "tipo" : "marca"]: g.valor }, enEditor)} className="tdr-item">
@@ -44,6 +45,6 @@ export const TIPOS_DRIVE_CSS = `
   .tdr-item:focus-visible { outline:3px solid var(--tdr-acento); outline-offset:2px }
   .tdr-icono { display:flex; align-items:center; justify-content:center; width:72px; height:52px; border-radius:14px; margin-bottom:14px;
     background:#f1f5f9; color:#0f172a; transition: background .2s, color .2s }
-  .tdr-item:hover .tdr-icono { background: var(--tdr-acento); color:#fff }
+  .tdr-item:hover .tdr-icono { background: var(--tdr-acento); color: var(--tdr-sobre) }
   @media (prefers-reduced-motion: reduce) { .tdr-item { transition:none } .tdr-item:hover { transform:none } }
 `;

@@ -45,7 +45,10 @@ export function BuscadorDrive({ slug, productos, opciones, principal, acento, en
   const [tipo, setTipo] = useState("");
   const [marca, setMarca] = useState("");
   const [precio, setPrecio] = useState("");
-  const [moneda, setMoneda] = useState<Moneda>(principal);
+  const [moneda, setMoneda] = useState<Moneda>(
+    /* Con una sola moneda no hay selector: tiene que ser ésa. Si todo el stock está en
+       dólares y la tienda en pesos, arrancar en pesos dejaba la búsqueda siempre en cero. */
+    opciones.monedas.length === 1 ? opciones.monedas[0] : principal);
 
   const filtro = useMemo(() => {
     const n = Number(sinPuntos(precio));

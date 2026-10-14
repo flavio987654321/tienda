@@ -1,4 +1,5 @@
 "use client";
+import { FOTO_VACIA } from "@/lib/foto-vacia";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { attr, kmDe, fmtKm, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
@@ -33,7 +34,7 @@ export const MOTOR_TARJETA_CSS = `
   @media (prefers-reduced-motion: reduce) { .tm-card, .tm-foto img, .tm-foto::after { transition:none } .tm-card:hover { transform:none } .tm-foto::after { display:none } }
 `;
 
-const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75";
+
 
 export function usoDe(p: StorefrontProduct): string {
   if (usaHoras(p.category)) {

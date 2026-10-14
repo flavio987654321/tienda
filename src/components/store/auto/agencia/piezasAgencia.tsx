@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CAPAS } from "@/lib/capas-tienda";
+import { linkWhatsApp, numeroWhatsApp } from "@/lib/whatsappTienda";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useEditContext } from "@/contexts/EditContext";
 import {
@@ -75,8 +76,15 @@ export function useAgencia() {
   const crudo = deMuestra ? EJEMPLO.agencia : (config?.agencia ?? {});
   const agencia = agenciaLimpia(crudo);
   const cambiar = (parcial: Partial<Agencia>) => setAgencia?.({ ...crudo, ...parcial });
+  /* Para lo que termina más tarde (una foto que se sube): parte de lo que hay
+     AL LLEGAR, no de lo que había al elegirla. Si no, lo que la dueña escribió
+     mientras subía (una descripción, otra persona) se deshacía. */
+  const ultimo = useRef(crudo);
+  useEffect(() => { ultimo.current = crudo; });
+  const cambiarAlLlegar = (armar: (actual: Agencia) => Partial<Agencia>) =>
+    setAgencia?.({ ...ultimo.current, ...armar(ultimo.current) });
   return {
-    enEdicion, ubicacion, agencia, crudo, cambiar,
+    enEdicion, ubicacion, agencia, crudo, cambiar, cambiarAlLlegar,
     conDireccion: hayDireccion(ubicacion),
     direccion: direccionCompleta(ubicacion),
     horarios: horariosResumidos(ubicacion.horarios),
@@ -189,7 +197,7 @@ function BotonFoto({ p, texto, onArchivo, subiendo }: { p: PaletaAgencia; texto:
 
 /* ── Equipo ────────────────────────────────────────────────────────────────── */
 export function EditorEquipo({ p }: { p: PaletaAgencia }) {
-  const { crudo, cambiar } = useAgencia();
+  const { crudo, cambiar, cambiarAlLlegar } = useAgencia();
   const equipo = crudo.equipo ?? [];
   const { subir, subiendo, error } = useSubida();
   const [subiendoEn, setSubiendoEn] = useState<number | null>(null);
@@ -203,9 +211,14 @@ export function EditorEquipo({ p }: { p: PaletaAgencia }) {
             {m.foto ? <img src={fotoLiviana(m.foto, 128)} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />
               : <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: "50%", border: `1px dashed ${p.linea}`, display: "grid", placeItems: "center", color: p.tenue }}>?</span>}
             <BotonFoto p={p} texto={m.foto ? "Cambiar foto" : "Subir foto"} subiendo={subiendo && subiendoEn === i}
-              onArchivo={(f) => { setSubiendoEn(i); subir(f, (url) => set(i, { foto: url })); }} />
+              onArchivo={(f) => {
+                if (subiendo || !f) return;
+                setSubiendoEn(i);
+                subir(f, (url) => cambiarAlLlegar((a) => ({ equipo: (a.equipo ?? []).map((x, k) => (k === i ? { ...x, foto: url } : x)) })));
+              }} />
             {m.foto && <button type="button" style={botonChico(p)} onClick={() => set(i, { foto: undefined })}>Sacar foto</button>}
-            <button type="button" style={{ ...botonChico(p), marginLeft: "auto" }} onClick={() => cambiar({ equipo: equipo.filter((_, k) => k !== i) })}>Quitar</button>
+            {/* Mientras sube una foto no se quita a nadie: correría los lugares y la foto caería en otra persona. */}
+            <button type="button" disabled={subiendo} style={{ ...botonChico(p), marginLeft: "auto", opacity: subiendo ? 0.5 : 1 }} onClick={() => cambiar({ equipo: equipo.filter((_, k) => k !== i) })}>Quitar</button>
           </div>
           <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}>
             <label><span style={etiqueta(p)}>Nombre</span><input style={campo(p)} maxLength={TOPE.texto} value={m.nombre} onChange={(e) => set(i, { nombre: e.target.value })} /></label>
@@ -219,8 +232,8 @@ export function EditorEquipo({ p }: { p: PaletaAgencia }) {
               placeholder="Ej.: 10 años vendiendo usados. Te ayudo a encontrar el que entra en tu presupuesto."
               onChange={(e) => set(i, { bio: e.target.value })} />
           </label>
-          {m.whatsapp && m.whatsapp.replace(/\D/g, "").length < 11 && (
-            <p style={{ margin: 0, fontSize: 12, color: "#f59e0b" }}>Poné el número con +54 9 adelante, si no el botón no abre ninguna conversación.</p>
+          {m.whatsapp?.trim() && !numeroWhatsApp(m.whatsapp) && (
+            <p style={{ margin: 0, fontSize: 12, color: "#f59e0b" }}>Ese número no sirve para WhatsApp: ponelo con característica, por ejemplo 2254 44-7183. Si no, no aparece el botón.</p>
           )}
         </div>
       ))}
@@ -234,7 +247,7 @@ export function EditorEquipo({ p }: { p: PaletaAgencia }) {
 
 /* ── Fotos del salón ───────────────────────────────────────────────────────── */
 export function EditorSalon({ p }: { p: PaletaAgencia }) {
-  const { crudo, cambiar } = useAgencia();
+  const { crudo, cambiar, cambiarAlLlegar } = useAgencia();
   const fotos = crudo.salon ?? [];
   const { subir, subiendo, error } = useSubida();
   return (
@@ -251,7 +264,7 @@ export function EditorSalon({ p }: { p: PaletaAgencia }) {
       </div>
       {error && <p role="alert" style={{ margin: 0, fontSize: 12.5, color: "#fb7185" }}>{error}</p>}
       {fotos.length < TOPE.salon
-        ? <div><BotonFoto p={p} texto={`+ Sumar foto (${fotos.length}/${TOPE.salon})`} subiendo={subiendo} onArchivo={(f) => subir(f, (url) => cambiar({ salon: [...fotos, url] }))} /></div>
+        ? <div><BotonFoto p={p} texto={`+ Sumar foto (${fotos.length}/${TOPE.salon})`} subiendo={subiendo} onArchivo={(f) => subir(f, (url) => cambiarAlLlegar((a) => ({ salon: [...(a.salon ?? []), url].slice(0, TOPE.salon) })))} /></div>
         : <p style={{ margin: 0, fontSize: 12.5, color: p.tenue }}>Llegaste a las {TOPE.salon} fotos. Quitá una para sumar otra.</p>}
     </div>
   );
@@ -259,9 +272,8 @@ export function EditorSalon({ p }: { p: PaletaAgencia }) {
 
 /** El link de WhatsApp de una persona del equipo, o null si el número no sirve. */
 export function waDeMiembro(m: Miembro, tienda: string): string | null {
-  const d = m.whatsapp?.replace(/\D/g, "") ?? "";
-  if (d.length < 11) return null;
-  return `https://wa.me/${d}?text=${encodeURIComponent(`Hola ${m.nombre.split(" ")[0]}! Te escribo desde la página de ${tienda}.`)}`;
+  // Con linkWhatsApp, como el resto de la tienda: un "011 15…" armaba un wa.me que no abría nada.
+  return linkWhatsApp(m.whatsapp, `Hola ${m.nombre.split(" ")[0]}! Te escribo desde la página de ${tienda}.`);
 }
 
 /* ── Visor de fotos del salón ────────────────────────────────────────────────

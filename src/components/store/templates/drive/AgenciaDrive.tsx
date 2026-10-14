@@ -10,7 +10,7 @@
  * lista; el equipo en retratos; la garantía; y el salón en mosaico que se abre
  * en grande. Datos, editores y visor compartidos (auto/agencia).
  */
-import { EditableZone } from "@/contexts/EditContext";
+import { EditableZone, getContrastColor } from "@/contexts/EditContext";
 import { NOMBRE_PAGO } from "@/lib/agencia";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import {
@@ -53,13 +53,16 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
   nombreTienda: string;
   waLink: string | null;
   todosHref: string;
-  fotoDeRespaldo: string;
+  /** La de "Nosotros" si la subió; sin foto propia, ninguna (una de muestra parecería el salón). */
+  fotoDeRespaldo?: string;
   enPrevia: boolean;
 }) {
   const a = useAgencia();
   const estado = useEstadoAhora(a.ubicacion.horarios);
   const visor = useVisorFotos();
-  const p: PaletaAgencia = { tinta: TINTA, tenue: SUAVE, linea: "#e2e8f0", campo: "#fff", acento, sobreAcento: "#fff" };
+  // Letra sobre el acento: blanca sobre amarillo o lima no se leía.
+  const sobre = getContrastColor(acento) === "dark" ? "#111" : "#fff";
+  const p: PaletaAgencia = { tinta: TINTA, tenue: SUAVE, linea: "#e2e8f0", campo: "#fff", acento, sobreAcento: sobre };
   const ver = (hay: boolean) => hay || a.enEdicion;
   const fotoPortada = a.agencia.salon[0] ?? fotoDeRespaldo;
 
@@ -92,7 +95,7 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
       {/* ── Portada ── */}
       <div style={{ position: "relative", borderRadius: 28, overflow: "hidden", minHeight: "clamp(420px,56vw,560px)", display: "flex", alignItems: "flex-end", background: TINTA }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- foto de la agencia */}
-        <img src={fotoLiviana(fotoPortada, 1920)} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        {fotoPortada && <img src={fotoLiviana(fotoPortada, 1920)} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
         <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.1) 55%, rgba(15,23,42,0) 100%)" }} />
         <div data-ef="sube" style={{ position: "relative", margin: "clamp(14px,3vw,32px)", width: "min(100%, 540px)", boxSizing: "border-box" }}>
           <div style={{ background: "#fff", borderRadius: 20, padding: "clamp(22px,3.4vw,34px)", boxShadow: "0 30px 70px rgba(15,23,42,0.28)" }}>
@@ -146,7 +149,7 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
                   </div>
                 ) : <div style={{ marginBottom: 16 }}><FaltaEnConfiguracion que="los horarios" p={p} /></div>}
                 {a.conDireccion && (
-                  <a href={urlComoLlegar(a.ubicacion)} target="_blank" rel="noopener noreferrer" style={{ ...boton(acento, "#fff"), width: "100%", boxSizing: "border-box" }}>
+                  <a href={urlComoLlegar(a.ubicacion)} target="_blank" rel="noopener noreferrer" style={{ ...boton(acento, sobre), width: "100%", boxSizing: "border-box" }}>
                     Cómo llegar
                   </a>
                 )}

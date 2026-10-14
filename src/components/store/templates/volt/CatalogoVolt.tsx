@@ -51,6 +51,8 @@ export const CATALOGO_VOLT_CSS = `
   .ctv-panel { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px }
   .ctv-ord { transition: color .15s }
   .ctv-ord:hover { color:#fff !important }
+  /* A 360 px el precio tiene unos 86 px: "$25.000.000" en una línea se montaba sobre el corazón. */
+  @media (max-width: 479px) { .ctv-precio > span { white-space:normal !important; overflow-wrap:anywhere; font-size:15px !important } }
   @media (max-width: 899px) {
     .ctv-cab { display:none }
     .ctv-orden-celu { display:block }
@@ -96,7 +98,8 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
   favoritos: string[];
   onFavorito: (id: string) => void;
   comparando: string[];
-  onComparar: (id: string) => void;
+  /** Sin esto no hay botón "Comparar" (la dueña ocultó el comparador: el botón no llevaba a nada). */
+  onComparar?: (id: string) => void;
   onVolver: () => void;
   storeId?: string;
   isOwner: boolean;
@@ -415,7 +418,7 @@ export function CatalogoVolt({ productos, opciones, filtroInicial, escribirUrl, 
                       style={{ ...iconoFila, color: fav ? acento : "#fff" }}>
                       <svg width={16} height={16} viewBox="0 0 24 24" fill={fav ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                     </button>
-                    {productos.length > 1 && (
+                    {onComparar && productos.length > 1 && (
                       <button type="button" onClick={() => onComparar(p.id)} aria-pressed={comp} aria-label={comp ? `Sacar ${p.name} de la comparación` : `Comparar ${p.name}`} title="Comparar"
                         style={{ ...iconoFila, borderColor: comp ? acento : "rgba(255,255,255,0.14)", background: comp ? conAlfa(acento, 0.2) : "rgba(5,7,13,0.6)", color: comp ? acento : "#fff" }}>⇄</button>
                     )}

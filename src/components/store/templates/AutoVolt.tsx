@@ -112,7 +112,10 @@ export default function AutoVolt() {
   const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", conAgencia ? "" : "av-nosotros"], ["Contacto", "contacto", ""]].filter(([, , b]) => !b || !ocultas.includes(b))
     // El comparador sólo se dibuja con dos vehículos o más: con uno, "Comparar" era un botón que no hacía nada.
     .filter(([, id]) => id !== "comparar" || products.length >= 2);
-  const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
+  /* El menú desplegable se usa también en tablet (hasta 900-1100 px), pero un
+     bloque oculto "sólo en el celular" se esconde recién por debajo de 768: se
+     marca igual que el bloque, así el link se va y vuelve con él. */
+  const menuCelu = menuAncho.map(([lbl, id, b]) => [lbl, id, ocultasCelu.includes(b) ? "si" : ""]);
   const isPreview = !!config?.previewFill;
   /* Los efectos al bajar se ven también en la vista previa (para probarlos
      antes de guardar), salvo editando: ahí no se esconde nada. */
@@ -205,23 +208,34 @@ export default function AutoVolt() {
   const favoriteProducts = products.filter(p => favorites.includes(p.id));
   const searchResults = searchQuery.trim().length > 0 ? filtrarVehiculos(products, { ...filtroVacio(), q: searchQuery }, currency) : [];
 
-  // Escape cierra el buscador y los favoritos.
+  // Escape cierra el buscador, los favoritos y el menú.
   useEffect(() => {
-    if (!searchOpen && !favoritesOpen) return;
+    if (!searchOpen && !favoritesOpen && !menuOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (searchOpen) { setSearchOpen(false); setSearchQuery(""); } else setFavoritesOpen(false);
+      if (searchOpen) { setSearchOpen(false); setSearchQuery(""); } else if (favoritesOpen) setFavoritesOpen(false);
+      else setMenuOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, favoritesOpen]);
+  }, [searchOpen, favoritesOpen, menuOpen]);
 
   /* Lo que se compara. Mientras el comprador no eligió nada, se muestran los
      dos primeros, así el bloque nunca está vacío; al tocar "Comparar" en el
      showroom pasa a mandar su elección (tres como mucho: el cuarto saca al primero). */
-  const [comparando, setComparando] = useState<string[]>([]);
-  const idsComparados = (comparando.length ? comparando : products.slice(0, 2).map(p => p.id)).filter(id => products.some(p => p.id === id));
-  const alternarComparar = (id: string) => setComparando(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id].slice(-3));
+  /* `null` = todavía no tocó nada. Con una lista vacía como "sin elegir", sacar
+     el último con la × hacía volver a los dos primeros (parecía que la × no
+     andaba), y sacar uno de los dos de entrada dejaba la barra "1 para comparar". */
+  const [eleccion, setEleccion] = useState<string[] | null>(null);
+  const comparando = eleccion ?? [];
+  const idsComparados = (eleccion ?? products.slice(0, 2).map(p => p.id)).filter(id => products.some(p => p.id === id));
+  const alternarComparar = (id: string) => setEleccion(c => {
+    const antes = c ?? [];
+    if (antes.includes(id)) return antes.filter(x => x !== id);
+    // El primero que elige va con otro al lado: una tabla de una sola columna no compara nada.
+    if (!antes.length) { const otro = products.find(p => p.id !== id); return otro ? [id, otro.id] : [id]; }
+    return [...antes, id].slice(-3);
+  });
   const todos = linkAVehiculos(slug, {}, isPreview);
 
   /* ── Portada o catálogo ─────────────────────────────────────────────────────
@@ -315,7 +329,7 @@ export default function AutoVolt() {
         .av-links { display:none }
         .av-solo-ancho { display:none }
         /* Con cinco links (Contacto se sumó el 14/10/26) no entran en 920: se partían en dos renglones y cortaban el nombre. */
-        @media(min-width:1100px){ .av-links { display:flex } .av-burger { display:none !important } .av-solo-ancho { display:inline-flex } }
+        @media(min-width:1100px){ .av-links { display:flex } .av-burger { display:none !important } .av-menu { display:none !important } .av-solo-ancho { display:inline-flex } }
         .av-links .av-link { white-space:nowrap }
         /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
         @media(max-width:479px){ .av-push { display:none !important } }
@@ -370,7 +384,7 @@ export default function AutoVolt() {
           display: "flex", alignItems: "center", justifyContent: "center", padding: "0 44px", gap: 10 }}>
           <span aria-hidden="true" className="av-latido" style={{ width: 6, height: 6, borderRadius: "50%", background: accent, boxShadow: `0 0 10px ${accent}`, animation: "av-latido 1.6s ease-in-out infinite", flexShrink: 0 }} />
           <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "rgba(232,236,246,0.85)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {annMessages[annIdx]}
+            {annMessages[annIdx % annMessages.length]}
           </span>
           <button type="button" onClick={() => setAnnVisible(false)} aria-label="Cerrar la barra de avisos"
             style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, background: "none", border: "none", color: "rgba(232,236,246,0.6)", cursor: "pointer", fontSize: 18 }}>×</button>
@@ -385,7 +399,8 @@ export default function AutoVolt() {
         zIndex: isPreview ? CAPAS.previaNav : 100, padding: isPreview ? `${NAV_TOP}px clamp(10px,2vw,20px) 0` : "0 clamp(10px,2vw,20px)", pointerEvents: "none",
         transform: barraOculta ? `translateY(-${(showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 24}px)` : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)" }}>
         <nav aria-label="Principal" style={{ pointerEvents: vista.cambiandoPantalla ? "none" : "auto", maxWidth: 1240, margin: "0 auto", borderRadius: 18,
-          background: navOscura ? "rgba(8,11,21,0.62)" : navBg, backdropFilter: "blur(18px) saturate(1.4)",
+          /* Sin color elegido, el vidrio oscuro de siempre. Con uno oscuro elegido se lo respeta (antes cualquier oscuro quedaba en el negro de fábrica), con la misma transparencia. */
+          background: !sc["navBg"] ? "rgba(8,11,21,0.62)" : navOscura && /^#?[\da-f]{6}$/i.test(navBg.trim()) ? conAlfa(navBg, 0.8) : navBg, backdropFilter: "blur(18px) saturate(1.4)",
           border: `1px solid ${navLinea}`, boxShadow: "0 18px 50px -24px rgba(0,0,0,0.7)", padding: "0 clamp(10px,1.6vw,16px)" }}>
           <div style={{ height: NAV_H, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, color: navTinta }}>
@@ -407,9 +422,9 @@ export default function AutoVolt() {
               <button type="button" onClick={() => setSearchOpen(true)} aria-label="Abrir el buscador" className="av-ico" style={iconoBoton}>
                 <svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </button>
-              <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favorites.length ? ` (${favorites.length})` : ""}`} className="av-ico" style={iconoBoton}>
-                <svg width={19} height={19} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                {favorites.length > 0 && <span aria-hidden="true" style={{ position: "absolute", top: 3, right: 3, background: accent, color: sobreAcento, borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{favorites.length}</span>}
+              <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favoriteProducts.length ? ` (${favoriteProducts.length})` : ""}`} className="av-ico" style={iconoBoton}>
+                <svg width={19} height={19} viewBox="0 0 24 24" fill={favoriteProducts.length > 0 ? accent : "none"} stroke={favoriteProducts.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                {favoriteProducts.length > 0 && <span aria-hidden="true" style={{ position: "absolute", top: 3, right: 3, background: accent, color: sobreAcento, borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{favoriteProducts.length}</span>}
               </button>
               {pushBell && config?.showPushBell && !isPreview && <span className="av-push"><StoreFollowButton storeSlug={slug} color={navTenue} size={19} /></span>}
               {pushBell && config?.showPushBell && !isPreview && (
@@ -460,9 +475,9 @@ export default function AutoVolt() {
             </div>
           </div>
           {menuOpen && (
-            <div style={{ borderTop: `1px solid ${navLinea}`, padding: "6px 0 14px" }}>
-              {menuCelu.map(([lbl, id]) => (
-                <button key={id} type="button" onClick={() => { irDesdeMenu(id); setMenuOpen(false); }}
+            <div className="av-menu" style={{ maxHeight:"calc(100dvh - 110px)", overflowY:"auto", overscrollBehavior:"contain", borderTop: `1px solid ${navLinea}`, padding: "6px 0 14px" }}>
+              {menuCelu.map(([lbl, id, celu]) => (
+                <button key={id} type="button" data-cel-bloque-oculto={celu ? "" : undefined} onClick={() => { irDesdeMenu(id); setMenuOpen(false); }}
                   style={{ display: "block", width: "100%", background: "none", border: "none", color: navTinta, cursor: "pointer", textAlign: "left", minHeight: 48, fontSize: 15, fontWeight: 600, fontFamily: "inherit", borderBottom: `1px solid ${navLinea}`, padding: "0 4px" }}>
                   {lbl}
                 </button>
@@ -500,7 +515,7 @@ export default function AutoVolt() {
             ) : (
               <CatalogoVolt key={JSON.stringify(filtroPedido)} productos={products} opciones={opciones} filtroInicial={filtroCatalogo} escribirUrl={!isPreview && !!slug}
                 acento={accent} moneda={currency} hrefDe={paginaDe} favoritos={favorites} onFavorito={toggleFavorite}
-                comparando={comparando} onComparar={alternarComparar} onVolver={vista.irALaPortada}
+                comparando={comparando} onComparar={ocultas.includes("av-comparar") ? undefined : alternarComparar} onVolver={vista.irALaPortada}
                 storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
             )}
           </div>
@@ -534,7 +549,7 @@ export default function AutoVolt() {
             </div>
           ) : (
             <EscenarioVolt productos={products} opciones={opciones} inicialId={foco?.id} acento={accent} moneda={currency} whatsapp={whatsapp} hrefDe={paginaDe}
-              favoritos={favorites} onFavorito={toggleFavorite} comparando={comparando} onComparar={alternarComparar}
+              favoritos={favorites} onFavorito={toggleFavorite} comparando={comparando} onComparar={ocultas.includes("av-comparar") ? undefined : alternarComparar}
               selector={enEdicion ? <div style={{ marginBottom: 16 }}><SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} oscuro onChange={setFeaturedVehicleId} /></div> : undefined}
               cabecera={<>
                 <p className="av-entra" style={{ margin: "0 0 14px", display: "inline-flex", alignItems: "center", gap: 10, fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", color: "rgba(232,236,246,0.8)",
@@ -567,8 +582,8 @@ export default function AutoVolt() {
               titulo={<EditableZone field="compararHeading" label="Título del comparador">Ponelos lado a lado</EditableZone>}
               derecha={<p style={{ margin: 0, maxWidth: 340, fontSize: 14, lineHeight: 1.55, color: fComparar.tenue }}>Sumá vehículos con <strong style={{ color: fComparar.tinta }}>⇄ Comparar</strong> en el showroom, o elegilos acá.</p>} />
             <ComparadorVolt productos={products} ids={idsComparados} acento={accent} moneda={currency} hrefDe={paginaDe}
-              onQuitar={id => setComparando(idsComparados.filter(x => x !== id))}
-              onAgregar={id => setComparando([...idsComparados, id].slice(-3))} />
+              onQuitar={id => setEleccion(idsComparados.filter(x => x !== id))}
+              onAgregar={id => setEleccion([...idsComparados, id].slice(-3))} />
           </div>
         </section>
       ) : null}
@@ -627,7 +642,7 @@ export default function AutoVolt() {
           <ChatPreguntasVolt acento={accent} nombreTienda={storeName} enEdicion={enEdicion}
             preguntas={armarPreguntasAutos({ monedas: opciones.monedas.length ? opciones.monedas : [principal], conWhatsapp: !!waLink })}
             otraDuda={
-              <a href={waLink ?? "#nosotros"} {...(waLink ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={isPreview ? e => e.preventDefault() : undefined}
+              <a href={waLink ?? "#contacto"} {...(waLink ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={isPreview ? e => e.preventDefault() : undefined}
                 style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 40, padding: "0 16px", borderRadius: 999, background: accent, color: sobreAcento, fontSize: 13.5, fontWeight: 800, textDecoration: "none" }}>
                 {waLink ? <><WaIcon size={15} /> Otra pregunta</> : "Otra pregunta →"}
               </a>} />
@@ -732,8 +747,9 @@ export default function AutoVolt() {
       </>)}
 
       {/* La barra de comparación: aparece cuando hay vehículos elegidos y lleva al comparador. */}
-      {comparando.length > 0 && !editMode && !ocultas.includes("av-comparar") && (
-        <div role="status" style={{ position: "fixed", left: 16, bottom: 24, zIndex: isPreview ? CAPAS.previaModal : CAPAS.panel, display: "flex", alignItems: "center", gap: 10,
+      {comparando.length > 1 && !editMode && !searchOpen && !ocultas.includes("av-comparar") && (
+        // Oculto sólo en el celular: la barra se va con el bloque (su "Ver" bajaba a algo escondido).
+        <div role="status" data-cel-bloque-oculto={ocultasCelu.includes("av-comparar") ? "" : undefined} style={{ position: "fixed", left: 16, bottom: 24, zIndex: isPreview ? CAPAS.previaModal : CAPAS.panel, display: "flex", alignItems: "center", gap: 10,
           padding: "8px 8px 8px 14px", borderRadius: 16, background: "rgba(8,11,21,0.88)", backdropFilter: "blur(14px)", border: `1px solid ${conAlfa(accent, 0.45)}`,
           boxShadow: `0 18px 40px -16px ${conAlfa(accent, 0.7)}`, maxWidth: "calc(100vw - 104px)", boxSizing: "border-box" }}>
           <span style={{ fontFamily: MONO, fontSize: 12, color: "#fff", whiteSpace: "nowrap" }}><span style={{ color: accent }}>⇄</span> {comparando.length} para comparar</span>
@@ -812,7 +828,7 @@ export default function AutoVolt() {
         <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 420, maxWidth: "100vw", background: "#080b15", color: "#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.35s cubic-bezier(.4,0,.2,1)", display: "flex", flexDirection: "column", borderLeft: `1px solid ${conAlfa(accent, 0.3)}` }}>
           <div style={{ padding: "16px 20px", borderBottom: `1px solid ${LINEA}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontWeight: 800, fontSize: 16, margin: 0 }}>Favoritos <span style={{ fontFamily: MONO, fontWeight: 500, fontSize: 13, color: accent }}>{String(favorites.length).padStart(2, "0")}</span></p>
+            <p style={{ fontWeight: 800, fontSize: 16, margin: 0 }}>Favoritos <span style={{ fontFamily: MONO, fontWeight: 500, fontSize: 13, color: accent }}>{String(favoriteProducts.length).padStart(2, "0")}</span></p>
             <button type="button" onClick={() => setFavoritesOpen(false)} aria-label="Cerrar favoritos" style={{ background: "none", border: "none", color: "#fff", fontSize: 24, cursor: "pointer", width: 44, height: 44, marginRight: -10 }}>×</button>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px" }}>
@@ -836,7 +852,8 @@ export default function AutoVolt() {
         </div>
       </div>
 
-      {!editMode && waLink && (
+      {/* Con el buscador abierto no va: tapaba el último resultado. */}
+      {!editMode && waLink && !searchOpen && (
         <a href={waLink} aria-label="Escribinos por WhatsApp" target="_blank" rel="noopener noreferrer"
           style={{ position: "fixed", bottom: 24, right: 24, zIndex: CAPAS.panel, background: "#25d366", color: "#fff", width: 56, height: 56, borderRadius: 18,
             display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 30px rgba(37,211,102,0.45)", textDecoration: "none" }}>

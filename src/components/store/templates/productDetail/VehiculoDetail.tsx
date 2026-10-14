@@ -9,6 +9,7 @@
  * (`tema`): oscura en Auto Motor, clara en Auto Drive. Las piezas de adentro
  * son las de siempre (consulta, ficha, tasación; ver components/store/auto).
  */
+import { FOTO_VACIA } from "@/lib/foto-vacia";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { ProductDetailViewProps } from "./shared";
@@ -42,7 +43,8 @@ const COLORES: Record<Tema, { fondo: string; superficie: string; linea: string; 
 const CON_MOUSE = "(hover: hover) and (pointer: fine)";
 const escucharMouse = (f: () => void) => { const m = window.matchMedia(CON_MOUSE); m.addEventListener("change", f); return () => m.removeEventListener("change", f); };
 
-export const FOTO_VACIA = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=80";
+// Sin foto: un recuadro que lo dice, no la foto de otro auto (ver lib/foto-vacia).
+export { FOTO_VACIA };
 
 /** Lo parecido: misma marca, después mismo tipo, después el resto. Nunca el mismo. */
 export function parecidos(p: StorefrontProduct, todos: StorefrontProduct[]): StorefrontProduct[] {
