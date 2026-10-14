@@ -371,10 +371,13 @@ export const STORE_TYPES: StoreTypeConfig[] = [
         { key: "traccion",   label: "Tracción",   options: ["4x2", "6x2", "6x4", "8x4", "4x4"] },
         { key: "transmision",label: "Transmisión", options: ["Manual", "Automatizada", "Automática"] },
         { key: "puertas",    label: "Puertas",  ocultar: true },
+        // Opcional (15/10/26): Auto Ruta lo usa para el tamaño de la unidad; sin él, sale del subtipo.
+        { key: "capacidad",  label: "Capacidad de carga (kg)", placeholder: "8000", type: "number" },
       ],
       utilitarios: [
         { key: "carroceria", label: "Carrocería", options: ["Furgón", "Furgón techo alto", "Combi / pasajeros", "Chasis cabina", "Minibús"] },
         { key: "traccion",   label: "Tracción",   options: ["Delantera", "Trasera", "4x4"] },
+        { key: "capacidad",  label: "Capacidad de carga (kg)", placeholder: "1500", type: "number" },
       ],
       maquinaria: [
         // Una máquina se mide en horas de uso, no en kilómetros.
