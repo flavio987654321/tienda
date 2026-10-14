@@ -38,7 +38,26 @@ export const dynamic = "force-dynamic";
 const PESOS = new Intl.NumberFormat("es-AR", {
   style: "currency", currency: "ARS", maximumFractionDigits: 0,
 });
-const FECHA = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short" });
+const FECHA = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", timeZone: "America/Argentina/Buenos_Aires" });
+const FECHA_CON_ANIO = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
+
+/* Filtro por fecha de alta. Va en la dirección (`?alta=7`) para poder
+   compartirlo o volver con "atrás". Filtra la tabla; las tarjetas de arriba
+   siguen siendo del ecosistema entero. */
+const FILTROS_ALTA = [
+  { valor: "", nombre: "Todas" },
+  { valor: "7", nombre: "Últimos 7 días" },
+  { valor: "30", nombre: "Últimos 30 días" },
+  { valor: "mes", nombre: "Este mes" },
+] as const;
+
+function pasaElFiltro(alta: Date | null, filtro: string, ahora: Date, inicioDelMes: Date): boolean {
+  if (!filtro) return true;
+  if (!alta) return false;
+  if (filtro === "mes") return alta >= inicioDelMes;
+  const dias = Number(filtro);
+  return Number.isFinite(dias) && ahora.getTime() - alta.getTime() <= dias * 86_400_000;
+}
 
 const PINTA_PLAN: Record<TierDigital, string> = {
   FREE: "text-gray-400 bg-gray-500/10 border-gray-500/20",
@@ -106,9 +125,12 @@ function Lista({ titulo, porque, children, vacia }: {
   );
 }
 
-export default async function AdminDigitalesPage() {
+export default async function AdminDigitalesPage({ searchParams }: { searchParams: Promise<{ alta?: string }> }) {
   const ahora = new Date();
   const foto = await fotoDeDigitales(ahora);
+  const { alta = "" } = await searchParams;
+  const filtroAlta = FILTROS_ALTA.some((f) => f.valor === alta) ? alta : "";
+  const cuentasVistas = foto.cuentas.filter((c) => pasaElFiltro(c.alta, filtroAlta, ahora, foto.desde));
   const atencion = necesitanAtencion(foto.cuentas, ahora);
   const hayQueMirar = atencion.pruebaPorVencer.length > 0 || atencion.enGracia.length > 0
     || atencion.vencidas.length > 0 || atencion.dominioEnRiesgo.length > 0;
@@ -214,11 +236,21 @@ export default async function AdminDigitalesPage() {
         <div className="px-5 py-3.5 border-b border-white/5">
           <p className="text-sm font-bold text-white">Las cuentas</p>
           <p className="text-xs text-gray-500">Primero la que más comisión dejó este mes.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {FILTROS_ALTA.map((f) => (
+              <Link key={f.valor} href={f.valor ? `/admin/digitales?alta=${f.valor}` : "/admin/digitales"}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${filtroAlta === f.valor
+                  ? "border-orange-500/40 bg-orange-500/10 text-orange-300" : "border-white/10 text-gray-400 hover:text-white"}`}>
+                {f.nombre}
+              </Link>
+            ))}
+            {filtroAlta && <span className="text-xs text-gray-500">{cuentasVistas.length} de {foto.cuentas.length} cuentas se registraron en ese período</span>}
+          </div>
         </div>
 
-        {foto.cuentas.length === 0 ? (
+        {cuentasVistas.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-gray-500">
-            Todavía no hay ninguna cuenta de Productos Digitales.
+            {foto.cuentas.length === 0 ? "Todavía no hay ninguna cuenta de Productos Digitales." : "Ninguna cuenta se registró en ese período."}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -233,7 +265,7 @@ export default async function AdminDigitalesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {foto.cuentas.map((c) => (
+                {cuentasVistas.map((c) => (
                   <tr key={c.userId} className={c.banned ? "bg-red-950/20" : "hover:bg-white/[0.02] transition-colors"}>
                     <td className="px-5 py-3.5">
                       <Link
@@ -245,6 +277,7 @@ export default async function AdminDigitalesPage() {
                             {c.nombre ?? "—"}
                           </span>
                           <span className="block text-xs text-gray-600">{c.email}</span>
+                          {c.alta && <span className="block text-[11px] text-gray-600">Alta: {FECHA_CON_ANIO.format(c.alta)}</span>}
                         </span>
                         <ExternalLink className="h-3 w-3 shrink-0 text-gray-700 group-hover:text-gray-400 transition-colors" />
                       </Link>
@@ -291,13 +324,14 @@ export default async function AdminDigitalesPage() {
                         <a key={pg.id} href={pg.url} target="_blank" rel="noopener noreferrer" title={pg.url}
                           className="mt-1 ml-auto flex max-w-[260px] items-center justify-end gap-1 text-[11px] text-indigo-300 hover:text-indigo-200">
                           <span className="truncate">{pg.nombre}</span>
+                          <span className="shrink-0 text-gray-500">· {FECHA.format(pg.creada)}</span>
                           {pg.dominioPropio && <Globe className="h-3 w-3 shrink-0" />}
                           <ExternalLink className="h-3 w-3 shrink-0" />
                         </a>
                       ) : (
                         <span key={pg.id} className="mt-1 ml-auto flex max-w-[260px] items-center justify-end gap-1 text-[11px] text-gray-600">
                           <span className="truncate">{pg.nombre}</span>
-                          <span className="shrink-0">· borrador</span>
+                          <span className="shrink-0">· {FECHA.format(pg.creada)} · borrador</span>
                         </span>
                       ))}
                     </td>

@@ -69,6 +69,8 @@ export type CuentaDigital = {
   freeDesde: Date | null;
   productos: number;
   publicados: number;
+  /** Cuándo se registró la cuenta. */
+  alta: Date | null;
   /** Cada página cargada con su dirección pública, para abrirla desde el admin. */
   paginas: PaginaDigital[];
   ventasDelMes: number;
@@ -77,7 +79,7 @@ export type CuentaDigital = {
   comisionTotal: number;
 };
 
-export type PaginaDigital = { id: string; nombre: string; url: string; publicada: boolean; dominioPropio: boolean };
+export type PaginaDigital = { id: string; nombre: string; url: string; publicada: boolean; dominioPropio: boolean; creada: Date };
 
 /** La dirección que ve el público: el dominio propio, si no el subdominio, si no la provisoria. Igual que el mail del cron. */
 export function urlDePagina(p: { id: string; slugDigital: string | null; dominioPropio: string | null }): string {
@@ -213,7 +215,7 @@ export async function fotoDeDigitales(ahora: Date = new Date()): Promise<FotoDig
       ...SUB_STATUS_SELECT,
       user: {
         select: {
-          name: true, email: true, banned: true,
+          name: true, email: true, banned: true, createdAt: true,
           store: { select: { id: true } },
         },
       },
@@ -259,13 +261,13 @@ export async function fotoDeDigitales(ahora: Date = new Date()): Promise<FotoDig
 
   const filasDePaginas = storeIds.length === 0 ? [] : await prisma.product.findMany({
     where: { storeId: { in: storeIds }, rolDigital: "PRINCIPAL", deletedAt: null },
-    select: { id: true, storeId: true, name: true, isActive: true, slugDigital: true, dominioPropio: true },
+    select: { id: true, storeId: true, name: true, isActive: true, slugDigital: true, dominioPropio: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
   const paginasDe = new Map<string, PaginaDigital[]>();
   for (const p of filasDePaginas) {
     paginasDe.set(p.storeId, [...(paginasDe.get(p.storeId) ?? []),
-      { id: p.id, nombre: p.name, url: urlDePagina(p), publicada: p.isActive, dominioPropio: !!p.dominioPropio }]);
+      { id: p.id, nombre: p.name, url: urlDePagina(p), publicada: p.isActive, dominioPropio: !!p.dominioPropio, creada: p.createdAt }]);
   }
 
   const porTienda = <T extends { storeId: string }>(xs: T[]) => {
@@ -312,6 +314,7 @@ export async function fotoDeDigitales(ahora: Date = new Date()): Promise<FotoDig
       productos: storeId ? cuantos.get(storeId) ?? 0 : 0,
       publicados: storeId ? cuantosVivos.get(storeId) ?? 0 : 0,
       paginas: storeId ? paginasDe.get(storeId) ?? [] : [],
+      alta: s.user?.createdAt ?? null,
       ventasDelMes: delMesAca.reduce((t, x) => t + x._count._all, 0),
       brutoDelMes: delMesAca.reduce((t, x) => t + (x._sum.total ?? 0), 0),
       comisionDelMes: sumar(delMesAca),
