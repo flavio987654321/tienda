@@ -66,8 +66,13 @@ export function TarjetaRuta({ p, acento, moneda, href, favorito, onFavorito }: {
             {p.name}
           </Link>
         </h3>
+        {/* Los km (u horas) van aparte para que cuenten como un odómetro al aparecer (ver AutoRuta, efecto 3). */}
         {datos.length > 0 && (
-          <p style={{ margin: 0, fontSize: 13.5, color: TENUE, fontVariantNumeric: "tabular-nums" }}>{datos.join("  ·  ")}</p>
+          <p style={{ margin: 0, fontSize: 13.5, color: TENUE, fontVariantNumeric: "tabular-nums" }}>
+            {datos.map((d, i) => (
+              <span key={i}>{i > 0 && "  ·  "}{d === uso ? <span data-ef-contar="" className="rt-odometro">{d}</span> : d}</span>
+            ))}
+          </p>
         )}
         {trabajos.length > 0 && (
           <p style={{ margin: 0, fontSize: 12.5, color: TINTA }}>

@@ -104,7 +104,7 @@ export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
             <h3 style={{ margin: "6px 0 0", fontFamily: TITULAR, fontSize: "clamp(26px,3.4vw,40px)", fontWeight: 700, lineHeight: 1, textTransform: "uppercase", overflowWrap: "anywhere" }}>{p.name}</h3>
           </div>
           {/* El sello: una línea gruesa del acento, inclinado como uno de goma */}
-          <span aria-hidden="true" style={{ flexShrink: 0, border: `2px solid ${acento}`, color: TINTA, background: alfa(acento, 0.12), fontFamily: TITULAR, fontSize: 12, fontWeight: 700, letterSpacing: 1.2,
+          <span aria-hidden="true" className="or-sello" style={{ flexShrink: 0, border: `2px solid ${acento}`, color: TINTA, background: alfa(acento, 0.12), fontFamily: TITULAR, fontSize: 12, fontWeight: 700, letterSpacing: 1.2,
             textTransform: "uppercase", lineHeight: 1.15, textAlign: "center", padding: "6px 9px", borderRadius: 3, transform: "rotate(-4deg)" }}>Unidad<br />de la semana</span>
         </div>
 
@@ -119,7 +119,8 @@ export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
           {numeros.map(([l, v]) => (
             <div key={l} style={{ padding: "10px 12px", minWidth: 0 }}>
               <p style={{ ...etiqueta, fontSize: 10, margin: 0 }}>{l}</p>
-              <p style={{ margin: "4px 0 0", fontFamily: TITULAR, fontSize: 19, fontWeight: 700, overflowWrap: "anywhere" }}>{v}</p>
+              <p {...(l === "Kilómetros" || l === "Horas" ? { "data-ef-contar": "", className: "rt-odometro" } : {})}
+                style={{ margin: "4px 0 0", fontFamily: TITULAR, fontSize: 19, fontWeight: 700, overflowWrap: "anywhere" }}>{v}</p>
             </div>
           ))}
         </div>

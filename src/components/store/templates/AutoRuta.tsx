@@ -323,6 +323,18 @@ export default function AutoRuta() {
         .ef-listo [data-ef="titulo"]:not(.ef-in) { opacity:0; transform:translateY(12px) }
         .ef-listo [data-ef="titulo"].ef-in { transition: opacity .6s, transform .6s cubic-bezier(.2,.7,.2,1) }
         .ef-listo [data-ef].ef-ya > *, .ef-listo [data-ef].ef-ya { animation:none !important; transition:none !important }
+        /* Los tres efectos propios de Ruta (14/10/26). Van detrás de .ef-listo
+           como los demás: quietos en el editor y con "reducir movimiento".
+           1 · La raya de la portada avanza despacio, como la ruta al manejar
+               (30 px es lo que mide un trazo más su hueco, ver rayaDeRuta). */
+        @keyframes rt-avanza { to { background-position: -30px 0 } }
+        .ef-listo .rt-raya { animation: rt-avanza 1.4s linear infinite }
+        /* 2 · El sello de la unidad de la semana se estampa (ver ruta/OrdenRuta). */
+        @keyframes rt-sello { 0% { opacity:0; transform: scale(1.9) rotate(-14deg) } 70% { opacity:1; transform: scale(.94) rotate(-3deg) } 100% { opacity:1; transform: scale(1) rotate(-4deg) } }
+        .ef-listo [data-ef].ef-in:not(.ef-ya) .or-sello { animation: rt-sello .5s .55s cubic-bezier(.3,.8,.3,1) backwards }
+        /* 3 · El odómetro: km y horas cuentan con cifras de ancho fijo, en una
+               cajita como la del tablero (data-ef-contar, ver shared/efectosAutos). */
+        .rt-odometro { font-variant-numeric: tabular-nums }
       `}</style>
 
       {/* ── BARRA DE AVISOS ── */}
@@ -508,7 +520,7 @@ export default function AutoRuta() {
             </dl>
           )}
         </div>
-        <span aria-hidden="true" style={{ position: "relative", zIndex: 1, display: "block", height: 6, background: rayaDeRuta(accent) }} />
+        <span aria-hidden="true" className="rt-raya" style={{ position: "relative", zIndex: 1, display: "block", height: 6, background: rayaDeRuta(accent) }} />
       </section>
 
       {/* ── POR TRABAJO ── el corazón de Ruta (ver ruta/SelectorRuta). */}
