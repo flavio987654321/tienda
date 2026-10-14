@@ -5,6 +5,7 @@ import CampoTelefono from "@/components/CampoTelefono";
 import { MessageCircle, Link2, Search, DollarSign, Save, Check, Loader2, MapPin } from "lucide-react";
 import { DIAS, NOMBRE_DIA, problemaDeHorarios, type Dia, type Franja, type Ubicacion } from "@/lib/agencia";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 
 /* Las cuatro preferencias que antes vivían dentro del modal "Configuración
    avanzada" del editor de diseño. Se mudaron porque para cambiarlas había que
@@ -410,6 +411,8 @@ export function UbicacionCard({ inicial }: { inicial: Ubicacion }) {
 
   return (
     <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
+      {/* Son muchos campos: irse sin guardar (otra sección, recargar, cerrar) avisa antes de perderlos. */}
+      <UnsavedChangesGuard isDirty={!sinCambios} />
       <Cabecera icon={MapPin}>La agencia: dirección y horarios</Cabecera>
       <div className="px-5 py-4 space-y-4">
         <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 leading-relaxed">

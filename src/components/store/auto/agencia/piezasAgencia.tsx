@@ -11,20 +11,51 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useEditContext } from "@/contexts/EditContext";
 import {
   agenciaLimpia, estadoAhora, hayDireccion, horariosResumidos, direccionCompleta, urlMapaEmbebido, urlComoLlegar,
-  PAGOS, NOMBRE_PAGO, TOPE, type Agencia, type Miembro, type Pago,
+  PAGOS, NOMBRE_PAGO, TOPE, type Agencia, type Miembro, type Pago, type Ubicacion,
 } from "@/lib/agencia";
 import { subirImagenDeDiseno } from "@/lib/subir-imagen-diseno";
 import { fotoLiviana } from "@/lib/foto-liviana";
 
 export type PaletaAgencia = { tinta: string; tenue: string; linea: string; campo: string; acento: string; sobreAcento: string };
 
+const EJEMPLO: { ubicacion: Ubicacion; agencia: Agencia } = {
+  ubicacion: {
+    calle: "Av. del Libertador 1234", localidad: "Vicente López", provincia: "Buenos Aires",
+    horarios: {
+      lun: [{ abre: "09:00", cierra: "19:00" }], mar: [{ abre: "09:00", cierra: "19:00" }], mie: [{ abre: "09:00", cierra: "19:00" }],
+      jue: [{ abre: "09:00", cierra: "19:00" }], vie: [{ abre: "09:00", cierra: "19:00" }], sab: [{ abre: "09:00", cierra: "13:00" }],
+    },
+  },
+  agencia: {
+    pagos: ["contado", "financiacion", "permuta", "dolares"],
+    pagosNota: "Financiación en hasta 48 cuotas con DNI y recibo de sueldo.",
+    equipo: [{ nombre: "Martín", rol: "Ventas" }, { nombre: "Laura", rol: "Usados y permutas" }, { nombre: "Diego", rol: "Gestoría" }],
+    garantia: "3 meses o 3.000 km de garantía mecánica en todos los usados. Los 0 km, con la garantía oficial de fábrica.",
+    salon: [
+      "https://images.unsplash.com/photo-1562141961-b5d1fdaf8b7b?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=80",
+    ],
+  },
+};
+
+function tieneAlgo(u: Ubicacion | undefined, a: Agencia | undefined) {
+  const l = agenciaLimpia(a);
+  return hayDireccion(u) || horariosResumidos(u?.horarios).length > 0 || l.pagos.length > 0 || l.equipo.length > 0 || !!l.garantia || l.salon.length > 0;
+}
+
 /** Todo lo que la página necesita, ya limpio, más si se está editando. */
 export function useAgencia() {
   const config = useStoreConfig();
   const { editMode, setAgencia } = useEditContext();
   const enEdicion = !!(editMode && config?.previewFill && setAgencia);
-  const ubicacion = config?.ubicacion ?? {};
-  const crudo = config?.agencia ?? {};
+  /* En la vista de muestra (galería de Diseño, demo pública) y sin nada
+     cargado, la página se veía como una portada sola: no se entendía qué
+     ofrece. Se muestra un ejemplo completo, como los vehículos de muestra.
+     Editando no: ahí se ve lo propio con sus editores. */
+  const deMuestra = !!config?.previewFill && !enEdicion && !tieneAlgo(config?.ubicacion, config?.agencia);
+  const ubicacion = deMuestra ? EJEMPLO.ubicacion : (config?.ubicacion ?? {});
+  const crudo = deMuestra ? EJEMPLO.agencia : (config?.agencia ?? {});
   const agencia = agenciaLimpia(crudo);
   const cambiar = (parcial: Partial<Agencia>) => setAgencia?.({ ...crudo, ...parcial });
   return {
@@ -33,8 +64,9 @@ export function useAgencia() {
     direccion: direccionCompleta(ubicacion),
     horarios: horariosResumidos(ubicacion.horarios),
     /** Sin nada de esto la página sólo muestra la presentación: no se dibujan tarjetas vacías. */
-    hayAlgo: hayDireccion(ubicacion) || horariosResumidos(ubicacion.horarios).length > 0 || agencia.pagos.length > 0
-      || agencia.equipo.length > 0 || !!agencia.garantia || agencia.salon.length > 0,
+    hayAlgo: tieneAlgo(ubicacion, crudo),
+    /** Se está mostrando el ejemplo, no datos de la tienda. */
+    deMuestra,
   };
 }
 
