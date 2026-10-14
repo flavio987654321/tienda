@@ -44,7 +44,7 @@ function cuenta(x: Partial<CuentaDigital> = {}): CuentaDigital {
     userId: `u${n}`, nombre: `Cuenta ${n}`, email: `c${n}@ejemplo.com`, banned: false,
     storeId: `s${n}`, tier: "PRO", plan: "MONTHLY", pago: true, estado: "ACTIVE",
     trialEndsAt: dias(-30), currentPeriodEnd: dias(10), freeDesde: null,
-    productos: 1, publicados: 1, ventasDelMes: 0, brutoDelMes: 0,
+    productos: 1, publicados: 1, paginas: [], ventasDelMes: 0, brutoDelMes: 0,
     comisionDelMes: 0, comisionTotal: 0,
     ...x,
   };

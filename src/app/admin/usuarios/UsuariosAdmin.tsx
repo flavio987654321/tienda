@@ -52,7 +52,11 @@ export type User = {
   banned: boolean;
   createdAt: string;
   subscription: Sub | null;
-  store: { name: string; isPublished: boolean; closedAt: string | null } | null;
+  store: {
+    name: string; isPublished: boolean; closedAt: string | null;
+    /** Sólo en cuentas de Productos Digitales: lo que se publica son páginas, no la tienda. */
+    paginas: { total: number; publicadas: number } | null;
+  } | null;
   _count: { orders: number };
   /** Cómo entra: "email" (contraseña o código) y/o "google". Sale de Supabase. */
   entraCon: string[];
@@ -473,7 +477,12 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter, bu
                           <p className="text-white text-xs font-medium">{u.store.name}</p>
                           {/* Una tienda cerrada por la dueña también tiene isPublished=false;
                               sin distinguirla, se veía igual que un borrador. */}
-                          {u.store.closedAt ? (
+                          {u.store.paginas ? (
+                            <p className={`text-xs ${u.store.paginas.publicadas > 0 ? "text-emerald-400" : "text-gray-500"}`}>
+                              {u.store.paginas.total === 0 ? "Sin páginas"
+                                : `${u.store.paginas.publicadas} de ${u.store.paginas.total} ${u.store.paginas.total === 1 ? "página publicada" : "páginas publicadas"}`}
+                            </p>
+                          ) : u.store.closedAt ? (
                             <p className="text-xs text-amber-400">Cerrada</p>
                           ) : (
                             <p className={`text-xs ${u.store.isPublished ? "text-emerald-400" : "text-gray-500"}`}>

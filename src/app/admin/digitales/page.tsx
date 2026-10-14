@@ -285,6 +285,21 @@ export default async function AdminDigitalesPage() {
                       <span className="block text-[11px] text-gray-600">
                         publicadas · {c.productos} cargada{c.productos === 1 ? "" : "s"}
                       </span>
+                      {/* La dirección pública de cada página, para verla como la ve un comprador.
+                          Un borrador no tiene link: fuera de su dueña, da "no encontrada". */}
+                      {c.paginas.map((pg) => pg.publicada ? (
+                        <a key={pg.id} href={pg.url} target="_blank" rel="noopener noreferrer" title={pg.url}
+                          className="mt-1 ml-auto flex max-w-[260px] items-center justify-end gap-1 text-[11px] text-indigo-300 hover:text-indigo-200">
+                          <span className="truncate">{pg.nombre}</span>
+                          {pg.dominioPropio && <Globe className="h-3 w-3 shrink-0" />}
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <span key={pg.id} className="mt-1 ml-auto flex max-w-[260px] items-center justify-end gap-1 text-[11px] text-gray-600">
+                          <span className="truncate">{pg.nombre}</span>
+                          <span className="shrink-0">· borrador</span>
+                        </span>
+                      ))}
                     </td>
                     <td className="px-5 py-3.5 text-right text-sm tabular-nums">
                       <span className="text-white">{c.ventasDelMes}</span>

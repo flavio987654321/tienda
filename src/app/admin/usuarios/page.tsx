@@ -20,7 +20,7 @@ export default async function AdminUsuariosPage({
       // valor vivo lo calcula getSubscriptionStatus. El admin mostraba el crudo,
       // así que una tienda vencida se veía "Activa".
       subscription: { select: { status: true, plan: true, tier: true, role: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true } },
-      store: { select: { name: true, isPublished: true, closedAt: true } },
+      store: { select: { id: true, name: true, isPublished: true, closedAt: true } },
       _count: { select: { orders: true } },
     },
   });
@@ -44,6 +44,20 @@ export default async function AdminUsuariosPage({
     console.error("[admin usuarios] no se pudo leer cómo entra cada uno:", e instanceof Error ? e.message : e);
   }
 
+  /* Una cuenta de Productos Digitales no publica la TIENDA: publica páginas
+     (cada producto PRINCIPAL activo). Su tienda queda siempre "sin publicar",
+     así que la columna decía "Sin publicar" de alguien con su página en el aire,
+     y Digitales decía "1/1 publicadas". Para esas cuentas se cuentan las páginas,
+     con la misma regla que Digitales (lib/admin-digitales). */
+  const idsDigitales = users.filter((u) => u.role === "DIGITAL" && u.store).map((u) => u.store!.id);
+  const [paginas, paginasVivas] = idsDigitales.length === 0 ? [[], []] : await Promise.all([
+    prisma.product.groupBy({ by: ["storeId"], where: { storeId: { in: idsDigitales }, rolDigital: "PRINCIPAL", deletedAt: null }, _count: { _all: true } }),
+    prisma.product.groupBy({ by: ["storeId"], where: { storeId: { in: idsDigitales }, rolDigital: "PRINCIPAL", deletedAt: null, isActive: true }, _count: { _all: true } }),
+  ]);
+  const cuenta = (filas: { storeId: string; _count: { _all: number } }[]) => new Map(filas.map((f) => [f.storeId, f._count._all]));
+  const totalPaginas = cuenta(paginas);
+  const vivas = cuenta(paginasVivas);
+
   const serialized = users.map(u => ({
     ...u,
     entraCon: entraCon.get(u.id) ?? [],
@@ -59,7 +73,10 @@ export default async function AdminUsuariosPage({
         }
       : null,
     store: u.store
-      ? { ...u.store, closedAt: u.store.closedAt?.toISOString() ?? null }
+      ? {
+          ...u.store, closedAt: u.store.closedAt?.toISOString() ?? null,
+          paginas: u.role === "DIGITAL" ? { total: totalPaginas.get(u.store.id) ?? 0, publicadas: vivas.get(u.store.id) ?? 0 } : null,
+        }
       : null,
   }));
 
