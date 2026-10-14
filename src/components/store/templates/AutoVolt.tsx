@@ -106,7 +106,7 @@ export default function AutoVolt() {
   // El menú sólo lleva a bloques que se ven; en el celular, tampoco a los ocultos ahí.
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", ""]].filter(([, , b]) => !b || !ocultas.includes(b))
+  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", ""], ["Contacto", "contacto", ""]].filter(([, , b]) => !b || !ocultas.includes(b))
     // El comparador sólo se dibuja con dos vehículos o más: con uno, "Comparar" era un botón que no hacía nada.
     .filter(([, id]) => id !== "comparar" || products.length >= 2);
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
@@ -255,7 +255,9 @@ export default function AutoVolt() {
   };
   /* "La agencia" es una página aparte (dirección, horarios, pagos, equipo; ver
      volt/AgenciaVolt); el resto del menú son bloques de la portada. */
-  const irDesdeMenu = (id: string) => (id === "nosotros" ? vista.irANosotros() : irA(id));
+  const irDesdeMenu = (id: string) => (id === "nosotros" ? vista.irANosotros()
+    // El contacto es el pie (WhatsApp y redes): está en todas las pantallas, así que se baja ahí sin cambiar de pantalla.
+    : id === "contacto" ? irASeccion("contacto") : irA(id));
   useEffect(() => {
     if (!seccionPendiente || !vista.enPortada) return;
     const t = setTimeout(() => { irASeccion(seccionPendiente); setSeccionPendiente(null); }, 80);
@@ -309,7 +311,9 @@ export default function AutoVolt() {
         @media(min-width:640px){ .av-marca { font-size:16px; letter-spacing:1px } }
         .av-links { display:none }
         .av-solo-ancho { display:none }
-        @media(min-width:920px){ .av-links { display:flex } .av-burger { display:none !important } .av-solo-ancho { display:inline-flex } }
+        /* Con cinco links (Contacto se sumó el 14/10/26) no entran en 920: se partían en dos renglones y cortaban el nombre. */
+        @media(min-width:1100px){ .av-links { display:flex } .av-burger { display:none !important } .av-solo-ancho { display:inline-flex } }
+        .av-links .av-link { white-space:nowrap }
         .av-about { display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(28px,5vw,64px); align-items:center }
         @media(min-width:880px){ .av-about { grid-template-columns:minmax(0,1fr) minmax(0,1fr) } }
         .av-faq { display:grid; grid-template-columns:minmax(0,1fr); gap:24px clamp(28px,5vw,64px) }
@@ -650,7 +654,7 @@ export default function AutoVolt() {
       <SectionBlock id="av-nosotros" label="La agencia" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
       <section id="nosotros" style={{ padding: pad, position: "relative", ...fNosotros.estilo, borderTop: `1px solid ${fNosotros.linea}` }}>
         {capa("bgNosotros", "Fondo de la agencia", fNosotros.ov)}
-        <div id="contacto" data-ef="sube" className="av-about" style={{ ...ancho, scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16 }}>
+        <div data-ef="sube" className="av-about" style={{ ...ancho, scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16 }}>
           <div className="av-incl" style={{ borderRadius: 26, padding: 1, background: `linear-gradient(160deg, ${conAlfa(accent, 0.7)}, transparent 45%, ${conAlfa(accent, 0.3)})` }}>
             <div style={{ position: "relative", borderRadius: 25, overflow: "hidden", aspectRatio: "5/4", background: "#03040a" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por la dueña */}
@@ -721,7 +725,7 @@ export default function AutoVolt() {
       )}
 
       {/* ── PIE ── */}
-      <footer style={{ position: "relative", padding: "clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", ...fPie.estilo, borderTop: `1px solid ${conAlfa(accent, 0.25)}` }}>
+      <footer id="contacto" style={{ position: "relative", padding: "clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16, ...fPie.estilo, borderTop: `1px solid ${conAlfa(accent, 0.25)}` }}>
         {capa("bgFooter", "Fondo del pie", fPie.ov, "Pie de la tienda")}
         <div style={ancho}>
           <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
