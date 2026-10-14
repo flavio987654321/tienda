@@ -18,6 +18,18 @@ export const ESTADOS_DEL_USADO = ["Excelente", "Muy bueno", "Bueno", "Regular", 
 export const COMBUSTIBLES = ["Nafta", "Diesel", "GNC", "Eléctrico", "Híbrido"] as const;
 export const TRANSMISIONES = ["Manual", "Automática"] as const;
 
+/* Unidades de trabajo (15/10/26, Auto Ruta). La tasación tiene columnas fijas
+   pensadas para autos; el tipo, la carrocería y si se mide en horas viajan en
+   una primera línea del comentario que arma el SERVIDOR (no la escribe nadie a
+   mano), así no hace falta tocar la base. Una máquina se mide en horas: el
+   número va en la columna de km y `resumenDelUsado` lo muestra con "h". */
+export const TIPOS_DE_TRABAJO = ["Camión", "Utilitario", "Pickup", "Máquina"] as const;
+export const MARCA_HORAS = "Se mide en horas de uso.";
+export const enHorasDeUso = (comentario: string | null | undefined) => {
+  const primera = (comentario ?? "").split("\n")[0];
+  return primera.startsWith("Tipo: ") && primera.includes(MARCA_HORAS);
+};
+
 export type ModalidadTasacion = "PERMUTA" | "VENTA";
 export type EstadoTasacion = "PENDIENTE" | "OFERTADA" | "ACEPTADA" | "DESCARTADA";
 
@@ -87,7 +99,12 @@ export function validarTasacion(b: Record<string, unknown> | null | undefined): 
   if (!marca) return { error: "Poné la marca de tu auto." };
   if (!modelo) return { error: "Poné el modelo de tu auto." };
   if (anio == null || anio < ANIO_MINIMO || anio > anioMaximo()) return { error: `El año tiene que estar entre ${ANIO_MINIMO} y ${anioMaximo()}.` };
-  if (km == null || km < 0 || km > KM_MAXIMO) return { error: "Poné los kilómetros (sólo números)." };
+  const tipo = deLista(b.tipo, TIPOS_DE_TRABAJO);
+  const horas = tipo === "Máquina";
+  if (km == null || km < 0 || km > KM_MAXIMO) return { error: horas ? "Poné las horas de uso (sólo números)." : "Poné los kilómetros (sólo números)." };
+  const carroceria = texto(b.carroceria, 40);
+  const cabecera = tipo ? [`Tipo: ${tipo}`, carroceria, horas ? MARCA_HORAS : null].filter(Boolean).join(" · ") : null;
+  const escrito = texto(b.comentario, 600);
 
   return {
     datos: {
@@ -97,15 +114,15 @@ export function validarTasacion(b: Record<string, unknown> | null | undefined): 
       combustible: deLista(b.combustible, COMBUSTIBLES),
       transmision: deLista(b.transmision, TRANSMISIONES),
       estado: deLista(b.estado, ESTADOS_DEL_USADO),
-      comentario: texto(b.comentario, 600),
+      comentario: [cabecera, escrito].filter(Boolean).join("\n") || null,
       modalidad: b.modalidad === "VENTA" ? "VENTA" : "PERMUTA",
     },
   };
 }
 
 /** "VW Gol Trend 1.6 · 2015 · 98.000 km" */
-export function resumenDelUsado(t: { marca: string; modelo: string; version?: string | null; anio: number; km: number }): string {
-  return `${[t.marca, t.modelo, t.version].filter(Boolean).join(" ")} · ${t.anio} · ${t.km.toLocaleString("es-AR")} km`;
+export function resumenDelUsado(t: { marca: string; modelo: string; version?: string | null; anio: number; km: number; comentario?: string | null }): string {
+  return `${[t.marca, t.modelo, t.version].filter(Boolean).join(" ")} · ${t.anio} · ${t.km.toLocaleString("es-AR")} ${enHorasDeUso(t.comentario) ? "h" : "km"}`;
 }
 
 /** El mensaje de WhatsApp con la oferta, listo para mandar desde el panel. */

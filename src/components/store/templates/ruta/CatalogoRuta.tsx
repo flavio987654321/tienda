@@ -309,7 +309,7 @@ export function CatalogoRuta({ productos, opciones, filtroInicial, trabajoInicia
       )}
 
       <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={cerrarAvisame}>
-        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} marcaInicial={filtro.q.trim()} />
+        <BusquedaVehiculo storeId={storeId} accent={acento} isOwner={isOwner} isPreview={isPreview} marcaInicial={filtro.q.trim()} deTrabajo />
       </VentanaAuto>
     </div>
   );

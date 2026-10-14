@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getContrastColor } from "@/contexts/EditContext";
-import { ESTADOS_DEL_USADO, COMBUSTIBLES, TRANSMISIONES, anioMaximo, ANIO_MINIMO, KM_MAXIMO, validarTasacion } from "@/lib/tasaciones";
+import { ESTADOS_DEL_USADO, COMBUSTIBLES, TRANSMISIONES, TIPOS_DE_TRABAJO, anioMaximo, ANIO_MINIMO, KM_MAXIMO, validarTasacion } from "@/lib/tasaciones";
 import { conPuntos, sinPuntos } from "@/lib/monedaVehiculo";
 import CampoTelefono from "@/components/CampoTelefono";
 import CampoTrampa from "@/components/store/auto/CampoTrampa";
@@ -22,7 +22,7 @@ import { useSessionDraft } from "@/hooks/useSessionDraft";
 type Estado = "idle" | "enviando" | "listo";
 type Paso = 1 | 2 | 3 | 4;
 const TASACION_VACIA = {
-  f: { marca: "", modelo: "", version: "", anio: "", km: "", combustible: "", transmision: "", estado: "", comentario: "", nombre: "", telefono: "" },
+  f: { tipo: "", carroceria: "", marca: "", modelo: "", version: "", anio: "", km: "", combustible: "", transmision: "", estado: "", comentario: "", nombre: "", telefono: "" },
   modalidad: null as "PERMUTA" | "VENTA" | null,
   paso: 1 as Paso,
   submissionKey: "",
@@ -31,6 +31,8 @@ const hayTasacion = (draft: typeof TASACION_VACIA) =>
   !!draft.modalidad || Object.values(draft.f).some(Boolean);
 
 const MARCAS_COMUNES = ["Volkswagen", "Toyota", "Ford", "Chevrolet", "Fiat", "Renault", "Peugeot"];
+/* Auto Ruta (15/10/26): camiones, utilitarios y máquinas. */
+const MARCAS_DE_TRABAJO = ["Mercedes-Benz", "Iveco", "Scania", "Volkswagen", "Ford", "Renault", "John Deere"];
 
 /** La escala del estado, del mejor al peor, con un color que se lee de un vistazo. */
 const COLOR_ESTADO: Record<(typeof ESTADOS_DEL_USADO)[number], string> = {
@@ -72,7 +74,7 @@ function Icono({ cual, color, tam = 22 }: { cual: "cambio" | "plata" | "auto" | 
 /** La hora, para los clicks. Afuera del componente: nunca se llama al dibujar. */
 const ahora = () => Date.now();
 
-export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false, oscuro }: {
+export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false, oscuro, deTrabajo = false }: {
   storeId?: string;
   accent: string;
   /** El vehículo de la tienda por el que lo entregaría (desde la página del vehículo). */
@@ -82,6 +84,9 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   abiertoDeEntrada?: boolean;
   /** Sobre fondo oscuro (Auto Volt). */
   oscuro?: boolean;
+  /** Unidades de trabajo (Auto Ruta): pregunta el tipo y la carrocería, marcas
+      de camiones, y una máquina se mide en horas de uso. */
+  deTrabajo?: boolean;
 }) {
   const pal = oscuro ? TEMA_OSCURO : TEMA_CLARO;
   const [abierto, setAbierto] = useState(abiertoDeEntrada);
@@ -116,6 +121,9 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   const soloMirando = !storeId || isOwner || isPreview;
   const formularioAbierto = abierto || (!cerradoAMano && borrador.loaded && hayTasacion(borrador.value));
   const sobreAcento = getContrastColor(accent) === "dark" ? "#111" : "#fff";
+  // `?? ""`: un borrador guardado antes del 15/10/26 no trae estos dos.
+  const tipo = deTrabajo ? (f.tipo ?? "") : "";
+  const enHoras = tipo === "Máquina";
 
   // Al cambiar de paso, el foco va al título: el lector de pantalla anuncia dónde está.
   useEffect(() => {
@@ -125,7 +133,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
 
   const poner = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
   /** Para los botones de opción: lo que se escribe pasa siempre, un toque recién llegado al paso no. */
-  const elegir = (k: keyof typeof f, v: string) => { if (!recienCambio()) poner(k, v); };
+  const elegir = (k: keyof typeof f, v: string) => { if (!recienCambio()) { poner(k, v); setError(""); } };
   const cambiar = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const v = e.target.value;
     // Año: sólo dígitos. Km: con puntos de miles a la vista, se guardan los dígitos.
@@ -136,11 +144,12 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   function errorDelPaso(p: Paso): string {
     if (p === 1 && !modalidad) return "Elegí qué querés hacer.";
     if (p === 2) {
+      if (deTrabajo && !tipo) return "Elegí qué tipo de unidad es.";
       if (!f.marca.trim()) return "Poné la marca de tu auto.";
       if (!f.modelo.trim()) return "Poné el modelo de tu auto.";
       const a = Number(f.anio);
       if (!f.anio || a < ANIO_MINIMO || a > anioMaximo()) return `El año tiene que estar entre ${ANIO_MINIMO} y ${anioMaximo()}.`;
-      if (f.km === "" || Number(f.km) > KM_MAXIMO) return "Poné los kilómetros (sólo números).";
+      if (f.km === "" || Number(f.km) > KM_MAXIMO) return enHoras ? "Poné las horas de uso (sólo números)." : "Poné los kilómetros (sólo números).";
     }
     return "";
   }
@@ -310,22 +319,38 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
         {/* ── 2. Tu vehículo ── */}
         {paso === 2 && (
           <>
-            <h3 ref={titulo} tabIndex={-1} style={{ margin: 0, fontSize: 19, fontWeight: 800, outline: "none" }}>Contanos de tu vehículo</h3>
+            <h3 ref={titulo} tabIndex={-1} style={{ margin: 0, fontSize: 19, fontWeight: 800, outline: "none" }}>Contanos de tu {deTrabajo ? "unidad" : "vehículo"}</h3>
+            {deTrabajo && (
+              <div>
+                <span id="tv-tipo" style={etiqueta}>Qué es</span>
+                <div role="radiogroup" aria-labelledby="tv-tipo" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {TIPOS_DE_TRABAJO.map((t) => (
+                    <button key={t} type="button" role="radio" aria-checked={tipo === t} className="tv-opcion" onClick={() => elegir("tipo", t)} style={chip(tipo === t)}>{t}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <label htmlFor="tv-marca" style={etiqueta}>Marca</label>
               <div role="group" aria-label="Marcas comunes" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                {MARCAS_COMUNES.map((m) => (
+                {(deTrabajo ? MARCAS_DE_TRABAJO : MARCAS_COMUNES).map((m) => (
                   <button key={m} type="button" className="tv-opcion" aria-pressed={f.marca === m} onClick={() => elegir("marca", m)} style={chip(f.marca === m)}>{m}</button>
                 ))}
               </div>
-              <input id="tv-marca" className="tv-campo" value={f.marca} onChange={cambiar("marca")} maxLength={40} placeholder="U otra: Nissan, Jeep…" style={campo} />
+              <input id="tv-marca" className="tv-campo" value={f.marca} onChange={cambiar("marca")} maxLength={40} placeholder={deTrabajo ? "U otra: Volvo, Hino, Agrale…" : "U otra: Nissan, Jeep…"} style={campo} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-              <label style={etiqueta}>Modelo<input className="tv-campo" value={f.modelo} onChange={cambiar("modelo")} maxLength={60} placeholder="Ej: Gol Trend" style={campo} /></label>
-              <label style={etiqueta}>Versión {opcional}<input className="tv-campo" value={f.version} onChange={cambiar("version")} maxLength={60} placeholder="Ej: 1.6 Highline" style={campo} /></label>
+              <label style={etiqueta}>Modelo<input className="tv-campo" value={f.modelo} onChange={cambiar("modelo")} maxLength={60} placeholder={enHoras ? "Ej: 6145J" : deTrabajo ? "Ej: Atego 1726" : "Ej: Gol Trend"} style={campo} /></label>
+              <label style={etiqueta}>Versión {opcional}<input className="tv-campo" value={f.version} onChange={cambiar("version")} maxLength={60} placeholder={enHoras ? "Ej: doble tracción" : deTrabajo ? "Ej: 4x2 cabina simple" : "Ej: 1.6 Highline"} style={campo} /></label>
               <label style={etiqueta}>Año<input className="tv-campo" value={f.anio} onChange={cambiar("anio")} inputMode="numeric" placeholder={String(anioMaximo() - 6)} style={campo} /></label>
-              <label style={etiqueta}>Kilómetros<input className="tv-campo" value={conPuntos(f.km)} onChange={cambiar("km")} inputMode="numeric" placeholder="Ej: 85.000" style={campo} /></label>
+              <label style={etiqueta}>{enHoras ? "Horas de uso" : "Kilómetros"}<input className="tv-campo" value={conPuntos(f.km)} onChange={cambiar("km")} inputMode="numeric" placeholder={enHoras ? "Ej: 3.500" : deTrabajo ? "Ej: 250.000" : "Ej: 85.000"} style={campo} /></label>
             </div>
+            {deTrabajo && (
+              <label style={etiqueta}>{enHoras ? "Implementos o equipo" : "Carrocería o equipo"} {opcional}
+                <input className="tv-campo" value={f.carroceria ?? ""} onChange={cambiar("carroceria")} maxLength={40}
+                  placeholder={enHoras ? "Ej: pala frontal, cabina con aire" : "Ej: volcador, caja seca, furgón térmico"} style={campo} />
+              </label>
+            )}
           </>
         )}
 

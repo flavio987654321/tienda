@@ -338,7 +338,7 @@ export function VehiculoDetailRuta({ view }: { view: ProductDetailViewProps }) {
             <section id="fr-tasar" data-ef="sube" style={{ marginTop: 34, scrollMarginTop: 80 }}>
               <h2 style={{ margin: "0 0 14px", paddingBottom: 10, borderBottom: `3px solid ${TINTA}`, fontFamily: TITULAR, fontSize: "clamp(20px,2.4vw,26px)", fontWeight: 700, textTransform: "uppercase", color: TINTA }}>Tomamos tu usado</h2>
               <div style={{ maxWidth: 760 }}>
-                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }} isOwner={isOwner} isPreview={isPreview} />
+                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }} isOwner={isOwner} isPreview={isPreview} deTrabajo />
               </div>
             </section>
           </div>

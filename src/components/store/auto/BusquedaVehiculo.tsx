@@ -16,7 +16,7 @@ import { paletaFormulario } from "./paletaFormulario";
 
 type Estado = "idle" | "enviando" | "listo";
 
-export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, marcaInicial = "", oscuro }: {
+export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, marcaInicial = "", oscuro, deTrabajo = false }: {
   storeId?: string;
   accent: string;
   isOwner?: boolean;
@@ -25,6 +25,8 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
   marcaInicial?: string;
   /** Sobre fondo oscuro (Auto Volt). Ver paletaFormulario. */
   oscuro?: boolean;
+  /** Auto Ruta: los ejemplos son de camiones, no de autos. */
+  deTrabajo?: boolean;
 }) {
   const c = paletaFormulario(oscuro);
   const [trampa, setTrampa] = useState("");
@@ -106,8 +108,8 @@ export default function BusquedaVehiculo({ storeId, accent, isOwner, isPreview, 
         </select>
       </label>
       <div style={dos}>
-        <label style={etiqueta}>Marca<input value={f.marca} onChange={cambiar("marca")} maxLength={40} placeholder="Ej: Toyota" style={campo} /></label>
-        <label style={etiqueta}>Modelo<input value={f.modelo} onChange={cambiar("modelo")} maxLength={60} placeholder="Ej: Hilux" style={campo} /></label>
+        <label style={etiqueta}>Marca<input value={f.marca} onChange={cambiar("marca")} maxLength={40} placeholder={deTrabajo ? "Ej: Mercedes-Benz" : "Ej: Toyota"} style={campo} /></label>
+        <label style={etiqueta}>Modelo<input value={f.modelo} onChange={cambiar("modelo")} maxLength={60} placeholder={deTrabajo ? "Ej: Atego" : "Ej: Hilux"} style={campo} /></label>
       </div>
       <div style={dos}>
         <label style={etiqueta}>Año desde {opcional}<input value={f.anioDesde} onChange={cambiar("anioDesde")} inputMode="numeric" placeholder="Ej: 2018" style={campo} /></label>

@@ -538,7 +538,7 @@ export default function AutoRuta() {
               <p style={{ margin: "0 0 16px", fontSize: 15, lineHeight: 1.6, color: fTasar.tenue }}>
                 <EditableZone field="tasarTexto" label="Tasá tu usado — texto">Contanos qué tenés y te respondemos con una oferta, para tomarla en parte de pago o comprártela.</EditableZone>
               </p>
-              <TasacionVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} oscuro={fTasar.oscuro} />
+              <TasacionVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} oscuro={fTasar.oscuro} deTrabajo />
             </div>
             <div style={{ background: fTasar.oscuro ? "rgba(255,255,255,0.06)" : FONDO, border: `1px solid ${fTasar.linea}`, borderRadius: 4, padding: "clamp(18px,2.6vw,26px)", minWidth: 0 }}>
               <p style={{ margin: "0 0 6px", fontFamily: TITULAR, fontSize: 24, fontWeight: 700, textTransform: "uppercase", color: fTasar.tinta }}>
@@ -714,7 +714,7 @@ export default function AutoRuta() {
       </footer>
 
       <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={cerrarAvisame}>
-        <BusquedaVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} />
+        <BusquedaVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} deTrabajo />
       </VentanaAuto>
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
