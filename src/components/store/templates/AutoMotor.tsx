@@ -536,7 +536,7 @@ export default function AutoMotor() {
       {agenciaNav.enAgencia ? (
         <section aria-label="La agencia" style={{ background: NEGRO, padding: `${isPreview ? 40 : (showAnn ? PROMO_H : 0) + NAV_H + 40}px clamp(16px,4vw,32px) clamp(56px,8vw,96px)` }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-            <AgenciaMotor acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} fotoDeRespaldo={nosotrosUrl} />
+            <AgenciaMotor acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} fotoDeRespaldo={nosotrosUrl} enPrevia={isPreview} />
           </div>
         </section>
       ) : (<>

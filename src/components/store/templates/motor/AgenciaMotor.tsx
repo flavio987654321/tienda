@@ -11,7 +11,7 @@ import { NOMBRE_PAGO } from "@/lib/agencia";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { WaIcon } from "@/components/store/auto/AutoVehicleShared";
 import {
-  useAgencia, useEstadoAhora, MapaAgencia, urlComoLlegar, FaltaEnConfiguracion, waDeMiembro,
+  useAgencia, useEstadoAhora, MapaAgencia, urlComoLlegar, FaltaEnConfiguracion, waDeMiembro, useVisorFotos, VisorFotos,
   EditorPagos, EditorEquipo, EditorGarantia, EditorSalon, type PaletaAgencia,
 } from "@/components/store/auto/agencia/piezasAgencia";
 
@@ -22,10 +22,14 @@ export const AGENCIA_MOTOR_CSS = `
   @media(min-width:720px){ .agm-fila { grid-template-columns:200px minmax(0,1fr) } }
   .agm-equipo { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)) }
   .agm-salon { display:grid; gap:6px; grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .agm-foto { display:block; padding:0; border:none; background:#141619; cursor:zoom-in; overflow:hidden; border-radius:2px }
+  .agm-foto img { transition: transform .7s cubic-bezier(.2,.7,.2,1), filter .4s }
+  .agm-foto:hover img { transform: scale(1.04); filter: brightness(1.08) }
+  @media (prefers-reduced-motion: reduce) { .agm-foto img { transition:none } }
   @media(min-width:760px){ .agm-salon { grid-template-columns:repeat(3,minmax(0,1fr)) } }
 `;
 
-export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosHref, fotoDeRespaldo }: {
+export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosHref, fotoDeRespaldo, enPrevia }: {
   acento: string;
   sobreAcento: string;
   nombreTienda: string;
@@ -33,8 +37,10 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
   todosHref: string;
   /** La foto de "Nosotros" de la portada, si todavía no hay fotos del salón. */
   fotoDeRespaldo: string;
+  enPrevia: boolean;
 }) {
   const a = useAgencia();
+  const visor = useVisorFotos();
   const estado = useEstadoAhora(a.ubicacion.horarios);
   const p: PaletaAgencia = { tinta: "#f4f4f5", tenue: "rgba(255,255,255,0.55)", linea: "rgba(255,255,255,0.14)", campo: "#0b0c0e", acento, sobreAcento };
   const ver = (hay: boolean) => hay || a.enEdicion;
@@ -52,7 +58,7 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
   return (
     <div style={{ display: "grid", gap: "clamp(48px,7vw,88px)" }}>
       {/* ── Presentación ── */}
-      <div className="agm-arriba">
+      <div className="agm-arriba" data-ef="sube">
         <div style={{ position: "relative", overflow: "hidden", aspectRatio: "5/4", borderRadius: 4, background: "#141619" }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- foto de la agencia */}
           <img src={fotoLiviana(fotoPrincipal, 1200)} alt={`${nombreTienda}, la agencia`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -91,7 +97,7 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
 
       {/* ── La ficha ── */}
       {(hayFicha || a.enEdicion) && (
-        <div>
+        <div data-ef="sube">
           {kicker("Ficha de la agencia")}
           <h2 style={h2}>Todo lo que necesitás saber</h2>
           <div style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
@@ -147,7 +153,7 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
 
       {/* ── El equipo ── */}
       {ver(a.agencia.equipo.length > 0) && (
-        <div>
+        <div data-ef="sube">
           {kicker("El equipo")}
           <h2 style={h2}>Con quién hablás</h2>
           {a.agencia.equipo.length > 0 && (
@@ -177,22 +183,24 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
 
       {/* ── El salón ── */}
       {ver(a.agencia.salon.length > 0) && (
-        <div>
+        <div data-ef="sube">
           {kicker("El salón")}
           <h2 style={h2}>Así es la agencia</h2>
           {a.agencia.salon.length > 0 && (
             <div className="agm-salon">
               {a.agencia.salon.map((f, i) => (
-                // eslint-disable-next-line @next/next/no-img-element -- foto subida por la dueña
-                <img key={f + i} src={fotoLiviana(f, 800)} alt={`Salón de ${nombreTienda}, foto ${i + 1}`} loading="lazy"
-                  style={{ width: "100%", aspectRatio: i === 0 ? "auto" : "4/3", height: "100%", objectFit: "cover", display: "block", borderRadius: 2,
-                    gridRow: i === 0 && a.agencia.salon.length > 2 ? "span 2" : undefined }} />
+                <button key={f + i} type="button" className="agm-foto" onClick={() => visor.abrir(i)} aria-label={`Ver la foto ${i + 1} del salón en grande`}
+                  style={{ gridRow: i === 0 && a.agencia.salon.length > 2 ? "span 2" : undefined, aspectRatio: i === 0 && a.agencia.salon.length > 2 ? undefined : "4/3" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por la dueña */}
+                  <img src={fotoLiviana(f, 800)} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </button>
               ))}
             </div>
           )}
           {a.enEdicion && <div style={{ marginTop: 16 }}><EditorSalon p={p} /></div>}
         </div>
       )}
+      <VisorFotos fotos={a.agencia.salon} indice={visor.abierta} onCerrar={visor.cerrar} onMover={visor.mover} titulo={`Salón de ${nombreTienda}`} enPrevia={enPrevia} />
     </div>
   );
 }

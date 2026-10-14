@@ -567,7 +567,7 @@ export default function AutoDrive() {
       {agenciaNav.enAgencia ? (
         <section aria-label="La agencia" style={{ background: FONDO, padding: `${isPreview ? 28 : (showAnn ? PROMO_H : 0) + NAV_H + 28}px clamp(16px,3vw,28px) clamp(56px,8vw,96px)` }}>
           <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-            <AgenciaDrive acento={accent} nombreTienda={storeName} waLink={waLink} todosHref={linkTodos} fotoDeRespaldo={nosotrosUrl} />
+            <AgenciaDrive acento={accent} nombreTienda={storeName} waLink={waLink} todosHref={linkTodos} fotoDeRespaldo={nosotrosUrl} enPrevia={isPreview} />
           </div>
         </section>
       ) : (<>

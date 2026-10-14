@@ -492,7 +492,7 @@ export default function AutoVolt() {
           paddingTop: isPreview ? 20 : (showAnn ? PROMO_H : 0) + NAV_TOP + NAV_H + 20 }}>
           <EscenaVolt acento={accent} quieta />
           <div style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: "clamp(12px,2.5vh,32px) clamp(16px,4vw,32px) clamp(56px,8vw,96px)", boxSizing: "border-box" }}>
-            <AgenciaVolt acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} onVerVehiculos={e => alClicTodos(e)} />
+            <AgenciaVolt acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} onVerVehiculos={e => alClicTodos(e)} enPrevia={isPreview} />
           </div>
         </section>
       )}

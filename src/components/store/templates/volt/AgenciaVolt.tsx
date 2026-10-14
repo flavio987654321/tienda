@@ -13,7 +13,7 @@ import { NOMBRE_PAGO, ahoraEnArgentina } from "@/lib/agencia";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { WaIcon } from "@/components/store/auto/AutoVehicleShared";
 import {
-  useAgencia, useEstadoAhora, MapaAgencia, urlComoLlegar, FaltaEnConfiguracion, waDeMiembro,
+  useAgencia, useEstadoAhora, MapaAgencia, urlComoLlegar, FaltaEnConfiguracion, waDeMiembro, useVisorFotos, VisorFotos,
   EditorPagos, EditorEquipo, EditorGarantia, EditorSalon, type PaletaAgencia,
 } from "@/components/store/auto/agencia/piezasAgencia";
 import { conAlfa, MONO } from "./EscenaVolt";
@@ -24,19 +24,25 @@ export const AGENCIA_VOLT_CSS = `
   @media(min-width:860px){ .agv-grilla { grid-template-columns:repeat(2,minmax(0,1fr)) } .agv-ancha { grid-column:1 / -1 } }
   .agv-equipo { display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)) }
   .agv-salon { display:grid; gap:8px; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)) }
+  .agv-foto { display:block; padding:0; border:none; background:#05070d; cursor:zoom-in; overflow:hidden; border-radius:12px }
+  .agv-foto img { transition: transform .7s cubic-bezier(.2,.7,.2,1) }
+  .agv-foto:hover img { transform: scale(1.05) }
+  @media (prefers-reduced-motion: reduce) { .agv-foto img { transition:none } }
 `;
 
 const sinSuscripcion = () => () => {};
 
-export function AgenciaVolt({ acento, sobreAcento, nombreTienda, waLink, onVerVehiculos, todosHref }: {
+export function AgenciaVolt({ acento, sobreAcento, nombreTienda, waLink, onVerVehiculos, todosHref, enPrevia }: {
   acento: string;
   sobreAcento: string;
   nombreTienda: string;
   waLink: string | null;
   onVerVehiculos: (e: React.MouseEvent) => void;
   todosHref: string;
+  enPrevia: boolean;
 }) {
   const a = useAgencia();
+  const visor = useVisorFotos();
   const estado = useEstadoAhora(a.ubicacion.horarios);
   // El día de hoy, para resaltarlo: también sólo en el navegador.
   const hoy = useSyncExternalStore(sinSuscripcion, () => ahoraEnArgentina().dia, () => null);
@@ -167,9 +173,10 @@ export function AgenciaVolt({ acento, sobreAcento, nombreTienda, waLink, onVerVe
             {a.agencia.salon.length > 0 && (
               <div className="agv-salon">
                 {a.agencia.salon.map((f, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element -- foto subida por la dueña
-                  <img key={f + i} src={fotoLiviana(f, 640)} alt={`Salón de ${nombreTienda}, foto ${i + 1}`} loading="lazy"
-                    style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: 12, display: "block" }} />
+                  <button key={f + i} type="button" className="agv-foto" onClick={() => visor.abrir(i)} aria-label={`Ver la foto ${i + 1} del salón en grande`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por la dueña */}
+                    <img src={fotoLiviana(f, 640)} alt="" loading="lazy" style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
+                  </button>
                 ))}
               </div>
             )}
@@ -177,6 +184,7 @@ export function AgenciaVolt({ acento, sobreAcento, nombreTienda, waLink, onVerVe
           </>
         ))}
       </div>
+      <VisorFotos fotos={a.agencia.salon} indice={visor.abierta} onCerrar={visor.cerrar} onMover={visor.mover} titulo={`Salón de ${nombreTienda}`} enPrevia={enPrevia} />
     </div>
   );
 }

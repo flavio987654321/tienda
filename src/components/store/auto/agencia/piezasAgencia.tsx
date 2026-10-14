@@ -6,7 +6,8 @@
  * template (Volt la arma como tablero, Motor y Drive a su manera). Por eso las
  * piezas reciben una paleta y no traen fondo ni tipografía propios.
  */
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { CAPAS } from "@/lib/capas-tienda";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useEditContext } from "@/contexts/EditContext";
 import {
@@ -252,4 +253,68 @@ export function waDeMiembro(m: Miembro, tienda: string): string | null {
   const d = m.whatsapp?.replace(/\D/g, "") ?? "";
   if (d.length < 11) return null;
   return `https://wa.me/${d}?text=${encodeURIComponent(`Hola ${m.nombre.split(" ")[0]}! Te escribo desde la página de ${tienda}.`)}`;
+}
+
+/* ── Visor de fotos del salón ────────────────────────────────────────────────
+   En la grilla las fotos se ven chicas y recortadas: tocar una la abre entera.
+   Flechas, teclado (← → Esc) y deslizar con el dedo. Mientras está abierto,
+   la página de atrás no se mueve. */
+export function useVisorFotos() {
+  const [abierta, setAbierta] = useState<number | null>(null);
+  return { abierta, abrir: (i: number) => setAbierta(i), cerrar: () => setAbierta(null), mover: (i: number) => setAbierta(i) };
+}
+
+export function VisorFotos({ fotos, indice, onCerrar, onMover, titulo, enPrevia }: {
+  fotos: string[];
+  indice: number | null;
+  onCerrar: () => void;
+  onMover: (i: number) => void;
+  titulo: string;
+  enPrevia: boolean;
+}) {
+  const cerrarRef = useRef<HTMLButtonElement>(null);
+  const toque = useRef<number | null>(null);
+  const abierto = indice !== null && fotos.length > 0;
+  const n = fotos.length;
+  const ir = (d: number) => { if (indice !== null) onMover((indice + d + n) % n); };
+
+  useEffect(() => {
+    if (!abierto) return;
+    cerrarRef.current?.focus();
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCerrar();
+      else if (e.key === "ArrowRight") ir(1);
+      else if (e.key === "ArrowLeft") ir(-1);
+    };
+    const antes = document.body.style.overflow;
+    if (!enPrevia) document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", tecla);
+    return () => { window.removeEventListener("keydown", tecla); document.body.style.overflow = antes; };
+  });
+
+  if (!abierto || indice === null) return null;
+  const flecha = (lado: "izq" | "der"): React.CSSProperties => ({
+    position: "absolute", top: "50%", [lado === "izq" ? "left" : "right"]: "clamp(8px,2vw,24px)", transform: "translateY(-50%)",
+    width: 48, height: 48, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(0,0,0,0.45)", color: "#fff",
+    fontSize: 22, cursor: "pointer", display: "grid", placeItems: "center", backdropFilter: "blur(6px)",
+  });
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`${titulo}: foto ${indice + 1} de ${n}`}
+      onClick={(e) => { if (e.target === e.currentTarget) onCerrar(); }}
+      onTouchStart={(e) => { toque.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => { if (toque.current === null) return; const dx = e.changedTouches[0].clientX - toque.current; toque.current = null; if (Math.abs(dx) > 50) ir(dx < 0 ? 1 : -1); }}
+      style={{ position: "fixed", inset: 0, zIndex: enPrevia ? CAPAS.previaModal : CAPAS.pantallaCompleta, background: "rgba(5,6,10,0.94)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(56px,8vh,80px) clamp(12px,6vw,96px)", boxSizing: "border-box" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por la dueña */}
+      <img src={fotoLiviana(fotos[indice], 1920)} alt={`${titulo}, foto ${indice + 1}`}
+        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 6, boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }} />
+      <p style={{ position: "absolute", top: 18, left: 20, margin: 0, color: "rgba(255,255,255,0.75)", fontSize: 13, letterSpacing: 1, fontVariantNumeric: "tabular-nums" }}>{indice + 1} / {n}</p>
+      <button ref={cerrarRef} type="button" onClick={onCerrar} aria-label="Cerrar"
+        style={{ position: "absolute", top: 12, right: 12, width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(0,0,0,0.45)", color: "#fff", fontSize: 22, cursor: "pointer" }}>×</button>
+      {n > 1 && <>
+        <button type="button" onClick={() => ir(-1)} aria-label="Foto anterior" style={flecha("izq")}>‹</button>
+        <button type="button" onClick={() => ir(1)} aria-label="Foto siguiente" style={flecha("der")}>›</button>
+      </>}
+    </div>
+  );
 }
