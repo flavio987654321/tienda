@@ -49,11 +49,14 @@ import { hayAgenciaCargada } from "@/components/store/auto/agencia/piezasAgencia
 import { FONDO, PAPEL, TINTA, TENUE, LINEA, ASFALTO, TITULAR, CUERPO, ACENTO_RUTA, rayaDeRuta } from "@/components/store/templates/ruta/estiloRuta";
 import { TARJETA_RUTA_CSS } from "@/components/store/templates/ruta/TarjetaRuta";
 import { SelectorRuta, SELECTOR_RUTA_CSS, type SeleccionRuta } from "@/components/store/templates/ruta/SelectorRuta";
+import { OrdenRuta } from "@/components/store/templates/ruta/OrdenRuta";
+import { SelectorVehiculoFoco } from "@/components/store/auto/SelectorVehiculoFoco";
+import { elegirFoco } from "@/lib/vehiculoFoco";
 import { CatalogoRuta, CATALOGO_RUTA_CSS } from "@/components/store/templates/ruta/CatalogoRuta";
 import { AgenciaRuta, AGENCIA_RUTA_CSS } from "@/components/store/templates/ruta/AgenciaRuta";
 import { VideosRuta, VIDEOS_RUTA_CSS } from "@/components/store/templates/ruta/VideosRuta";
 
-const RT_SECTION_IDS = ["rt-tasar", "rt-videos", "rt-preguntas", "rt-novedades", "rt-nosotros"];
+const RT_SECTION_IDS = ["rt-foco", "rt-tasar", "rt-videos", "rt-preguntas", "rt-novedades", "rt-nosotros"];
 const HERO_DE_FABRICA = "https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1920&q=80";
 const NOSOTROS_DE_FABRICA = "https://images.unsplash.com/photo-1591768793355-74d04bb6608f?auto=format&fit=crop&w=1200&q=80";
 
@@ -96,7 +99,7 @@ export default function AutoRuta() {
   const config = useStoreConfig();
   const pushBell = usePushBell();
   const { products, loadingProducts } = useStorefront();
-  const { editMode, overrides, hiddenSections } = useEditContext();
+  const { editMode, overrides, hiddenSections, setFeaturedVehicleId } = useEditContext();
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
   // Sin datos de agencia, "La agencia" baja al bloque de la portada (ver hayAgenciaCargada); si está oculto, no se ofrece.
@@ -116,6 +119,8 @@ export default function AutoRuta() {
   const slug = config?.slug ?? "";
   const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
   const videos = useMemo(() => videosDeVehiculos(products), [products]);
+  // La "Unidad de la semana" (ver ruta/OrdenRuta): la elegida en Diseño o la destacada.
+  const foco = useMemo(() => elegirFoco(products, config?.featuredVehicleId), [products, config?.featuredVehicleId]);
   const storeName = config?.storeName ?? "AUTO RUTA";
   const whatsapp = config?.whatsapp ?? { enabled: false, number: "", message: "" };
   const waLink = whatsapp.enabled ? linkWhatsApp(whatsapp.number, whatsapp.message) : null;
@@ -124,6 +129,7 @@ export default function AutoRuta() {
   const sc = config?.sectionColors ?? {};
   const fondo = (campo: string, def: string) => ({ ...fondoDe(iovr[`sectionbg_${campo}`], sc[campo] ?? def), ov: iovr[`sectionbg_${campo}`] });
   const fTrabajo = fondo("bgTrabajo", FONDO);
+  const fFoco = fondo("bgFoco", ASFALTO);
   const fTasar = fondo("bgTasar", PAPEL);
   const fVideos = fondo("bgVideos", FONDO);
   const fPreguntas = fondo("bgPreguntas", PAPEL);
@@ -522,6 +528,39 @@ export default function AutoRuta() {
       </section>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
+
+      {/* ── UNIDAD DE LA SEMANA ── una orden de trabajo (ver ruta/OrdenRuta). */}
+      <SectionBlock id="rt-foco" label="Unidad de la semana" isPreview={isPreview} defaultOrder={RT_SECTION_IDS}>
+      {(foco || (editMode && isPreview)) ? (
+        <section id="semana" style={{ padding: pad, position: "relative", ...fFoco.estilo }}>
+          {capa("bgFoco", "Fondo de la unidad de la semana", fFoco.ov)}
+          <div data-ef="sube" style={ancho}>
+            {editMode && isPreview && (
+              <div style={{ marginBottom: 18 }}>
+                <SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} onChange={setFeaturedVehicleId} oscuro={fFoco.oscuro} />
+              </div>
+            )}
+            <div data-ef="titulo" style={{ marginBottom: 22 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: accent }}>
+                <span aria-hidden="true" style={{ width: 26, height: 3, background: accent }} />
+                <EditableZone field="focoRutaKicker" label="Etiqueta de la unidad de la semana">Elegida por la agencia</EditableZone>
+              </span>
+              <h2 style={{ margin: "8px 0 0", fontFamily: TITULAR, fontSize: "clamp(28px,4vw,46px)", fontWeight: 700, lineHeight: 1, textTransform: "uppercase", color: fFoco.tinta }}>
+                <EditableZone field="focoRutaHeading" label="Título de la unidad de la semana">La unidad de la semana</EditableZone>
+              </h2>
+            </div>
+            {foco ? (
+              <OrdenRuta p={foco} numero={products.findIndex(x => x.id === foco.id) + 1} acento={accent} currency={currency} href={paginaDe(foco)}
+                whatsapp={whatsapp.enabled ? whatsapp.number : null} />
+            ) : (
+              <p style={{ margin: 0, padding: 24, color: fFoco.tinta, border: `1px dashed ${fFoco.linea}`, borderRadius: 4, textAlign: "center" }}>
+                {loadingProducts ? "Cargando unidades…" : "Todavía no hay unidades para mostrar acá."}
+              </p>
+            )}
+          </div>
+        </section>
+      ) : null}
+      </SectionBlock>
 
       {/* ── TOMAMOS TU USADO / AVISAME SI ENTRA ── */}
       <SectionBlock id="rt-tasar" label="Tomamos tu usado y Avisame si entra" isPreview={isPreview} defaultOrder={RT_SECTION_IDS}>

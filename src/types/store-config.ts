@@ -119,7 +119,7 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFoco", "bgFooter", "bgHero", "bgNovedades", "bgNosotros", "bgPresupuesto", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgVideos"],
   "auto-motor":    ["bgCatalogo", "bgContacto", "bgFoco", "bgFooter", "bgNovedades", "bgNosotros", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgTipos", "bgVideos"],
   "auto-volt":     ["bgComparar", "bgFooter", "bgNosotros", "bgNovedades", "bgPreguntas", "bgTasar", "bgVideos"],
-  "auto-ruta":     ["bgFooter", "bgNosotros", "bgNovedades", "bgPreguntas", "bgTasar", "bgTrabajo", "bgVideos"],
+  "auto-ruta":     ["bgFoco", "bgFooter", "bgNosotros", "bgNovedades", "bgPreguntas", "bgTasar", "bgTrabajo", "bgVideos"],
   "boho-terra":    ["bgNewsletter"],
   "casa-clara":    ["bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
   "chic-paris":    [],
