@@ -10,20 +10,16 @@
  * placa oscura y, abajo, tres trazos de la raya de la ruta que se van llenando
  * mientras corre el tiempo de cada cartel.
  *
- * Qué se muestra: los carteles con foto propia. Sin ninguna cargada, los tres
- * de ejemplo (como la foto de la portada, que también es de fábrica). En el
- * editor siempre los tres, para poder cargarlos.
+ * Cómo funciona (qué carteles se muestran, el tiempo, la pausa) está en
+ * auto/useCartelera, compartido con Motor, Drive y Volt.
  */
-import { useEffect, useRef, useState } from "react";
 import type { ImageOverride } from "@/types/store-config";
 import { EditableImageButton, EditableZone, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
-import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { fotoLiviana } from "@/lib/foto-liviana";
+import { useCartelera, fotoDelCartel } from "@/components/store/auto/useCartelera";
 import { TINTA, TITULAR } from "./estiloRuta";
 
 /* Fotos de ejemplo (Pexels): 800 px para el celular (70-90 KB) y 1200 para
    la compu (150-210 KB). */
-const PX = (id: number, w: number) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
 const EJEMPLOS = [2348359, 27627498, 5125783];
 
 const TEXTOS = [
@@ -66,55 +62,22 @@ export function CarteleraRuta({ fotos, acento, intervalMs, editMode, hrefStock, 
   onStock: (e: React.MouseEvent) => void;
 }) {
   const sobreAcento = getContrastColor(acento) === "dark" ? TINTA : "#fff";
-  const propios = [0, 1, 2].filter((i) => !!fotos[i]?.url);
-  // En el editor, siempre los tres; en la tienda, los que tienen foto (o los de ejemplo si no hay ninguna).
-  const visibles = editMode || propios.length === 0 ? [0, 1, 2] : propios;
-  const [actual, setActual] = useState(0);
-  const [pausa, setPausa] = useState(false);
-  const [quieto, setQuieto] = useState(false);
-  const n = visibles.length;
-  const pos = Math.min(actual, n - 1);
-  const ir = (k: number) => setActual(((k % n) + n) % n);
-  const swipe = useTouchSwipe(() => ir(pos + 1), () => ir(pos - 1));
-  const raiz = useRef<HTMLDivElement>(null);
-
-  // "Reducir movimiento": no pasa solo (se puede pasar con las flechas y los trazos).
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const ver = () => setQuieto(mq.matches);
-    ver();
-    mq.addEventListener("change", ver);
-    return () => mq.removeEventListener("change", ver);
-  }, []);
-
-  const corre = !editMode && !pausa && !quieto && n > 1;
-  useEffect(() => {
-    if (!corre) return;
-    const id = window.setTimeout(() => setActual((a) => (Math.min(a, n - 1) + 1) % n), intervalMs);
-    return () => window.clearTimeout(id);
-  }, [corre, pos, n, intervalMs]);
+  const { visibles, n, pos, ir, corre, contenedor } = useCartelera({ fotos, intervalMs, editMode });
 
   return (
-    <div ref={raiz} className="cr-cartel" role="region" aria-roledescription="carrusel" aria-label="Cartelera"
-      onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)}
-      onFocus={() => setPausa(true)} onBlur={(e) => { if (!raiz.current?.contains(e.relatedTarget as Node)) setPausa(false); }}
-      onKeyDown={(e) => { if (e.key === "ArrowRight") ir(pos + 1); if (e.key === "ArrowLeft") ir(pos - 1); }}
-      {...swipe}>
+    <div className="cr-cartel" aria-label="Cartelera" {...contenedor}>
       <style>{CARTELERA_RUTA_CSS}</style>
 
       {visibles.map((ranura, k) => {
         const ov = fotos[ranura];
         const activo = k === pos;
-        const ej = EJEMPLOS[ranura];
+        const foto = fotoDelCartel(ov, EJEMPLOS[ranura]);
         const t = TEXTOS[ranura];
         return (
           <div key={ranura} className="cr-slide" aria-hidden={!activo} role="group" aria-roledescription="cartel" aria-label={`${k + 1} de ${n}`}
             style={{ opacity: activo ? 1 : 0, pointerEvents: activo ? "auto" : "none" }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- foto propia achicada con fotoLiviana, o de ejemplo con su srcSet */}
-            <img alt="" decoding="async" loading={k === 0 ? "eager" : "lazy"}
-              src={ov?.url ? fotoLiviana(ov.url, 1600) : PX(ej, 1200)}
-              srcSet={ov?.url ? undefined : `${PX(ej, 800)} 800w, ${PX(ej, 1200)} 1200w`} sizes="(max-width: 640px) 100vw, 1240px"
-              style={{ objectPosition: `${ov?.posX ?? 50}% ${ov?.posY ?? 50}%` }} />
+            <img alt="" decoding="async" loading={k === 0 ? "eager" : "lazy"} {...foto} />
             <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(22,25,29,.85) 0%, rgba(22,25,29,.3) 50%, rgba(22,25,29,0) 100%), linear-gradient(to right, rgba(22,25,29,.7) 0%, rgba(22,25,29,.25) 55%, rgba(22,25,29,0) 80%)" }} />
             {editMode && activo && (
               <>

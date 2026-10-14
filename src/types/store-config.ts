@@ -116,9 +116,9 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   // la foto no compite con la escena, es el bloque: va la de la tienda si sube
   // una, y si no la de sus propios productos.
   "aurora":        ["bgHero"],
-  "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFoco", "bgFooter", "bgHero", "bgNovedades", "bgNosotros", "bgPresupuesto", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgVideos"],
+  "auto-drive":    ["bgCartelera", "bgCatalogo", "bgCategorias", "bgContacto", "bgFoco", "bgFooter", "bgHero", "bgNovedades", "bgNosotros", "bgPresupuesto", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgVideos"],
   "auto-motor":    ["bgCatalogo", "bgContacto", "bgFoco", "bgFooter", "bgNovedades", "bgNosotros", "bgPreguntas", "bgServicios", "bgStats", "bgTasar", "bgTipos", "bgVideos"],
-  "auto-volt":     ["bgComparar", "bgFooter", "bgNosotros", "bgNovedades", "bgPreguntas", "bgTasar", "bgVideos"],
+  "auto-volt":     ["bgCartelera", "bgComparar", "bgFooter", "bgNosotros", "bgNovedades", "bgPreguntas", "bgTasar", "bgVideos"],
   "auto-ruta":     ["bgCartelera", "bgFoco", "bgFooter", "bgNosotros", "bgNovedades", "bgPreguntas", "bgTasar", "bgTrabajo", "bgVideos"],
   "boho-terra":    ["bgNewsletter"],
   "casa-clara":    ["bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],

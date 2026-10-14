@@ -18,7 +18,9 @@ import { irASeccion } from "@/components/store/templates/shared/irASeccion";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
-import { barraMs, type ImageOverride } from "@/types/store-config";
+import { barraMs, carruselMs, type ImageOverride } from "@/types/store-config";
+import { CarteleraVolt } from "@/components/store/templates/volt/CarteleraVolt";
+import { hayFotosDeCartelera } from "@/components/store/auto/useCartelera";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useVistaTemplate } from "@/components/store/templates/shared/useVistaTemplate";
 import Link from "next/link";
@@ -60,7 +62,7 @@ const TINTA = "#e8ecf6";
 const TINTA_CLARA = "#0b1020"; // el texto cuando la dueña le pone un fondo claro a un bloque
 const LINEA = "rgba(255,255,255,0.08)";
 
-const AV_SECTION_IDS = ["av-comparar", "av-tasar", "av-videos", "av-preguntas", "av-novedades", "av-nosotros"];
+const AV_SECTION_IDS = ["av-cartelera", "av-comparar", "av-tasar", "av-videos", "av-preguntas", "av-novedades", "av-nosotros"];
 
 /** El fondo de un bloque: color o foto elegidos por la dueña, y el color de letra que le corresponde. */
 function fondoDe(ov: ImageOverride | undefined, color: string) {
@@ -137,6 +139,7 @@ export default function AutoVolt() {
   const iovr = config?.imageOverrides ?? {};
   const sc = config?.sectionColors ?? {};
   const fondo = (campo: string, def: string) => ({ ...fondoDe(iovr[`sectionbg_${campo}`], sc[campo] ?? def), ov: iovr[`sectionbg_${campo}`] });
+  const fCartelera = fondo("bgCartelera", VACIO);
   const fComparar = fondo("bgComparar", SUPERFICIE);
   const fTasar = fondo("bgTasar", VACIO);
   const fVideos = fondo("bgVideos", SUPERFICIE);
@@ -570,6 +573,20 @@ export default function AutoVolt() {
       </section>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
+
+      {/* ── CARTELERA ── tres carteles que pasan solos (ver volt/CarteleraVolt).
+           En la tienda sólo aparece cuando la agencia sube una foto propia. */}
+      <SectionBlock id="av-cartelera" label="Cartelera" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>
+      {(isPreview || hayFotosDeCartelera(iovr)) ? (
+        <section id="cartelera" aria-label="Cartelera" style={{ padding: "clamp(40px,5vw,64px) clamp(16px,4vw,32px)", position: "relative", ...fCartelera.estilo, borderTop: `1px solid ${fCartelera.linea}` }}>
+          {capa("bgCartelera", "Fondo de la cartelera", fCartelera.ov)}
+          <div data-ef="sube" style={ancho}>
+            <CarteleraVolt fotos={[iovr["promoBanner1"], iovr["promoBanner2"], iovr["promoBanner3"]]} acento={accent}
+              intervalMs={carruselMs("auto-volt", config?.bannerInterval)} editMode={editMode && isPreview} ejemplosEnTienda={isPreview} hrefStock={todos} />
+          </div>
+        </section>
+      ) : null}
+      </SectionBlock>
 
       {/* ── COMPARADOR ── hasta tres lado a lado (ver volt/ComparadorVolt). */}
       <SectionBlock id="av-comparar" label="Comparador" isPreview={isPreview} defaultOrder={AV_SECTION_IDS}>

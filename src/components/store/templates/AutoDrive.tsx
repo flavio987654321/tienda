@@ -6,7 +6,7 @@ import { hayAgenciaCargada } from "@/components/store/auto/agencia/piezasAgencia
 import { AgenciaDrive, AGENCIA_DRIVE_CSS } from "@/components/store/templates/drive/AgenciaDrive";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
-import { barraMs } from "@/types/store-config";
+import { barraMs, carruselMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,6 +36,8 @@ import { VideosDrive, VIDEOS_DRIVE_CSS } from "@/components/store/templates/driv
 import { VenderDrive, VENDER_DRIVE_CSS } from "@/components/store/templates/drive/VenderDrive";
 import { PreguntasDrive } from "@/components/store/templates/drive/PreguntasDrive";
 import { FocoDrive } from "@/components/store/templates/drive/FocoDrive";
+import { CarteleraDrive } from "@/components/store/templates/drive/CarteleraDrive";
+import { hayFotosDeCartelera } from "@/components/store/auto/useCartelera";
 import { elegirFoco } from "@/lib/vehiculoFoco";
 import { fotoLiviana } from "@/lib/foto-liviana";
 
@@ -75,7 +77,7 @@ const FONDO = "#f4f6f9";
 const TINTA = "#0f172a";
 const LINEA = "#e8ebf0";
 
-const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-foco", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
+const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-cartelera", "ad-foco", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
 
 /** El título de cada bloque: etiqueta en pastilla y título grande. */
 function Titulo({ acento, tinta = TINTA, kicker, titulo, derecha, centrado }: { acento: string; tinta?: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode; centrado?: boolean }) {
@@ -166,6 +168,8 @@ export default function AutoDrive() {
   const catMid      = secMid(catalogoImg, catalogoBg);
 
   const focoBg = sc["bgFoco"] ?? "#ffffff";
+  const carteleraBg = sc["bgCartelera"] ?? "#f5f7fa";
+  const carteleraImg = iovr["sectionbg_bgCartelera"];
   const focoImg = iovr["sectionbg_bgFoco"];
   const focoText = secText(focoImg, focoBg);
   const focoMid = secMid(focoImg, focoBg);
@@ -735,6 +739,21 @@ export default function AutoDrive() {
           )}
         </div>
       </section>
+      </SectionBlock>
+
+      {/* ── CARTELERA ── tres carteles que pasan solos (ver drive/CarteleraDrive).
+           En la tienda sólo aparece cuando la agencia sube una foto propia. */}
+      <SectionBlock id="ad-cartelera" label="Cartelera" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
+      {(isPreview || hayFotosDeCartelera(iovr)) ? (
+        <section id="cartelera" aria-label="Cartelera" style={{ padding:"clamp(40px,5vw,64px) clamp(16px,3vw,28px)", position:"relative", ...secBg(carteleraImg, carteleraBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgCartelera" /><SectionOverlay ov={carteleraImg} />
+          <EditableSectionBg field="bgCartelera" label="Fondo de la cartelera" />
+          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+            <CarteleraDrive fotos={[iovr["promoBanner1"], iovr["promoBanner2"], iovr["promoBanner3"]]} acento={accent}
+              intervalMs={carruselMs("auto-drive", config?.bannerInterval)} editMode={editMode && isPreview} ejemplosEnTienda={isPreview} hrefStock={linkTodos} />
+          </div>
+        </section>
+      ) : null}
       </SectionBlock>
 
       {/* ── VIDRIERA: una unidad elegida por la agencia. */}

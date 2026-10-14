@@ -19,7 +19,7 @@ import { hayAgenciaCargada } from "@/components/store/auto/agencia/piezasAgencia
 import { AgenciaMotor, AGENCIA_MOTOR_CSS } from "@/components/store/templates/motor/AgenciaMotor";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
-import { barraMs } from "@/types/store-config";
+import { barraMs, carruselMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,6 +44,8 @@ import { TarjetaMotor, MOTOR_TARJETA_CSS } from "@/components/store/templates/mo
 import { BuscadorMotor } from "@/components/store/templates/motor/BuscadorMotor";
 import { TiposMotor } from "@/components/store/templates/motor/TiposMotor";
 import { FocoMotor } from "@/components/store/templates/motor/FocoMotor";
+import { CarteleraMotor } from "@/components/store/templates/motor/CarteleraMotor";
+import { hayFotosDeCartelera } from "@/components/store/auto/useCartelera";
 import { ServiciosMotor } from "@/components/store/templates/motor/ServiciosMotor";
 import { VideosMotor, VIDEOS_MOTOR_CSS } from "@/components/store/templates/motor/VideosMotor";
 import { PreguntasMotor } from "@/components/store/templates/motor/PreguntasMotor";
@@ -78,7 +80,7 @@ const NEGRO = "#0b0c0e";
 const SUPERFICIE = "#101114";
 const LINEA = "rgba(255,255,255,0.08)";
 
-const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-foco", "am-videos", "am-tasar", "am-novedades", "am-stats", "am-servicios", "am-nosotros", "am-preguntas", "am-contacto"];
+const AM_SECTION_IDS = ["am-tipos", "am-catalogo", "am-cartelera", "am-foco", "am-videos", "am-tasar", "am-novedades", "am-stats", "am-servicios", "am-nosotros", "am-preguntas", "am-contacto"];
 
 /** El título de cada bloque: rayita del acento, etiqueta chica y título grande. */
 function Encabezado({ acento, tinta, kicker, titulo, derecha }: { acento: string; tinta: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode }) {
@@ -662,6 +664,17 @@ export default function AutoMotor() {
           )}
         </div>
       </section>
+      </SectionBlock>
+
+      {/* ── CARTELERA ── tres carteles que pasan solos (ver motor/CarteleraMotor).
+           En la tienda sólo aparece cuando la agencia sube una foto propia. */}
+      <SectionBlock id="am-cartelera" label="Cartelera" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
+        {(isPreview || hayFotosDeCartelera(iovr)) && (
+          <section id="cartelera" aria-label="Cartelera" style={{ position:"relative" }}>
+            <CarteleraMotor fotos={[iovr["promoBanner1"], iovr["promoBanner2"], iovr["promoBanner3"]]} acento={accent}
+              intervalMs={carruselMs("auto-motor", config?.bannerInterval)} editMode={editMode && isPreview} ejemplosEnTienda={isPreview} hrefStock={todos} />
+          </section>
+        )}
       </SectionBlock>
 
       {/* ── VEHÍCULO EN FOCO ── */}
