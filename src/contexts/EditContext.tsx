@@ -1,5 +1,6 @@
 "use client";
 import { createContext, isValidElement, useContext, useState } from "react";
+import type { Agencia } from "@/lib/agencia";
 import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
 import { ayudaDeBloque, idDeSuperficie } from "@/lib/ayudaBloques";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
@@ -42,6 +43,8 @@ type EditContextType = {
   sectionOrder: string[];
   moveSection: (id: string, defaultOrder: string[], direction: "up" | "down") => void;
   setFeaturedVehicleId: (id: string | undefined) => void;
+  /** Pagos, equipo, garantía y salón de "La agencia". Opcional: sólo el editor lo pasa. */
+  setAgencia?: (a: Agencia) => void;
   /** Se está editando la vista de celular (el iframe de /preview/celular).
    *  Opcional: la tienda publicada y la previa de PC no lo pasan. */
   vistaCelular?: boolean;

@@ -1,4 +1,5 @@
 import type { ClaveLegal } from "@/lib/politicas-tienda";
+import type { Ubicacion, Agencia } from "@/lib/agencia";
 
 export type TemplateId = "aire" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "auto-volt" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
@@ -412,7 +413,18 @@ export type StoreConfig = {
   sectionOrder?: string[];
   /** Vehículo elegido para la vidriera de Auto Motor / Auto Drive. */
   featuredVehicleId?: string;
+  /** Dirección y horarios de la agencia. Se cargan en Configuración (ver lib/agencia). */
+  ubicacion?: Ubicacion;
+  /** Pagos, equipo, garantía y salón de la página "La agencia". Se editan en Diseño. */
+  agencia?: Agencia;
 };
+
+// ── Qué templates tienen la página "La agencia" ─────────────────────────────
+// TODOS los de autos y motos tienen que estar (lo controla agencia.check.ts):
+// es donde el comprador ve dirección, horarios, pagos y equipo antes de ir.
+// Un template nuevo del rubro que no la dibuje deja a la concesionaria con
+// datos cargados en el panel que ningún comprador ve.
+export const TEMPLATES_CON_AGENCIA: TemplateId[] = ["auto-motor", "auto-drive", "auto-volt"];
 
 // ── Qué templates dejan elegir el color de la barra de navegación ────────────
 // Estar en la lista = el panel ofrece el control; el valor es el color que el

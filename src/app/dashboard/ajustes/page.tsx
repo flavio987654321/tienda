@@ -7,7 +7,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import DangerZone from "@/app/dashboard/configuracion/DangerZone";
 import ConfiguracionShell, { type SeccionConfig } from "./ConfiguracionShell";
 import { DescripcionCard, SubdominioCard, AppCard, DominioCard, FlyerCard, PushCard } from "./AjustesClient";
-import { WhatsappCard, RedesCard, MonedaCard, SeoCard } from "./PreferenciasCards";
+import { WhatsappCard, RedesCard, MonedaCard, SeoCard, UbicacionCard } from "./PreferenciasCards";
+import type { Ubicacion } from "@/lib/agencia";
 import LogoUploadCard from "@/components/LogoUploadCard";
 import ArchiveDownloadCard from "./ArchiveDownloadCard";
 import { AgregarContrasena } from "@/components/AgregarContrasena";
@@ -82,6 +83,9 @@ export default async function AjustesPage({ searchParams }: Props) {
     ...(cfg.whatsapp as object | undefined),
   } as { enabled: boolean; number: string; message?: string };
   const redesIniciales = (cfg.socialLinks ?? {}) as Record<string, string>;
+  const ubicacionInicial = (cfg.ubicacion && typeof cfg.ubicacion === "object" ? cfg.ubicacion : {}) as Ubicacion;
+  // La página "La agencia" existe sólo en los templates de autos y motos.
+  const esAgencia = store?.tipoTienda === "AUTOS";
   const monedaInicial = cfg.currency === "USD" ? "USD" as const : "ARS" as const;
   const seoInicial = {
     enabled: false, title: "", description: "",
@@ -135,10 +139,11 @@ export default async function AjustesPage({ searchParams }: Props) {
       grupo: "Tu tienda",
       label: "Contacto y redes",
       descripcion: "Por dónde te escriben tus clientes y dónde te siguen.",
-      claves: ["whatsapp", "telefono", "numero", "instagram", "facebook", "tiktok", "youtube", "pinterest", "redes", "social"],
+      claves: ["whatsapp", "telefono", "numero", "instagram", "facebook", "tiktok", "youtube", "pinterest", "redes", "social", "direccion", "horario", "horarios", "mapa", "agencia", "ubicacion"],
       contenido: (
         <>
           <WhatsappCard inicial={whatsappInicial} />
+          {esAgencia && <UbicacionCard inicial={ubicacionInicial} />}
           <RedesCard inicial={redesIniciales} />
         </>
       ),

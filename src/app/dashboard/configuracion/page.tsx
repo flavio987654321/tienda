@@ -19,6 +19,7 @@ import TourGuide from "@/components/TourGuide";
 import MarcoCelular, { SelectorAncho, type Ancho } from "./MarcoCelular";
 import IndiceCelular from "./IndiceCelular";
 import { TemplateSeguro } from "@/components/store/TemplateSeguro";
+import type { Agencia } from "@/lib/agencia";
 import type { Edicion, ItemIndice, Llamada } from "@/app/preview/celular/avisos";
 import { GUION_PREVIEW, GUION_EDITOR, TOUR_PREVIEW_KEY, TOUR_EDITOR_KEY } from "@/components/tours";
 
@@ -2700,6 +2701,12 @@ export default function ConfiguracionPage() {
     setIsDirty(true);
   }, []);
 
+  /* La página "La agencia" de los templates de autos (ver lib/agencia). */
+  const setAgencia = useCallback((a: Agencia) => {
+    setConfig(c => ({ ...c, agencia: a }));
+    setIsDirty(true);
+  }, []);
+
   /* "Deshacer todo lo del celular": vuelve cada texto y cada bloque a como se ve
      en computadora. Toca sólo lo del celular —lo de PC queda como está— y es
      un borrador más: hasta "Guardar cambios" no se pierde nada. */
@@ -2723,10 +2730,10 @@ export default function ConfiguracionPage() {
   const llamadaDelCelular = useCallback((fn: Llamada, args: unknown[]) => {
     const funciones: Record<Llamada, (...a: never[]) => void> = {
       setActiveField, setOverride, resetOverride, setImageOverride,
-      setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular, setFeaturedVehicleId,
+      setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular, setFeaturedVehicleId, setAgencia,
     };
     (funciones[fn] as (...a: unknown[]) => void)(...args);
-  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular, setFeaturedVehicleId]);
+  }, [setActiveField, setOverride, resetOverride, setImageOverride, setSectionColor, toggleHiddenSection, moveSection, setHiddenSectionCelular, setFeaturedVehicleId, setAgencia]);
   const edicionCelular = useMemo<Edicion>(
     () => ({ activeField, activeLabel, imageLoading: imageLoadingFields }),
     [activeField, activeLabel, imageLoadingFields],
@@ -3288,6 +3295,7 @@ export default function ConfiguracionPage() {
           sectionOrder: config.sectionOrder ?? [],
           moveSection,
           setFeaturedVehicleId,
+          setAgencia,
         }}>
           {ancho === "celular" ? (
             /* En el celular también se toca para editar: lo que se toque adentro

@@ -33,7 +33,9 @@ const csp = [
   // Los eventos NO se estaban perdiendo, y por eso el error parecía inofensivo:
   // el Pixel tiene varios transportes y los otros pasaban. Es ruido, pero ruido
   // que tapa los errores de CSP que sí importan.
-  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://challenges.cloudflare.com https://www.facebook.com",
+  // `www.google.com`: el mapa de la página "La agencia" de los templates de
+  // autos (13/10/26). Es el embebido sin clave (`/maps?q=…&output=embed`).
+  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://challenges.cloudflare.com https://www.facebook.com https://www.google.com",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://sdk.mercadopago.com https://client.crisp.chat https://challenges.cloudflare.com https://connect.facebook.net https://www.googletagmanager.com`,
   "style-src 'self' 'unsafe-inline' https://client.crisp.chat",
   "font-src 'self' data: https://client.crisp.chat",

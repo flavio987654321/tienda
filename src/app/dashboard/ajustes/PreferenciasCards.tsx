@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import CampoTelefono from "@/components/CampoTelefono";
-import { MessageCircle, Link2, Search, DollarSign, Save, Check, Loader2 } from "lucide-react";
+import { MessageCircle, Link2, Search, DollarSign, Save, Check, Loader2, MapPin } from "lucide-react";
+import { DIAS, NOMBRE_DIA, problemaDeHorarios, type Dia, type Franja, type Ubicacion } from "@/lib/agencia";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 /* Las cuatro preferencias que antes vivían dentro del modal "Configuración
    avanzada" del editor de diseño. Se mudaron porque para cambiarlas había que
@@ -376,6 +378,104 @@ export function SeoCard({ inicial }: { inicial: Seo }) {
           onClick={async () => { if (await guardar({ seo })) setBase(seo); }}
           guardando={guardando} guardado={guardado} sinCambios={igual(seo, base)}
           error={error}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── La agencia: dirección y horarios (sólo autos y motos) ────────────────────
+   Se muestran en la página "La agencia" de los templates de autos: el mapa,
+   "Cómo llegar" y el cartel de "Abierto ahora". Van acá y no en Diseño porque
+   son del negocio: no se pierden si se cambia de template (ver lib/agencia). */
+const HORARIO_TIPICO: Franja[] = [{ abre: "09:00", cierra: "19:00" }];
+
+export function UbicacionCard({ inicial }: { inicial: Ubicacion }) {
+  const [u, setU] = useState<Ubicacion>(inicial);
+  const [base, setBase] = useState<Ubicacion>(inicial);
+  const { guardar, guardando, guardado, error } = useGuardado();
+  const sinCambios = igual(u, base);
+  const horarios = u.horarios ?? {};
+  const aviso = problemaDeHorarios(horarios)
+    || ((u.calle?.trim() && !u.localidad?.trim()) ? "Falta la localidad: sin ella el mapa no encuentra la dirección." : "");
+
+  const setDia = (d: Dia, fr: Franja[]) => setU({ ...u, horarios: { ...horarios, [d]: fr } });
+  const setFranja = (d: Dia, i: number, campo: keyof Franja, v: string) =>
+    setDia(d, (horarios[d] ?? []).map((f, k) => (k === i ? { ...f, [campo]: v } : f)));
+  const copiarATodos = (d: Dia) => {
+    const fr = horarios[d] ?? [];
+    setU({ ...u, horarios: Object.fromEntries(DIAS.map((x) => [x, x === "dom" ? (horarios.dom ?? []) : fr.map((f) => ({ ...f }))])) });
+  };
+  const hora = "w-[92px] border border-slate-200 panel-oscuro:border-gray-700 rounded-lg px-2 py-1.5 text-sm text-slate-800 panel-oscuro:text-gray-200 bg-white panel-oscuro:bg-gray-900";
+
+  return (
+    <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm overflow-hidden">
+      <Cabecera icon={MapPin}>La agencia: dirección y horarios</Cabecera>
+      <div className="px-5 py-4 space-y-4">
+        <p className="text-xs text-slate-500 panel-oscuro:text-gray-400 leading-relaxed">
+          Aparecen en la página «La agencia» de tu tienda, con el mapa, el botón «Cómo llegar» y el cartel de
+          «Abierto ahora». Si no los cargás, esa parte no se muestra.
+        </p>
+        <div>
+          <label htmlFor="ag-calle" className={labelCls}>Calle y número</label>
+          <input id="ag-calle" className={inputCls} value={u.calle ?? ""} maxLength={120} placeholder="Av. Bunge 1234"
+            onChange={(e) => setU({ ...u, calle: e.target.value })} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="ag-localidad" className={labelCls}>Localidad</label>
+            <input id="ag-localidad" className={inputCls} value={u.localidad ?? ""} maxLength={80} placeholder="Pinamar"
+              onChange={(e) => setU({ ...u, localidad: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="ag-provincia" className={labelCls}>Provincia</label>
+            <select id="ag-provincia" className={inputCls} value={u.provincia ?? ""} onChange={(e) => setU({ ...u, provincia: e.target.value })}>
+              <option value="">Elegí…</option>
+              {PROVINCIAS_ARGENTINA.map((p) => <option key={p.code} value={p.name}>{p.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <p className={labelCls}>Horarios de atención</p>
+          <div className="divide-y divide-slate-100 panel-oscuro:divide-gray-800 rounded-lg border border-slate-200 panel-oscuro:border-gray-700">
+            {DIAS.map((d) => {
+              const fr = horarios[d] ?? [];
+              const abierto = fr.length > 0;
+              return (
+                <div key={d} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
+                  <span className="w-[84px] text-sm font-semibold text-slate-700 panel-oscuro:text-gray-200">{NOMBRE_DIA[d]}</span>
+                  <Switch value={abierto} onChange={(v) => setDia(d, v ? HORARIO_TIPICO.map((f) => ({ ...f })) : [])} label={`Abierto los ${NOMBRE_DIA[d].toLowerCase()}`} />
+                  {!abierto && <span className="text-xs text-slate-400 panel-oscuro:text-gray-500">Cerrado</span>}
+                  {abierto && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {fr.map((f, i) => (
+                        <span key={i} className="flex items-center gap-1.5">
+                          {i > 0 && <span className="text-xs text-slate-400">y</span>}
+                          <input type="time" aria-label={`${NOMBRE_DIA[d]}: abre`} className={hora} value={f.abre} onChange={(e) => setFranja(d, i, "abre", e.target.value)} />
+                          <span className="text-xs text-slate-400">a</span>
+                          <input type="time" aria-label={`${NOMBRE_DIA[d]}: cierra`} className={hora} value={f.cierra} onChange={(e) => setFranja(d, i, "cierra", e.target.value)} />
+                        </span>
+                      ))}
+                      {fr.length === 1 ? (
+                        <button type="button" onClick={() => setDia(d, [{ abre: fr[0].abre < "13:00" ? fr[0].abre : "09:00", cierra: "13:00" }, { abre: "16:00", cierra: "20:00" }])} className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400">+ Horario cortado</button>
+                      ) : (
+                        <button type="button" onClick={() => setDia(d, [fr[0]])} className="text-xs font-semibold text-slate-500">Quitar el segundo</button>
+                      )}
+                      {d === "lun" && <button type="button" onClick={() => copiarATodos("lun")} className="text-xs font-semibold text-indigo-600 panel-oscuro:text-indigo-400">Copiar a martes–sábado</button>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <Nota>En hora de Argentina. «Copiar» no toca el domingo.</Nota>
+        </div>
+
+        <PieDeTarjeta
+          onClick={async () => { if (await guardar({ ubicacion: u })) setBase(u); }}
+          guardando={guardando} guardado={guardado} sinCambios={sinCambios}
+          error={error} aviso={aviso}
         />
       </div>
     </div>

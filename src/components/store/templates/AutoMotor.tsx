@@ -14,7 +14,8 @@
  */
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
-import { irASeccion } from "@/components/store/templates/shared/irASeccion";
+import { useVistaAgencia, MENU_AGENCIA } from "@/components/store/auto/agencia/useVistaAgencia";
+import { AgenciaMotor, AGENCIA_MOTOR_CSS } from "@/components/store/templates/motor/AgenciaMotor";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
@@ -107,7 +108,7 @@ export default function AutoMotor() {
      dueño ocultó sólo en el celular. */
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Vehículos","catálogo","am-catalogo"],["Tasá tu usado","tasar","am-tasar"],["Nosotros","nosotros","am-nosotros"],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
+  const menuAncho = [["Vehículos","catálogo","am-catalogo"],["Tasá tu usado","tasar","am-tasar"],["La agencia",MENU_AGENCIA,""],["Contacto","contacto","am-contacto"]].filter(([, , b]) => !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview     = !!config?.previewFill;
   // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
@@ -121,6 +122,8 @@ export default function AutoMotor() {
   const currency      = config?.currency ?? "ARS";
   const principal     = monedaDeTienda({ currency });
   const slug          = config?.slug ?? "";
+  /* "La agencia" es una página aparte (/nosotros); el resto del menú baja a bloques. Ver auto/agencia. */
+  const agenciaNav    = useVistaAgencia({ isPreview, slug, templateId: "auto-motor" });
   // Lo que la tienda tiene, para el buscador, los tipos y las estadísticas (ver lib/filtroVehiculos).
   const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
   const foco = useMemo(() => elegirFoco(products, config?.featuredVehicleId), [products, config?.featuredVehicleId]);
@@ -292,10 +295,13 @@ export default function AutoMotor() {
   ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0"));
 
   return (
-    <div style={{ background: NEGRO, color: "#f4f4f5",
-      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh" }}>
+    <div data-template-raiz style={{ background: NEGRO, color: "#f4f4f5",
+      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh",
+      // El candado del cambio de pantalla (ver useVistaTemplate): el segundo toque de un doble clic no cae en la pantalla nueva.
+      pointerEvents: agenciaNav.cambiando ? "none" : undefined }}>
       <style>{`
         ${AM_MODAL_CSS}
+        ${AGENCIA_MOTOR_CSS}
         ${MOTOR_TARJETA_CSS}
         ${VIDEOS_MOTOR_CSS}
         .am-grid { display:grid; gap:12px; grid-template-columns:1fr }
@@ -402,7 +408,7 @@ export default function AutoMotor() {
           </div>
           <div className="am-nav-links" style={{ gap:28, alignItems:"center" }}>
             {menuAncho.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => irASeccion(id)} className="am-link"
+              <button key={id} type="button" onClick={() => agenciaNav.ir(id)} aria-current={id === MENU_AGENCIA && agenciaNav.enAgencia ? "page" : undefined} className="am-link"
                 style={{ background:"none", border:"none", cursor:"pointer", fontSize:12, minHeight:44,
                   fontWeight:600, letterSpacing:1.5, textTransform:"uppercase", transition:"color 0.15s",
                   color: navTextMid, fontFamily:"inherit" }}>
@@ -508,7 +514,7 @@ export default function AutoMotor() {
         {menuOpen && (
           <div style={{ borderTop:`1px solid ${navBorderColor}`, padding:"6px 0 18px" }}>
             {menuCelu.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => { irASeccion(id); setMenuOpen(false); }}
+              <button key={id} type="button" onClick={() => { agenciaNav.ir(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navText, cursor:"pointer", textAlign:"left", minHeight:48,
                   fontSize:13, fontWeight:700, textTransform:"uppercase", fontFamily:"inherit",
@@ -526,6 +532,14 @@ export default function AutoMotor() {
         )}
       </nav>
 
+      {/* ── LA AGENCIA ── página aparte: dirección, horario, pagos, equipo (ver motor/AgenciaMotor). */}
+      {agenciaNav.enAgencia ? (
+        <section aria-label="La agencia" style={{ background: NEGRO, padding: `${isPreview ? 40 : (showAnn ? PROMO_H : 0) + NAV_H + 40}px clamp(16px,4vw,32px) clamp(56px,8vw,96px)` }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+            <AgenciaMotor acento={accent} sobreAcento={sobreAcento} nombreTienda={storeName} waLink={waLink} todosHref={todos} fotoDeRespaldo={nosotrosUrl} />
+          </div>
+        </section>
+      ) : (<>
       {/* ── PORTADA ── la foto, el título y el buscador: lo primero que se hace en una agencia es buscar. */}
       <section aria-label="Portada" style={{ position:"relative", minHeight:"min(100svh, 920px)",
         display:"flex", flexDirection:"column", justifyContent:"flex-end",
@@ -820,6 +834,11 @@ export default function AutoMotor() {
             <p style={{ margin:0, fontSize:16, color:nosMid, lineHeight:1.8 }}>
               <EditableZone field="nosotrosP2" label="Párrafo 2">Cada vehículo tiene fotos reales, su ficha técnica y el precio a la vista. Escribinos por cualquiera y te contamos todo.</EditableZone>
             </p>
+            <a href={agenciaNav.hrefAgencia} onClick={e => { e.preventDefault(); agenciaNav.irALaAgencia(); }}
+              style={{ display:"inline-flex", alignItems:"center", minHeight:48, marginTop:22, padding:"0 22px", borderRadius:2, background:accent, color:sobreAcento,
+                textDecoration:"none", fontWeight:800, fontSize:12, letterSpacing:1.5, textTransform:"uppercase" }}>
+              Conocé la agencia →
+            </a>
           </div>
         </div>
       </section>
@@ -900,6 +919,7 @@ export default function AutoMotor() {
       </section>
       </SectionBlock>
       </div>
+      </>)}
 
       {/* ── PIE ── */}
       <footer style={{ position:"relative", padding:"clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px",

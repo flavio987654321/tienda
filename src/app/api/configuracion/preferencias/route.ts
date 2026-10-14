@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import { storePreferencesSchema, mergeStorePreferences } from "@/lib/store-config";
 import { isSafeExternalUrl } from "@/lib/url-utils";
+import { problemaDeHorarios } from "@/lib/agencia";
 
 const NOMBRE_RED: Record<string, string> = {
   instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok",
@@ -79,6 +80,10 @@ export async function PATCH(req: NextRequest) {
       );
     }
   }
+
+  // El formato (HH:MM) lo mira el schema; que cierre después de abrir, esto.
+  const problemaHorario = problemaDeHorarios(parsed.data.ubicacion?.horarios);
+  if (problemaHorario) return NextResponse.json({ error: problemaHorario }, { status: 400 });
 
   const current = await prisma.store.findUnique({
     where: { ownerId: user.id },

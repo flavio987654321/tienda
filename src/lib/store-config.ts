@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 //   paymentInfo       → /api/pagos          (CBU, alias, efectivo)
 //   shippingMethods   → /api/pagos          (métodos de envío)
 //   analytics         → OAuth de Google y Meta, y también campos del editor
+//   ubicacion         → /api/configuracion/preferencias (dirección y horarios de la agencia)
 //
 // Tratarlo como si fuera solo diseño causó dos bugs distintos:
 //   1. Guardar el diseño escribía `parsed.data` tal cual, y zod descarta las
@@ -21,6 +22,35 @@ import { prisma } from "@/lib/prisma";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+
+/* ── La agencia (ver lib/agencia) ──────────────────────────────────────────── */
+const horaSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const franjasSchema = z.array(z.object({ abre: horaSchema, cierra: horaSchema })).max(2);
+const horariosSchema = z.object({
+  lun: franjasSchema, mar: franjasSchema, mie: franjasSchema, jue: franjasSchema,
+  vie: franjasSchema, sab: franjasSchema, dom: franjasSchema,
+}).partial();
+/* Las fotos terminan en un <img src> de la tienda pública: sólo https, nada
+   de javascript: ni data:. */
+const urlFoto = z.string().max(2000).regex(/^https:\/\//);
+const agenciaSchema = z.object({
+  pagos: z.array(z.enum(["contado", "transferencia", "tarjeta", "financiacion", "permuta", "dolares"])).max(6).optional(),
+  pagosNota: z.string().max(300).optional(),
+  equipo: z.array(z.object({
+    nombre: z.string().max(80),
+    rol: z.string().max(80).optional(),
+    foto: urlFoto.optional(),
+    whatsapp: z.string().max(30).optional(),
+  })).max(8).optional(),
+  garantia: z.string().max(600).optional(),
+  salon: z.array(urlFoto).max(8).optional(),
+});
+export const ubicacionSchema = z.object({
+  calle: z.string().max(120).optional(),
+  localidad: z.string().max(80).optional(),
+  provincia: z.string().max(60).optional(),
+  horarios: horariosSchema.optional(),
+});
 
 export const storeConfigSchema = z.object({
   /* "fashion-noir" sigue acá aunque el template ya no exista.
@@ -142,6 +172,8 @@ export const storeConfigSchema = z.object({
   hiddenSectionsCelular: z.array(z.string().max(60)).max(40).optional(),
   sectionOrder: z.array(z.string().max(60)).optional(),
   featuredVehicleId: z.string().max(100).optional(),
+  // Pagos, equipo, garantía y salón de la página "La agencia" (autos y motos).
+  agencia: agenciaSchema.optional(),
 });
 
 export type StoreConfigInput = z.infer<typeof storeConfigSchema>;
@@ -175,6 +207,8 @@ export const storePreferencesSchema = z.object({
     title: z.string().max(120),
     description: z.string().max(320),
   }).optional(),
+  // Dirección y horarios de la agencia: del negocio, no del diseño (ver lib/agencia).
+  ubicacion: ubicacionSchema.optional(),
 });
 
 export type StorePreferencesInput = z.infer<typeof storePreferencesSchema>;

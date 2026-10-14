@@ -1,7 +1,8 @@
 "use client";
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
-import { irASeccion } from "@/components/store/templates/shared/irASeccion";
+import { useVistaAgencia, MENU_AGENCIA } from "@/components/store/auto/agencia/useVistaAgencia";
+import { AgenciaDrive, AGENCIA_DRIVE_CSS } from "@/components/store/templates/drive/AgenciaDrive";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs } from "@/types/store-config";
@@ -111,7 +112,7 @@ export default function AutoDrive() {
      dueño ocultó sólo en el celular. */
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Vehículos","catálogo","ad-catalogo"],["Vendé tu usado","tasar","ad-tasar"],["Preguntas","preguntas","ad-preguntas"],["Contacto","contacto","ad-contacto"]].filter(([, , b]) => !ocultas.includes(b));
+  const menuAncho = [["Vehículos","catálogo","ad-catalogo"],["Vendé tu usado","tasar","ad-tasar"],["La agencia",MENU_AGENCIA,""],["Preguntas","preguntas","ad-preguntas"],["Contacto","contacto","ad-contacto"]].filter(([, , b]) => !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview    = !!config?.previewFill;
   // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
@@ -125,6 +126,8 @@ export default function AutoDrive() {
   const currency     = config?.currency ?? "ARS";
   const principal    = monedaDeTienda({ currency });
   const slug         = config?.slug ?? "";
+  /* "La agencia" es una página aparte (/nosotros); el resto del menú baja a bloques. Ver auto/agencia. */
+  const agenciaNav   = useVistaAgencia({ isPreview, slug, templateId: "auto-drive" });
   const storeName    = config?.storeName ?? "AUTO DRIVE";
   const whatsapp     = config?.whatsapp ?? { enabled:false, number:"", message:"" };
   /* El link armado con `linkWhatsApp` (06/10/26): saca el 0 y el 15, pone el
@@ -316,10 +319,13 @@ export default function AutoDrive() {
   );
 
   return (
-    <div style={{ background:FONDO, color:TINTA,
-      fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh" }}>
+    <div data-template-raiz style={{ background:FONDO, color:TINTA,
+      fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh",
+      // El candado del cambio de pantalla (ver useVistaTemplate): el segundo toque de un doble clic no cae en la pantalla nueva.
+      pointerEvents: agenciaNav.cambiando ? "none" : undefined }}>
       <style>{`
         ${DRIVE_TARJETA_CSS}
+        ${AGENCIA_DRIVE_CSS}
         ${TIPOS_DRIVE_CSS}
         ${PRESUPUESTO_DRIVE_CSS}
         ${VIDEOS_DRIVE_CSS}
@@ -436,7 +442,7 @@ export default function AutoDrive() {
           </div>
           <div className="ad-nav-links" style={{ gap:4, alignItems:"center" }}>
             {menuAncho.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => irASeccion(id)} className="ad-link-nav"
+              <button key={id} type="button" onClick={() => agenciaNav.ir(id)} aria-current={id === MENU_AGENCIA && agenciaNav.enAgencia ? "page" : undefined} className="ad-link-nav"
                 style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:"10px 14px", borderRadius:10,
                   fontSize:14, fontWeight:600, fontFamily:"inherit", transition:"color 0.15s" }}>
                 {lbl}
@@ -541,7 +547,7 @@ export default function AutoDrive() {
         {menuOpen && (
           <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px clamp(16px,3vw,28px) 18px" }}>
             {menuCelu.map(([lbl,id]) => (
-              <button key={id} type="button" onClick={() => { irASeccion(id); setMenuOpen(false); }}
+              <button key={id} type="button" onClick={() => { agenciaNav.ir(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navText, cursor:"pointer", textAlign:"left", fontFamily:"inherit",
                   padding:"14px 0", fontSize:15, fontWeight:600, borderBottom:`1px solid ${navBorderColor}` }}>
@@ -557,6 +563,14 @@ export default function AutoDrive() {
         )}
       </nav>
 
+      {/* ── LA AGENCIA ── página aparte: visita, pagos, equipo, garantía (ver drive/AgenciaDrive). */}
+      {agenciaNav.enAgencia ? (
+        <section aria-label="La agencia" style={{ background: FONDO, padding: `${isPreview ? 28 : (showAnn ? PROMO_H : 0) + NAV_H + 28}px clamp(16px,3vw,28px) clamp(56px,8vw,96px)` }}>
+          <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+            <AgenciaDrive acento={accent} nombreTienda={storeName} waLink={waLink} todosHref={linkTodos} fotoDeRespaldo={nosotrosUrl} />
+          </div>
+        </section>
+      ) : (<>
       {/* ── PORTADA: el buscador manda ── */}
       <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H),
         position:"relative", ...secBg(heroImg, heroBg), overflow:"hidden" }}>
@@ -969,6 +983,11 @@ export default function AutoDrive() {
                 <WaIcon /> Hablemos
               </a>
             )}
+            <a href={agenciaNav.hrefAgencia} onClick={e => { e.preventDefault(); agenciaNav.irALaAgencia(); }}
+              style={{ display:"inline-flex", alignItems:"center", minHeight:50, marginLeft:waLink ? 10 : 0, padding:"0 22px", borderRadius:14, border:`1px solid ${accent}`, color:accent,
+                textDecoration:"none", fontWeight:800, fontSize:15 }}>
+              Conocé la agencia →
+            </a>
           </div>
         </div>
       </section>
@@ -1061,6 +1080,7 @@ export default function AutoDrive() {
       </section>
       </SectionBlock>
       </div>
+      </>)}
 
       {/* ── PIE ── */}
       <footer style={{ position:"relative", padding:"clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", ...secBg(footerImg, footerBg) }}>

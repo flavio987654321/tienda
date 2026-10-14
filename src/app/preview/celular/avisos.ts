@@ -28,6 +28,7 @@ export const LLAMADAS = [
   "moveSection",
   "setHiddenSectionCelular",
   "setFeaturedVehicleId",
+  "setAgencia",
 ] as const;
 export type Llamada = (typeof LLAMADAS)[number];
 
