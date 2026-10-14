@@ -5,6 +5,25 @@ import { Megaphone, X, ArrowRight, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDo
 import { TONOS, esTono, CANAL_AVISOS } from "@/lib/avisos-admin";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 
+/**
+ * Adónde lleva el botón y si abre otra pestaña.
+ *
+ * Abría SIEMPRE otra pestaña, también para un link a nuestro propio panel
+ * ("Ver mis productos"): la persona quedaba con dos paneles abiertos. Un link
+ * de la plataforma (con o sin www) va en la misma pestaña y como dirección
+ * corta, así no salta de www al dominio pelado y pierde la sesión. Uno de
+ * afuera (WhatsApp, otra web) sigue abriéndose aparte.
+ */
+function destinoDelBoton(link: string): { href: string; afuera: boolean } {
+  try {
+    const u = new URL(link);
+    const propio = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.tiendaapps.com");
+    const sinWww = (h: string) => h.replace(/^www\./, "");
+    if (sinWww(u.hostname) === sinWww(propio.hostname)) return { href: `${u.pathname}${u.search}${u.hash}`, afuera: false };
+  } catch { /* no es una dirección completa: se deja como vino */ }
+  return { href: link, afuera: true };
+}
+
 export type AvisoEnPantalla = {
   id: string;
   titulo: string;
@@ -53,9 +72,8 @@ export function CartelAviso({
           <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed opacity-90 [overflow-wrap:anywhere]">{aviso.texto}</p>
           {aviso.botonTexto && aviso.botonLink && (
             <a
-              href={aviso.botonLink}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={destinoDelBoton(aviso.botonLink).href}
+              {...(destinoDelBoton(aviso.botonLink).afuera ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               onClick={onClick}
               className={`mt-4 inline-flex max-w-full items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${t.boton}`}
             >
