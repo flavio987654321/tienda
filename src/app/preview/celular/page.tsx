@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { TemplateSeguro } from "@/components/store/TemplateSeguro";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext } from "@/contexts/EditContext";
 import { TEMPLATE_CATEGORIES } from "@/lib/templateRegistry";
@@ -235,7 +236,8 @@ export default function PreviaCelular() {
   return (
     <EditContext.Provider value={contexto!}>
       <StoreConfigContext.Provider value={config}>
-        {dibujo}
+        {/* Un template roto deja el cartel en el celular, no una pantalla de error (ver TemplateSeguro). */}
+        <TemplateSeguro template={config.template} modo="editor" reintentarCon={config}>{dibujo}</TemplateSeguro>
       </StoreConfigContext.Provider>
     </EditContext.Provider>
   );

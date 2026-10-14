@@ -3137,7 +3137,7 @@ export default function ConfiguracionPage() {
               <StoreConfigContext.Provider value={configPrevia}>
                 <BrowserFrame storeName={config.storeName}>
                   {/* Un template roto no tumba el editor: ver TemplateSeguro. */}
-                  <TemplateSeguro template={config.template} modo="editor" reintentarCon={configPrevia}>
+                  <TemplateSeguro key={selected!.id} template={selected!.id} modo="editor" reintentarCon={config}>
                     <TemplateComponent />
                   </TemplateSeguro>
                 </BrowserFrame>
@@ -3321,7 +3321,7 @@ export default function ConfiguracionPage() {
               <StoreConfigContext.Provider value={configPrevia}>
                 <BrowserFrame storeName={config.storeName}>
                   {/* Un template roto no tumba el editor: ver TemplateSeguro. */}
-                  <TemplateSeguro template={config.template} modo="editor" reintentarCon={configPrevia}>
+                  <TemplateSeguro key={selected!.id} template={selected!.id} modo="editor" reintentarCon={config}>
                     <TemplateComponent />
                   </TemplateSeguro>
                 </BrowserFrame>

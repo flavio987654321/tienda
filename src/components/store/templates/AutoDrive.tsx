@@ -2,6 +2,7 @@
 import { ContenidoPieAutos, FRASE_PIE } from "@/components/store/auto/PieDeAutos";
 import { useEfectosAlBajar } from "@/components/store/templates/shared/efectosAutos";
 import { useVistaAgencia, MENU_AGENCIA } from "@/components/store/auto/agencia/useVistaAgencia";
+import { hayAgenciaCargada } from "@/components/store/auto/agencia/piezasAgencia";
 import { AgenciaDrive, AGENCIA_DRIVE_CSS } from "@/components/store/templates/drive/AgenciaDrive";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
@@ -112,7 +113,9 @@ export default function AutoDrive() {
      dueño ocultó sólo en el celular. */
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Vehículos","catálogo","ad-catalogo"],["Vendé tu usado","tasar","ad-tasar"],["La agencia",MENU_AGENCIA,""],["Preguntas","preguntas","ad-preguntas"],["Contacto","contacto","ad-contacto"]].filter(([, , b]) => !ocultas.includes(b));
+  // Sin datos de agencia, "La agencia" baja al bloque "Nuestra historia": si ese bloque está oculto, no se ofrece.
+  const conAgencia = hayAgenciaCargada(config);
+  const menuAncho = [["Vehículos","catálogo","ad-catalogo"],["Vendé tu usado","tasar","ad-tasar"],["La agencia",MENU_AGENCIA,conAgencia ? "" : "ad-nosotros"],["Preguntas","preguntas","ad-preguntas"],["Contacto","contacto","ad-contacto"]].filter(([, , b]) => !ocultas.includes(b));
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
   const isPreview    = !!config?.previewFill;
   // Efectos al bajar: en el editor no (ahí todo tiene que verse para editarlo).
@@ -127,7 +130,7 @@ export default function AutoDrive() {
   const principal    = monedaDeTienda({ currency });
   const slug         = config?.slug ?? "";
   /* "La agencia" es una página aparte (/nosotros); el resto del menú baja a bloques. Ver auto/agencia. */
-  const agenciaNav   = useVistaAgencia({ isPreview, slug, templateId: "auto-drive" });
+  const agenciaNav   = useVistaAgencia({ isPreview, slug, templateId: "auto-drive", conPagina: conAgencia });
   const storeName    = config?.storeName ?? "AUTO DRIVE";
   const whatsapp     = config?.whatsapp ?? { enabled:false, number:"", message:"" };
   /* El link armado con `linkWhatsApp` (06/10/26): saca el 0 y el 15, pone el
@@ -983,11 +986,11 @@ export default function AutoDrive() {
                 <WaIcon /> Hablemos
               </a>
             )}
-            <a href={agenciaNav.hrefAgencia} onClick={e => { e.preventDefault(); agenciaNav.irALaAgencia(); }}
+            {agenciaNav.conPagina && <a href={agenciaNav.hrefAgencia} onClick={e => { e.preventDefault(); agenciaNav.irALaAgencia(); }}
               style={{ display:"inline-flex", alignItems:"center", minHeight:50, marginLeft:waLink ? 10 : 0, padding:"0 22px", borderRadius:14, border:`1px solid ${accent}`, color:accent,
                 textDecoration:"none", fontWeight:800, fontSize:15 }}>
               Conocé la agencia →
-            </a>
+            </a>}
           </div>
         </div>
       </section>

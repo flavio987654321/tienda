@@ -52,6 +52,15 @@ function tieneAlgo(u: Ubicacion | undefined, a: Agencia | undefined) {
   return hayDireccion(u) || horariosResumidos(u?.horarios).length > 0 || l.pagos.length > 0 || l.equipo.length > 0 || !!l.garantia || l.salon.length > 0;
 }
 
+/**
+ * Si la página "La agencia" tiene algo para mostrar. Sin nada cargado, en la
+ * tienda era el nombre y dos botones: el menú baja entonces al bloque de la
+ * portada, como antes. En Diseño y en la demo siempre (ejemplo o editores).
+ */
+export function hayAgenciaCargada(config: { previewFill?: boolean; ubicacion?: Ubicacion; agencia?: Agencia } | null | undefined): boolean {
+  return !!config?.previewFill || tieneAlgo(config?.ubicacion, config?.agencia);
+}
+
 /** Todo lo que la página necesita, ya limpio, más si se está editando. */
 export function useAgencia() {
   const config = useStoreConfig();
@@ -278,19 +287,24 @@ export function VisorFotos({ fotos, indice, onCerrar, onMover, titulo, enPrevia 
   const n = fotos.length;
   const ir = (d: number) => { if (indice !== null) onMover((indice + d + n) % n); };
 
+  // El teclado lee siempre lo último (índice y funciones) sin volver a engancharse en cada dibujado.
+  const ultimo = useRef({ ir, onCerrar });
+  useEffect(() => { ultimo.current = { ir, onCerrar }; });
+
+  // Al abrir: el foco a "Cerrar", la página quieta y el teclado. Una sola vez por apertura.
   useEffect(() => {
     if (!abierto) return;
     cerrarRef.current?.focus();
     const tecla = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCerrar();
-      else if (e.key === "ArrowRight") ir(1);
-      else if (e.key === "ArrowLeft") ir(-1);
+      if (e.key === "Escape") ultimo.current.onCerrar();
+      else if (e.key === "ArrowRight") ultimo.current.ir(1);
+      else if (e.key === "ArrowLeft") ultimo.current.ir(-1);
     };
     const antes = document.body.style.overflow;
     if (!enPrevia) document.body.style.overflow = "hidden";
     window.addEventListener("keydown", tecla);
     return () => { window.removeEventListener("keydown", tecla); document.body.style.overflow = antes; };
-  });
+  }, [abierto, enPrevia]);
 
   if (!abierto || indice === null) return null;
   const flecha = (lado: "izq" | "der"): React.CSSProperties => ({

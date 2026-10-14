@@ -51,6 +51,7 @@ import { PortadaVolt, PORTADA_VOLT_CSS } from "@/components/store/templates/volt
 import { TIRA_VOLT_CSS } from "@/components/store/templates/volt/TiraVolt";
 import { useDesplazamientoVolt, LineaDeProgreso } from "@/components/store/templates/volt/desplazamientoVolt";
 import { AgenciaVolt, AGENCIA_VOLT_CSS } from "@/components/store/templates/volt/AgenciaVolt";
+import { hayAgenciaCargada } from "@/components/store/auto/agencia/piezasAgencia";
 
 /** La paleta: casi negro azulado, una superficie apenas más clara, y el acento de la dueña. */
 const VACIO = "#05070d";
@@ -106,7 +107,9 @@ export default function AutoVolt() {
   // El menú sólo lleva a bloques que se ven; en el celular, tampoco a los ocultos ahí.
   const ocultas = config?.hiddenSections ?? hiddenSections;
   const ocultasCelu = config?.hiddenSectionsCelular ?? [];
-  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", ""], ["Contacto", "contacto", ""]].filter(([, , b]) => !b || !ocultas.includes(b))
+  // Sin datos de agencia, "La agencia" baja al bloque de la portada (ver hayAgenciaCargada); si está oculto, no se ofrece.
+  const conAgencia = hayAgenciaCargada(config);
+  const menuAncho = [["Showroom", "showroom", ""], ["Comparar", "comparar", "av-comparar"], ["Tasá tu usado", "tasar", "av-tasar"], ["La agencia", "nosotros", conAgencia ? "" : "av-nosotros"], ["Contacto", "contacto", ""]].filter(([, , b]) => !b || !ocultas.includes(b))
     // El comparador sólo se dibuja con dos vehículos o más: con uno, "Comparar" era un botón que no hacía nada.
     .filter(([, id]) => id !== "comparar" || products.length >= 2);
   const menuCelu = menuAncho.filter(([, , b]) => !ocultasCelu.includes(b));
@@ -255,7 +258,7 @@ export default function AutoVolt() {
   };
   /* "La agencia" es una página aparte (dirección, horarios, pagos, equipo; ver
      volt/AgenciaVolt); el resto del menú son bloques de la portada. */
-  const irDesdeMenu = (id: string) => (id === "nosotros" ? vista.irANosotros()
+  const irDesdeMenu = (id: string) => (id === "nosotros" ? (conAgencia ? vista.irANosotros() : irA("nosotros"))
     // El contacto es el pie (WhatsApp y redes): está en todas las pantallas, así que se baja ahí sin cambiar de pantalla.
     : id === "contacto" ? irASeccion("contacto") : irA(id));
   useEffect(() => {
@@ -702,10 +705,10 @@ export default function AutoVolt() {
               <Link href={todos} onClick={e => alClicTodos(e)} style={{ display: "inline-flex", alignItems: "center", minHeight: 50, padding: "0 22px", borderRadius: 14, border: `1px solid ${fNosotros.claro ? "rgba(11,16,32,0.25)" : "rgba(255,255,255,0.22)"}`, color: fNosotros.tinta, textDecoration: "none", fontWeight: 700, fontSize: 15 }}>
                 Ver todos los vehículos
               </Link>
-              <a href={`${vista.urlTienda}/nosotros${vista.sufijoEditor}`} onClick={e => { e.preventDefault(); vista.irANosotros(); }}
+              {conAgencia && <a href={`${vista.urlTienda}/nosotros${vista.sufijoEditor}`} onClick={e => { e.preventDefault(); vista.irANosotros(); }}
                 style={{ display: "inline-flex", alignItems: "center", minHeight: 50, padding: "0 6px", color: accent, textDecoration: "none", fontWeight: 800, fontSize: 15 }}>
                 Conocé la agencia →
-              </a>
+              </a>}
             </div>
           </div>
         </div>

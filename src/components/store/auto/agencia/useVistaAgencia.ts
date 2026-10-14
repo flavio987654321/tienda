@@ -17,7 +17,11 @@ import { irASeccion } from "@/components/store/templates/shared/irASeccion";
 /** El id de menú que lleva a la página y no a un bloque. */
 export const MENU_AGENCIA = "agencia";
 
-export function useVistaAgencia({ isPreview, slug, templateId }: { isPreview: boolean; slug: string; templateId: string }) {
+export function useVistaAgencia({ isPreview, slug, templateId, conPagina }: {
+  isPreview: boolean; slug: string; templateId: string;
+  /** Ver hayAgenciaCargada: sin datos, "La agencia" baja al bloque de la portada. */
+  conPagina: boolean;
+}) {
   const vista = useVistaTemplate({ isPreview, slug, templateId, catalogo: "vehiculos" });
   const [pendiente, setPendiente] = useState<string | null>(null);
   useEffect(() => {
@@ -27,13 +31,17 @@ export function useVistaAgencia({ isPreview, slug, templateId }: { isPreview: bo
   }, [pendiente, vista.enNosotros]);
 
   const ir = (id: string) => {
-    if (id === MENU_AGENCIA) { if (!vista.enNosotros) vista.irANosotros(); return; }
+    if (id === MENU_AGENCIA) {
+      if (conPagina) { if (!vista.enNosotros) vista.irANosotros(); return; }
+      id = "nosotros";
+    }
     if (vista.enNosotros) { setPendiente(id); vista.irALaPortada(); return; }
     irASeccion(id);
   };
 
   return {
     enAgencia: vista.enNosotros,
+    conPagina,
     /** Ver el candado en useVistaTemplate: la raíz apaga sus clics mientras dura. */
     cambiando: vista.cambiandoPantalla,
     ir,

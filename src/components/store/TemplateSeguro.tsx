@@ -30,11 +30,17 @@ type Props = {
   nombreTienda?: string;
   /** Número de WhatsApp de la tienda: si la tienda no se puede ver, que igual se le pueda escribir. */
   whatsapp?: string | null;
-  /** Cuando cambia, se vuelve a intentar dibujar (en el editor: la config de la previa). */
+  /** Cuando cambia, se vuelve a intentar dibujar (en el editor: la config editada).
+   *  Tiene que ser un objeto que cambie SÓLO cuando se edita algo: uno armado de
+   *  nuevo en cada dibujado reintentaba (y volvía a romperse) con cada movimiento. */
   reintentarCon?: unknown;
 };
 
 type Estado = { error: boolean; con: unknown };
+
+/* A Sentry una vez por template y por visita: el mismo error repetido no
+   suma información y gasta la cuota. */
+const avisados = new Set<string>();
 
 export class TemplateSeguro extends Component<Props, Estado> {
   state: Estado = { error: false, con: this.props.reintentarCon };
@@ -49,7 +55,11 @@ export class TemplateSeguro extends Component<Props, Estado> {
   }
 
   componentDidCatch(error: Error) {
-    Sentry.captureException(error, { tags: { template: this.props.template, donde: this.props.modo } });
+    const clave = `${this.props.template}|${this.props.modo}|${error.message}`;
+    if (!avisados.has(clave)) {
+      avisados.add(clave);
+      Sentry.captureException(error, { tags: { template: this.props.template, donde: this.props.modo } });
+    }
     console.error(`[template ${this.props.template}]`, error);
   }
 
