@@ -106,7 +106,8 @@ export function validarTasacion(b: Record<string, unknown> | null | undefined): 
   const tipo = deLista(b.tipo, TIPOS_DE_TRABAJO);
   const horas = tipo === "Máquina";
   if (km == null || km < 0 || km > KM_MAXIMO) return { error: horas ? "Poné las horas de uso (sólo números)." : "Poné los kilómetros (sólo números)." };
-  const carroceria = texto(b.carroceria, 40);
+  // En una sola línea: va adentro de la cabecera, que es la primera línea del comentario.
+  const carroceria = texto(typeof b.carroceria === "string" ? b.carroceria.replace(/\s+/g, " ") : null, 40);
   const cabecera = tipo ? [`Tipo: ${tipo}`, carroceria, horas ? MARCA_HORAS : null].filter(Boolean).join(" · ") : null;
   const escrito = texto(b.comentario, 600);
 

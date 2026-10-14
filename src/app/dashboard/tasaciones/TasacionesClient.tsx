@@ -8,7 +8,7 @@
 import { useRef, useState } from "react";
 import { Check, X, Phone, MessageCircle, Loader2, RotateCcw, Repeat } from "lucide-react";
 import { numeroWhatsApp } from "@/lib/whatsappTienda";
-import { ESTADO_TASACION, esEstadoTasacion, resumenDelUsado, mensajeDeOferta, enteroDe, type EstadoTasacion } from "@/lib/tasaciones";
+import { ESTADO_TASACION, esEstadoTasacion, resumenDelUsado, mensajeDeOferta, enteroDe, enHorasDeUso, type EstadoTasacion } from "@/lib/tasaciones";
 import type { TasacionDelPanel } from "@/lib/tasacionesPanel";
 
 type Totales = { pendientes: number; ofertadas: number; aceptadas: number; descartadas: number };
@@ -162,7 +162,7 @@ export default function TasacionesClient({ inicial, totales: totalesIniciales, s
           const est = esEstadoTasacion(t.status) ? ESTADO_TASACION[t.status] : ESTADO_TASACION.PENDIENTE;
           const auto = resumenDelUsado(t);
           const primerNombre = t.nombre.split(/\s+/)[0];
-          const saludo = `Hola ${primerNombre}! Te escribo de ${tienda} por la tasación de tu ${t.marca} ${t.modelo} ${t.anio}. ¿Me mandás unas fotos? Frente, costados, interior y el tablero con los km.`;
+          const saludo = `Hola ${primerNombre}! Te escribo de ${tienda} por la tasación de tu ${t.marca} ${t.modelo} ${t.anio}. ¿Me mandás unas fotos? Frente, costados, interior y ${enHorasDeUso(t.comentario) ? "el horímetro" : "el tablero con los km"}.`;
           const waSaludo = enlaceWhatsApp(t.telefono, saludo);
           const waOferta = t.ofertaMonto != null ? enlaceWhatsApp(t.telefono, mensajeDeOferta(t, t.ofertaMonto, moneda, tienda)) : null;
           const enCurso = t.status === "PENDIENTE" || t.status === "OFERTADA";

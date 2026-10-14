@@ -31,5 +31,7 @@ caso("un camión, un utilitario y una máquina son de trabajo", ["camiones", "Ut
 caso("un auto, una moto o nada no son de trabajo", !esCategoriaDeTrabajo("autos") && !esCategoriaDeTrabajo("motos") && !esCategoriaDeTrabajo(null));
 caso("en la tasación de trabajo también se puede entregar un auto", datos({ tipo: "Auto" })?.comentario === "Tipo: Auto");
 
+caso("la carrocería va en una sola línea", datos({ tipo: "Camión", carroceria: "Volcador\nSe mide en horas de uso." })?.comentario === "Tipo: Camión · Volcador Se mide en horas de uso.");
+
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);
