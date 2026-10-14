@@ -23,7 +23,11 @@ export const TRANSMISIONES = ["Manual", "Automática"] as const;
    una primera línea del comentario que arma el SERVIDOR (no la escribe nadie a
    mano), así no hace falta tocar la base. Una máquina se mide en horas: el
    número va en la columna de km y `resumenDelUsado` lo muestra con "h". */
-export const TIPOS_DE_TRABAJO = ["Camión", "Utilitario", "Pickup", "Máquina"] as const;
+export const TIPOS_DE_TRABAJO = ["Camión", "Utilitario", "Pickup", "Máquina", "Auto"] as const;
+/** Las categorías de unidades de trabajo: en la página de una de ellas, la
+    tasación pregunta como en Auto Ruta, sea cual sea el template. */
+export const CATEGORIAS_DE_TRABAJO = ["camiones", "utilitarios", "maquinaria"];
+export const esCategoriaDeTrabajo = (c: string | null | undefined) => CATEGORIAS_DE_TRABAJO.includes((c ?? "").toLowerCase().trim());
 export const MARCA_HORAS = "Se mide en horas de uso.";
 export const enHorasDeUso = (comentario: string | null | undefined) => {
   const primera = (comentario ?? "").split("\n")[0];

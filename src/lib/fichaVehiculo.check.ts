@@ -11,7 +11,7 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = "https://abc.supabase.co";
 import {
   leerFicha, fichaComoAtributo, bloquesDeFicha, limpiarDato, tipoDeFicha, esAtributoInterno,
   esFolletoNuestro, CLAVE_FICHA, FICHA_VACIA, LARGO_MAXIMO_FICHA, EQUIPAMIENTO, PAPELES, MOTOR, MEDIDAS,
-  esVehiculo, usaHoras, CATEGORIAS_VEHICULO, NOMBRE_TIPO, controlDeFicha, urlFichaPdf, type TipoDeFicha, type CampoNumerico,
+  esVehiculo, usaHoras, CATEGORIAS_VEHICULO, NOMBRE_TIPO, controlDeFicha, urlFichaPdf, SERVICES, servicesDe, type TipoDeFicha, type CampoNumerico,
 } from "./fichaVehiculo";
 
 let fallos = 0;
@@ -87,6 +87,16 @@ ok("camión: retarder sí, techo solar no; 15.000 kg y 3 ejes", cam.equipamiento
 const ctl = controlDeFicha(leerFicha(attr({ equipamiento: ["aire"], papeles: ["vtv"] })), "auto");
 ok("control: lista completa y sólo lo cargado tildado", ctl.equipamiento.length === EQUIPAMIENTO.auto.length && ctl.equipamiento.filter((i) => i.tiene).length === 1 && ctl.papeles.length === PAPELES.length && ctl.papeles.filter((i) => i.tiene).length === 1, ctl);
 ok("urlFichaPdf: ver y descargar", urlFichaPdf("a b") === "/api/public/ficha-vehiculo/a%20b" && urlFichaPdf("x", true) === "/api/public/ficha-vehiculo/x?descargar=1");
+
+// Services según el tipo (15/10/26)
+const tiposServices = Object.keys(SERVICES) as TipoDeFicha[];
+ok("services: cada tipo tiene su lista", tiposServices.length === 6 && tiposServices.every((t) => SERVICES[t].length >= 5));
+ok("services: sin claves repetidas en un tipo", tiposServices.every((t) => new Set(SERVICES[t].map((i) => i.id)).size === SERVICES[t].length));
+ok("services: una misma clave dice lo mismo en todos los tipos", (() => { const m = new Map<string, string>(); return tiposServices.every((t) => SERVICES[t].every((i) => { const l = m.get(i.id); m.set(i.id, l ?? i.label); return !l || l === i.label || i.id === "suspension"; })); })());
+ok("services: un camión tiene embrague y diferencial, no distribución", servicesDe("camiones").some((i) => i.id === "embrague") && servicesDe("camiones").some((i) => i.id === "diferencial") && !servicesDe("camiones").some((i) => i.id === "distribucion"));
+ok("services: una moto no tiene aire acondicionado", !servicesDe("motos").some((i) => i.id === "ac"));
+ok("services: un tractor tiene hidráulico", servicesDe("maquinaria").some((i) => i.id === "hidraulico"));
+ok("services: los de auto conservan las claves de siempre", ["aceite", "frenos", "distribucion", "cubiertas", "suspension", "electrico", "ac", "caja"].every((k) => servicesDe("autos").some((i) => i.id === k)));
 
 console.log(fallos === 0 ? "\n✓ todo bien\n" : `\n✗ ${fallos} falla(s)\n`);
 process.exit(fallos === 0 ? 0 : 1);

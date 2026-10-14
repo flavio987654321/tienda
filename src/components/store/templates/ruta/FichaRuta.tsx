@@ -23,7 +23,7 @@ import StoreProductReels from "@/components/store/ProductReels";
 import ConsultaVehiculo from "@/components/store/auto/ConsultaVehiculo";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import PieDeAutos from "@/components/store/auto/PieDeAutos";
-import { attr, fmtPrice, esReservado, vehicleLocation, datosDelVehiculo, AUTO_SERVICES, WaIcon } from "@/components/store/auto/AutoVehicleShared";
+import { attr, fmtPrice, esReservado, vehicleLocation, datosDelVehiculo, servicesDelVehiculo, WaIcon } from "@/components/store/auto/AutoVehicleShared";
 import { usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, usaHoras, tipoDeFicha, leerFicha, bloquesDeFicha, controlDeFicha, urlFichaPdf, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
@@ -321,7 +321,7 @@ export function VehiculoDetailRuta({ view }: { view: ProductDetailViewProps }) {
               <Seccion titulo="Papeles y condiciones"><Control items={control.papeles} acento={acento} /></Seccion>
             )}
             {hayServices && (
-              <Seccion titulo="Historial de servicios"><Control items={AUTO_SERVICES.map(s => ({ label: s.label, tiene: !!services[s.key] }))} acento={acento} /></Seccion>
+              <Seccion titulo="Historial de servicios"><Control items={servicesDelVehiculo(p).map(s => ({ label: s.label, tiene: !!services[s.key] }))} acento={acento} /></Seccion>
             )}
             {p.description && (
               <Seccion titulo="Descripción">
@@ -338,7 +338,7 @@ export function VehiculoDetailRuta({ view }: { view: ProductDetailViewProps }) {
             <section id="fr-tasar" data-ef="sube" style={{ marginTop: 34, scrollMarginTop: 80 }}>
               <h2 style={{ margin: "0 0 14px", paddingBottom: 10, borderBottom: `3px solid ${TINTA}`, fontFamily: TITULAR, fontSize: "clamp(20px,2.4vw,26px)", fontWeight: 700, textTransform: "uppercase", color: TINTA }}>Tomamos tu usado</h2>
               <div style={{ maxWidth: 760 }}>
-                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }} isOwner={isOwner} isPreview={isPreview} deTrabajo />
+                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name, category: p.category }} isOwner={isOwner} isPreview={isPreview} deTrabajo />
               </div>
             </section>
           </div>

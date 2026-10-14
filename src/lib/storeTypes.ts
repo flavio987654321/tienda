@@ -354,21 +354,42 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     /* Lo que cambia según el tipo de vehículo (06/10/26). Sólo por CATEGORÍA:
        hay subcategorías que se llaman igual en dos tipos ("tractor"). */
     extraFieldsByCategory: {
+      /* Desde el 15/10/26 cada tipo trae también sus ejemplos de marca, modelo,
+         versión y motor: al elegir Camiones el formulario decía "Corolla, Ranger".
+         Un campo con la misma key reemplaza al del rubro entero, por eso se
+         repiten label, type y sugerirMarca. */
       autos: [
+        { key: "marca",      label: "Marca",       placeholder: "Toyota, Volkswagen, Ford…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "Corolla, Gol, Focus…" },
+        { key: "version",    label: "Versión",     placeholder: "XEI, Highline, Titanium…" },
+        { key: "motor",      label: "Motor",       placeholder: "2.0, 1.6, 1.0 Turbo" },
         { key: "carroceria", label: "Carrocería", options: ["Sedán", "SUV", "Hatchback", "Coupé", "Convertible", "Rural / Familiar", "Monovolumen"] },
         { key: "traccion",   label: "Tracción",   options: ["Delantera", "Trasera", "4x4", "AWD"] },
       ],
       camionetas: [
+        { key: "marca",      label: "Marca",       placeholder: "Toyota, Ford, Volkswagen…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "Hilux, Ranger, Amarok…" },
+        { key: "version",    label: "Versión",     placeholder: "SRX, XLT, Highline…" },
+        { key: "motor",      label: "Motor",       placeholder: "2.8 TD, 3.2 TDCi, 2.0 TDI" },
         { key: "carroceria", label: "Carrocería", options: ["Pickup cabina simple", "Pickup cabina doble", "SUV", "Van"] },
         { key: "traccion",   label: "Tracción",   options: ["4x2", "4x4", "AWD"] },
       ],
       motos: [
+        { key: "marca",      label: "Marca",       placeholder: "Honda, Yamaha, Motomel…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "CB 500F, XTZ 250, Blitz…" },
+        { key: "version",    label: "Versión",     placeholder: "ABS, Edición especial…" },
+        { key: "motor",      label: "Motor",       placeholder: "110cc, 250cc, 689cc" },
         { key: "carroceria", label: "Carrocería", options: ["Naked", "Deportiva", "Enduro", "Trail", "Scooter", "Custom", "Touring", "Cub / Ciclomotor"] },
         { key: "transmision",label: "Transmisión", options: ["Manual", "Automática", "Semiautomática"] },
         { key: "traccion",   label: "Tracción", ocultar: true },
         { key: "puertas",    label: "Puertas",  ocultar: true },
       ],
       camiones: [
+        { key: "marca",      label: "Marca",       placeholder: "Mercedes-Benz, Iveco, Scania…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "Atego, Tector, Cargo…" },
+        { key: "version",    label: "Versión",     placeholder: "1726, 170E28, 1723…" },
+        { key: "motor",      label: "Motor",       placeholder: "7.2 TD, 4.8 TD, 13 L" },
+        { key: "km",         label: "Kilómetros",  placeholder: "300000", type: "number" },
         { key: "carroceria", label: "Carrocería", options: ["Chasis", "Caja seca", "Térmica / refrigerada", "Volcador", "Playo", "Tanque", "Jaula", "Tractor (semi)"] },
         { key: "traccion",   label: "Tracción",   options: ["4x2", "6x2", "6x4", "8x4", "4x4"] },
         { key: "transmision",label: "Transmisión", options: ["Manual", "Automatizada", "Automática"] },
@@ -376,10 +397,18 @@ export const STORE_TYPES: StoreTypeConfig[] = [
         { key: "cabina",     label: "Cabina",   options: ["Simple", "Dormitorio", "Dormitorio techo alto"] },
       ],
       utilitarios: [
+        { key: "marca",      label: "Marca",       placeholder: "Renault, Fiat, Mercedes-Benz…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "Kangoo, Ducato, Sprinter…" },
+        { key: "version",    label: "Versión",     placeholder: "Furgón 1.6, Maxicargo, 415 CDI…" },
+        { key: "motor",      label: "Motor",       placeholder: "1.6, 2.3 TD, 2.1 CDI" },
         { key: "carroceria", label: "Carrocería", options: ["Furgón", "Furgón techo alto", "Combi / pasajeros", "Chasis cabina", "Minibús"] },
         { key: "traccion",   label: "Tracción",   options: ["Delantera", "Trasera", "4x4"] },
       ],
       maquinaria: [
+        { key: "marca",      label: "Marca",       placeholder: "John Deere, Case IH, Caterpillar…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "6145J, Axial-Flow 7150, 416…" },
+        { key: "version",    label: "Versión",     placeholder: "Doble tracción, Cabinada…" },
+        { key: "motor",      label: "Motor",       placeholder: "6.8, 4.5 TD" },
         // Una máquina se mide en horas de uso, no en kilómetros.
         { key: "km",         label: "Kilómetros", ocultar: true },
         { key: "horas",      label: "Horas de uso", placeholder: "3500", type: "number" },
@@ -389,6 +418,10 @@ export const STORE_TYPES: StoreTypeConfig[] = [
         { key: "puertas",    label: "Puertas",  ocultar: true },
       ],
       cuatriciclos: [
+        { key: "marca",      label: "Marca",       placeholder: "Honda, Can-Am, Polaris…", sugerirMarca: true },
+        { key: "modelo",     label: "Modelo",      placeholder: "TRX 420, Outlander, Sportsman…" },
+        { key: "version",    label: "Versión",     placeholder: "4x4, EPS, XT…" },
+        { key: "motor",      label: "Motor",       placeholder: "420cc, 570cc, 900cc Turbo" },
         { key: "carroceria", label: "Carrocería", options: ["Cuatriciclo", "UTV / Side by side", "Buggy"] },
         { key: "traccion",   label: "Tracción",   options: ["4x2", "4x4"] },
         { key: "transmision",label: "Transmisión", options: ["Manual", "Automática (CVT)", "Semiautomática"] },

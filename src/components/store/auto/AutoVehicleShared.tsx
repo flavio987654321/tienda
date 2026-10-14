@@ -1,4 +1,5 @@
 "use client";
+import { servicesDe } from "@/lib/fichaVehiculo";
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
@@ -52,16 +53,8 @@ export function WaIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export const AUTO_SERVICES = [
-  { key: "aceite",       label: "Aceite y filtros" },
-  { key: "frenos",       label: "Frenos" },
-  { key: "distribucion", label: "Distribución" },
-  { key: "cubiertas",    label: "Cubiertas" },
-  { key: "suspension",   label: "Suspensión" },
-  { key: "electrico",    label: "Sist. eléctrico" },
-  { key: "ac",           label: "Aire acond." },
-  { key: "caja",         label: "Caja de cambios" },
-];
+/** Los services de ESTE vehículo, según su tipo (ver SERVICES en lib/fichaVehiculo). */
+export const servicesDelVehiculo = (p: { category?: string | null }) => servicesDe(p.category).map((s) => ({ key: s.id, label: s.label }));
 
 
 /* Todas las columnas con `minmax(0, …)` y los hijos con `min-width: 0` (06/10/26).

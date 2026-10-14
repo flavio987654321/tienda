@@ -180,6 +180,58 @@ export const EQUIPAMIENTO: Record<TipoDeFicha, Item[]> = {
   ],
 };
 
+/**
+ * El historial de services según el tipo (15/10/26). Antes había una sola
+ * lista, la de autos, para todo: una moto o un tractor mostraban
+ * "Distribución" y "Aire acondicionado", y a un camión le faltaban el embrague,
+ * el diferencial y los frenos de aire. Se guarda en el atributo "Servicios"
+ * como { clave: true }; las claves de autos son las de siempre, así lo cargado
+ * antes se sigue leyendo.
+ */
+export const SERVICES: Record<TipoDeFicha, Item[]> = {
+  auto: [
+    { id: "aceite", label: "Aceite y filtros" }, { id: "frenos", label: "Frenos" },
+    { id: "distribucion", label: "Distribución" }, { id: "cubiertas", label: "Cubiertas" },
+    { id: "suspension", label: "Suspensión" }, { id: "electrico", label: "Sist. eléctrico" },
+    { id: "ac", label: "Aire acondicionado" }, { id: "caja", label: "Caja de cambios" },
+  ],
+  moto: [
+    { id: "aceite", label: "Aceite y filtros" }, { id: "frenos", label: "Frenos" },
+    { id: "kitTransmision", label: "Kit de transmisión" }, { id: "cubiertas", label: "Cubiertas" },
+    { id: "suspension", label: "Suspensión" }, { id: "electrico", label: "Sist. eléctrico" },
+    { id: "bujias", label: "Bujías" }, { id: "valvulas", label: "Calibración de válvulas" },
+  ],
+  camion: [
+    { id: "aceite", label: "Aceite y filtros" }, { id: "frenos", label: "Frenos" },
+    { id: "aireFrenos", label: "Sistema de aire" }, { id: "embrague", label: "Embrague" },
+    { id: "cubiertas", label: "Cubiertas" }, { id: "suspension", label: "Suspensión / elásticos" },
+    { id: "caja", label: "Caja de cambios" }, { id: "diferencial", label: "Diferencial" },
+    { id: "inyeccion", label: "Inyección" }, { id: "electrico", label: "Sist. eléctrico" },
+  ],
+  utilitario: [
+    { id: "aceite", label: "Aceite y filtros" }, { id: "frenos", label: "Frenos" },
+    { id: "distribucion", label: "Distribución" }, { id: "embrague", label: "Embrague" },
+    { id: "cubiertas", label: "Cubiertas" }, { id: "suspension", label: "Suspensión" },
+    { id: "electrico", label: "Sist. eléctrico" }, { id: "ac", label: "Aire acondicionado" },
+  ],
+  agro: [
+    { id: "aceite", label: "Aceite y filtros" }, { id: "hidraulico", label: "Sistema hidráulico" },
+    { id: "transmision", label: "Transmisión" }, { id: "tomaFuerza", label: "Toma de fuerza" },
+    { id: "rodado", label: "Cubiertas / orugas" }, { id: "frenos", label: "Frenos" },
+    { id: "refrigeracion", label: "Refrigeración" }, { id: "electrico", label: "Sist. eléctrico" },
+  ],
+  cuatri: [
+    { id: "aceite", label: "Aceite y filtros" }, { id: "frenos", label: "Frenos" },
+    { id: "transmisionCvt", label: "Transmisión / correa CVT" }, { id: "cubiertas", label: "Cubiertas" },
+    { id: "suspension", label: "Suspensión" }, { id: "electrico", label: "Sist. eléctrico" },
+  ],
+};
+
+/** Los services que van con esta categoría (los de auto si no es un vehículo conocido). */
+export function servicesDe(category: string | null | undefined): Item[] {
+  return SERVICES[tipoDeFicha(category) ?? "auto"];
+}
+
 export const PAPELES: Item[] = [
   { id: "unicoDueno", label: "Único dueño" },
   { id: "vtv", label: "VTV / RTO al día" },

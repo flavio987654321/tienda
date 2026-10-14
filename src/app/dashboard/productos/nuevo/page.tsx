@@ -28,7 +28,7 @@ import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/comp
 import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
 import FichaTecnicaForm from "./FichaTecnicaForm";
 import { revisarVehiculo, type AvisoVehiculo } from "@/lib/revisarVehiculo";
-import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, esVehiculo as esCategoriaVehiculo, type FichaVehiculo } from "@/lib/fichaVehiculo";
+import { CLAVE_FICHA, FICHA_VACIA, leerFicha, fichaComoAtributo, tipoDeFicha, servicesDe, esVehiculo as esCategoriaVehiculo, type FichaVehiculo } from "@/lib/fichaVehiculo";
 import { CLAVE_MONEDA, conPuntos, sinPuntos, esMoneda, precioEn, type Moneda } from "@/lib/monedaVehiculo";
 
 /** Un precio guardado ("30000000", "9500.5") para mostrarlo con puntos: entero. */
@@ -41,16 +41,7 @@ type PromoFijaVigente = { name: string; type: string; value: number | null; scop
 
 const GASTO_CONCEPTOS = ["Compra", "Lavado", "Pulido/Detailing", "Service", "Cambio de cubiertas", "Otro"];
 
-const AUTO_SERVICES = [
-  { key: "aceite",      label: "Aceite y filtros" },
-  { key: "frenos",      label: "Frenos" },
-  { key: "distribucion",label: "Distribución" },
-  { key: "cubiertas",   label: "Cubiertas" },
-  { key: "suspension",  label: "Suspensión" },
-  { key: "electrico",   label: "Sist. eléctrico" },
-  { key: "ac",          label: "Aire acondicionado" },
-  { key: "caja",        label: "Caja de cambios" },
-];
+/* Los services cambian según el tipo de vehículo: ver SERVICES en lib/fichaVehiculo. */
 
 // `getVariantOptions` vivía acá: una tabla fija de nombres por rubro, con un
 // "Otro" que los tres lugares que la llamaban filtraban. O sea que en Moda
@@ -1268,8 +1259,11 @@ function ProductoFormPage() {
        antes de cambiar de categoría. */
     const ocultos = camposOcultos(storeTypeConfig, activeExtraFields);
     const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim() && !ocultos.has(a.key));
-    const svcList = storeTypeConfig.hideVariants && Object.keys(services).length > 0
-      ? [{ key: "Servicios", value: JSON.stringify(services) }]
+    /* Sólo los services de ESTE tipo: si marcó alguno y después cambió de
+       categoría (de auto a camión), los que no van con el camión no se guardan. */
+    const servicesDelTipo = Object.fromEntries(servicesDe(category).filter((sv) => services[sv.id]).map((sv) => [sv.id, true]));
+    const svcList = storeTypeConfig.hideVariants && Object.keys(servicesDelTipo).length > 0
+      ? [{ key: "Servicios", value: JSON.stringify(servicesDelTipo) }]
       : [];
     /* La ficha sólo para vehículos: si pasó a "repuestos", se va con el cambio. */
     const fichaAttr = storeTypeConfig.id === "AUTOS" && tipoDeFicha(category) ? fichaComoAtributo(ficha) : null;
@@ -1989,7 +1983,7 @@ function ProductoFormPage() {
                   <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-0.5">Marcá los servicios que están al día. Se muestran con un tilde verde en la página del vehículo.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {AUTO_SERVICES.map(svc => (
+                  {servicesDe(form.category).map(({ id: key, label }) => ({ key, label })).map(svc => (
                     <button
                       key={svc.key}
                       type="button"

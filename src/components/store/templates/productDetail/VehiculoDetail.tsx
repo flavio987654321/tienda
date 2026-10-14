@@ -21,7 +21,7 @@ import StoreProductReels from "@/components/store/ProductReels";
 import ConsultaVehiculo from "@/components/store/auto/ConsultaVehiculo";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import { DescargasDeFicha, HojaDeFicha } from "@/components/store/auto/FichaDelVehiculo";
-import { attr, fmtPrice, esReservado, vehicleLocation, datosDelVehiculo, VehicleCard, AM_MODAL_CSS, AUTO_SERVICES } from "@/components/store/auto/AutoVehicleShared";
+import { attr, fmtPrice, esReservado, vehicleLocation, datosDelVehiculo, VehicleCard, AM_MODAL_CSS, servicesDelVehiculo } from "@/components/store/auto/AutoVehicleShared";
 import { TarjetaMotor, MOTOR_TARJETA_CSS, usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
@@ -326,7 +326,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
               <section style={{ marginTop: 32 }}>
                 {tituloBloque("Historial de servicios")}
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "10px 18px", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", maxWidth: 760 }}>
-                  {AUTO_SERVICES.map(svc => (
+                  {servicesDelVehiculo(p).map(svc => (
                     <li key={svc.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: services[svc.key] ? c.tinta : c.suave }}>
                       <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 12, fontWeight: 800, background: services[svc.key] ? "#22c55e" : c.linea, color: services[svc.key] ? "#fff" : c.suave }}>
@@ -352,7 +352,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
             <section style={{ marginTop: 40, maxWidth: 760 }}>
               {tituloBloque("¿Lo pagás con tu usado?")}
               <div>
-                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }}
+                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name, category: p.category }}
                   isOwner={isOwner} isPreview={isPreview} />
               </div>
             </section>

@@ -3,7 +3,7 @@
  *
  *   npx tsx src/lib/tasaciones.check.ts
  */
-import { validarTasacion, resumenDelUsado, MARCA_HORAS } from "./tasaciones";
+import { validarTasacion, resumenDelUsado, esCategoriaDeTrabajo, MARCA_HORAS } from "./tasaciones";
 
 let fallos = 0;
 function caso(nombre: string, ok: boolean) {
@@ -27,6 +27,9 @@ caso("el resumen de un camión dice km", resumenDelUsado(datos({ tipo: "Camión"
 caso("escribir la marca a mano en el comentario no cambia la unidad", resumenDelUsado(datos({ comentario: MARCA_HORAS })!).endsWith("km"));
 const sinHoras = validarTasacion({ ...base, tipo: "Máquina", km: "" });
 caso("una máquina sin horas pide las horas", "error" in sinHoras && sinHoras.error.includes("horas"));
+caso("un camión, un utilitario y una máquina son de trabajo", ["camiones", "Utilitarios", "maquinaria"].every(esCategoriaDeTrabajo));
+caso("un auto, una moto o nada no son de trabajo", !esCategoriaDeTrabajo("autos") && !esCategoriaDeTrabajo("motos") && !esCategoriaDeTrabajo(null));
+caso("en la tasación de trabajo también se puede entregar un auto", datos({ tipo: "Auto" })?.comentario === "Tipo: Auto");
 
 console.log(fallos === 0 ? "\nTodo bien." : `\n${fallos} fallo(s).`);
 process.exit(fallos === 0 ? 0 : 1);

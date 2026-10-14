@@ -29,7 +29,7 @@ import StoreProductReels from "@/components/store/ProductReels";
 import ConsultaVehiculo from "@/components/store/auto/ConsultaVehiculo";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import PieDeAutos from "@/components/store/auto/PieDeAutos";
-import { attr, fmtPrice, esReservado, vehicleLocation, datosDelVehiculo, AUTO_SERVICES, WaIcon } from "@/components/store/auto/AutoVehicleShared";
+import { attr, fmtPrice, esReservado, vehicleLocation, datosDelVehiculo, servicesDelVehiculo, WaIcon } from "@/components/store/auto/AutoVehicleShared";
 import { usoDe } from "@/components/store/templates/motor/TarjetaMotor";
 import { monedaDe } from "@/lib/monedaVehiculo";
 import { NOMBRE_TIPO, usaHoras, tipoDeFicha, leerFicha, bloquesDeFicha, controlDeFicha, urlFichaPdf, type CategoriaVehiculo, type FilaDeFicha } from "@/lib/fichaVehiculo";
@@ -390,8 +390,8 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
               </section>
             )}
             {hayServices && (
-              <Plegable acento={acento} titulo="Historial de servicios" cuantos={`${AUTO_SERVICES.filter(s => services[s.key]).length} / ${AUTO_SERVICES.length}`}>
-                <Control items={AUTO_SERVICES.map(s => ({ label: s.label, tiene: !!services[s.key] }))} acento={acento} />
+              <Plegable acento={acento} titulo="Historial de servicios" cuantos={`${servicesDelVehiculo(p).filter(s => services[s.key]).length} / ${servicesDelVehiculo(p).length}`}>
+                <Control items={servicesDelVehiculo(p).map(s => ({ label: s.label, tiene: !!services[s.key] }))} acento={acento} />
               </Plegable>
             )}
 
@@ -411,7 +411,7 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
             {/* La tasación, para ESTE vehículo: "lo pago con mi usado". */}
             <Bloque acento={acento} codigo="06 // TU USADO" titulo="¿Lo pagás con tu usado?">
               <div style={{ maxWidth: 760 }}>
-                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name }} isOwner={isOwner} isPreview={isPreview} oscuro />
+                <TasacionVehiculo key={p.id} storeId={storeId ?? undefined} accent={acento} producto={{ id: p.id, name: p.name, category: p.category }} isOwner={isOwner} isPreview={isPreview} oscuro />
               </div>
             </Bloque>
           </div>

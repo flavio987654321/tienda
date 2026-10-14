@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getContrastColor } from "@/contexts/EditContext";
-import { ESTADOS_DEL_USADO, COMBUSTIBLES, TRANSMISIONES, TIPOS_DE_TRABAJO, anioMaximo, ANIO_MINIMO, KM_MAXIMO, validarTasacion } from "@/lib/tasaciones";
+import { ESTADOS_DEL_USADO, COMBUSTIBLES, TRANSMISIONES, TIPOS_DE_TRABAJO, esCategoriaDeTrabajo, anioMaximo, ANIO_MINIMO, KM_MAXIMO, validarTasacion } from "@/lib/tasaciones";
 import { conPuntos, sinPuntos } from "@/lib/monedaVehiculo";
 import CampoTelefono from "@/components/CampoTelefono";
 import CampoTrampa from "@/components/store/auto/CampoTrampa";
@@ -74,11 +74,12 @@ function Icono({ cual, color, tam = 22 }: { cual: "cambio" | "plata" | "auto" | 
 /** La hora, para los clicks. Afuera del componente: nunca se llama al dibujar. */
 const ahora = () => Date.now();
 
-export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false, oscuro, deTrabajo = false }: {
+export default function TasacionVehiculo({ storeId, accent, producto, isOwner, isPreview, abiertoDeEntrada = false, oscuro, deTrabajo: deTrabajoPedido = false }: {
   storeId?: string;
   accent: string;
-  /** El vehículo de la tienda por el que lo entregaría (desde la página del vehículo). */
-  producto?: { id: string; name: string } | null;
+  /** El vehículo de la tienda por el que lo entregaría (desde la página del vehículo).
+      Con `category` de camión, utilitario o máquina, pregunta como en Ruta. */
+  producto?: { id: string; name: string; category?: string | null } | null;
   isOwner?: boolean;
   isPreview?: boolean;
   abiertoDeEntrada?: boolean;
@@ -89,6 +90,7 @@ export default function TasacionVehiculo({ storeId, accent, producto, isOwner, i
   deTrabajo?: boolean;
 }) {
   const pal = oscuro ? TEMA_OSCURO : TEMA_CLARO;
+  const deTrabajo = deTrabajoPedido || esCategoriaDeTrabajo(producto?.category);
   const [abierto, setAbierto] = useState(abiertoDeEntrada);
   /* Cerrado con la X. Sin esto la X no cerraba nada (13/10/26): un borrador con
      algo elegido reabre el formulario solo —para retomar al volver a la página—,
