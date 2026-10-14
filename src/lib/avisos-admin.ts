@@ -94,11 +94,20 @@ function limpio(valor: unknown, tope: number, conSaltos = false): string | null 
  *
  * Un número suelto ("2254447183") se acepta y se convierte en `wa.me`, con el 54
  * y el 9 del celular argentino: es lo que uno escribe sin pensar.
+ *
+ * Y una dirección corta de la plataforma (`/digitales/productos`, 15/10/26): era
+ * lo natural para mandar a una pantalla del panel, y se descartaba. Sólo con
+ * UNA barra adelante: `//otro.com` es una dirección de otro sitio disfrazada, y
+ * la barra invertida algunos navegadores la leen como barra.
  */
 export function linkDelBoton(valor: unknown): string | null {
   if (typeof valor !== "string") return null;
   const crudo = valor.trim();
   if (!crudo || crudo.length > LARGO_LINK) return null;
+
+  if (crudo.startsWith("/")) {
+    return /^\/(?![/\\])[^\s\\]*$/.test(crudo) ? crudo : null;
+  }
 
   const soloDigitos = crudo.replace(/[\s()+-]/g, "");
   if (/^\d{8,15}$/.test(soloDigitos)) {
@@ -222,7 +231,7 @@ export function validarAviso(cuerpo: unknown, ahora = new Date()): { ok: true; a
   const linkCrudo = typeof c.botonLink === "string" ? c.botonLink.trim() : "";
   const botonLink = linkCrudo ? linkDelBoton(linkCrudo) : null;
   if (linkCrudo && !botonLink) {
-    return { ok: false, error: "El link del botón tiene que empezar con https:// o ser un número de WhatsApp." };
+    return { ok: false, error: "El link del botón tiene que empezar con https://, con / (una pantalla nuestra) o ser un número de WhatsApp." };
   }
   /* El botón va entero o no va: un botón sin destino no hace nada, y un link
      sin texto no hay dónde dibujarlo. */

@@ -27,6 +27,12 @@ check("AV-F", linkDelBoton("2254447183") === "https://wa.me/5492254447183"
   && linkDelBoton("02254 447183") === "https://wa.me/5492254447183"
   && linkDelBoton("+54 9 2254 447183") === "https://wa.me/5492254447183",
   "un número suelto se vuelve un link de WhatsApp con el 549 adelante");
+check("AV-F2", linkDelBoton("/digitales/productos") === "/digitales/productos"
+  && linkDelBoton("/dashboard?x=1#a") === "/dashboard?x=1#a",
+  "una pantalla nuestra se acepta corta, con / adelante");
+check("AV-F3", linkDelBoton("//malo.com") === null && linkDelBoton("/\\malo.com") === null
+  && linkDelBoton("/con espacio") === null && linkDelBoton("/a\\b") === null,
+  "una dirección de otro sitio disfrazada de corta (//, barra invertida) se rechaza");
 check("AV-G", (() => { const r = validarAviso({ ...base, titulo: "a\u0000b\u0007c", texto: "uno\r\ndos\n\n\n\ntres" }, AHORA); return r.ok && r.aviso.titulo === "a b c" && r.aviso.texto === "uno\ndos\n\ntres"; })(),
   "saca los caracteres de control; el texto conserva los párrafos pero no más de un renglón en blanco");
 check("AV-H", (() => { const r = validarAviso({ ...base, titulo: "x".repeat(500), texto: "y".repeat(5000) }, AHORA); return r.ok && r.aviso.titulo.length === 90 && r.aviso.texto.length === 600; })(),

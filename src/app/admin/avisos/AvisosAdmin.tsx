@@ -342,9 +342,16 @@ export default function AvisosAdmin({ inicial }: { inicial: Aviso[] }) {
             </div>
             <div>
               <label htmlFor="av-link" className={etiqueta}>Link del botón</label>
-              <input id="av-link" inputMode="url" autoComplete="off" className={campo} value={b.botonLink} maxLength={LARGO_LINK} onChange={(e) => set("botonLink", e.target.value)} placeholder="2254447183 o https://…" />
+              <input id="av-link" inputMode="url" autoComplete="off" className={campo} value={b.botonLink} maxLength={LARGO_LINK} onChange={(e) => set("botonLink", e.target.value)} placeholder="/digitales/productos, https://… o 2254447183" />
               {linkArmado && linkArmado !== b.botonLink.trim() && (
                 <p className="mt-1 truncate text-[11.5px] text-emerald-500/80">→ {linkArmado}</p>
+              )}
+              {/* Antes un link que no servía se descartaba callado: el botón
+                  desaparecía de la vista previa y no se sabía por qué. */}
+              {b.botonLink.trim() && !linkArmado && (
+                <p role="alert" className="mt-1 text-[11.5px] text-red-400">
+                  Ese link no sirve. Usá una pantalla nuestra que empiece con / (como /digitales/productos), una dirección con https:// o un número de WhatsApp.
+                </p>
               )}
             </div>
           </div>

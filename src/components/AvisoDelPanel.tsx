@@ -15,6 +15,8 @@ import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/sup
  * afuera (WhatsApp, otra web) sigue abriéndose aparte.
  */
 function destinoDelBoton(link: string): { href: string; afuera: boolean } {
+  // Ya corta (`/digitales/productos`): es nuestra. Ver linkDelBoton.
+  if (link.startsWith("/") && !link.startsWith("//")) return { href: link, afuera: false };
   try {
     const u = new URL(link);
     const propio = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.tiendaapps.com");
