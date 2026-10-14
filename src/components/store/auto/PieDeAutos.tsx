@@ -26,7 +26,7 @@ import type { StorefrontProduct } from "@/hooks/useStorefront";
 export const FRASE_PIE = "Vehículos seleccionados, con la ficha completa de cada unidad.";
 
 export type ColoresPie = { fondo: string; tinta: string; suave: string; linea: string };
-export type EstiloPie = "motor" | "drive" | "volt";
+export type EstiloPie = "motor" | "drive" | "volt" | "ruta";
 
 /** Los tipos que la tienda tiene publicados, con cuántos hay, para la columna "Vehículos". */
 export function tiposParaPie(products: StorefrontProduct[], slug: string, enEditor: boolean) {
@@ -76,14 +76,16 @@ export function ContenidoPieAutos({
 }) {
   const motor = estilo === "motor";
   const volt = estilo === "volt";
-  const radio = motor ? 2 : volt ? 12 : 999;
+  // Ruta (15/10/26): esquinas casi rectas y títulos de cartel, como Motor pero sin mayúsculas en todo.
+  const ruta = estilo === "ruta";
+  const radio = motor ? 2 : ruta ? 4 : volt ? 12 : 999;
   const wa = linkWhatsApp(whatsapp, `Hola ${storeName}, vi los vehículos en la tienda y quería consultar.`);
   const susRedes = REDES.map(([k, label]) => ({ k, label, href: linkSeguro(redes?.[k]) })).filter((r) => r.href);
   const tipos = tiposParaPie(products, slug, enEditor);
   const inicio = `/tienda/${slug}${enEditor ? "?from=editor" : ""}`;
   const legal = linksLegales(slug, legales, { esAutos: true, enEditor });
 
-  const titulo = { margin: "0 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: motor || volt ? 2.5 : 1.2, textTransform: "uppercase" as const, color: volt ? acento : colores.tinta,
+  const titulo = { margin: "0 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: motor || volt || ruta ? 2.5 : 1.2, textTransform: "uppercase" as const, color: volt ? acento : colores.tinta,
     ...(volt ? { fontFamily: "ui-monospace,'SF Mono','Cascadia Code',Menlo,Consolas,monospace", fontWeight: 600 } : {}) };
   const alClic = (tipo: string) => onVerVehiculos ? (e: React.MouseEvent) => { e.preventDefault(); onVerVehiculos(tipo); } : undefined;
   const link = { color: colores.suave, textDecoration: "none", fontSize: 14, lineHeight: 1.4, minHeight: 34, display: "inline-flex", alignItems: "center", gap: 8 };
@@ -138,7 +140,7 @@ export function ContenidoPieAutos({
               {susRedes.map((r) => (
                 <li key={r.k}>
                   <a href={r.href!} target="_blank" rel="noopener noreferrer" aria-label={r.label} className="pda-red"
-                    style={{ width: 42, height: 42, borderRadius: motor ? 2 : volt ? 12 : "50%", border: `1px solid ${colores.linea}`, color: colores.tinta,
+                    style={{ width: 42, height: 42, borderRadius: motor ? 2 : ruta ? 4 : volt ? 12 : "50%", border: `1px solid ${colores.linea}`, color: colores.tinta,
                       display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONOS[r.k]}</svg>
                   </a>

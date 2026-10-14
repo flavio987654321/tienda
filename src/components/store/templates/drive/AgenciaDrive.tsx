@@ -126,10 +126,11 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
           {titulo(num("visita"), "Visitanos", "Vení a ver los vehículos en persona. Coordinamos la prueba por WhatsApp.")}
           <div data-ef="sube">
             <div className="agd-visita">
-              <div className="agd-mapa" style={{ minHeight: 280 }}>
+              {/* Sin dirección, el hueco del mapa sólo aparece editando (con el aviso de dónde cargarla). */}
+              {(a.conDireccion || a.enEdicion) && <div className="agd-mapa" style={{ minHeight: 280 }}>
                 {a.conDireccion ? <MapaAgencia ubicacion={a.ubicacion} alto={440} radio={0} />
                   : <div style={{ padding: 24 }}><FaltaEnConfiguracion que="la dirección" p={p} /></div>}
-              </div>
+              </div>}
               <div className="agd-panel">
                 {a.conDireccion && (
                   <>
@@ -137,7 +138,7 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
                     <p style={{ margin: "0 0 18px", fontSize: 16, fontWeight: 700, color: TINTA, lineHeight: 1.5 }}>{a.direccion}</p>
                   </>
                 )}
-                <p style={{ margin: "0 0 8px", fontSize: 11.5, fontWeight: 800, letterSpacing: 1.8, textTransform: "uppercase", color: SUAVE }}>Horario</p>
+                {(a.horarios.length > 0 || a.enEdicion) && <p style={{ margin: "0 0 8px", fontSize: 11.5, fontWeight: 800, letterSpacing: 1.8, textTransform: "uppercase", color: SUAVE }}>Horario</p>}
                 {a.horarios.length > 0 ? (
                   <div style={{ display: "grid", marginBottom: a.conDireccion ? 20 : 0 }}>
                     {a.horarios.map((h, i) => (
@@ -147,7 +148,7 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
                       </div>
                     ))}
                   </div>
-                ) : <div style={{ marginBottom: 16 }}><FaltaEnConfiguracion que="los horarios" p={p} /></div>}
+                ) : a.enEdicion ? <div style={{ marginBottom: 16 }}><FaltaEnConfiguracion que="los horarios" p={p} /></div> : null}
                 {a.conDireccion && (
                   <a href={urlComoLlegar(a.ubicacion)} target="_blank" rel="noopener noreferrer" style={{ ...boton(acento, sobre), width: "100%", boxSizing: "border-box" }}>
                     Cómo llegar

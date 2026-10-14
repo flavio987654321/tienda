@@ -118,6 +118,10 @@ export { urlComoLlegar };
 
 /** En el editor, cuando falta lo que se carga en Configuración. */
 export function FaltaEnConfiguracion({ que, p }: { que: string; p: PaletaAgencia }) {
+  /* Es un aviso para la dueña: decía "en la tienda esta parte no se muestra" y
+     se le mostraba al comprador (visto el 15/10/26 en los tres templates). */
+  const { enEdicion } = useAgencia();
+  if (!enEdicion) return null;
   return (
     <p style={{ margin: 0, padding: "12px 14px", borderRadius: 12, border: `1px dashed ${p.linea}`, color: p.tenue, fontSize: 13, lineHeight: 1.55 }}>
       Cargá {que} en <strong style={{ color: p.tinta }}>Configuración → Contacto y redes → La agencia</strong>. Mientras falte, en la tienda esta parte no se muestra.

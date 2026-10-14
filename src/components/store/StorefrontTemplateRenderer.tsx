@@ -10,6 +10,7 @@ import Aurora from "./templates/Aurora";
 import AutoMotor from "./templates/AutoMotor";
 import AutoDrive from "./templates/AutoDrive";
 import AutoVolt from "./templates/AutoVolt";
+import AutoRuta from "./templates/AutoRuta";
 import ElectroPrime from "./templates/ElectroPrime";
 import TechNova from "./templates/TechNova";
 import HomeStudio from "./templates/HomeStudio";
@@ -40,6 +41,7 @@ const TEMPLATES: Record<string, React.ComponentType> = {
   "auto-motor":   AutoMotor,
   "auto-drive":   AutoDrive,
   "auto-volt":    AutoVolt,
+  "auto-ruta":    AutoRuta,
   "electro-prime": ElectroPrime,
   "tech-nova":     TechNova,
   "home-studio":   HomeStudio,

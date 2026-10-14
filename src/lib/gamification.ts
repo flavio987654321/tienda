@@ -1,5 +1,5 @@
 // Autos/motos quedan afuera de la ruleta de gamificación a propósito.
-export const GAMIFICATION_EXCLUDED_TEMPLATES = new Set(["auto-motor", "auto-drive", "auto-volt"]);
+export const GAMIFICATION_EXCLUDED_TEMPLATES = new Set(["auto-motor", "auto-drive", "auto-volt", "auto-ruta"]);
 
 // ─── Ruleta: helpers compartidos ─────────────────────────────────────────────
 // La ruleta se dibuja en dos lugares distintos: SVG en la vista previa del

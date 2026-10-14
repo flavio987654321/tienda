@@ -14,7 +14,7 @@
 import { TEMPLATES_CON_NEWSLETTER, type TemplateId } from "@/types/store-config";
 
 /** El bloque de mail de cada template de autos, por su id de sección. */
-export const BLOQUE_MAIL_AUTOS: Record<string, string> = { "auto-motor": "am-novedades", "auto-drive": "ad-novedades", "auto-volt": "av-novedades" };
+export const BLOQUE_MAIL_AUTOS: Record<string, string> = { "auto-motor": "am-novedades", "auto-drive": "ad-novedades", "auto-volt": "av-novedades", "auto-ruta": "rt-novedades" };
 
 export function tieneBloqueDeMail(template: string | null | undefined, hiddenSections: string[] | null | undefined): boolean {
   if (!template) return false;

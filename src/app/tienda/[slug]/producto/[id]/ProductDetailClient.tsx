@@ -26,6 +26,7 @@ import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPu
 import AireDetail from "@/components/store/templates/productDetail/AireDetail";
 import { VehiculoDetailOscuro, VehiculoDetailClaro } from "@/components/store/templates/productDetail/VehiculoDetail";
 import { VehiculoDetailVolt } from "@/components/store/templates/volt/FichaVolt";
+import { VehiculoDetailRuta } from "@/components/store/templates/ruta/FichaRuta";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
@@ -44,6 +45,7 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   "auto-motor": VehiculoDetailOscuro,
   "auto-drive": VehiculoDetailClaro,
   "auto-volt": VehiculoDetailVolt,
+  "auto-ruta": VehiculoDetailRuta,
   // El id viejo de Aire: hay tiendas cuyo JSON todavia lo dice.
   "fashion-noir": AireDetail,
 };
@@ -336,7 +338,7 @@ export default function ProductDetailClient({
   // Auto Volt tiene la suya (13/10/26): antes caía en "si no" y mostraba la
   // ficha CLARA de Auto Drive adentro de un template oscuro.
   const ThemedDetail = esAutos
-    ? (template === "auto-volt" ? VehiculoDetailVolt : template === "auto-motor" ? VehiculoDetailOscuro : VehiculoDetailClaro)
+    ? (template === "auto-volt" ? VehiculoDetailVolt : template === "auto-ruta" ? VehiculoDetailRuta : template === "auto-motor" ? VehiculoDetailOscuro : VehiculoDetailClaro)
     : template ? THEMED_DETAIL[template] : undefined;
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {

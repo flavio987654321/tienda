@@ -22,7 +22,7 @@ import VehiculosGenerico from "./VehiculosGenerico";
  * que tiene "Volver al editor". */
 export const dynamic = "force-dynamic";
 
-const CON_CATALOGO_PROPIO = new Set(["auto-volt"]);
+const CON_CATALOGO_PROPIO = new Set(["auto-volt", "auto-ruta"]);
 
 type Props = {
   params: Promise<{ slug: string }>;
