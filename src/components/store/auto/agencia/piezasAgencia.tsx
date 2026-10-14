@@ -29,10 +29,17 @@ const EJEMPLO: { ubicacion: Ubicacion; agencia: Agencia } = {
   agencia: {
     pagos: ["contado", "financiacion", "permuta", "dolares"],
     pagosNota: "Financiación en hasta 48 cuotas con DNI y recibo de sueldo.",
-    equipo: [{ nombre: "Martín", rol: "Ventas" }, { nombre: "Laura", rol: "Usados y permutas" }, { nombre: "Diego", rol: "Gestoría" }],
+    equipo: [
+      { nombre: "Martín", rol: "Ventas", foto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&h=300&q=80",
+        bio: "10 años vendiendo autos. Te ayudo a encontrar el que entra en tu presupuesto." },
+      { nombre: "Laura", rol: "Usados y permutas", foto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&h=300&q=80",
+        bio: "Tasamos tu usado en el momento y te decimos cuánto te lo tomamos." },
+      { nombre: "Diego", rol: "Gestoría", foto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&h=300&q=80",
+        bio: "Me ocupo de la transferencia y los papeles: vos te llevás el auto." },
+    ],
     garantia: "3 meses o 3.000 km de garantía mecánica en todos los usados. Los 0 km, con la garantía oficial de fábrica.",
     salon: [
-      "https://images.unsplash.com/photo-1562141961-b5d1fdaf8b7b?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=80",
     ],
@@ -196,6 +203,12 @@ export function EditorEquipo({ p }: { p: PaletaAgencia }) {
             <label><span style={etiqueta(p)}>WhatsApp (opcional)</span><input style={campo(p)} maxLength={30} inputMode="tel" value={m.whatsapp ?? ""} placeholder="+54 9 2254 44-7183"
               onChange={(e) => set(i, { whatsapp: e.target.value })} /></label>
           </div>
+          <label>
+            <span style={etiqueta(p)}>Sobre {m.nombre.trim() ? m.nombre.trim().split(" ")[0] : "esta persona"} (opcional · {(m.bio ?? "").length}/{TOPE.bio})</span>
+            <textarea style={{ ...campo(p), minHeight: 56, resize: "vertical" }} maxLength={TOPE.bio} value={m.bio ?? ""}
+              placeholder="Ej.: 10 años vendiendo usados. Te ayudo a encontrar el que entra en tu presupuesto."
+              onChange={(e) => set(i, { bio: e.target.value })} />
+          </label>
           {m.whatsapp && m.whatsapp.replace(/\D/g, "").length < 11 && (
             <p style={{ margin: 0, fontSize: 12, color: "#f59e0b" }}>Poné el número con +54 9 adelante, si no el botón no abre ninguna conversación.</p>
           )}

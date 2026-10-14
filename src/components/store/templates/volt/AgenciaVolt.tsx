@@ -142,6 +142,7 @@ export function AgenciaVolt({ acento, sobreAcento, nombreTienda, waLink, onVerVe
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <p style={{ margin: 0, fontWeight: 800, color: "#fff", overflowWrap: "anywhere" }}>{m.nombre}</p>
                         {m.rol && <p style={{ margin: "2px 0 0", fontSize: 13, color: p.tenue, overflowWrap: "anywhere" }}>{m.rol}</p>}
+                        {m.bio && <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(232,236,246,0.78)", lineHeight: 1.5, overflowWrap: "anywhere" }}>{m.bio}</p>}
                       </div>
                       {wa && <a href={wa} target="_blank" rel="noopener noreferrer" aria-label={`Escribirle a ${m.nombre} por WhatsApp`}
                         style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", background: "#25d366", color: "#fff" }}><WaIcon size={18} /></a>}

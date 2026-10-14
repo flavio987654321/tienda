@@ -162,6 +162,7 @@ export function AgenciaMotor({ acento, sobreAcento, nombreTienda, waLink, todosH
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <p style={{ margin: 0, fontWeight: 800, color: "#fff", fontSize: 15, overflowWrap: "anywhere" }}>{m.nombre}</p>
                       {m.rol && <p style={{ margin: "3px 0 0", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: p.tenue, overflowWrap: "anywhere" }}>{m.rol}</p>}
+                      {m.bio && <p style={{ margin: "8px 0 0", fontSize: 13.5, color: "rgba(255,255,255,0.75)", lineHeight: 1.55, overflowWrap: "anywhere" }}>{m.bio}</p>}
                     </div>
                     {wa && <a href={wa} target="_blank" rel="noopener noreferrer" aria-label={`Escribirle a ${m.nombre} por WhatsApp`}
                       style={{ flexShrink: 0, width: 42, height: 42, display: "grid", placeItems: "center", background: "#25d366", color: "#fff", borderRadius: 2 }}><WaIcon size={18} /></a>}

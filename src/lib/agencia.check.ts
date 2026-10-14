@@ -59,6 +59,7 @@ const agenciaSch = storeConfigSchema.shape.agencia;
 const diseno = agenciaSch.safeParse({ pagos: ["contado"], salon: ["https://x.supabase.co/a.webp"] });
 chequear("el diseño acepta la agencia", diseno.success, diseno.success ? undefined : diseno.error.flatten());
 chequear("una foto con javascript: no pasa", !agenciaSch.safeParse({ salon: ["javascript:alert(1)"] }).success);
+chequear("la descripción de una persona tiene tope de 140", agenciaSch.safeParse({ equipo: [{ nombre: "Ana", bio: "x".repeat(140) }] }).success && !agenciaSch.safeParse({ equipo: [{ nombre: "Ana", bio: "x".repeat(141) }] }).success);
 chequear("un medio de pago inventado no pasa", !agenciaSch.safeParse({ pagos: ["trueque"] }).success);
 chequear("las preferencias aceptan la ubicación", storePreferencesSchema.safeParse({ ubicacion: { calle: "Bunge 1234", horarios: semana } }).success && agenciaSch.safeParse({ equipo: [{ nombre: "Ana", foto: "https://x/a.webp" }] }).success);
 chequear("una hora mal escrita no pasa", !storePreferencesSchema.safeParse({ ubicacion: { horarios: { lun: [{ abre: "9", cierra: "25:00" }] } } }).success);

@@ -149,6 +149,7 @@ export function AgenciaDrive({ acento, nombreTienda, waLink, todosHref, fotoDeRe
                       : <span aria-hidden="true" style={{ width: 84, height: 84, borderRadius: "50%", display: "grid", placeItems: "center", background: `${acento}1a`, color: acento, fontWeight: 900, fontSize: 30 }}>{m.nombre.trim()[0]?.toUpperCase()}</span>}
                     <p style={{ margin: 0, fontWeight: 900, fontSize: 16, color: "#0f172a", overflowWrap: "anywhere" }}>{m.nombre}</p>
                     {m.rol && <p style={{ margin: 0, fontSize: 13.5, color: p.tenue, overflowWrap: "anywhere" }}>{m.rol}</p>}
+                    {m.bio && <p style={{ margin: "4px 0 0", fontSize: 14, color: "#334155", lineHeight: 1.55, overflowWrap: "anywhere" }}>{m.bio}</p>}
                     {wa && <a href={wa} target="_blank" rel="noopener noreferrer" style={{ marginTop: 4, display: "inline-flex", alignItems: "center", gap: 7, minHeight: 40, padding: "0 16px", borderRadius: 12, background: "#25d366", color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: 13.5 }}><WaIcon size={15} /> Escribile</a>}
                   </div>
                 );

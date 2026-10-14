@@ -39,6 +39,7 @@ const agenciaSchema = z.object({
   equipo: z.array(z.object({
     nombre: z.string().max(80),
     rol: z.string().max(80).optional(),
+    bio: z.string().max(140).optional(),
     foto: urlFoto.optional(),
     whatsapp: z.string().max(30).optional(),
   })).max(8).optional(),

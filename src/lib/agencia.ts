@@ -41,7 +41,14 @@ export const NOMBRE_PAGO: Record<Pago, string> = {
   financiacion: "Financiación", permuta: "Tomamos tu usado", dolares: "Aceptamos dólares",
 };
 
-export type Miembro = { nombre: string; rol?: string; foto?: string; whatsapp?: string };
+export type Miembro = {
+  nombre: string;
+  rol?: string;
+  foto?: string;
+  whatsapp?: string;
+  /** Una frase sobre la persona: una cara y dos líneas dan más confianza que una inicial. */
+  bio?: string;
+};
 
 export type Agencia = {
   pagos?: Pago[];
@@ -53,7 +60,7 @@ export type Agencia = {
   salon?: string[];
 };
 
-export const TOPE = { equipo: 8, salon: 8, nota: 300, garantia: 600, texto: 80 } as const;
+export const TOPE = { equipo: 8, salon: 8, nota: 300, garantia: 600, texto: 80, bio: 140 } as const;
 
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 export const esHora = (h: string) => HORA.test(h);
