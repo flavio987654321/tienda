@@ -335,6 +335,10 @@ export default function AutoDrive() {
         ${VENDER_DRIVE_CSS}
         .ad-nav-links { display:none }
         @media(min-width:960px){ .ad-nav-links { display:flex } .ad-burger { display:none } }
+        /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
+        @media(max-width:479px){ .ad-push { display:none !important } }
+        .ad-push-menu { display:none }
+        @media(max-width:479px){ .ad-push-menu { display:flex; flex-direction:column } }
         .ad-hero { grid-template-columns:1fr }
         .ad-hero-foto { display:none }
         @media(min-width:1000px){ .ad-hero { grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr) } .ad-hero-foto { display:block } }
@@ -458,16 +462,16 @@ export default function AutoDrive() {
               style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:8, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label="Favoritos"
+            <button type="button" onClick={() => setFavoritesOpen(true)} aria-label={`Favoritos${favorites.length ? ` (${favorites.length})` : ""}`}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:8, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? "#ef4444" : "none"} stroke={favorites.length > 0 ? "#ef4444" : "currentColor"} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:2, right:0, background:"#ef4444", color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
             </button>
             {pushBell && config?.showPushBell && !isPreview && (
-              <StoreFollowButton storeSlug={slug} color={navTextMid} size={20} />
+              <span className="ad-push"><StoreFollowButton storeSlug={slug} color={navTextMid} size={20} /></span>
             )}
             {pushBell && config?.showPushBell && !isPreview && (
-              <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda"
+              <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" className="ad-push"
                 style={{ position:"relative", background:"none", border:"none", color:navTextMid,
                   cursor:"pointer", padding:8, display:"flex", alignItems:"center" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24"
@@ -557,6 +561,16 @@ export default function AutoDrive() {
                 {lbl}
               </button>
             ))}
+            {pushBell && config?.showPushBell && !isPreview && (
+              <div className="ad-push-menu">
+                <StoreFollowButton storeSlug={slug} color={navText} size={18} fila={{ padding:"14px 0", fontSize:15, fontWeight:600, color:navText, borderBottom:`1px solid ${navBorderColor}` }} />
+                <button type="button" onClick={() => { setMenuOpen(false); pushBell.openDrawer(); }}
+                  style={{ display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none", cursor:"pointer", textAlign:"left", fontFamily:"inherit", padding:"14px 0", fontSize:15, fontWeight:600, color:navText, borderBottom:`1px solid ${navBorderColor}` }}>
+                  <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  Novedades{pushBell.hasNew && <span aria-label="hay novedades" style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444" }} />}
+                </button>
+              </div>
+            )}
             <Link href={linkTodos} onClick={() => setMenuOpen(false)}
               style={{ display:"flex", alignItems:"center", justifyContent:"center", marginTop:14, minHeight:48, borderRadius:12,
                 background:accent, color:sobreAcento, fontSize:15, fontWeight:800, textDecoration:"none" }}>

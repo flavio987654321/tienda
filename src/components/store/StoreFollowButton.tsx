@@ -13,13 +13,16 @@ interface Props {
   storeSlug: string;
   color?: string;
   size?: number;
+  /** Versión de renglón para el menú del celular (ícono + "Seguir la tienda"):
+   *  en la barra no entraba junto al nombre en pantallas angostas (14/10/26). */
+  fila?: React.CSSProperties;
 }
 
 const HINT_SHOWN_KEY = (slug: string) => `push_activate_hint_${slug}`;
 const HINT_WIDTH = 220;
 const VIEWPORT_MARGIN = 12;
 
-export default function StoreFollowButton({ storeSlug, color = "currentColor", size = 20 }: Props) {
+export default function StoreFollowButton({ storeSlug, color = "currentColor", size = 20, fila }: Props) {
   const bell = usePushBell();
   const [alert, setAlert] = useState<AlertType>(null);
   const [showHint, setShowHint] = useState(false);
@@ -139,7 +142,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
 
   return (
     <>
-      <div ref={wrapRef} style={{ position: "relative", display: "inline-flex" }}>
+      <div ref={wrapRef} style={{ position: "relative", display: fila ? "block" : "inline-flex" }}>
         <button
           onClick={onClickButton}
           disabled={isLoading}
@@ -159,6 +162,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
             placeItems: "center",
             opacity: isLoading ? 0.5 : 1,
             transition: "opacity 0.2s",
+            ...(fila ? { display: "flex", alignItems: "center", gap: 12, width: "100%", justifyContent: "flex-start", fontFamily: "inherit", ...fila } : {}),
           }}
         >
           {isLoading ? (
@@ -168,6 +172,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
           ) : (
             <ThumbsUp width={size} height={size} />
           )}
+          {fila && <span>{isFollowing ? "Dejar de seguir la tienda" : "Seguir la tienda"}</span>}
         </button>
 
       </div>

@@ -317,6 +317,10 @@ export default function AutoVolt() {
         /* Con cinco links (Contacto se sumó el 14/10/26) no entran en 920: se partían en dos renglones y cortaban el nombre. */
         @media(min-width:1100px){ .av-links { display:flex } .av-burger { display:none !important } .av-solo-ancho { display:inline-flex } }
         .av-links .av-link { white-space:nowrap }
+        /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
+        @media(max-width:479px){ .av-push { display:none !important } }
+        .av-push-menu { display:none }
+        @media(max-width:479px){ .av-push-menu { display:flex; flex-direction:column } }
         .av-about { display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(28px,5vw,64px); align-items:center }
         @media(min-width:880px){ .av-about { grid-template-columns:minmax(0,1fr) minmax(0,1fr) } }
         .av-faq { display:grid; grid-template-columns:minmax(0,1fr); gap:24px clamp(28px,5vw,64px) }
@@ -407,9 +411,9 @@ export default function AutoVolt() {
                 <svg width={19} height={19} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 {favorites.length > 0 && <span aria-hidden="true" style={{ position: "absolute", top: 3, right: 3, background: accent, color: sobreAcento, borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{favorites.length}</span>}
               </button>
-              {pushBell && config?.showPushBell && !isPreview && <StoreFollowButton storeSlug={slug} color={navTenue} size={19} />}
+              {pushBell && config?.showPushBell && !isPreview && <span className="av-push"><StoreFollowButton storeSlug={slug} color={navTenue} size={19} /></span>}
               {pushBell && config?.showPushBell && !isPreview && (
-                <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" className="av-ico" style={iconoBoton}>
+                <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" className="av-ico av-push" style={iconoBoton}>
                   <svg width={19} height={19} viewBox="0 0 24 24" aria-hidden="true" fill={pushBell.followState === "following" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                   {pushBell.hasNew && <span style={{ position: "absolute", top: 7, right: 7, width: 9, height: 9, background: "#f43f5e", borderRadius: "50%" }} />}
                 </button>
@@ -463,6 +467,16 @@ export default function AutoVolt() {
                   {lbl}
                 </button>
               ))}
+              {pushBell && config?.showPushBell && !isPreview && (
+                <div className="av-push-menu">
+                  <StoreFollowButton storeSlug={slug} color={navTinta} size={18} fila={{ minHeight: 48, padding: "0 4px", fontSize: 15, fontWeight: 600, color: navTinta, borderBottom: `1px solid ${navLinea}` }} />
+                  <button type="button" onClick={() => { setMenuOpen(false); pushBell.openDrawer(); }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", minHeight: 48, padding: "0 4px", fontSize: 15, fontWeight: 600, color: navTinta, borderBottom: `1px solid ${navLinea}` }}>
+                    <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    Novedades{pushBell.hasNew && <span aria-label="hay novedades" style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
+                  </button>
+                </div>
+              )}
               {!vista.enCatalogo && (
                 <a href={todos} onClick={e => { setMenuOpen(false); alClicTodos(e); }} style={{ display: "flex", alignItems: "center", minHeight: 48, color: accent, fontSize: 15, fontWeight: 800, textDecoration: "none", padding: "0 4px" }}>
                   Ver todos los vehículos →

@@ -314,6 +314,10 @@ export default function AutoMotor() {
         .am-marca { font-size:12px; letter-spacing:1px }
         @media(min-width:640px){ .am-marca { font-size:16px; letter-spacing:3.5px } }
         .am-solo-ancho { display:none }
+        /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
+        @media(max-width:479px){ .am-push { display:none !important } }
+        .am-push-menu { display:none }
+        @media(max-width:479px){ .am-push-menu { display:flex; flex-direction:column } }
         @media(min-width:900px){ .am-nav-links { display:flex } .am-burger { display:none !important } .am-solo-ancho { display:inline-flex } }
         .am-about { grid-template-columns:1fr }
         @media(min-width:860px){ .am-about { grid-template-columns:1.05fr 1fr } }
@@ -431,10 +435,10 @@ export default function AutoMotor() {
               {favorites.length > 0 && <span aria-hidden="true" style={{ position:"absolute", top:2, right:2, background:accent, color:sobreAcento, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
             </button>
             {pushBell && config?.showPushBell && !isPreview && (
-              <StoreFollowButton storeSlug={slug} color={navTextMid} size={20} />
+              <span className="am-push"><StoreFollowButton storeSlug={slug} color={navTextMid} size={20} /></span>
             )}
             {pushBell && config?.showPushBell && !isPreview && (
-              <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda"
+              <button type="button" onClick={pushBell.openDrawer} aria-label="Novedades de la tienda" className="am-push"
                 style={{ position:"relative", background:"none", border:"none", cursor:"pointer", width:40, height:40,
                   display:"flex", alignItems:"center", justifyContent:"center", color:navTextMid }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" aria-hidden="true"
@@ -525,6 +529,16 @@ export default function AutoMotor() {
                 {lbl}
               </button>
             ))}
+            {pushBell && config?.showPushBell && !isPreview && (
+              <div className="am-push-menu">
+                <StoreFollowButton storeSlug={slug} color={navText} size={18} fila={{ minHeight:48, padding:0, fontSize:13, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:navText, borderBottom:`1px solid ${navBorderColor}` }} />
+                <button type="button" onClick={() => { setMenuOpen(false); pushBell.openDrawer(); }}
+                  style={{ display:"flex", alignItems:"center", gap:12, width:"100%", background:"none", border:"none", cursor:"pointer", textAlign:"left", fontFamily:"inherit", minHeight:48, padding:0, fontSize:13, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:navText, borderBottom:`1px solid ${navBorderColor}` }}>
+                  <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  Novedades{pushBell.hasNew && <span aria-label="hay novedades" style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444" }} />}
+                </button>
+              </div>
+            )}
             <Link href={todos}
               style={{ display:"flex", alignItems:"center", color:accent, minHeight:48,
                 fontSize:13, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5, textDecoration:"none" }}
