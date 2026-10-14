@@ -47,12 +47,12 @@ export const COPY_ROL: Record<RolDigital, { titulo: string; bajada: string; cort
      pero la bajada lo explica en criollo, con lo que decide quien compra. */
   BONO: {
     titulo: "Bonos",
-    bajada: "Regalos que van con la compra: no se cobran, suman valor. Sin publicar no se entregan ni se muestran.",
+    bajada: "Regalos que van con la compra: no se cobran, suman valor. Se entregan apenas les subís el archivo.",
     corto: "Bono",
   },
   UPSELL: {
     titulo: "Upsells",
-    bajada: "Una oferta extra al pagar y después de pagar, con su propio precio; quien compra puede decir que no. Sin publicar no se ofrece.",
+    bajada: "Una oferta extra al pagar y después de pagar, con su propio precio; quien compra puede decir que no. Con su archivo, tocá «Ofrecer al comprar».",
     corto: "Upsell",
   },
 };

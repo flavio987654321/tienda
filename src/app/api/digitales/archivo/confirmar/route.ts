@@ -11,6 +11,7 @@ import {
   avisoDePeso,
 } from "@/lib/subida-digital";
 import { configDeposito, borrarDelDeposito, type ConfigDeposito } from "@/lib/deposito-digital";
+import { incluirBonoAlRecibirArchivo } from "@/lib/bono-incluido";
 
 export const runtime = "nodejs";
 
@@ -144,6 +145,9 @@ export async function POST(req: NextRequest) {
     select: { id: true, archivoNombre: true, archivoPeso: true },
   });
 
+  // Un bono con su primer archivo ya se entrega con la compra. Ver lib/bono-incluido.
+  const incluido = await incluirBonoAlRecibirArchivo(producto.id, user.id, producto.archivoPath !== null);
+
   /* ⚠️ Borrar el archivo de antes, si esto era un reemplazo.
    *
    * Sin esto, cada vez que alguien cambia el PDF queda uno viejo en el bucket
@@ -169,6 +173,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+    incluido,
     archivoNombre: actualizado.archivoNombre,
     archivoPeso: actualizado.archivoPeso,
     // No bloquea nada: es para que la pantalla lo muestre al lado del archivo.

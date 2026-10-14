@@ -16,6 +16,7 @@ import { buscarFoto, buscarFotos, bajarElegida, comoFue } from "@/lib/fotos-pexe
 import { leerOpciones, conEstilo, firmaDeLaTapa } from "@/lib/ebook-opciones";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
+import { incluirBonoAlRecibirArchivo } from "@/lib/bono-incluido";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -403,6 +404,9 @@ export async function POST(req: NextRequest) {
       console.error("[ia-ebook-armar] quedó huérfano el anterior:", anterior);
     }
   }
+
+  // Un bono con su primer archivo ya se entrega con la compra. Ver lib/bono-incluido.
+  await incluirBonoAlRecibirArchivo(producto.id, user.id, anterior !== null);
 
   /* ══════════════════════════════════════════════════════════════════════════
      LA TAPA, TAMBIÉN COMO IMAGEN

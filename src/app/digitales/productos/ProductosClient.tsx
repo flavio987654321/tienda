@@ -7,7 +7,7 @@ import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   RotateCcw,
   Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
-  FileText, Download, CircleDashed, Send,
+  FileText, Download, CircleDashed, Send, ChevronDown,
 } from "lucide-react";
 import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -140,6 +140,20 @@ const TINTA: Record<RolDigital, { borde: string; fondo: string; texto: string; s
     texto: "text-sky-600 panel-oscuro:text-sky-300",
     suave: "bg-sky-50 panel-oscuro:bg-sky-500/10",
   },
+};
+
+/**
+ * Cómo se dice "publicado" en cada rol (14/10/26).
+ *
+ * Un bono y un upsell no tienen página: no se "publican". Con "Publicar" y
+ * "Borrador" en las tres tarjetas, una cuenta subió el PDF de su bono, vio su
+ * libro publicado, y nunca entendió que al regalo le faltaba un clic: quien
+ * compraba no lo recibía. Cada rol dice lo que de verdad pasa.
+ */
+const ESTADO_ROL: Record<RolDigital, { si: string; no: string; activar: string; desactivar: string; para: string }> = {
+  PRINCIPAL: { si: "Publicado", no: "Borrador", activar: "Publicar", desactivar: "Despublicar", para: "Para publicarlo" },
+  BONO: { si: "Incluido en la compra", no: "No se entrega todavía", activar: "Incluir en la compra", desactivar: "Sacar de la compra", para: "Para incluirlo" },
+  UPSELL: { si: "Se ofrece al comprar", no: "No se ofrece todavía", activar: "Ofrecer al comprar", desactivar: "Dejar de ofrecer", para: "Para ofrecerlo" },
 };
 
 type Borrador = {
@@ -316,7 +330,11 @@ function Rotulo({ children }: { children: React.ReactNode }) {
 }
 
 /* ── Una tarjeta, igual para los tres roles ──────────────────────────────── */
-function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
+function Tarjeta({ p, acc, incrustada = false }: {
+  p: ProductoEnPantalla; acc: Acciones;
+  /** Abierta adentro del renglón de un bono o upsell: sin borde propio, ya lo tiene el renglón. */
+  incrustada?: boolean;
+}) {
   const Icono = ICONO[p.rol];
   const tinta = TINTA[p.rol];
   const falta = loQueFalta({
@@ -348,7 +366,8 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
        estabas yendo. `motion-reduce` la apaga para quien pidió menos animación
        en su sistema. */
     <div
-      className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md motion-reduce:transition-none`}
+      className={incrustada ? "p-4 sm:p-5"
+        : `rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md motion-reduce:transition-none`}
     >
       <div className="flex gap-4">
         {/* La portada si la hay; si no, el ícono del rol. Un cuadro vacío en su
@@ -360,7 +379,9 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             pantalla con un producto, dos bonos y tres upsells, no se leía cuál
             era cuál sin buscar el título de la sección más arriba. El borde
             punteado dice además que ahí FALTA una portada, que es cierto. */}
-        {p.imagen ? (
+        {/* Abierta en el renglón de un bono o upsell, la portada, el título y el
+            estado ya están en el renglón: repetirlos debajo se leía doble. */}
+        {incrustada ? null : p.imagen ? (
           /* ⚠️ CON PORTADA TAMBIÉN LLEVA EL SELLO, encima de la imagen.
              Estaba sólo en la rama sin portada, así que la etiqueta del rol
              desaparecía justo en el producto PRINCIPAL —que es el único que
@@ -392,7 +413,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
         )}
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
+          {!incrustada && <div className="flex items-start justify-between gap-3">
             <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 leading-snug break-words">{p.name}</p>
             <span
               className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
@@ -401,9 +422,9 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-500 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700"
               }`}
             >
-              {p.publicado ? "Publicado" : "Borrador"}
+              {p.publicado ? ESTADO_ROL[p.rol].si : ESTADO_ROL[p.rol].no}
             </span>
-          </div>
+          </div>}
 
           {/* ⚠️ `max-w-prose`: la descripción NO se estira hasta el borde.
               Un renglón se lee cómodo hasta unos 75 caracteres; sin tope, a 896
@@ -446,7 +467,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   motivo por el que está apagado tiene que llegarle también a
                   quien no ve la franja. Ver ese botón más abajo. */}
               <p id={`falta-${p.id}`} className={`text-xs font-medium ${p.publicado ? "text-red-700 panel-oscuro:text-red-300" : "text-gray-600 panel-oscuro:text-gray-300"}`}>
-                {p.publicado ? falta : `Para publicarlo: ${falta.charAt(0).toLowerCase()}${falta.slice(1)}`}
+                {p.publicado ? falta : `${ESTADO_ROL[p.rol].para}: ${falta.charAt(0).toLowerCase()}${falta.slice(1)}`}
               </p>
             </div>
           )}
@@ -962,7 +983,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               ) : (
                 <Eye className="h-3.5 w-3.5" />
               )}
-              {p.publicado ? "Despublicar" : "Publicar"}
+              {p.publicado ? ESTADO_ROL[p.rol].desactivar : ESTADO_ROL[p.rol].activar}
             </button>
 
             <button
@@ -1093,6 +1114,108 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
 }
 
 
+/* ── El clic que falta, arriba de todo ─────────────────────────────────────
+   Bonos y upsells con su archivo que no se entregan. Ver ESTADO_ROL. */
+function AvisoSinEntregar({ padre, acc }: { padre: ProductoEnPantalla; acc: Acciones }) {
+  const sinEntregar = [...acc.hijosDe(padre.id, "BONO"), ...acc.hijosDe(padre.id, "UPSELL")].filter((h) =>
+    !h.publicado && h.tieneArchivo && acc.sinLugarPara(h) === null
+    && loQueFalta({ rolDigital: h.rol, archivoPath: "hay", price: h.price, name: h.name, cobroConectado: acc.cobroConectado }) === null);
+  if (sinEntregar.length === 0) return null;
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 panel-oscuro:border-amber-500/30 bg-amber-50 panel-oscuro:bg-amber-500/10 px-4 py-3">
+      <AlertTriangle aria-hidden className="h-4 w-4 shrink-0 text-amber-600" />
+      <p className="min-w-0 flex-1 text-sm text-amber-900 panel-oscuro:text-amber-200">
+        {sinEntregar.length === 1
+          ? <><strong>«{sinEntregar[0].name}»</strong> tiene su archivo pero {sinEntregar[0].rol === "BONO" ? "no se entrega con la compra" : "no se ofrece al comprar"}.</>
+          : <><strong>{sinEntregar.length} bonos o upsells</strong> tienen su archivo pero no se entregan ni se ofrecen.</>}
+      </p>
+      {sinEntregar.length === 1 && (
+        <button type="button" onClick={() => acc.publicar(sinEntregar[0], true)} disabled={acc.trabajando === sinEntregar[0].id}
+          className="shrink-0 rounded-xl bg-orange-600 px-3 py-2 text-xs font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-50">
+          {ESTADO_ROL[sinEntregar[0].rol].activar}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ── Un bono o un upsell, en un renglón ─────────────────────────────────────
+   Eran tarjetas del mismo tamaño que el producto, con los mismos ocho
+   botones: se leían como tres productos y no como uno con sus regalos. Ahora
+   cuelgan del producto en un renglón que dice lo que importa —qué es, qué
+   archivo entrega, si se entrega— con UN botón cuando falta un clic. El resto
+   (reemplazar el archivo, precio, borrar) se abre con "Editar". */
+function RenglonHijo({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
+  const [abierto, setAbierto] = useState(false);
+  const tinta = TINTA[p.rol];
+  const Icono = ICONO[p.rol];
+  const est = ESTADO_ROL[p.rol];
+  const falta = loQueFalta({
+    rolDigital: p.rol, archivoPath: p.tieneArchivo ? "hay" : null, price: p.price, name: p.name, cobroConectado: acc.cobroConectado,
+  });
+  const listo = !p.publicado && falta === null && acc.sinLugarPara(p) === null;
+  const ocupado = acc.trabajando === p.id;
+  const idCuerpo = `hijo-${p.id}`;
+
+  return (
+    <div className={`rounded-xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 shadow-sm`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
+        {p.imagen ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={p.imagen} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover border border-gray-100 panel-oscuro:border-gray-800" />
+        ) : (
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tinta.suave}`}>
+            <Icono aria-hidden className={`h-4.5 w-4.5 ${tinta.texto}`} />
+          </span>
+        )}
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="truncate text-sm font-bold text-gray-900 panel-oscuro:text-gray-100" title={p.name}>{p.name}</p>
+          <p className="truncate text-[11.5px] text-gray-500 panel-oscuro:text-gray-400">
+            {p.rol === "BONO" ? "Gratis" : money(p.price)}
+            {" · "}
+            {p.tieneArchivo
+              ? (p.archivoNombre ?? "Archivo cargado")
+              : <span className="font-semibold text-gray-700 panel-oscuro:text-gray-300">Falta el archivo</span>}
+          </p>
+        </div>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+          p.publicado
+            ? "bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-700 panel-oscuro:text-emerald-300 border-emerald-200 panel-oscuro:border-emerald-500/30"
+            : listo
+              ? "bg-amber-50 panel-oscuro:bg-amber-500/10 text-amber-800 panel-oscuro:text-amber-300 border-amber-200 panel-oscuro:border-amber-500/30"
+              : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-500 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700"
+        }`}>
+          {p.publicado ? est.si : est.no}
+        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* El único paso que falta, a la vista: no hay que abrir nada para encontrarlo. */}
+          {listo && (
+            <button type="button" onClick={() => acc.publicar(p, true)} disabled={ocupado || !!acc.deMentira}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-3 py-2 text-xs font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-50">
+              {ocupado && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {est.activar}
+            </button>
+          )}
+          <button type="button" onClick={() => setAbierto((a) => !a)} aria-expanded={abierto} aria-controls={idCuerpo}
+            className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
+              !p.tieneArchivo && !abierto
+                ? "bg-orange-600 text-white hover:bg-orange-500"
+                : "border border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+            }`}>
+            {abierto ? "Cerrar" : p.tieneArchivo ? "Editar" : "Subir el archivo"}
+            <ChevronDown aria-hidden className={`h-3.5 w-3.5 transition-transform ${abierto ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+      {abierto && (
+        <div id={idCuerpo} className="border-t border-gray-100 panel-oscuro:border-gray-800">
+          <Tarjeta p={p} acc={acc} incrustada />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Un grupo de hijos (bonos o upsells) de un principal ─────────────────── */
 function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "UPSELL"; acc: Acciones }) {
   const items = acc.hijosDe(padre.id, rol);
@@ -1222,9 +1345,9 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
           Todavía no cargaste {rol === "BONO" ? "ningún bono" : "ningún upsell"}.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {items.map((h) => (
-            <Tarjeta key={h.id} p={h} acc={acc} />
+            <RenglonHijo key={h.id} p={h} acc={acc} />
           ))}
         </div>
       )}
@@ -2003,23 +2126,17 @@ export default function ProductosClient({
         </div>
       ) : (
         (elegido ? [elegido] : []).map((p) => (
-          /* ⚠️ SIN SANGRÍA. Acá había un `sm:pl-8` en los grupos, para mostrar
-             que los bonos y los upsells cuelgan del producto. El costo era que
-             TODO lo de abajo quedaba 32 px más angosto que la tarjeta de
-             arriba: la sangría era el último motivo por el que los tamaños no
-             coincidían, y se ve a simple vista aunque no se sepa por qué.
-
-             Lo que cuelga de qué ya lo dice el color —cada sección con su barra
-             y su tinte— y lo dice mejor, porque también funciona en 360, donde
-             la sangría estaba apagada y no decía nada.
-
-             Y para que dos embudos seguidos no se mezclen, la separación entre
-             productos es más grande que la de adentro: `space-y-10` afuera
-             contra `space-y-3` adentro. El aire agrupa igual que la sangría y
-             no le come ancho a nadie. */
+          /* ⚠️ CON SANGRÍA DE NUEVO (14/10/26), y esta vez no le come ancho a
+             nadie. Antes se había sacado porque los bonos eran tarjetas del
+             mismo tamaño que el producto y quedaban 32 px más angostas. Ahora
+             son renglones (ver RenglonHijo), así que la línea al costado puede
+             decir lo que el color solo no alcanzaba a decir: que cuelgan del
+             producto. Una cuenta armó y borró bonos durante una hora sin
+             entender qué eran. */
           <div key={p.id} className="space-y-3">
+            <AvisoSinEntregar padre={p} acc={acc} />
             <Tarjeta p={p} acc={acc} />
-            <div className="space-y-3">
+            <div className="ml-3 space-y-5 border-l-2 border-gray-200 pl-3 panel-oscuro:border-gray-800 sm:ml-6 sm:pl-5">
               <Grupo padre={p} rol="BONO" acc={acc} />
               <Grupo padre={p} rol="UPSELL" acc={acc} />
             </div>
