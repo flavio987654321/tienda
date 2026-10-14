@@ -178,10 +178,14 @@ export default function ProductDetailClient({
         setIsOwner(!!data.isOwner);
         if (Array.isArray(data.legales)) setLegales(data.legales);
         setEsAutos(data.store.tipoTienda === "AUTOS");
+        // Con qué diseño se mira: el del `?t=` si vino, si no el guardado. Decide
+        // qué lista de ejemplo se usa (Auto Ruta tiene la suya, de camiones).
+        let disenoMirado: string | null = tParam;
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setWhatsapp(cfg.whatsapp.number);
           if (cfg.template && !tParam) setTemplate(cfg.template);
+          disenoMirado = tParam ?? cfg.template ?? null;
           if (cfg.currency) setCurrency(cfg.currency);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
@@ -198,7 +202,7 @@ export default function ProductDetailClient({
         // Productos demo del editor (ej. "hogar-2"): no existen en la base,
         // se completan con el mismo pool de muestra que usa el home del template.
         if (fromEditor && isDemoProductId(productId) && !real.some((p: StorefrontProduct) => p.id === productId)) {
-          setProducts([...real, ...getDemoPool(data.store.tipoTienda)]);
+          setProducts([...real, ...getDemoPool(data.store.tipoTienda, disenoMirado)]);
         } else {
           setProducts(real);
         }

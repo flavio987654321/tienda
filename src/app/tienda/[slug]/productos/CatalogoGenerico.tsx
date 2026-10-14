@@ -848,7 +848,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           // En el editor: productos reales primero, demos para completar y poder
           // probar el catálogo/categorías aunque la tienda todavía no tenga stock cargado.
           const tipoTienda = data.store.tipoTienda ?? "ROPA";
-          const demoPool = getDemoPool(tipoTienda);
+          const demoPool = getDemoPool(tipoTienda, tParam);
           const needed = Math.max(0, fillTargetFor(tipoTienda) - real.length);
           setProducts([...real, ...demoPool.slice(0, needed)]);
         } else {

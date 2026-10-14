@@ -242,6 +242,68 @@ const DEMO_PRODUCTS_AUTOS: StorefrontProduct[] = [
     attrs: { "Condición": "Usado", "Marca": "Can-Am", "Modelo": "Maverick X3", "Año": "2021", "Kilómetros": "6800", "Motor": "900cc Turbo", "Transmisión": "Automática (CVT)", "Combustible": "Nafta", "Tracción": "4x4", "Carrocería": "UTV / Side by side", "Color": "Negro", "Provincia": "Buenos Aires", "Localidad": "Pinamar", "Moneda": "USD" } }),
 ];
 
+/* Los de Auto Ruta (14/10/26): ese template es para camiones, utilitarios y
+   maquinaria, y con la lista de arriba la portada "¿Para qué lo necesitás?"
+   mostraba un Corolla y una Ninja. Mezcla fotos de Unsplash y de Pexels
+   (`PX`), todas recortadas a 800 px: pesan entre 40 y 120 KB cada una. Los id
+   empiezan con "auto-" para que `isDemoProductId` los reconozca sin tocarlo. */
+const PX = (id: number) => `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=800`;
+function demoRuta(o: Omit<Parameters<typeof demoVehiculo>[0], "fotos"> & { fotos: (string | number)[] }): StorefrontProduct {
+  const p = demoVehiculo({ ...o, fotos: [] });
+  const images = o.fotos.map((f) => (typeof f === "number" ? PX(f) : FOTO(f)));
+  return { ...p, images, imageItems: images.map((url) => ({ url })) };
+}
+const DEMO_PRODUCTS_RUTA: StorefrontProduct[] = [
+  demoRuta({ id: "auto-r1", createdAt: "2026-08-20T12:00:00.000Z", name: "Scania R450 6x2 tractor", price: 168000000, category: "camiones", subcategory: "tractor (semi)", badge: "DESTACADO",
+    description: "Tractor para semi, cabina dormitorio, caja Opticruise. Services oficiales y cubiertas al 70%.",
+    fotos: ["photo-1601584115197-04ecc0da31d7", 28264496],
+    attrs: { "Condición": "Usado", "Marca": "Scania", "Modelo": "R450", "Año": "2020", "Kilómetros": "420000", "Motor": "13 L 450 CV", "Transmisión": "Automatizada", "Combustible": "Diesel", "Tracción": "6x2", "Carrocería": "Tractor (semi)", "Color": "Blanco", "Provincia": "Santa Fe", "Localidad": "Rosario" } }),
+  demoRuta({ id: "auto-r2", createdAt: "2026-08-18T12:00:00.000Z", name: "Hino 300 816 con caja seca", price: 52000000, category: "camiones", subcategory: "liviano",
+    description: "Camión liviano para reparto urbano. Caja seca de 4,2 m con puerta lateral.",
+    fotos: [6940962],
+    attrs: { "Condición": "Usado", "Marca": "Hino", "Modelo": "300", "Versión": "816", "Año": "2021", "Kilómetros": "98000", "Motor": "4.0 TD", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "4x2", "Carrocería": "Caja seca", "Capacidad de carga (kg)": "3500", "Color": "Blanco", "Provincia": "Buenos Aires", "Localidad": "Avellaneda" } }),
+  demoRuta({ id: "auto-r3", createdAt: "2026-08-16T12:00:00.000Z", name: "Iveco Trakker 380 volcador", price: 118000000, category: "camiones", subcategory: "volcador",
+    description: "Volcador 6x4 con caja de 14 m³. Listo para obra y cantera.",
+    fotos: [13734379, 35177799],
+    attrs: { "Condición": "Usado", "Marca": "Iveco", "Modelo": "Trakker", "Versión": "380", "Año": "2018", "Kilómetros": "265000", "Motor": "13 L 380 CV", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "6x4", "Carrocería": "Volcador", "Capacidad de carga (kg)": "18000", "Color": "Rojo", "Provincia": "Córdoba", "Localidad": "Córdoba" } }),
+  demoRuta({ id: "auto-r4", createdAt: "2026-08-14T12:00:00.000Z", name: "Renault Kangoo Furgón 1.6", price: 21500000, category: "utilitarios", subcategory: "furgón",
+    description: "Furgón con puerta lateral corrediza y mampara. Ideal para reparto.",
+    fotos: ["photo-1652093932112-3fbc369da1f3", 6407553],
+    attrs: { "Condición": "Usado", "Marca": "Renault", "Modelo": "Kangoo", "Versión": "Furgón", "Año": "2021", "Kilómetros": "54000", "Motor": "1.6", "Transmisión": "Manual", "Combustible": "Nafta", "Tracción": "Delantera", "Carrocería": "Furgón", "Capacidad de carga (kg)": "800", "Color": "Blanco", "Puertas": "4", "Provincia": "Buenos Aires", "Localidad": "Lanús" } }),
+  demoRuta({ id: "auto-r5", createdAt: "2026-08-12T12:00:00.000Z", name: "Freightliner Cascadia con semi", price: 98000, category: "camiones", subcategory: "tractor (semi)",
+    description: "Tractor de larga distancia con cabina dormitorio alta. Se entrega con semirremolque.",
+    fotos: [20733229, 34902065],
+    attrs: { "Condición": "Usado", "Marca": "Freightliner", "Modelo": "Cascadia", "Año": "2019", "Kilómetros": "510000", "Motor": "14.8 L 505 CV", "Transmisión": "Automatizada", "Combustible": "Diesel", "Tracción": "6x4", "Carrocería": "Tractor (semi)", "Color": "Verde", "Provincia": "Buenos Aires", "Localidad": "Campana", "Moneda": "USD" } }),
+  demoRuta({ id: "auto-r6", createdAt: "2026-08-10T12:00:00.000Z", name: "Mercedes-Benz Sprinter 415 furgón techo alto", price: 46500000, category: "utilitarios", subcategory: "furgón",
+    description: "Furgón largo con techo alto, piso fenólico y luz de carga. Un solo dueño.",
+    fotos: ["photo-1549194898-60fd030ecc0f", 6169178],
+    attrs: { "Condición": "Usado", "Marca": "Mercedes-Benz", "Modelo": "Sprinter", "Versión": "415", "Año": "2022", "Kilómetros": "71000", "Motor": "2.1 TD", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "Trasera", "Carrocería": "Furgón techo alto", "Capacidad de carga (kg)": "1500", "Color": "Blanco", "Provincia": "Buenos Aires", "Localidad": "Morón" } }),
+  demoRuta({ id: "auto-r7", createdAt: "2026-08-08T12:00:00.000Z", name: "John Deere 6145J doble tracción", price: 185000, category: "maquinaria", subcategory: "tractor",
+    description: "Tractor de 145 CV con cabina, aire, toma de fuerza y tres puntos. Listo para la campaña.",
+    fotos: [29465456, "photo-1530267981375-f0de937f5f13"],
+    attrs: { "Condición": "Usado", "Marca": "John Deere", "Modelo": "6145J", "Año": "2018", "Horas de uso": "3500", "Motor": "6.8", "Transmisión": "Powershift", "Combustible": "Diesel", "Tracción": "Doble (4x4)", "Color": "Verde", "Provincia": "Buenos Aires", "Localidad": "Pergamino", "Moneda": "USD" } }),
+  demoRuta({ id: "auto-r8", createdAt: "2026-08-06T12:00:00.000Z", name: "International 9800 con semi tanque", price: 132000000, comparePrice: 145000000, category: "camiones", subcategory: "pesado",
+    description: "Tractor con semirremolque tanque de acero inoxidable de 30.000 litros, habilitado.",
+    fotos: [18468412],
+    attrs: { "Condición": "Usado", "Marca": "International", "Modelo": "9800", "Año": "2017", "Kilómetros": "640000", "Motor": "12.4 L 420 CV", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "6x4", "Carrocería": "Tanque", "Color": "Blanco", "Provincia": "Entre Ríos", "Localidad": "Paraná" } }),
+  demoRuta({ id: "auto-r9", createdAt: "2026-08-04T12:00:00.000Z", name: "Ford Cargo 1723 con playo", price: 74000000, category: "camiones", subcategory: "mediano",
+    description: "Camión mediano con playo de 7 m y barandas rebatibles. Ideal para materiales de obra.",
+    fotos: [11808227],
+    attrs: { "Condición": "Usado", "Marca": "Ford", "Modelo": "Cargo", "Versión": "1723", "Año": "2019", "Kilómetros": "230000", "Motor": "6.7 TD", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "4x2", "Carrocería": "Playo", "Capacidad de carga (kg)": "10500", "Color": "Blanco", "Provincia": "Mendoza", "Localidad": "Godoy Cruz" } }),
+  demoRuta({ id: "auto-r10", createdAt: "2026-08-02T12:00:00.000Z", name: "Toyota Hilux DX 2.4 4x4 cabina doble", price: 39000000, category: "camionetas", subcategory: "pickup",
+    description: "Pickup de trabajo, versión DX con caja de carga protegida. Mantenimiento al día.",
+    fotos: ["photo-1559416523-140ddc3d238c"],
+    attrs: { "Condición": "Usado", "Marca": "Toyota", "Modelo": "Hilux", "Versión": "DX", "Año": "2020", "Kilómetros": "112000", "Motor": "2.4 TD", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "4x4", "Carrocería": "Pickup", "Color": "Gris", "Puertas": "4", "Provincia": "La Pampa", "Localidad": "Santa Rosa" } }),
+  demoRuta({ id: "auto-r11", createdAt: "2026-07-30T12:00:00.000Z", name: "New Holland TT 3840", price: 42000, category: "maquinaria", subcategory: "tractor",
+    description: "Tractor de 65 CV, ideal para tambo, quinta y tareas generales. Cubiertas nuevas.",
+    fotos: [7457180, 25945067],
+    attrs: { "Condición": "Usado", "Marca": "New Holland", "Modelo": "TT 3840", "Año": "2016", "Horas de uso": "5200", "Motor": "3.9", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "Simple (4x2)", "Color": "Azul", "Provincia": "Santa Fe", "Localidad": "Rafaela", "Moneda": "USD" } }),
+  demoRuta({ id: "auto-r12", createdAt: "2026-07-28T12:00:00.000Z", name: "Kenworth T800 6x4", price: 88000, category: "camiones", subcategory: "pesado",
+    description: "Tractor clásico de trompa larga, motor Cummins y diferenciales reforzados. Para cargas pesadas de larga distancia.",
+    fotos: [6563903],
+    attrs: { "Condición": "Usado", "Marca": "Kenworth", "Modelo": "T800", "Año": "2016", "Kilómetros": "720000", "Motor": "15 L 500 CV", "Transmisión": "Manual", "Combustible": "Diesel", "Tracción": "6x4", "Carrocería": "Tractor (semi)", "Color": "Rojo", "Provincia": "Neuquén", "Localidad": "Neuquén", "Moneda": "USD" } }),
+];
+
 const DEMO_PRODUCTS_HOGAR_TECH: StorefrontProduct[] = [
   { id: "hogar-1", name: "Heladera Samsung No Frost 380L", price: 899999, comparePrice: 1099999, category: "electrodomesticos", subcategory: "refrigeracion", description: "No Frost, dispenser de agua, eficiencia A+++.",
     images: [
@@ -438,13 +500,19 @@ export { isDemoProductId } from "@/lib/demoProducts";
  */
 const VIDEO_DEMO_AUTOS = "/demo/auto-en-ruta.mp4";
 
-function conVideoDeEjemplo(lista: StorefrontProduct[]): StorefrontProduct[] {
+// El de Ruta: un camión en la ruta, 8 s sin sonido, 570 KB (de Pexels, recortado).
+const VIDEO_DEMO_RUTA = "/demo/camion-en-ruta.mp4";
+
+function conVideoDeEjemplo(lista: StorefrontProduct[], video = VIDEO_DEMO_AUTOS): StorefrontProduct[] {
   if (typeof window === "undefined") return lista;
-  const url = window.location.origin + VIDEO_DEMO_AUTOS;
-  return lista.map((p) => (p.id === "auto-1" ? { ...p, reelUrls: [url] } : p));
+  const url = window.location.origin + video;
+  return lista.map((p, i) => (i === 0 ? { ...p, reelUrls: [url] } : p));
 }
 
-export function getDemoPool(tipoTienda?: string | null): StorefrontProduct[] {
+/** Los productos de ejemplo. `template` sólo cambia algo para los templates
+ *  que tienen su propia lista (hoy Auto Ruta); el resto usa la del rubro. */
+export function getDemoPool(tipoTienda?: string | null, template?: string | null): StorefrontProduct[] {
+  if (tipoTienda === "AUTOS" && template === "auto-ruta") return conVideoDeEjemplo(DEMO_PRODUCTS_RUTA, VIDEO_DEMO_RUTA);
   return tipoTienda === "AUTOS" ? conVideoDeEjemplo(DEMO_PRODUCTS_AUTOS) : tipoTienda === "HOGAR_TECH" ? DEMO_PRODUCTS_HOGAR_TECH : DEMO_PRODUCTS;
 }
 
@@ -501,7 +569,7 @@ export function useStorefront() {
     if (!slug) {
       const tipoTienda = config?.tipoTienda ?? "ROPA";
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el preview demo con el tipo de tienda elegido en el editor
-      setProducts(getDemoPool(tipoTienda));
+      setProducts(getDemoPool(tipoTienda, config?.template));
       setLoadingProducts(false);
       return;
     }
@@ -516,7 +584,7 @@ export function useStorefront() {
         if (previewFill) {
           // En el editor: productos reales primero, demos para completar hasta el objetivo (8, o 12 para AUTOS/HOGAR_TECH)
           const tipoTienda = config?.tipoTienda ?? "ROPA";
-          const demoPool = getDemoPool(tipoTienda);
+          const demoPool = getDemoPool(tipoTienda, config?.template);
           const fillTarget = fillTargetFor(tipoTienda);
           /* Mirando un diseño que todavía no es el de la tienda: SÓLO ejemplos.
              Mezclar los reales con los de ejemplo no muestra ni una cosa ni la
@@ -533,7 +601,7 @@ export function useStorefront() {
       })
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
-  }, [slug, previewFill, demoPuro, config?.tipoTienda]);
+  }, [slug, previewFill, demoPuro, config?.tipoTienda, config?.template]);
 
   // Encuentra el variantId que coincide con el valor seleccionado
   /**

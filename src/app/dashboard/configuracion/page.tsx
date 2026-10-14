@@ -2767,6 +2767,11 @@ export default function ConfiguracionPage() {
         ...c,
         template: t.id,
         colors: tplDefaults ? { ...c.colors, accent: tplDefaults.accent } : c.colors,
+        /* Tampoco las fotos ni los fondos de sección: eran del otro diseño
+           (la Hilux de la portada de Motor aparecía en la de camiones de Ruta).
+           El diseño nuevo se ve con las suyas hasta que le cargues otras. */
+        imageOverrides: {},
+        sectionColors: {},
         bannerInterval: undefined,
         promoBanner: c.promoBanner ?? { enabled: true },
       }));

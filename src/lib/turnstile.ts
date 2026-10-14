@@ -164,6 +164,10 @@ export async function getTurnstileSiteKey(hostname: string): Promise<{ configure
   const isPrimaryHost = domain === primaryHost || domain === "tiendaapps.com";
   const isLocalHost = domain === "localhost" || domain === "127.0.0.1" || domain === "::1";
   const isVercelPreview = process.env.VERCEL_ENV === "preview" && domain.endsWith(".vercel.app");
+  /* En local alcanza con la clave pública: el ingreso lo verifica Supabase con
+     su propio secreto, y sin widget el token no viaja y Supabase lo rechaza
+     ("no seas un robot"). El secreto nuestro no está en .env.local. */
+  if (isLocalHost && process.env.NODE_ENV !== "production" && publicKey) return { configured: true, siteKey: publicKey };
   if (isPrimaryHost || isVercelPreview || (isLocalHost && process.env.NODE_ENV !== "production")) {
     if (publicKey && secret) return { configured: true, siteKey: publicKey };
     if (process.env.NODE_ENV !== "production") return { configured: false };
