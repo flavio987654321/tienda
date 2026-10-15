@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import type { MarcaNav as MarcaNavModo } from "@/types/store-config";
 import { registrarVista } from "@/lib/registrarVista";
 import { getDemoPool, isDemoProductId, parsePromotions, crearPedido, type StorefrontProduct, type PlaceOrderParams, type SeleccionOpciones } from "@/hooks/useStorefront";
 import { valoresElegidos } from "@/lib/opciones";
@@ -59,6 +60,7 @@ export default function ProductDetailClient({
   storeIdInicial = null, isOwnerInicial = false, showPushBell = false,
   isVerified = false, verifiedInfo, promoBanner = null,
   navTagline = null, storeNameInicial = null, esEditor = false,
+  storeLogo = null, marcaNav = null,
 }: {
   slug: string;
   productId: string;
@@ -108,6 +110,9 @@ export default function ProductDetailClient({
   storeNameInicial?: string | null;
   /** Se está mirando desde el editor (`?from=editor`). Lo resuelve el servidor. */
   esEditor?: boolean;
+  /** El logo de la tienda y si la dueña eligió mostrarlo en la barra. Ver `MarcaNav`. */
+  storeLogo?: string | null;
+  marcaNav?: MarcaNavModo | null;
 }) {
   const router = useRouter();
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
@@ -352,7 +357,7 @@ export default function ProductDetailClient({
       canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref, fraseDelPie,
       /* Para la barra de arriba. Ver la nota en `ProductDetailViewProps`. */
       products, promotions, ocultarPrecios, showPushBell, isVerified, verifiedInfo,
-      promoBanner, navTagline,
+      promoBanner, navTagline, storeLogo, marcaNav: marcaNav ?? undefined,
     };
     return <ThemedDetail view={view} />;
   }

@@ -25,6 +25,7 @@ import {  } from "@/hooks/useStorefront";
 import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav, { modoDeMarca } from "@/components/store/templates/shared/MarcaNav";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock, PromoPrice, PALETA_PROMO_TIERRA } from "@/components/store/PromoDisplay";
@@ -157,6 +158,8 @@ export default function BohoTerra() {
   const [reviewHoneypot, setReviewHoneypot] = useState("");
 
   const storeConfig = useStoreConfig();
+  // Con "Logo y nombre" la marca necesita más ancho que el nombre solo (ver `MarcaNav`).
+  const logoYNombre = modoDeMarca(storeConfig?.marcaNav, storeConfig?.storeLogo) === "ambos";
   const pushBell = usePushBell();
   const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
@@ -828,8 +831,10 @@ export default function BohoTerra() {
             misma decisión para los tres templates. */}
         <div style={{ padding:"0 20px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
-            <button onClick={()=>irASeccion("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-              <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
+            <button onClick={()=>irASeccion("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth: logoYNombre ? 400 : 180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              <MarcaNav modo={storeConfig?.marcaNav} logo={storeConfig?.storeLogo} nombre={storeConfig?.storeName ?? "Terra"} alto={36} anchoMax={170} nombreDesde={1100}>
+                <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
+              </MarcaNav>
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </div>

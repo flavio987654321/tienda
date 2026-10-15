@@ -12,6 +12,7 @@
  * components/store/auto y lib/fichaVehiculo): cambia la cara, no lo que hace.
  */
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
@@ -196,7 +197,7 @@ export function VehiculoDetailRuta({ view }: { view: ProductDetailViewProps }) {
             <span aria-hidden="true" style={{ fontSize: 16 }}>←</span><span aria-hidden="true">{isPreview ? "Editor" : "Planilla"}</span>
           </Link>
           <Link href={inicio} style={{ flex: 1, minWidth: 0, textAlign: "center", color: TINTA, textDecoration: "none", fontFamily: TITULAR, fontWeight: 700, fontSize: 19, textTransform: "uppercase", letterSpacing: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {storeName}
+            <MarcaNav modo={view.marcaNav} logo={view.storeLogo} nombre={storeName} alto={34}>{storeName}</MarcaNav>
           </Link>
           <button type="button" onClick={compartir} aria-label={copiado ? "Link copiado" : "Compartir esta unidad"} className="fr-btn" style={icono}>
             <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>

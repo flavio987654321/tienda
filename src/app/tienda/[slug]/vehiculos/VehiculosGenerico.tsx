@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
+import type { MarcaNav as MarcaNavModo } from "@/types/store-config";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -96,6 +98,8 @@ function VehiculosPageInner() {
   const [products,    setProducts]    = useState<StorefrontProduct[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [storeName,   setStoreName]   = useState("Tienda");
+  /* El logo y si la dueña lo eligió para la barra (ver `MarcaNav`). */
+  const [marca, setMarca] = useState<{ modo?: MarcaNavModo; logo: string | null }>({ logo: null });
   // Para el pie: cómo escribirle a la concesionaria sin volver a la portada.
   const [contacto, setContacto] = useState<{ whatsapp: string | null; descripcion: string | null }>({ whatsapp: null, descripcion: null });
   const [redes, setRedes] = useState<Record<string, string>>({});
@@ -160,6 +164,7 @@ function VehiculosPageInner() {
         setIsOwner(!!data.isOwner);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
+          setMarca({ modo: cfg.marcaNav, logo: data.store.logo ?? null });
           if (cfg.colors?.accent)          setAccent(cfg.colors.accent);
           if (cfg.socialLinks && typeof cfg.socialLinks === "object") setRedes(cfg.socialLinks);
           if (typeof cfg.textOverrides?.footerFrase?.text === "string") setContacto(c => ({ ...c, descripcion: cfg.textOverrides.footerFrase.text }));
@@ -316,7 +321,7 @@ function VehiculosPageInner() {
           <span style={{ flex:1, minWidth:0, textAlign:"center", fontSize:17, fontWeight:900,
             letterSpacing: headerIsDark ? 3 : -0.5, textTransform: headerIsDark ? "uppercase" : "none", color: accent,
             overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-            {storeName}
+            <MarcaNav modo={marca.modo} logo={marca.logo} nombre={storeName} alto={34}>{storeName}</MarcaNav>
           </span>
           <span className="av-solo-ancho" style={{ fontSize:12, color: headerCountColor, letterSpacing:1, flexShrink:0 }}>
             {filtered.length} vehículo{filtered.length !== 1 ? "s" : ""}

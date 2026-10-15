@@ -308,6 +308,8 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     // Sin los datos bancarios: este objeto termina en el HTML (ver `lib/configPublica`).
     ...configPublica(parsed),
     storeName: store.name,
+    // El logo para la barra, si la dueña eligió mostrarlo (ver `MarcaNav`).
+    storeLogo: store.logo ?? null,
     storeId: store.id,
     slug,
     tipoTienda: store.tipoTienda ?? "GENERAL",

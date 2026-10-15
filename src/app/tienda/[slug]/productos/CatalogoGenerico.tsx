@@ -1,6 +1,8 @@
 "use client";
 
 import { avisoUltimas } from "@/lib/textoStock";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
+import type { MarcaNav as MarcaNavModo } from "@/types/store-config";
 import { firmaDeResena } from "@/lib/firmaResenaCliente";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment } from "react";
@@ -694,6 +696,8 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
+  /* El logo y si la dueña lo eligió para la barra (ver `MarcaNav`). */
+  const [marca, setMarca] = useState<{ modo?: MarcaNavModo; logo: string | null }>({ logo: null });
   const [template,   setTemplate]   = useState(tParam && THEMES[tParam] ? tParam : "aire");
   const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
@@ -832,6 +836,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
         }
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
+          setMarca({ modo: cfg.marcaNav, logo: data.store.logo ?? null });
           if (cfg.template && !tParam) setTemplate(cfg.template);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
@@ -1771,7 +1776,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
             </Link>
           )}
           </div>
-          <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:GT }}>{storeName}</span>
+          <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:GT }}><MarcaNav modo={marca.modo} logo={marca.logo} nombre={storeName} alto={36}>{storeName}</MarcaNav></span>
           <button onClick={() => setCartOpen(true)} style={{ position:"relative", background:"none", border:`1px solid ${border}`, color:T, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"border-color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor=chipBg)}
             onMouseLeave={e => (e.currentTarget.style.borderColor=border)}>

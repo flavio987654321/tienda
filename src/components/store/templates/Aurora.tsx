@@ -32,6 +32,7 @@ import { catalogoTieneGeneros } from "@/lib/generos";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav, { modoDeMarca } from "@/components/store/templates/shared/MarcaNav";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { PromoPrice } from "@/components/store/PromoDisplay";
 import { resolveProductPromo } from "@/lib/promoDisplay";
@@ -178,6 +179,8 @@ export default function Aurora() {
   }, []);
 
   const storeConfig = useStoreConfig();
+  // Con "Logo y nombre" la marca necesita más ancho que el nombre solo (ver `MarcaNav`).
+  const logoYNombre = modoDeMarca(storeConfig?.marcaNav, storeConfig?.storeLogo) === "ambos";
   const pushBell = usePushBell();
   const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
@@ -854,8 +857,11 @@ export default function Aurora() {
             misma decisión para los tres templates. */}
         <div style={{ padding: navApretada ? "0 14px" : "0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <button onClick={() => irASeccion("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:TITULO, fontSize: navApretada ? 15 : 18, fontWeight:400, letterSpacing: navApretada ? 2 : 5, color:T, maxWidth: navApretada ? 150 : 220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-              <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "AURORA"}</EditableZone>
+            <button onClick={() => irASeccion("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:TITULO, fontSize: navApretada ? 15 : 18, fontWeight:400, letterSpacing: navApretada ? 2 : 5, color:T, maxWidth: navApretada ? 150 : (logoYNombre ? 440 : 220), overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              <MarcaNav modo={storeConfig?.marcaNav} logo={storeConfig?.storeLogo} nombre={storeConfig?.storeName ?? "AURORA"}
+                alto={navApretada ? 32 : 40} anchoMax={navApretada ? 140 : 200} nombreDesde={1100}>
+                <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "AURORA"}</EditableZone>
+              </MarcaNav>
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </div>

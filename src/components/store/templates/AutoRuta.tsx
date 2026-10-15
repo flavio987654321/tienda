@@ -33,6 +33,7 @@ import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda, type Moneda } from "@/lib/monedaVehiculo";
@@ -357,10 +358,12 @@ export default function AutoRuta() {
         <nav aria-label="Principal" style={{ pointerEvents: vista.cambiandoPantalla ? "none" : "auto", background: navBg, borderBottom: `1px solid ${navLinea}` }}>
           <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 clamp(10px,2.4vw,24px)", height: NAV_H, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, color: navTinta }}>
-              <span aria-hidden="true" style={{ width: 8, height: 26, background: accent, flexShrink: 0 }} />
-              <span className="rt-marca" style={{ fontFamily: TITULAR, fontWeight: 700, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.05 }}>
-                <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
-              </span>
+              <MarcaNav modo={config?.marcaNav} logo={config?.storeLogo} nombre={storeName} alto="clamp(30px,6vw,40px)" anchoMax="min(170px,40vw)" enFila
+                insignia={<span aria-hidden="true" style={{ width: 8, height: 26, background: accent, flexShrink: 0 }} />}>
+                <span className="rt-marca" style={{ fontFamily: TITULAR, fontWeight: 700, textTransform: "uppercase", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.05 }}>
+                  <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+                </span>
+              </MarcaNav>
               <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navTinta} />
             </div>
             <div className="rt-links" style={{ gap: 2, alignItems: "center", alignSelf: "stretch" }}>

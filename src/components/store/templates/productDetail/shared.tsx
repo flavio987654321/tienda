@@ -365,6 +365,9 @@ export interface ProductDetailViewProps {
   promoBanner?: { enabled: boolean; messages?: string[] } | null;
   /** La bajada del logo. Cadena vacía = la dueña la apagó. */
   navTagline?: string | null;
+  /** El logo de la tienda y si va en la barra en vez del nombre, o al lado. Ver `MarcaNav`. */
+  storeLogo?: string | null;
+  marcaNav?: import("@/types/store-config").MarcaNav;
 }
 
 /**

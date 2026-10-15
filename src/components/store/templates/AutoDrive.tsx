@@ -20,6 +20,7 @@ import { SelectorVehiculoFoco } from "@/components/store/auto/SelectorVehiculoFo
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
@@ -446,13 +447,17 @@ export default function AutoDrive() {
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0,
             fontWeight:900, fontSize:"clamp(16px,2vw,19px)", color:navText, letterSpacing:-0.5 }}>
-            <span aria-hidden="true" style={{ width:30, height:30, borderRadius:9, background:accent, color:sobreAcento, flexShrink:0,
-              display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <svg width={18} height={18} viewBox="0 0 48 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M4 17v-4.5l6.5-1.5 4.5-5h15l6 5 7 1.5V17" /><circle cx="13" cy="17.5" r="3.5" /><circle cx="35" cy="17.5" r="3.5" /></svg>
-            </span>
-            <span style={{ minWidth:0, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden", lineHeight:1.1 }}>
-              <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
-            </span>
+            <MarcaNav modo={config?.marcaNav} logo={config?.storeLogo} nombre={storeName} alto="clamp(30px,6vw,40px)" anchoMax="min(170px,40vw)" enFila
+              insignia={
+                <span aria-hidden="true" style={{ width:30, height:30, borderRadius:9, background:accent, color:sobreAcento, flexShrink:0,
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <svg width={18} height={18} viewBox="0 0 48 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M4 17v-4.5l6.5-1.5 4.5-5h15l6 5 7 1.5V17" /><circle cx="13" cy="17.5" r="3.5" /><circle cx="35" cy="17.5" r="3.5" /></svg>
+                </span>
+              }>
+              <span style={{ minWidth:0, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden", lineHeight:1.1 }}>
+                <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+              </span>
+            </MarcaNav>
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
           <div className="ad-nav-links" style={{ gap:4, alignItems:"center" }}>

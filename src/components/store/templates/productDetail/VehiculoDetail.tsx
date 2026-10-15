@@ -10,6 +10,7 @@
  * son las de siempre (consulta, ficha, tasación; ver components/store/auto).
  */
 import { FOTO_VACIA } from "@/lib/foto-vacia";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { ProductDetailViewProps } from "./shared";
@@ -203,7 +204,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
           </Link>
           <Link href={inicio} style={{ flex: 1, minWidth: 0, textAlign: "center", color: c.tinta, textDecoration: "none", fontWeight: 900,
             fontSize: 14, letterSpacing: 2.5, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {storeName}
+            <MarcaNav modo={view.marcaNav} logo={view.storeLogo} nombre={storeName} alto={34}>{storeName}</MarcaNav>
           </Link>
           <button type="button" onClick={() => fav.alternar(p.id)} aria-pressed={fav.esFavorito(p.id)}
             aria-label={fav.esFavorito(p.id) ? "Sacar de favoritos" : "Guardar en favoritos"}

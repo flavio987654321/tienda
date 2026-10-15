@@ -34,6 +34,7 @@ import { elegirFoco } from "@/lib/vehiculoFoco";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
@@ -414,9 +415,11 @@ export default function AutoMotor() {
           <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0,
             fontWeight:900, textTransform:"uppercase", color: navText }}>
             {/* En el celular se parte en dos renglones antes que cortarse ("RODRÍ…"). */}
-            <span className="am-marca" style={{ overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", lineHeight:1.1 }}>
-              <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
-            </span>
+            <MarcaNav modo={config?.marcaNav} logo={config?.storeLogo} nombre={storeName} alto="clamp(30px,6vw,40px)" anchoMax="min(170px,40vw)" enFila>
+              <span className="am-marca" style={{ overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", lineHeight:1.1 }}>
+                <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+              </span>
+            </MarcaNav>
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
           <div className="am-nav-links" style={{ gap:28, alignItems:"center" }}>

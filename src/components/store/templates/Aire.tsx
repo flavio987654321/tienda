@@ -17,6 +17,7 @@ import { catalogoTieneGeneros } from "@/lib/generos";
 import { fotoDesdeProductos } from "@/lib/categoryTiles";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoPrice } from "@/components/store/PromoDisplay";
@@ -1736,15 +1737,17 @@ export default function Aire() {
           <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
             <button onClick={() => (enContacto ? irALaPortada() : irASeccion("hero"))} aria-label="Ir al inicio"
               style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
-              {/* La marca dibujada. Es geométrica y se pinta con el acento a
-                  propósito: el logo que la dueña sube en Ajustes NO llega hasta
-                  acá (no viaja en la config que reciben los templates), así que
-                  cualquier dibujo más específico sería el logo de otra tienda. */}
-              <span aria-hidden style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius:10, background:G, display:"grid", placeItems:"center", flexShrink:0 }}>
-                <svg width={isMobile ? 15 : 17} height={isMobile ? 15 : 17} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 14h9a3 3 0 1 0-3-3"/><path d="M3 9h6"/><path d="M3 19h13a3 3 0 1 0-3-3"/>
-                </svg>
-              </span>
+              {/* La marca dibujada, geométrica y con el acento, hace de logo
+                  mientras la dueña no elija mostrar el suyo (ver `MarcaNav`). */}
+              <MarcaNav modo={storeConfig?.marcaNav} logo={storeConfig?.storeLogo} nombre={storeConfig?.storeName ?? "AIRE"}
+                alto={isMobile ? 30 : 38} anchoMax={isMobile ? 130 : 200} enFila
+                insignia={
+                  <span aria-hidden style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius:10, background:G, display:"grid", placeItems:"center", flexShrink:0 }}>
+                    <svg width={isMobile ? 15 : 17} height={isMobile ? 15 : 17} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 14h9a3 3 0 1 0-3-3"/><path d="M3 9h6"/><path d="M3 19h13a3 3 0 1 0-3-3"/>
+                    </svg>
+                  </span>
+                }>
               <span style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", lineHeight:1.05, maxWidth: isMobile ? 118 : 210, minWidth:0, overflow:"hidden" }}>
                 <span style={{ fontSize: isMobile ? 13.5 : 17, fontWeight:800, letterSpacing: isMobile ? "-0.5px" : "-0.4px", textTransform:"uppercase", color:T, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>
                   <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "AIRE"}</EditableZone>
@@ -1755,6 +1758,7 @@ export default function Aire() {
                   </span>
                 )}
               </span>
+              </MarcaNav>
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </div>

@@ -18,6 +18,7 @@
  * components/store/auto y lib/fichaVehiculo): cambia la cara, no lo que hace.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
@@ -262,8 +263,10 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
             <span aria-hidden="true" style={{ fontSize: 16 }}>←</span><span aria-hidden="true" className="fv-barra-txt">{isPreview ? "EDITOR" : "VEHÍCULOS"}</span>
           </Link>
           <Link href={inicio} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#fff", textDecoration: "none", fontWeight: 800, fontSize: 15 }}>
-            <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: 3, background: acento, boxShadow: `0 0 12px ${acento}`, transform: "rotate(45deg)", flexShrink: 0 }} />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{storeName}</span>
+            <MarcaNav modo={view.marcaNav} logo={view.storeLogo} nombre={storeName} alto={32} anchoMax="min(160px,40vw)" enFila
+              insignia={<span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: 3, background: acento, boxShadow: `0 0 12px ${acento}`, transform: "rotate(45deg)", flexShrink: 0 }} />}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{storeName}</span>
+            </MarcaNav>
           </Link>
           <button type="button" onClick={compartir} aria-label={copiado ? "Link copiado" : "Compartir este vehículo"} style={icono}>
             <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>

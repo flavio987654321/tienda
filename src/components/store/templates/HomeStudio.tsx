@@ -8,6 +8,7 @@ import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext, textoSobre } from "@/contexts/EditContext";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { PromoTag } from "@/components/store/PromoDisplay";
@@ -319,7 +320,9 @@ export default function HomeStudio() {
         boxShadow: scrolled ? "0 2px 16px rgba(0,0,0,0.05)" : "none", transition:"all 0.3s", padding:"0 28px" }}>
         <div style={{ maxWidth:1240, margin:"0 auto", height:NAV_H, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ fontWeight:700, fontSize:18, color:navText, letterSpacing:1, fontFamily:"Georgia, serif" }}>
-            <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+            <MarcaNav modo={config?.marcaNav} logo={config?.storeLogo} nombre={storeName} nombreDesde={1100}>
+              <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+            </MarcaNav>
           </div>
           <div className="hs-nav-links" style={{ gap:32, alignItems:"center" }}>
             <div className="hs-mega-wrap" style={{ position:"relative" }}>

@@ -237,6 +237,8 @@ async function findStoreConfig(slug: string) {
          portada, aunque la dirección sea idéntica.
          Nada de esto viajaba hasta acá, por eso la barra no podía dibujarlo. */
       id: true, ownerId: true,
+      // El logo, si la dueña eligió mostrarlo en la barra (ver `MarcaNav`).
+      logo: true,
       isVerified: true,
       verifiedShowName: true, verifiedShowCity: true,
       verifiedShowPhone: true, verifiedShowSince: true,
@@ -272,6 +274,7 @@ async function findStoreConfig(slug: string) {
     isVerified: store?.isVerified ?? false,
     // Sólo lo que la dueña eligió mostrar: esto termina en el HTML.
     verifiedInfo: infoVerificadaPublica(store, memberSince),
+    storeLogo: store?.logo ?? null,
   };
 
   try {
@@ -288,12 +291,13 @@ async function findStoreConfig(slug: string) {
       navTagline: parsed.textOverrides?.navTagline?.hidden
         ? "" : (parsed.textOverrides?.navTagline?.text ?? null),
       storeNameOverride: parsed.textOverrides?.storeName?.text ?? null,
+      marcaNav: parsed.marcaNav ?? null,
     };
   } catch {
     return {
       analytics: undefined, currency: "ARS" as const,
       template: null, legales, esAutos, ...barra,
-      promoBanner: null, navTagline: null, storeNameOverride: null,
+      promoBanner: null, navTagline: null, storeNameOverride: null, marcaNav: null,
     };
   }
 }
@@ -333,7 +337,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
   const {
     analytics, currency, template, legales, esAutos,
     storeId, isOwnerInicial, showPushBell, isVerified, verifiedInfo,
-    promoBanner, navTagline, storeNameOverride,
+    promoBanner, navTagline, storeNameOverride, storeLogo, marcaNav,
   } = await findStoreConfig(slug);
 
   /* Autos (07/10/26): ESTA es la página del vehículo (antes redirigía a la
@@ -421,6 +425,8 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
           verifiedInfo={verifiedInfo}
           promoBanner={promoBanner}
           navTagline={navTagline}
+          storeLogo={storeLogo}
+          marcaNav={marcaNav}
           storeNameInicial={storeNameOverride || product?.store.name || null}
           esEditor={from === "editor"}
         />

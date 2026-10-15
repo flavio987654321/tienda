@@ -35,6 +35,7 @@ import { SelectorVehiculoFoco } from "@/components/store/auto/SelectorVehiculoFo
 import { elegirFoco } from "@/lib/vehiculoFoco";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
@@ -407,10 +408,12 @@ export default function AutoVolt() {
           border: `1px solid ${navLinea}`, boxShadow: "0 18px 50px -24px rgba(0,0,0,0.7)", padding: "0 clamp(10px,1.6vw,16px)" }}>
           <div style={{ height: NAV_H, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, color: navTinta }}>
-              <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: accent, boxShadow: `0 0 14px ${accent}`, flexShrink: 0, transform: "rotate(45deg)" }} />
-              <span className="av-marca" style={{ fontWeight: 800, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.15 }}>
-                <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
-              </span>
+              <MarcaNav modo={config?.marcaNav} logo={config?.storeLogo} nombre={storeName} alto="clamp(28px,5vw,36px)" anchoMax="min(160px,38vw)" enFila
+                insignia={<span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: accent, boxShadow: `0 0 14px ${accent}`, flexShrink: 0, transform: "rotate(45deg)" }} />}>
+                <span className="av-marca" style={{ fontWeight: 800, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.15 }}>
+                  <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+                </span>
+              </MarcaNav>
               <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navTinta} />
             </div>
             <div className="av-links" style={{ gap: 4, alignItems: "center" }}>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -172,12 +173,15 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
     (isPreview ? "&from=editor" : "");
 
   const marca = (chico: boolean) => (
-    <>
-      <span aria-hidden style={{ width: chico ? 28 : 32, height: chico ? 28 : 32, borderRadius: 10, background: G, display: "grid", placeItems: "center", flexShrink: 0 }}>
-        <svg width={chico ? 15 : 17} height={chico ? 15 : 17} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 14h9a3 3 0 1 0-3-3"/><path d="M3 9h6"/><path d="M3 19h13a3 3 0 1 0-3-3"/>
-        </svg>
-      </span>
+    <MarcaNav modo={view.marcaNav} logo={view.storeLogo} nombre={storeName}
+      alto={chico ? 30 : 38} anchoMax={chico ? 130 : 200} enFila
+      insignia={
+        <span aria-hidden style={{ width: chico ? 28 : 32, height: chico ? 28 : 32, borderRadius: 10, background: G, display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <svg width={chico ? 15 : 17} height={chico ? 15 : 17} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 14h9a3 3 0 1 0-3-3"/><path d="M3 9h6"/><path d="M3 19h13a3 3 0 1 0-3-3"/>
+          </svg>
+        </span>
+      }>
       <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.05, maxWidth: chico ? 118 : 210, minWidth: 0, overflow: "hidden" }}>
         <span style={{ fontSize: chico ? 15 : 17, fontWeight: 800, letterSpacing: "-0.4px", textTransform: "uppercase", color: T, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
           {storeName}
@@ -190,7 +194,7 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
           </span>
         )}
       </span>
-    </>
+    </MarcaNav>
   );
 
   const linkMenu = (href: string, texto: string) => (

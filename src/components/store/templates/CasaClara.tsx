@@ -7,6 +7,7 @@ import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext, textoSobre } from "@/contexts/EditContext";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { PromoTag } from "@/components/store/PromoDisplay";
@@ -272,7 +273,9 @@ export default function CasaClara() {
         boxShadow: scrolled ? "0 1px 0 rgba(0,0,0,0.03)" : "none", transition:"all 0.3s", padding:"0 24px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", height:NAV_H, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ fontWeight:600, fontSize:15, color:navText, letterSpacing:2, textTransform:"uppercase" }}>
-            <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+            <MarcaNav modo={config?.marcaNav} logo={config?.storeLogo} nombre={storeName} nombreDesde={1100}>
+              <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+            </MarcaNav>
           </div>
           <div className="cc-nav-links" style={{ gap:28, alignItems:"center" }}>
             <div className="cc-mega-wrap" style={{ position:"relative" }}>

@@ -30,6 +30,7 @@ import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock, PromoPrice, coloresPromo } from "@/components/store/PromoDisplay";
@@ -1079,9 +1080,12 @@ export default function ChicParis() {
               "AMARANTA" se va a ir a lo ancho, y se acepta: ancho no se come los
               clics de nadie, apilado si. */}
           <a onClick={() => irASeccion("hero")} style={{ cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <span style={{ fontSize: isMobile ? 15 : 22, fontWeight: 900, letterSpacing: isMobile ? 1.5 : 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s", whiteSpace: "nowrap" }}>
-              <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
-            </span>
+            <MarcaNav modo={storeConfig?.marcaNav} logo={storeConfig?.storeLogo} nombre={storeConfig?.storeName ?? "CHIC PARIS"}
+              alto={isMobile ? 30 : 40} anchoMax={isMobile ? 130 : 200} enFila>
+              <span style={{ fontSize: isMobile ? 15 : 22, fontWeight: 900, letterSpacing: isMobile ? 1.5 : 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s", whiteSpace: "nowrap" }}>
+                <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
+              </span>
+            </MarcaNav>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </a>
 

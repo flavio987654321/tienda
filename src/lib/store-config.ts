@@ -148,6 +148,9 @@ export const storeConfigSchema = z.object({
   bannerInterval: z.number().optional(),
   promoBanner: z.object({ enabled: z.boolean(), messages: z.array(z.string().max(120)).max(3).optional(), intervalMs: z.number().min(1000).max(60000).optional() }).optional(),
   previewFill: z.boolean().optional(),
+  // Nombre, logo o los dos en la barra de arriba (ver `MarcaNav`). `storeLogo` NO
+  // va acá a propósito: es el logo de la tienda, vive en `Store.logo`.
+  marcaNav: z.enum(["nombre", "logo", "ambos"]).optional(),
   tipoTienda: z.string().max(30).optional(),
   tieneVentaMayorista: z.boolean().optional(),
   ocultarPreciosPublico: z.boolean().optional(),

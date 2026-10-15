@@ -330,6 +330,9 @@ No se edita desde un menú — se hace tocando directamente esa parte en la vist
 ### Subir o cambiar el logo de la tienda
 Se hace desde "Configuración" (no desde "Diseño") — ahí está la opción para subir el logo.
 
+### Poner el logo en la barra de arriba de la tienda
+Por defecto, arriba a la izquierda se ve el NOMBRE de la tienda escrito. Para que se vea el logo: Diseño → el engranaje ("Configuración avanzada") → "Barra de arriba" → elegir "Logo" o "Logo y nombre", y "Guardar y cerrar". Funciona en todos los diseños (ropa, hogar, tecnología, autos y motos), en la portada, en la página de cada producto y en el catálogo. Antes hay que haber subido el logo en Configuración → Identidad; si no hay logo, se sigue viendo el nombre. Con "Logo y nombre", en el celular (y en tablet, en algunos diseños) se ve sólo el logo, porque los dos juntos no entran. Si el logo ya trae el nombre escrito, conviene "Logo" solo.
+
 ### Carritos abandonados — recuperar ventas que casi se pierden
 1. Ir a "Carritos abandonados" en el menú de la izquierda (no aparece en tiendas de tipo Autos, que no tienen carrito de compra).
 2. Arriba se ven 4 indicadores automáticos: cuántos carritos están pendientes de recuperar, cuántos ya se recuperaron, la tasa de recupero (% de los que terminaron comprando) y "Plata recuperada" (el total en pesos que entró gracias al sistema).

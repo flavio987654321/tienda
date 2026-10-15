@@ -483,6 +483,36 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
             <p style={{ margin: "8px 0 0", fontSize: 11, color: P.muted }}>Afecta botones, precios y elementos destacados.</p>
           </div>
 
+          {/* Qué va arriba a la izquierda: el nombre, el logo o los dos (ver
+              `MarcaNav`). Sin elegir, el nombre. El logo no se sube acá: es el
+              de Configuración → Identidad, el mismo del ícono de la app. */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Barra de arriba</p>
+            <p style={{ margin: "0 0 12px", fontSize: 11, color: P.muted }}>Qué se ve arriba a la izquierda de tu tienda.</p>
+            <div role="radiogroup" aria-label="Barra de arriba" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+              {([["nombre", "Nombre"], ["logo", "Logo"], ["ambos", "Logo y nombre"]] as const).map(([valor, texto]) => {
+                const activo = (config.marcaNav ?? "nombre") === valor;
+                return (
+                  <button key={valor} type="button" role="radio" aria-checked={activo}
+                    onClick={() => update("marcaNav", valor)}
+                    style={{ padding: "9px 6px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      border: `1px solid ${activo ? "#6366f1" : "#e2e8f0"}`, background: activo ? "#eef2ff" : "white", color: activo ? "#4338ca" : "#334155" }}>
+                    {texto}
+                  </button>
+                );
+              })}
+            </div>
+            {config.marcaNav === "ambos" && (
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: P.muted }}>En el celular se ve sólo el logo: el nombre al lado no entra.</p>
+            )}
+            {config.marcaNav && config.marcaNav !== "nombre" && !config.storeLogo && (
+              <p style={{ margin: "10px 0 0", fontSize: 11, color: "#b45309" }}>
+                Todavía no subiste un logo, así que se sigue viendo el nombre.{" "}
+                <a href="/dashboard/ajustes?s=tienda" style={{ color: "#4338ca", fontWeight: 600 }}>Subilo en Configuración → Identidad</a>.
+              </p>
+            )}
+          </div>
+
           {/* Color nav — sólo los templates que lo declaran en TEMPLATE_NAV_BG */}
           {navBgDeFabrica && (
             <div style={sec}>
@@ -2571,6 +2601,8 @@ export default function ConfiguracionPage() {
           ...(store.slug && { slug:    store.slug }),
           tieneVentaMayorista: Boolean(store.tieneVentaMayorista),
           tipoTienda: store.tipoTienda ?? "GENERAL",
+          // Para que la vista previa dibuje el logo en la barra (ver `MarcaNav`).
+          storeLogo: store.logo ?? null,
         };
         try {
           const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");

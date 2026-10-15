@@ -1621,6 +1621,11 @@ export const ARTICULOS: Articulo[] = [
           "Acá está lo que se mira: colores, textos, fotos, la barra de avisos de arriba, el flyer y la velocidad del carrusel. Todo lo demás —tu WhatsApp, tus redes, la moneda, el SEO, el logo y la dirección web— vive en **Configuración**.",
       },
       {
+        t: "p",
+        texto:
+          "El logo se sube en Configuración, pero si va arriba en tu tienda se elige acá: en el engranaje, **Barra de arriba**, elegís **Nombre**, **Logo** o **Logo y nombre**. Si tu logo ya trae el nombre escrito, elegí Logo solo. Con Logo y nombre, en el celular se ve sólo el logo.",
+      },
+      {
         t: "aviso",
         tono: "dato",
         texto:

@@ -33,6 +33,7 @@ import { ventanaArgentina } from "@/lib/fechas-comerciales";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import MarcaNav, { modoDeMarca } from "@/components/store/templates/shared/MarcaNav";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock, PromoPrice, coloresPromo, PALETA_PROMO_NEON } from "@/components/store/PromoDisplay";
@@ -211,6 +212,8 @@ export default function UrbanPulse() {
   }, []);
 
   const storeConfig = useStoreConfig();
+  // Con "Logo y nombre" la marca necesita más ancho que el nombre solo (ver `MarcaNav`).
+  const logoYNombre = modoDeMarca(storeConfig?.marcaNav, storeConfig?.storeLogo) === "ambos";
   const pushBell = usePushBell();
   const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1118,10 +1121,13 @@ export default function UrbanPulse() {
           <span role="link" tabIndex={0} aria-label="Ir al inicio"
             onClick={() => { if (editMode) return; if (vista.enPortada) window.scrollTo({ top: 0, behavior: "smooth" }); else vista.irALaPortada(); }}
             onKeyDown={e => { if (e.key === "Enter" && !editMode) { if (vista.enPortada) window.scrollTo({ top: 0, behavior: "smooth" }); else vista.irALaPortada(); } }}
-            style={{ maxWidth:200, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor: editMode ? undefined : "pointer" }}>
-            <EditableZone field="storeName" label="Nombre de la tienda">
-              {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:accSobreDark, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
-            </EditableZone>
+            style={{ maxWidth: logoYNombre ? 400 : 200, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor: editMode ? undefined : "pointer" }}>
+            <MarcaNav modo={storeConfig?.marcaNav} logo={storeConfig?.storeLogo} nombre={storeConfig?.storeName ?? "URBAN PULSE"}
+              alto={isMobile ? 30 : 38} anchoMax={isMobile ? 130 : 190} nombreDesde={1100}>
+              <EditableZone field="storeName" label="Nombre de la tienda">
+                {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:accSobreDark, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
+              </EditableZone>
+            </MarcaNav>
           </span>
           <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
         </div>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { ChevronLeft, Heart, ShoppingBag, User } from "lucide-react";
 import { paletaDeTemplate } from "@/components/store/PromoDisplay";
 import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveDetailTheme, editorParam, type DetailTheme, type ProductDetailViewProps } from "./shared";
@@ -111,7 +112,7 @@ export default function BohoTerraDetail({ view }: { view: ProductDetailViewProps
             color: theme.text, textDecoration: "none",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>
-            {storeName}
+            <MarcaNav modo={view.marcaNav} logo={view.storeLogo} nombre={storeName} alto={36}>{storeName}</MarcaNav>
           </Link>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>

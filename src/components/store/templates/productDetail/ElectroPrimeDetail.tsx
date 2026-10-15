@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import { ChevronLeft, Heart, ShoppingBag, User } from "lucide-react";
 import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveDetailTheme, editorParam, type DetailTheme, type ProductDetailViewProps } from "./shared";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -18,7 +19,7 @@ export default function ElectroPrimeDetail({ view }: { view: ProductDetailViewPr
     <div style={{ minHeight: "100vh", background: theme.pageBg, fontFamily: theme.font, color: theme.text }}>
       <nav style={{ borderBottom: `1px solid ${theme.cardBorder}`, padding: "0 24px", position: "sticky", top: 0, background: theme.pageBg, zIndex: CAPAS.navFicha }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href={homeHref} style={{ fontWeight: 900, fontSize: 18, color: theme.text, textDecoration: "none", letterSpacing: -0.5 }}>{storeName}</Link>
+          <Link href={homeHref} style={{ fontWeight: 900, fontSize: 18, color: theme.text, textDecoration: "none", letterSpacing: -0.5 }}><MarcaNav modo={view.marcaNav} logo={view.storeLogo} nombre={storeName} alto={36}>{storeName}</MarcaNav></Link>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <button onClick={() => { cart.setFavoritesOpen(true); cart.setCartOpen(false); }} style={{ color: theme.muted, display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0 }} aria-label="Favoritos"><Heart size={20} /></button>
             <Link href={homeHref} style={{ color: theme.muted, display: "flex" }} aria-label="Mi cuenta"><User size={20} /></Link>

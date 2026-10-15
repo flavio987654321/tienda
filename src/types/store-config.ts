@@ -266,12 +266,23 @@ export const DEFAULT_PAYMENT_INFO: StorePaymentInfo = {
   },
 };
 
+/** Qué va en la barra de arriba: el nombre escrito, el logo, o los dos. Ver `MarcaNav`. */
+export type MarcaNav = "nombre" | "logo" | "ambos";
+
 export type StoreConfig = {
   template: TemplateId;
   storeId?: string;
   slug?: string;
   storeName: string;
   storeTagline: string;
+  /** Lo elige la dueña en Diseño. Sin elegir, el nombre: así estaba antes del 15/10/26. */
+  marcaNav?: MarcaNav;
+  /**
+   * El logo de la tienda (`Store.logo`, se sube en Configuración → Identidad).
+   * NO se guarda en el JSON: lo pone la página al armar el config, y zod lo
+   * descarta si el editor lo manda de vuelta al guardar.
+   */
+  storeLogo?: string | null;
   colors: {
     accent: string;
   };
