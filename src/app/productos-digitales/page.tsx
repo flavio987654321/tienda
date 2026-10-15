@@ -187,6 +187,26 @@ export default function ProductosDigitalesPage() {
 
   const [abierta, setAbierta] = useState<number | null>(0);
 
+  const pasosRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: pasosProg } = useScroll({ target: pasosRef, offset: ["start 80%", "end 60%"] });
+  const lineaPasos = useTransform(pasosProg, [0, 1], [menosMovimiento ? 1 : 0, 1]);
+
+  /* "Lo que trae": en el celular es una tira que se desliza; el puntito que
+     se marca sale de cuánto se corrió. */
+  const tiraRef = useRef<HTMLDivElement>(null);
+  const [enTira, setEnTira] = useState(0);
+  function alDeslizar() {
+    const el = tiraRef.current;
+    const primera = el?.firstElementChild as HTMLElement | null;
+    if (!el || !primera) return;
+    setEnTira(Math.round(el.scrollLeft / (primera.offsetWidth + 16)));
+  }
+  function irATira(i: number) {
+    const el = tiraRef.current;
+    const tarjeta = el?.children[i] as HTMLElement | undefined;
+    if (el && tarjeta) el.scrollTo({ left: tarjeta.offsetLeft - el.offsetLeft - 24, behavior: "smooth" });
+  }
+
   /* La misma llave que mira la home, el registro y los precios. Con el producto
      apagado esta página no existe: ver el `notFound` de más abajo no sirve acá
      porque es un componente de cliente, así que se dibuja el aviso y nada más. */
@@ -268,23 +288,28 @@ export default function ProductosDigitalesPage() {
           .pd-reveal > *:nth-child(2) { animation-range: entry 0% cover 33%; }
           .pd-reveal > *:nth-child(3) { animation-range: entry 0% cover 36%; }
           .pd-reveal > *:nth-child(4) { animation-range: entry 0% cover 39%; }
+
+          /* Los números de los pasos: grises hasta que llegan, despues naranja.
+             Sin soporte quedan naranja de entrada (el color final es el de la clase). */
+          @keyframes pd-prende { from { background-color: #d1d5db; transform: scale(.85) } to { background-color: var(--color-marca); transform: none } }
+          .pd-prende { animation: pd-prende linear both; animation-timeline: view(); animation-range: entry 70% cover 45%; }
         }
 
         /* Quien pidió menos movimiento no recibe ninguno de estos efectos. */
         @media (prefers-reduced-motion: reduce) {
           .pd-texto-degrade, .pd-flota, .pd-cinta, .pd-latido { animation: none !important; }
-          .pd-entra > *, .pd-reveal > *, .pd-reveal-uno { animation: none !important; }
+          .pd-entra > *, .pd-reveal > *, .pd-reveal-uno, .pd-prende { animation: none !important; }
         }
       `}</style>
 
       <SiteNav active="digitales" />
 
       {/* ═══ HERO ═══ */}
-      <section ref={heroRef} className="relative overflow-hidden pd-grilla bg-white pt-16 pb-24 lg:pt-24 lg:pb-32">
+      <section ref={heroRef} className="relative overflow-hidden pd-grilla bg-white pt-8 pb-20 sm:pt-16 sm:pb-24 lg:pt-24 lg:pb-32">
         <div className="absolute -top-40 -left-40 w-[560px] h-[560px] bg-orange-200/35 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-20 -right-40 w-[520px] h-[520px] bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-16 items-center">
+        <div className="relative max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-14 lg:gap-16 items-center">
           {/* La entrada de acá es CSS (`pd-entra`) y no framer-motion. Ver el
               comentario largo en el `<style>`: con variantes, este texto se
               quedaba invisible y el hero aparecía vacío. */}
@@ -293,31 +318,31 @@ export default function ProductosDigitalesPage() {
               <Download className="h-3.5 w-3.5" /> Productos digitales
             </span>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-950 leading-[1.05] tracking-tight mb-6">
+            <h1 className="text-[34px] sm:text-5xl lg:text-6xl font-black text-gray-950 leading-[1.05] tracking-tight mb-4 sm:mb-6">
               Vendé lo que sabés,<br />
               <span className="pd-texto-degrade">sin tener una tienda.</span>
             </h1>
 
-            <p className="text-gray-500 text-lg leading-relaxed mb-8 max-w-lg">
+            <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8 max-w-lg">
               Subís tu archivo y te queda una página de venta con su propia dirección. Cobrás con Mercado Pago y la entrega sale sola, apenas se aprueba el pago.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 mb-8">
+            <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
               <Link
                 href="/registro?plan=digital"
-                className="inline-flex items-center gap-2 bg-gray-950 text-white px-7 py-4 rounded-2xl font-bold hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+                className="inline-flex items-center gap-2 bg-gray-950 text-white px-6 py-3.5 sm:px-7 sm:py-4 rounded-2xl font-bold hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
               >
                 Empezá gratis <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="#como-funciona"
-                className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-7 py-4 rounded-2xl font-bold hover:border-gray-300 hover:text-gray-950 transition-colors"
+                className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-6 py-3.5 sm:px-7 sm:py-4 rounded-2xl font-bold hover:border-gray-300 hover:text-gray-950 transition-colors"
               >
-                Ver cómo funciona
+                <span className="sm:hidden">Cómo funciona</span><span className="hidden sm:inline">Ver cómo funciona</span>
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2.5 text-sm text-gray-500">
+            <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 text-[13px] sm:text-sm text-gray-500">
               {["Sin tarjeta", "El plan gratis no vence", "Cobrás vos, a tu cuenta"].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5">
                   <Check className="h-4 w-4 text-orange-600" /> {t}
@@ -327,8 +352,8 @@ export default function ProductosDigitalesPage() {
           </div>
 
           {/* El celular, con parallax y las ventas entrando de a una */}
-          <motion.div style={{ y: celularY, scale: celularEscala }} className="relative mx-auto w-[260px] sm:w-[300px]">
-            <div className="pd-flota relative h-[450px] sm:h-[520px] rounded-[2.4rem] overflow-hidden border-[8px] border-gray-900 shadow-2xl shadow-orange-200/60 bg-white">
+          <motion.div style={{ y: celularY, scale: celularEscala }} className="relative mx-auto w-[230px] sm:w-[300px]">
+            <div className="pd-flota relative h-[400px] sm:h-[520px] rounded-[2.4rem] overflow-hidden border-[8px] border-gray-900 shadow-2xl shadow-orange-200/60 bg-white">
               <Image
                 src="/marketing/pagina-de-venta-ejemplo.png"
                 alt="Ejemplo de una página de venta de un producto digital"
@@ -346,16 +371,19 @@ export default function ProductosDigitalesPage() {
                 scale) y al escribirlo pisa el del `style`, así que la tarjeta
                 salía derecha. Puesta entre lo que anima, entra en el mismo
                 transform y sobrevive. */}
+            {/* En el celular también se ven (antes iban escondidas): más arriba,
+                saliendo por los costados del marco, porque el celular asoma recién
+                al final de la primera pantalla y es lo primero que se ve de él. */}
             {[
-              { monto: "$ 9.900", donde: "-right-14 bottom-40", retraso: 0.8, giro: 3 },
-              { monto: "$ 14.500", donde: "-left-16 bottom-16", retraso: 1.5, giro: -3 },
+              { monto: "$ 9.900", donde: "-right-10 top-20 sm:top-auto sm:-right-14 sm:bottom-40", retraso: 0.8, giro: 3 },
+              { monto: "$ 14.500", donde: "-left-10 top-52 sm:top-auto sm:-left-16 sm:bottom-16", retraso: 1.5, giro: -3 },
             ].map((v) => (
               <motion.div
                 key={v.monto}
                 initial={{ opacity: 0, x: 30, scale: 0.9, rotate: v.giro }}
                 animate={{ opacity: 1, x: 0, scale: 1, rotate: v.giro }}
                 transition={{ duration: 0.5, delay: v.retraso }}
-                className={`hidden sm:flex absolute ${v.donde} items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-xl shadow-gray-300/60 border border-black/5`}
+                className={`flex absolute ${v.donde} z-10 items-center gap-2.5 bg-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 shadow-xl shadow-gray-300/60 border border-black/5`}
               >
                 <div className="pd-latido w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
                   <Check className="h-4 w-4 text-white" strokeWidth={3} />
@@ -454,26 +482,37 @@ export default function ProductosDigitalesPage() {
             </motion.h2>
           </motion.div>
 
-          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* La línea que une los pasos, dibujándose al entrar */}
+          {/* La línea que une los pasos se dibuja con el scroll (useScroll: va
+              atada a la posición, no a "entró en pantalla", así que no puede
+              quedarse a medias como whileInView). Horizontal en la compu,
+              vertical en el celular, donde los pasos van uno abajo del otro. */}
+          <div ref={pasosRef} className="relative grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
+            <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-orange-200/50" />
             <motion.div
-              style={{ transformOrigin: "left" }}
-              className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-orange-300 via-orange-400 to-rose-300"
+              style={{ scaleX: lineaPasos, transformOrigin: "left" }}
+              className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-orange-300 via-orange-500 to-rose-400"
+            />
+            <div className="md:hidden absolute left-8 top-8 bottom-8 w-px bg-orange-200/50" />
+            <motion.div
+              style={{ scaleY: lineaPasos, transformOrigin: "top" }}
+              className="md:hidden absolute left-8 top-8 bottom-8 w-px bg-gradient-to-b from-orange-300 via-orange-500 to-rose-400"
             />
 
             {PASOS.map((p, i) => (
               <motion.div
                 key={p.titulo}
-                className="pd-reveal-uno relative text-center md:text-left"
+                className="pd-reveal-uno relative flex gap-5 md:block text-left"
               >
-                <div className="relative z-10 w-16 h-16 rounded-2xl bg-white border border-black/[0.06] shadow-lg shadow-orange-100/70 flex items-center justify-center mb-5 mx-auto md:mx-0">
+                <div className="relative z-10 w-16 h-16 flex-shrink-0 rounded-2xl bg-white border border-black/[0.06] shadow-lg shadow-orange-100/70 flex items-center justify-center md:mb-5">
                   <p.icon className="h-7 w-7 text-orange-600" />
-                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-950 text-white text-[11px] font-black flex items-center justify-center">
+                  <span className="pd-prende absolute -top-2 -right-2 w-6 h-6 rounded-full bg-orange-600 text-white text-[11px] font-black flex items-center justify-center">
                     {i + 1}
                   </span>
                 </div>
-                <h3 className="text-xl font-black text-gray-950 mb-2.5">{p.titulo}</h3>
-                <p className="text-gray-500 leading-relaxed">{p.texto}</p>
+                <div className="pt-1 md:pt-0">
+                  <h3 className="text-xl font-black text-gray-950 mb-2.5">{p.titulo}</h3>
+                  <p className="text-gray-500 leading-relaxed">{p.texto}</p>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -493,9 +532,18 @@ export default function ProductosDigitalesPage() {
             </motion.p>
           </motion.div>
 
-          <motion.div className="pd-reveal grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* En el celular, una tira que se desliza de a una (antes eran seis
+              tarjetas apiladas, casi una pantalla y media de lo mismo); desde sm,
+              la grilla. La aparición va en el envoltorio y no en cada tarjeta:
+              adentro de una tira horizontal, `animation-timeline: view()` mira
+              el scroll de la tira y no el de la página. */}
+          <div className="pd-reveal-uno">
+          <div
+            ref={tiraRef} onScroll={alDeslizar}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-2 [scrollbar-width:none] sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-5 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0"
+          >
             {ADENTRO.map((c) => (
-              <div key={c.titulo}>
+              <div key={c.titulo} className="snap-center flex-shrink-0 w-[82%] sm:w-auto">
               <motion.div
                 whileHover={{ y: -5 }}
                 className="h-full bg-gray-50 hover:bg-white border border-transparent hover:border-black/[0.06] rounded-2xl p-6 transition-all hover:shadow-xl hover:shadow-gray-200/60"
@@ -508,7 +556,18 @@ export default function ProductosDigitalesPage() {
               </motion.div>
               </div>
             ))}
-          </motion.div>
+          </div>
+          <div className="flex justify-center gap-1.5 mt-5 sm:hidden">
+            {ADENTRO.map((c, i) => (
+              <button
+                key={c.titulo} type="button" onClick={() => irATira(i)}
+                aria-label={`Ver ${c.titulo}`} aria-current={i === enTira}
+                className="h-2 rounded-full transition-all duration-300"
+                style={{ width: i === enTira ? 22 : 8, background: i === enTira ? "var(--color-marca)" : "#e5e7eb" }}
+              />
+            ))}
+          </div>
+          </div>
         </div>
       </section>
 
@@ -662,7 +721,7 @@ export default function ProductosDigitalesPage() {
       </section>
 
       {/* ═══ CIERRE ═══ */}
-      <section className="py-24 bg-gray-950 relative overflow-hidden">
+      <section className="pt-24 bg-gray-950 relative overflow-hidden">
         <div className="absolute inset-0 pd-grilla opacity-[0.15]" />
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-orange-600/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -682,6 +741,24 @@ export default function ProductosDigitalesPage() {
             Empezá gratis <ArrowRight className="h-4 w-4" />
           </Link>
         </motion.div>
+
+        {/* El mismo celular del principio, asomando desde abajo con una venta:
+            la página cierra mostrando lo que promete. Se corta con el borde de
+            la sección a propósito. */}
+        <div className="pd-reveal-uno relative mx-auto mt-14 w-[240px] sm:w-[280px] h-[210px] sm:h-[240px]">
+          <div className="absolute inset-x-0 top-0 h-[420px] rounded-t-[2.2rem] overflow-hidden border-[7px] border-b-0 border-gray-700 bg-white shadow-2xl shadow-orange-600/20">
+            <Image src="/marketing/pagina-de-venta-ejemplo.png" alt="" fill sizes="280px" className="object-cover object-top" />
+          </div>
+          <div className="absolute -left-12 sm:-left-20 top-16 z-10 flex items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-xl shadow-black/30 -rotate-3">
+            <div className="pd-latido w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+              <Check className="h-4 w-4 text-white" strokeWidth={3} />
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-400 font-semibold leading-none mb-1">Venta aprobada</p>
+              <p className="text-sm font-black text-gray-900 leading-none">$ 9.900</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       <SiteFooter />
