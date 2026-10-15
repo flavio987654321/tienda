@@ -4,6 +4,7 @@ import type { FlyerConfig } from "@/types/store-config";
 import { pedirTurno } from "@/lib/interrupcion-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 import { fotoLiviana } from "@/lib/foto-liviana";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 
 export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
   const [visible, setVisible] = useState(false);
@@ -52,10 +53,12 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
     liberar.current = null;
   }, []);
 
-  if (!visible || total === 0) return null;
-
   function prev() { setDir("prev"); setIndex(i => (i - 1 + total) % total); }
   function next() { setDir("next"); setIndex(i => (i + 1) % total); }
+  // En el celular se pasa con el dedo (las flechas son sólo para el mouse).
+  const swipe = useTouchSwipe(() => { if (total > 1) next(); }, () => { if (total > 1) prev(); });
+
+  if (!visible || total === 0) return null;
 
   return (
     <div
@@ -85,6 +88,10 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
           from { opacity: 0; transform: translateX(-36px) scale(0.97) }
           to   { opacity: 1; transform: translateX(0)     scale(1)    }
         }
+        /* Pantallas táctiles: sin flechas, alcanza con el dedo y los puntitos. */
+        @media (hover: none), (pointer: coarse) {
+          .flyer-flecha { display: none !important; }
+        }
       `}</style>
 
       <div
@@ -93,6 +100,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
           animation: "flyerSlideUp 0.4s cubic-bezier(0.22,1,0.36,1)",
         }}
         onClick={e => e.stopPropagation()}
+        {...swipe}
       >
         {/* Botón cerrar */}
         <button
@@ -128,7 +136,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
         {/* Flechas */}
         {total > 1 && (
           <>
-            <button onClick={prev} aria-label="Anterior"
+            <button onClick={prev} aria-label="Anterior" className="flyer-flecha"
               style={{
                 position: "absolute", left: -24, top: "50%", transform: "translateY(-50%)",
                 width: 38, height: 38, borderRadius: "50%",
@@ -138,7 +146,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
                 boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
               }}
             >‹</button>
-            <button onClick={next} aria-label="Siguiente"
+            <button onClick={next} aria-label="Siguiente" className="flyer-flecha"
               style={{
                 position: "absolute", right: -24, top: "50%", transform: "translateY(-50%)",
                 width: 38, height: 38, borderRadius: "50%",
