@@ -15,7 +15,7 @@ import {
  */
 
 export const TERMINOS_DOS_PASOS: string[] = [
-  "Podés activar, si querés, la verificación en dos pasos desde Seguridad, en tu panel: además de tu contraseña, de un código por mail o de Google, para entrar se te pide la huella o la cara de tu dispositivo (una llave de acceso) o un código de una app de autenticación.",
+  "Podés activar, si querés, la verificación en dos pasos desde Seguridad, en tu panel: además de tu contraseña, de un código por mail o de Google, para entrar se te pide un código de una app de autenticación o, cuando lo habilitemos, la huella o la cara de tu dispositivo (una llave de acceso).",
   `Al activarla te damos ${CANTIDAD_CODIGOS} códigos de respaldo de un solo uso. Guardarlos es tu responsabilidad: TiendaApps no puede verlos ni volver a mostrártelos.`,
   "Con la verificación activada, también se pide antes de cambiar tus datos de cobro (CBU, CVU, alias o cuenta de Mercado Pago), de pedir un retiro y de cambiar la seguridad de tu cuenta. Sin ella, para eso mismo se pide un código por mail cuando ya había datos cargados.",
   `Si perdés todos tus métodos y tus códigos, podés pedir que se quite desde "Perdí mi celular": confirmás desde tu mail y se quita después de ${DIAS_ESPERA_CON_CONTRASENA} días corridos (${DIAS_ESPERA_SIN_CONTRASENA} si al pedirlo entraste sin tu contraseña). Si en ese tiempo alguien entra a la cuenta con el segundo paso, el pedido se cancela solo. Te avisamos por mail y en tu panel mientras dura la espera.`,

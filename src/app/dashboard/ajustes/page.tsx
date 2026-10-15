@@ -196,7 +196,7 @@ export default async function AjustesPage({ searchParams }: Props) {
       id: "seguridad",
       grupo: "Cuenta",
       label: "Seguridad",
-      descripcion: "Verificación en dos pasos con huella, cara o app de códigos, y dónde está abierta tu cuenta.",
+      descripcion: "Verificación en dos pasos con una app de códigos, y dónde está abierta tu cuenta.",
       claves: ["seguridad", "dos pasos", "2fa", "huella", "cara", "autenticador", "authenticator", "codigo", "sesiones", "hackeo", "robo", "proteger"],
       contenido: <PanelSeguridad acento="naranja" />,
     },

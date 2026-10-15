@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { pedir, registrarHuella, hayLlavesDeAcceso, limpiarSinVerificar, MENSAJE_SIN_CONEXION } from "@/lib/seguridad-cliente";
-import { nivelDeSeguridad, CANTIDAD_CODIGOS } from "@/lib/seguridad-cuenta-reglas";
+import { nivelDeSeguridad, CANTIDAD_CODIGOS, HUELLA_LISTA } from "@/lib/seguridad-cuenta-reglas";
 import { useVerificarIdentidad } from "./VerificarIdentidad";
 
 /**
@@ -203,7 +203,7 @@ export default function PanelSeguridad({ acento = "naranja" }: { acento?: keyof 
         </div>
         {!tieneAlguno && (
           <p className={`${bajada} mt-3`}>
-            Con la verificación en dos pasos, para entrar a tu cuenta hace falta además tu huella, tu cara o un código de tu celular.
+            Con la verificación en dos pasos, para entrar a tu cuenta hace falta además {HUELLA_LISTA ? "tu huella, tu cara o " : ""}un código de una app de tu celular.
             Así, aunque alguien consiga tu contraseña o entre a tu mail, no puede entrar ni cambiar a dónde cobrás.
           </p>
         )}
@@ -240,7 +240,8 @@ export default function PanelSeguridad({ acento = "naranja" }: { acento?: keyof 
       {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {ok && <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{ok}</div>}
 
-      {/* Huella o cara */}
+      {/* Huella o cara: sólo si ya está habilitada, o si quedó alguna guardada para poder quitarla. */}
+      {(HUELLA_LISTA || huellas.length > 0) && (
       <div className={tarjeta}>
         <Cabeza a={a} Icono={Fingerprint} t="Huella o cara" b="Lo más fácil: al entrar, tu celular o tu compu te pide la huella o la cara. No hace falta bajar nada." />
         {huellas.length > 0 && (
@@ -258,7 +259,7 @@ export default function PanelSeguridad({ acento = "naranja" }: { acento?: keyof 
             ))}
           </ul>
         )}
-        {puedeHuella ? (
+        {!HUELLA_LISTA ? null : puedeHuella ? (
           <button type="button" onClick={activarHuella} disabled={!!ocupado} className={botonPrimario}>
             {ocupado === "huella" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-4 w-4" />}
             {huellas.length > 0 ? "Agregar este dispositivo" : "Activar con huella o cara"}
@@ -272,10 +273,11 @@ export default function PanelSeguridad({ acento = "naranja" }: { acento?: keyof 
           </p>
         )}
       </div>
+      )}
 
       {/* App de códigos */}
       <div className={tarjeta}>
-        <Cabeza a={a} Icono={Smartphone} t="App de códigos" b="Una alternativa: Google Authenticator, Microsoft Authenticator o similar te muestran un número de 6 cifras que cambia cada 30 segundos." />
+        <Cabeza a={a} Icono={Smartphone} t="App de códigos" b={`${HUELLA_LISTA ? "Una alternativa: " : ""}Google Authenticator, Microsoft Authenticator o similar (se bajan gratis) te muestran un número de 6 cifras que cambia cada 30 segundos.`} />
         {appActiva && !app && (
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 px-4 py-3">
             <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100">Activada el {fecha(appActiva.creadoAt)}</p>
@@ -329,7 +331,7 @@ export default function PanelSeguridad({ acento = "naranja" }: { acento?: keyof 
             </button>
           </div>
         ) : (
-          <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">Te los damos al activar la huella o la app.</p>
+          <p className="text-sm text-gray-600 panel-oscuro:text-gray-400">Te los damos al activar {HUELLA_LISTA ? "la huella o la app" : "la app de códigos"}.</p>
         )}
       </div>
 

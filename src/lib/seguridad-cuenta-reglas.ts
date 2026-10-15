@@ -7,6 +7,14 @@
  * El diseño completo está en `seguridad-cuenta.ts`.
  */
 
+/**
+ * La huella o la cara (WebAuthn) como segundo paso. Apagada hasta habilitarla en
+ * Supabase y probarla de punta a punta: mientras tanto la pestaña Seguridad no
+ * ofrece activarla y queda sólo la app de códigos. Al prenderla, devolver la
+ * huella a los textos de ayuda, de Sasha y de los términos.
+ */
+export const HUELLA_LISTA = false;
+
 /** Cuántos códigos de respaldo se dan al activar. */
 export const CANTIDAD_CODIGOS = 8;
 

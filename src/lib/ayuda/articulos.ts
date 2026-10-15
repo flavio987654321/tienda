@@ -2518,7 +2518,7 @@ export const ARTICULOS: Articulo[] = [
       {
         t: "p",
         texto:
-          "Si activaste la **verificación en dos pasos**, después de cualquiera de las tres formas te pedimos además tu huella, tu cara o el código de tu app. Ver *La verificación en dos pasos*.",
+          "Si activaste la **verificación en dos pasos**, después de cualquiera de las tres formas te pedimos además el código de tu app. Ver *La verificación en dos pasos*.",
       },
     ],
   },
@@ -2528,7 +2528,7 @@ export const ARTICULOS: Articulo[] = [
     slug: "verificacion-en-dos-pasos",
     titulo: "La verificación en dos pasos",
     resumen:
-      "Cómo proteger tu cuenta con tu huella, tu cara o una app de códigos, y qué hacer si perdés el celular.",
+      "Cómo proteger tu cuenta con una app de códigos en tu celular, y qué hacer si lo perdés.",
     grupo: "cuenta",
     clase: "mecanica",
     rol: "ambos",
@@ -2538,16 +2538,16 @@ export const ARTICULOS: Articulo[] = [
       {
         t: "p",
         texto:
-          "Con la verificación en dos pasos, para entrar a tu cuenta hace falta **además** de tu contraseña (o del código por mail, o de Google) algo que solo tenés vos: tu **huella o tu cara**, o un **código de una app** de tu celular. Así, aunque alguien consiga tu contraseña o entre a tu mail, no puede entrar ni cambiar a dónde cobrás. Es opcional y no cuesta nada.",
+          "Con la verificación en dos pasos, para entrar a tu cuenta hace falta **además** de tu contraseña (o del código por mail, o de Google) algo que solo tenés vos: el **código de una app** de tu celular, como Google Authenticator (se baja gratis). Así, aunque alguien consiga tu contraseña o entre a tu mail, no puede entrar ni cambiar a dónde cobrás. Es opcional y no cuesta nada.",
       },
       { t: "h", texto: "Activarla" },
       {
         t: "pasos",
         items: [
           "Andá a **Seguridad**: en tu tienda está en **Configuración → Seguridad**; en productos digitales, en **Configuración**, pestaña **Seguridad**; y en afiliados, en el menú, **Seguridad**.",
-          "Tocá **Activar con huella o cara** (lo más fácil) o **Activar con app de códigos**.",
+          "Tocá **Activar con app de códigos**.",
           "La primera vez te mandamos un código al mail para confirmar que sos vos.",
-          "Con la huella: tu celular o tu compu te la pide y listo. Con la app: escaneás el código con Google Authenticator o similar y escribís el número que muestra.",
+          "Escaneás el código con Google Authenticator o similar y escribís el número que muestra.",
           `Te mostramos **${CANTIDAD_CODIGOS} códigos de respaldo**. Copialos o descargalos y guardalos fuera del celular: es la única vez que se ven.`,
         ],
       },
@@ -2555,7 +2555,7 @@ export const ARTICULOS: Articulo[] = [
         t: "aviso",
         tono: "dato",
         texto:
-          "Si usás tu cuenta en el celular y en la compu, activá la huella en los dos: si un día perdés uno, entrás con el otro.",
+          "Los códigos de respaldo son tu salida si perdés el celular: guardalos impresos o en otro lugar, nunca solo en el mismo celular.",
       },
       { t: "h", texto: "Qué cambia cuando la tenés" },
       {
@@ -2571,7 +2571,6 @@ export const ARTICULOS: Articulo[] = [
         t: "tabla",
         cols: ["Si tenés…", "Qué hacer"],
         filas: [
-          ["La huella en otro dispositivo", "Entrá desde ese. Después, en Seguridad, quitá el que perdiste."],
           ["Un código de respaldo", `En la pantalla de verificación tocá **Usar un código de respaldo**. Entrás al toque, pero la verificación se apaga: volvé a activarla. Por ${HORAS_TRABA_POR_RESPALDO} horas no se pueden cambiar los datos de cobro.`],
           ["Nada de lo anterior", `Tocá **Perdí mi celular** y confirmá desde el mail. La verificación se quita a los **${DIAS_ESPERA_CON_CONTRASENA} días** si entraste con tu contraseña, o a los ${DIAS_ESPERA_SIN_CONTRASENA} si entraste con Google o un código. Después, los datos de cobro quedan trabados ${DIAS_DINERO_TRABADO} días más.`],
         ],

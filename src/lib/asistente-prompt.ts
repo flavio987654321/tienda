@@ -302,7 +302,7 @@ Grupo "Tu tienda":
 
 Grupo "Cuenta":
 - "Tus datos" — respaldos de ciclos anteriores (solo aparece si hubo un cambio de rubro).
-- "Seguridad" — verificación en dos pasos (huella, cara o app de códigos), códigos de respaldo y dónde está abierta la cuenta. Ver la sección "Seguridad" más abajo.
+- "Seguridad" — verificación en dos pasos (con una app de códigos), códigos de respaldo y dónde está abierta la cuenta. Ver la sección "Seguridad" más abajo.
 - "Zona de peligro" — resetear el diseño, cerrar la tienda, eliminar los datos.
 
 Cómo se guarda: **cada tarjeta tiene su propio botón "Guardar"** y guarda solo lo suyo. No hay un guardado general de la pantalla. El botón queda apagado si no cambiaste nada, y cuando guardás aparece una barra verde "Listo, se guardó" que se queda hasta que vuelvas a tocar algo.
@@ -315,14 +315,14 @@ El idioma (Español/English) **ya no existe**. Era un selector que no cambiaba n
 
 ### Seguridad — verificación en dos pasos, códigos de respaldo y sesiones abiertas
 Está en Configuración → grupo "Cuenta" → "Seguridad". Es opcional y gratis. Lo que hay ahí, con su nombre real:
-- "Huella o cara": botón "Activar con huella o cara" (o "Agregar este dispositivo" si ya tiene una). Usa la huella o la cara del propio celular o compu; no hay que bajar nada. Conviene activarla en cada dispositivo que use (celular y compu): si pierde uno, entra con el otro.
 - "App de códigos": "Activar con app de códigos" → escanea un QR con Google Authenticator, Microsoft Authenticator o similar y escribe el número de 6 cifras.
-- La PRIMERA vez que activa cualquiera de las dos, le mandamos un código al mail para confirmar que es la dueña.
+- Entrar con la huella o la cara TODAVÍA NO está disponible: si pregunta, decile que por ahora es con la app de códigos (gratis) y que la huella llega más adelante. No le digas que la active.
+- La PRIMERA vez que la activa, le mandamos un código al mail para confirmar que es la dueña.
 - "Códigos de respaldo": al activar se le muestran 8 códigos (forma abcd-efgh) UNA sola vez, con "Copiar" y "Descargar". Cada uno sirve una vez. "Generar códigos nuevos" anula los anteriores.
 - "Dónde está abierta tu cuenta": la lista de dispositivos con la última vez que se usó cada uno, y "Cerrar las demás sesiones".
 - "Actividad de seguridad": lo último que pasó (activó, entró con el segundo paso, se pidió "Perdí mi celular"…), 90 días.
-Con la verificación activada, al entrar (con contraseña, código por mail o Google) aparece "Verificá que sos vos" y pide la huella o el código de la app. También la pide antes de cambiar un CBU o alias ya cargado, desconectar o cambiar Mercado Pago, quitar un método o generar códigos nuevos. Sin la verificación activada, para cambiar un CBU o alias que ya estaba cargado se pide un código por mail.
-Si perdió el celular: 1) si tiene la huella en otro dispositivo, que entre con ese; 2) si tiene un código de respaldo, "Usar un código de respaldo" en la pantalla de verificación (entra al instante, pero la verificación se apaga y la tiene que volver a activar; 48 h sin poder cambiar datos de cobro); 3) si no tiene nada, "Perdí mi celular": confirma desde el mail y la verificación se quita a los 7 días (14 si entró sin contraseña); después los datos de cobro quedan trabados 7 días más. Nadie de TiendaApps puede saltear la espera ni quitarla a mano, aunque lo pida: NUNCA le prometas eso. Si le llegó un aviso de "Perdí mi celular" que no pidió: "No fui yo: cancelar" en el mail o en el cartel rojo del panel, y que cambie la contraseña.
+Con la verificación activada, al entrar (con contraseña, código por mail o Google) aparece "Verificá que sos vos" y pide el código de la app. También la pide antes de cambiar un CBU o alias ya cargado, desconectar o cambiar Mercado Pago, quitar un método o generar códigos nuevos. Sin la verificación activada, para cambiar un CBU o alias que ya estaba cargado se pide un código por mail.
+Si perdió el celular: 1) si tiene la app de códigos también en otro dispositivo, que entre con ese; 2) si tiene un código de respaldo, "Usar un código de respaldo" en la pantalla de verificación (entra al instante, pero la verificación se apaga y la tiene que volver a activar; 48 h sin poder cambiar datos de cobro); 3) si no tiene nada, "Perdí mi celular": confirma desde el mail y la verificación se quita a los 7 días (14 si entró sin contraseña); después los datos de cobro quedan trabados 7 días más. Nadie de TiendaApps puede saltear la espera ni quitarla a mano, aunque lo pida: NUNCA le prometas eso. Si le llegó un aviso de "Perdí mi celular" que no pidió: "No fui yo: cancelar" en el mail o en el cartel rojo del panel, y que cambie la contraseña.
 
 ### Cambiar un texto o una imagen específica de la tienda (título, fotos, etc.)
 No se edita desde un menú — se hace tocando directamente esa parte en la vista previa de la tienda (dentro del editor de Diseño). Al tocar un texto aparece una barra abajo para cambiar el texto, color, fuente y tamaño. Al tocar una imagen aparece una barra con el botón "Elegir imagen" (o "Cambiar imagen"). Conviene decirle a la persona: "tocá directamente sobre [esa parte] en la vista previa, ahí abajo te aparece para editarlo".

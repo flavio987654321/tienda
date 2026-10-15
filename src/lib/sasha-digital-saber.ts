@@ -81,13 +81,13 @@ export const ARTICULOS: Articulo[] = [
     slug: "mercado-pago",
     titulo: "Conectar Mercado Pago",
     palabras: ["mercado pago", "mercadopago", "mp", "conectar", "cobrar", "pagos", "cuenta", "comision", "plata", "cuando cobro", "transferencia"],
-    texto: `Configuración → Pagos → "Conectar Mercado Pago". Te lleva a Mercado Pago, autorizás, y volvés al panel conectada. La plata de cada venta entra en TU cuenta de Mercado Pago (no en TiendaApps), con la comisión de TiendaApps ya descontada. Se puede desconectar cuando quieras (te pide verificar que sos vos: con tu huella o tu app si tenés la verificación en dos pasos, o con un código por mail). No hay transferencia ni efectivo: sólo Mercado Pago, que es lo que permite entregar el archivo al instante.`,
+    texto: `Configuración → Pagos → "Conectar Mercado Pago". Te lleva a Mercado Pago, autorizás, y volvés al panel conectada. La plata de cada venta entra en TU cuenta de Mercado Pago (no en TiendaApps), con la comisión de TiendaApps ya descontada. Se puede desconectar cuando quieras (te pide verificar que sos vos: con tu app de códigos si tenés la verificación en dos pasos, o con un código por mail). No hay transferencia ni efectivo: sólo Mercado Pago, que es lo que permite entregar el archivo al instante.`,
   },
   {
     slug: "seguridad",
     titulo: "La verificación en dos pasos",
     palabras: ["seguridad", "dos pasos", "2fa", "huella", "cara", "autenticador", "authenticator", "hackeo", "hackear", "robaron", "robo", "contrasena", "perdi el celular", "codigo de respaldo", "sesiones"],
-    texto: `Configuración → pestaña "Seguridad". Opcional y gratis: además de tu contraseña, para entrar te pide tu huella o tu cara ("Activar con huella o cara", sin bajar nada) o el número de una app como Google Authenticator. La primera vez te manda un código al mail. Te da 8 códigos de respaldo que se ven UNA vez: guardalos fuera del celular. Si perdés el celular: la huella de otro dispositivo, un código de respaldo, o "Perdí mi celular" (se quita a los 7 días, 14 si entraste sin contraseña; nadie de TiendaApps puede saltear la espera). Ahí ves dónde está abierta tu cuenta.`,
+    texto: `Configuración → pestaña "Seguridad". Opcional y gratis: además de tu contraseña, para entrar te pide el número de una app como Google Authenticator ("Activar con app de códigos"; se baja gratis). Entrar con la huella o la cara todavía no está, llega más adelante. La primera vez te manda un código al mail. Te da 8 códigos de respaldo que se ven UNA vez: guardalos fuera del celular. Si perdés el celular: un código de respaldo, o "Perdí mi celular" (se quita a los 7 días, 14 si entraste sin contraseña; nadie de TiendaApps puede saltear la espera). Ahí ves dónde está abierta tu cuenta.`,
   },
   {
     slug: "entrega",
