@@ -1938,20 +1938,22 @@ export default function ProductosClient({
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
+          /* En el celular, uno abajo del otro y del mismo ancho: envueltos quedaban
+             de dos anchos distintos y pegados a la izquierda, desparejos. */
+          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             {/* ⚠️ La IA va PRIMERA y a mano va segunda, no al revés. Es el camino
                 que resuelve la pantalla en blanco —"no sé qué escribir"— y el que
                 hace que valga la pena el plan. Escribir a mano sigue estando, y
                 sin castigo: es un botón al lado, no un enlace escondido. */}
             <button
               onClick={() => setEmbudoIA(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors shadow-lg shadow-orange-200"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors shadow-lg shadow-orange-200 panel-oscuro:shadow-none"
             >
               <Sparkles className="h-4 w-4" /> Armar todo con IA
             </button>
             <button
               onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
             >
               {/* "Producto nuevo" y no "A mano": el de al lado ya dice "con IA",
                   así que la diferencia queda dicha sin repetir el método, y este
