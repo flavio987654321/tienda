@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { factoresDe, codigosLibres, crearCodigosRespaldo, registrarEvento } from "@/lib/seguridad-cuenta";
-import { describirDispositivo } from "@/lib/seguridad-cuenta-reglas";
+import { describirDispositivo, MINUTOS_PARA_CONFIRMAR_ACTIVACION } from "@/lib/seguridad-cuenta-reglas";
+import { identidadReciente } from "@/lib/identidad-reciente";
 import { sendSeguridadEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/site";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -36,27 +37,51 @@ export async function POST(req: NextRequest) {
   const factor = factores.find((f) => f.id === factorId);
   if (!factor) return NextResponse.json({ error: "No encontramos esa activación. Probá de nuevo." }, { status: 404 });
 
-  const yaAnotado = await prisma.eventoCuenta.findFirst({ where: { userId: user.id, detalle: factorId } });
-  if (yaAnotado) return NextResponse.json({ ok: true, codigos: null });
+  const esElPrimero = factores.length === 1;
+
+  const yaAnotado = await prisma.eventoCuenta.findFirst({ where: { userId: user.id, detalle: factorId }, select: { creadoAt: true } });
+  if (yaAnotado) {
+    /* Ya se había terminado, pero la respuesta no llegó (se cortó internet en el
+       camino) y el navegador volvió a avisar: los códigos de la primera vez no los
+       vio nadie. Si es de recién y la sesión acaba de pasar el segundo paso —lo
+       mismo que pide "Generar códigos nuevos"—, se dan otros que los reemplazan. */
+    if (esElPrimero && Date.now() - yaAnotado.creadoAt.getTime() <= MINUTOS_PARA_CONFIRMAR_ACTIVACION * 60_000) {
+      const identidad = await identidadReciente(req, user.id);
+      if (identidad.ok && identidad.conDosPasos) {
+        const codigos = await crearCodigosRespaldo(user.id).catch(() => null);
+        return NextResponse.json({ ok: true, codigos });
+      }
+    }
+    return NextResponse.json({ ok: true, codigos: null });
+  }
 
   /* El PRIMER factor pide antes el código por mail. Sin esto, alguien sentado en
      una compu con la sesión abierta activaba SU huella en la cuenta de otro y lo
      dejaba afuera. Los siguientes no: Supabase ya exige haber pasado el segundo
      paso para sumar otro. Si el código no está, la activación se deshace. */
-  if (factores.length === 1) {
-    const token = req.headers.get("x-otp-token");
-    if (!token || !(await otpTokenVigente(token, user.id))) {
-      await createSupabaseAdminClient().auth.admin.mfa.deleteFactor({ id: factorId, userId: user.id }).catch(() => {});
-      return NextResponse.json({ error: "Para activarla primero hay que verificar tu mail. Probá de nuevo.", code: "VERIFICAR" }, { status: 403 });
-    }
-    await quemarOtpToken(user.id, token);
+  const token = req.headers.get("x-otp-token");
+  if (esElPrimero && (!token || !(await otpTokenVigente(token, user.id)))) {
+    await createSupabaseAdminClient().auth.admin.mfa.deleteFactor({ id: factorId, userId: user.id }).catch(() => {});
+    return NextResponse.json({ error: "Para activarla primero hay que verificar tu mail. Probá de nuevo.", code: "VERIFICAR" }, { status: 403 });
   }
+
+  /* Los códigos ANTES de anotar la activación: el evento es la marca de "ya se
+     terminó", y anotado sin códigos dejaba la cuenta con el doble paso y sin
+     ninguna salida si se perdía el celular. Con el primer factor siempre se hacen
+     de nuevo: si quedaron de una activación anterior, nadie los tiene a mano.
+     Si no se pueden crear, la activación se deshace entera y se reintenta. */
+  let codigos: string[] | null = null;
+  try {
+    if (esElPrimero || (await codigosLibres(user.id)) === 0) codigos = await crearCodigosRespaldo(user.id);
+  } catch (e) {
+    console.error("[seguridad] códigos al activar:", e instanceof Error ? e.message : e);
+    if (esElPrimero) await createSupabaseAdminClient().auth.admin.mfa.deleteFactor({ id: factorId, userId: user.id }).catch(() => {});
+    return NextResponse.json({ error: "No pudimos terminar la activación. Probá de nuevo en un rato." }, { status: 503 });
+  }
+  if (esElPrimero && token) await quemarOtpToken(user.id, token);
 
   const dispositivo = describirDispositivo(req.headers.get("user-agent"));
   await registrarEvento(user.id, factor.tipo === "huella" ? "huella_activada" : "app_activada", { detalle: factorId, dispositivo });
-
-  // Los códigos se dan con el primer factor. Si ya tenía, no se tocan.
-  const codigos = (await codigosLibres(user.id)) === 0 ? await crearCodigosRespaldo(user.id) : null;
 
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut({ scope: "others" }).catch((e) =>

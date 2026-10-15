@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUsuarioConSegundoPaso } from "@/lib/auth-session";
-import { revisarBloqueo, anotarFallo, limpiarFallos, mensajeBloqueo } from "@/lib/seguridad-intentos";
+import { reservarIntento, restantesTrasFallo, limpiarFallos, mensajeBloqueo } from "@/lib/seguridad-intentos";
 import { despuesDelSegundoPaso } from "@/lib/seguridad-cuenta";
 import { esFallaDelServicio, MENSAJE_SERVICIO_CAIDO } from "@/lib/falla-servicio";
 
@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
   const code = typeof body?.code === "string" ? body.code.replace(/\D/g, "") : "";
   if (code.length !== 6) return NextResponse.json({ error: "Ingresá los 6 números de tu app." }, { status: 400 });
 
-  const bloqueo = await revisarBloqueo(user.id);
+  // El intento se gasta acá, antes de probar (ver `reservarIntento`). Si después
+  // Supabase no contesta, ese intento queda gastado: es uno de cinco, y no
+  // devolverlo es lo que impide que lo aprovechen.
+  const bloqueo = await reservarIntento(user.id);
   if (bloqueo.bloqueado) return NextResponse.json({ error: mensajeBloqueo(bloqueo.minutos), bloqueado: true }, { status: 429 });
 
   const supabase = await createSupabaseServerClient();
@@ -41,8 +44,7 @@ export async function POST(req: NextRequest) {
   if (vErr) {
     // Supabase caído no es un código errado: no se cuenta.
     if (esFallaDelServicio(vErr)) return NextResponse.json({ error: MENSAJE_SERVICIO_CAIDO }, { status: 503 });
-    const restantes = bloqueo.contador ? await anotarFallo(user.id) : null;
-    return NextResponse.json({ error: "El código no coincide. Fijate que sea el que muestra ahora la app.", restantes }, { status: 401 });
+    return NextResponse.json({ error: "El código no coincide. Fijate que sea el que muestra ahora la app.", restantes: restantesTrasFallo(bloqueo) }, { status: 401 });
   }
 
   if (bloqueo.contador) await limpiarFallos(user.id);

@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getUsuarioConSegundoPaso } from "@/lib/auth-session";
 import { gastarCodigoRespaldo, entrarConCodigoRespaldo } from "@/lib/seguridad-cuenta";
 import { describirDispositivo } from "@/lib/seguridad-cuenta-reglas";
-import { revisarBloqueo, anotarFallo, limpiarFallos, mensajeBloqueo } from "@/lib/seguridad-intentos";
+import { reservarIntento, restantesTrasFallo, limpiarFallos, mensajeBloqueo } from "@/lib/seguridad-intentos";
 
 /**
  * Entrar con un código de respaldo. Supabase no tiene códigos de respaldo: el
@@ -23,12 +23,11 @@ export async function POST(req: NextRequest) {
   const { user } = sesion;
 
   const body = await req.json().catch(() => null);
-  const bloqueo = await revisarBloqueo(user.id);
+  const bloqueo = await reservarIntento(user.id);
   if (bloqueo.bloqueado) return NextResponse.json({ error: mensajeBloqueo(bloqueo.minutos), bloqueado: true }, { status: 429 });
 
   if (!(await gastarCodigoRespaldo(user.id, body?.codigo))) {
-    const restantes = bloqueo.contador ? await anotarFallo(user.id) : null;
-    return NextResponse.json({ error: "Ese código no es válido o ya se usó.", restantes }, { status: 401 });
+    return NextResponse.json({ error: "Ese código no es válido o ya se usó.", restantes: restantesTrasFallo(bloqueo) }, { status: 401 });
   }
   if (bloqueo.contador) await limpiarFallos(user.id);
 

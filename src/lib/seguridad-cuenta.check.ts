@@ -81,7 +81,16 @@ const link = codigo("src/app/api/seguridad/recuperacion/link/route.ts");
 ver("los links del mail no hacen nada con sólo abrirlos (no hay GET)", !/export async function GET/.test(link) && /export async function POST/.test(link));
 ver("la página del link no llama a la API sola", !/useEffect/.test(codigo("src/app/seguridad/recuperacion/RecuperacionCliente.tsx")));
 const activado = codigo("src/app/api/seguridad/activado/route.ts");
-ver("el primer método pide el código por mail, y si no está lo deshace", /factores\.length === 1/.test(activado) && /deleteFactor\(\{ id: factorId, userId: user\.id \}\)/.test(activado));
+ver("el primer método pide el código por mail, y si no está lo deshace", /esElPrimero = factores\.length === 1/.test(activado) && /deleteFactor\(\{ id: factorId, userId: user\.id \}\)/.test(activado));
+ver("los códigos se crean ANTES de anotar la activación (anotada sin códigos no tiene salida)",
+  activado.indexOf("crearCodigosRespaldo(user.id)", activado.indexOf("let codigos")) < activado.indexOf("await registrarEvento(") && activado.indexOf("let codigos") > 0);
+ver("si se cortó internet en la activación, el navegador reintenta y si no la deshace",
+  /r\.status !== 0\) break/.test(codigo("src/components/seguridad/PanelSeguridad.tsx")) && /mfa\.unenroll\(\{ factorId \}\)/.test(codigo("src/components/seguridad/PanelSeguridad.tsx")));
+for (const ruta of ["verificar", "respaldo"]) {
+  const s = codigo(`src/app/api/seguridad/${ruta}/route.ts`);
+  ver(`${ruta}: el intento se gasta antes de probar el código (muchos a la vez no pasan el tope)`,
+    /reservarIntento\(user\.id\)/.test(s) && !/revisarBloqueo|countFailures/.test(s));
+}
 const nucleo = codigo("src/lib/seguridad-cuenta.ts");
 ver("al terminar la espera se traban los cobros", /const hasta = new Date\(ahora\.getTime\(\) \+ DIAS_DINERO_TRABADO \* DIA_MS\);[\s\S]{0,80}await trabarDinero\(r\.userId, hasta\);/.test(nucleo));
 ver("y con un código de respaldo también", /entrarConCodigoRespaldo[\s\S]{0,300}trabarDinero\(u\.id/.test(nucleo));

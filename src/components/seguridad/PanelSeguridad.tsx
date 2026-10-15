@@ -6,7 +6,7 @@ import {
   Loader2, Copy, Check, Download, Trash2, AlertTriangle,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { pedir, registrarHuella, hayLlavesDeAcceso, limpiarSinVerificar, MENSAJE_SIN_CONEXION } from "@/lib/seguridad-cliente";
+import { pedir, registrarHuella, hayLlavesDeAcceso, limpiarSinVerificar, MENSAJE_SIN_CONEXION, type Respuesta } from "@/lib/seguridad-cliente";
 import { nivelDeSeguridad, CANTIDAD_CODIGOS, HUELLA_LISTA } from "@/lib/seguridad-cuenta-reglas";
 import { useVerificarIdentidad } from "./VerificarIdentidad";
 
@@ -87,13 +87,32 @@ export default function PanelSeguridad({ acento = "naranja" }: { acento?: keyof 
     return v?.token ?? false;
   }
 
+  /* Supabase ya activó el método; falta que el servidor lo confirme y dé los
+     códigos de respaldo. Si se corta internet justo acá se reintenta, y si no hay
+     caso se deshace desde el navegador: una activación a medias se ve prendida en
+     la pantalla pero no tiene códigos, y a los minutos la quita el sistema con un
+     mail de alarma (ver `quitarActivacionSinConfirmar`). */
   async function avisarActivado(factorId: string, token?: string) {
-    const r = await pedir<{ codigos: string[] | null }>("/api/seguridad/activado", {
-      method: "POST",
-      headers: token ? { "x-otp-token": token } : {},
-      body: JSON.stringify({ factorId }),
-    });
-    if (!r.ok) { setError(r.error); await cargar(); return false; }
+    let r: Respuesta<{ codigos: string[] | null }> | null = null;
+    for (let intento = 0; intento < 3; intento++) {
+      if (intento > 0) await new Promise((listo) => setTimeout(listo, 1500));
+      r = await pedir<{ codigos: string[] | null }>("/api/seguridad/activado", {
+        method: "POST",
+        headers: token ? { "x-otp-token": token } : {},
+        body: JSON.stringify({ factorId }),
+      });
+      if (r.ok || r.status !== 0) break;
+    }
+    if (!r || !r.ok) {
+      if (!r || r.status === 0) {
+        await supabase.auth.mfa.unenroll({ factorId }).catch(() => {});
+        setError("Se cortó la conexión y la activación no se terminó. Probá de nuevo.");
+      } else {
+        setError(r.error);
+      }
+      await cargar();
+      return false;
+    }
     if (r.data.codigos) setCodigosNuevos(r.data.codigos);
     return true;
   }
