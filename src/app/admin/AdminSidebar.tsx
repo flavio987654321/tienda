@@ -81,7 +81,7 @@ function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: 
   }
 
   return (
-    <nav className="flex-1 px-3 py-4 space-y-4">
+    <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-4">
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
           <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
@@ -249,7 +249,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className="hidden md:flex w-64 bg-gray-900 border-r border-white/5 flex-col min-h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 shrink-0 bg-gray-900 border-r border-white/5 flex-col h-screen sticky top-0">
         <div className="px-6 py-5 border-b border-white/5 flex items-center gap-3">
           <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
             <ShoppingBag className="h-5 w-5 text-white" />
@@ -290,7 +290,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-64 bg-gray-900 flex flex-col min-h-screen shadow-2xl">
+          <aside className="relative w-64 max-w-[85vw] bg-gray-900 flex flex-col h-dvh shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">

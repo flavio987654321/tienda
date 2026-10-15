@@ -486,6 +486,8 @@ export default function DashboardLayout({
     // `data-panel-root`: al imprimir hay que devolverle el flujo normal a esta
     // caja (ver el bloque @media print de globals.css). En pantalla es del alto
     // de la ventana con el scroll adentro; en papel eso sería una sola hoja.
+    // También le dice a globals.css que apague el scroll del documento: sin esta
+    // marca, la página scrollea normal (es lo que necesita la ayuda del panel).
     <div data-panel-root className="h-screen bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 [color-scheme:light] panel-oscuro:[color-scheme:dark]">
 
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}

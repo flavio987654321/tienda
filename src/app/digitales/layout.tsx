@@ -214,8 +214,12 @@ export default async function DigitalesLayout({ children }: { children: React.Re
        fondo igual —es `fixed` con `h-full`, no la afecta el flex— pero el área
        de contenido no, y queda un escalón. Visto en pantalla el 08/09/26.
 
-       Con `shrink-0`, `h-screen` pasa a ser lo que dice. */
-    <div className="h-screen shrink-0 bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 transition-colors">
+       Con `shrink-0`, `h-screen` pasa a ser lo que dice.
+
+       `data-panel-root` es lo que hace que globals.css apague el scroll del
+       documento (el de verdad va en el `<main>`), y abre la caja al imprimir.
+       El recibimiento de arriba no lo lleva: ahí scrollea la página. */
+    <div data-panel-root className="h-screen shrink-0 bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 transition-colors">
       {/* Pinta el tema ANTES del primer dibujo. Sin esto, entrar en oscuro es un
           flash blanco de pantalla completa: el HTML llega claro, React hidrata y
           recién ahí se lee la preferencia. Ningún efecto de React puede correr

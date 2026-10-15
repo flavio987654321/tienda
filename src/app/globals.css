@@ -199,9 +199,15 @@ html[data-panel-tema="oscuro"] body {
  *
  * ⚠️ Va con `[data-panel-tema]` —el atributo que el panel pone al entrar y
  * BORRA al salir— y no en `html` a secas. Suelto, dejaría el sitio público sin
- * poder scrollear, que es infinitamente peor que una franja. */
-html[data-panel-tema],
-html[data-panel-tema] body {
+ * poder scrollear, que es infinitamente peor que una franja.
+ *
+ * ⚠️ Y con `:has([data-panel-root])`: sólo cuando la pantalla tiene el armazón
+ * que scrollea por dentro (`DashboardLayout` y el layout de digitales). Las del
+ * panel que no lo usan —la ayuda de tiendas, el recibimiento de digitales— no
+ * tienen otro scroll que el del documento: con la regla suelta quedaban sin
+ * poder bajar en el celular. Reportado el 15/10/26. */
+html[data-panel-tema]:has([data-panel-root]),
+html[data-panel-tema]:has([data-panel-root]) body {
   height: 100%;
   overflow: hidden;
   overflow: clip;

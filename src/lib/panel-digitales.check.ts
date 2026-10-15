@@ -1399,13 +1399,22 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
      el scroll en el `<main>`; si el `<body>` puede scrollear, el armazón se va
      para arriba y abajo queda el fondo. La regla tiene que estar atada a
      `data-panel-tema`: suelta, dejaría el SITIO PÚBLICO sin poder scrollear,
-     que es muchísimo peor que la franja que arregla. */
+     que es muchísimo peor que la franja que arregla.
+
+     Y atada también a `:has([data-panel-root])`, la marca del armazón que
+     scrollea por dentro: las pantallas del panel sin armazón (la ayuda de
+     tiendas, el recibimiento) no tienen otro scroll que el del documento, y con
+     la regla suelta quedaban trabadas en el celular (15/10/26). */
+  const selectorDelPanel = "html[data-panel-tema]:has([data-panel-root]),";
   const bloqueDelPanel = estilosGlobales.slice(
-    estilosGlobales.indexOf("html[data-panel-tema],"),
-    estilosGlobales.indexOf("html[data-panel-tema],") + 200);
-  const noScrollea = /html\[data-panel-tema\],\s*html\[data-panel-tema\] body\s*\{[^}]*overflow:\s*hidden/.test(estilosGlobales);
+    estilosGlobales.indexOf(selectorDelPanel),
+    estilosGlobales.indexOf(selectorDelPanel) + 200);
+  const noScrollea = /html\[data-panel-tema\]:has\(\[data-panel-root\]\),\s*html\[data-panel-tema\]:has\(\[data-panel-root\]\) body\s*\{[^}]*overflow:\s*hidden/.test(estilosGlobales);
   chequear("adentro del panel el documento no scrollea, y la regla no se escapa al sitio público",
     noScrollea && !/^html,\s*body\s*\{[^}]*overflow:\s*hidden/m.test(estilosGlobales));
+  chequear("y sólo donde hay armazón: el de digitales lleva la marca, el recibimiento no",
+    /<div data-panel-root className="h-screen/.test(layout) &&
+    !/<Recibimiento[\s\S]{0,40}data-panel-root/.test(layout));
 
   /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ Y TIENE QUE SER `clip`, NO ALCANZA CON `hidden`.
