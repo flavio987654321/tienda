@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock, ShieldCheck, ChevronDown, Check } from "lucide-react";
+import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import PanelSeguridad from "@/components/seguridad/PanelSeguridad";
+import SelectorDesplegable from "@/components/panel/SelectorDesplegable";
 import { useVerificarIdentidad } from "@/components/seguridad/VerificarIdentidad";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
@@ -290,7 +291,13 @@ export default function ConfiguracionClient(p: Props) {
           antes del primer campo. Un botón que dice dónde estás ocupa un renglón
           y muestra todas de una. Sin ícono de hamburguesa a propósito: el de
           arriba ya abre el menú principal. */}
-      <SelectorDeSeccion pestana={pestana} elegir={setPestana} />
+      <SelectorDesplegable
+        className="mb-5 lg:hidden"
+        queSeElige="Sección"
+        opciones={PESTANAS.map(({ id, label, Icon }) => ({ id, label, marca: <Icon className="h-4 w-4" /> }))}
+        valor={pestana}
+        elegir={setPestana}
+      />
 
       <nav aria-label="Secciones de la configuración" className="hidden lg:block lg:sticky lg:top-6">
         <div className="flex flex-col gap-1">
@@ -469,61 +476,3 @@ export default function ConfiguracionClient(p: Props) {
   );
 }
 
-/** El desplegable de secciones del celular y la tablet (en la compu está el menú de la izquierda). */
-function SelectorDeSeccion({ pestana, elegir }: { pestana: Pestana; elegir: (p: Pestana) => void }) {
-  const [abierto, setAbierto] = useState(false);
-  const caja = useRef<HTMLDivElement>(null);
-  const actual = PESTANAS.find((t) => t.id === pestana) ?? PESTANAS[0];
-
-  // Se cierra tocando afuera o con Escape, como cualquier desplegable.
-  useEffect(() => {
-    if (!abierto) return;
-    const afuera = (e: PointerEvent) => { if (!caja.current?.contains(e.target as Node)) setAbierto(false); };
-    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") setAbierto(false); };
-    document.addEventListener("pointerdown", afuera);
-    document.addEventListener("keydown", tecla);
-    return () => { document.removeEventListener("pointerdown", afuera); document.removeEventListener("keydown", tecla); };
-  }, [abierto]);
-
-  return (
-    <div ref={caja} className="relative mb-5 lg:hidden">
-      <button
-        type="button"
-        onClick={() => setAbierto((v) => !v)}
-        aria-expanded={abierto}
-        aria-haspopup="true"
-        aria-label={`Sección: ${actual.label}. Cambiar de sección`}
-        className="flex w-full items-center gap-2.5 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-4 py-3 text-left text-sm font-bold text-gray-900 panel-oscuro:text-gray-100"
-      >
-        <actual.Icon className="h-4 w-4 text-orange-600 panel-oscuro:text-orange-400" />
-        <span className="flex-1">{actual.label}</span>
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${abierto ? "rotate-180" : ""}`} />
-      </button>
-
-      {abierto && (
-        <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-1.5 shadow-xl">
-          {PESTANAS.map(({ id, label, Icon }) => {
-            const activa = pestana === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => { elegir(id); setAbierto(false); }}
-                aria-current={activa ? "page" : undefined}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 py-3 text-left text-sm font-bold transition-colors ${
-                  activa
-                    ? "bg-orange-500/10 panel-oscuro:bg-orange-500/15 text-orange-700 panel-oscuro:text-orange-300"
-                    : "text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="flex-1">{label}</span>
-                {activa && <Check className="h-4 w-4" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}

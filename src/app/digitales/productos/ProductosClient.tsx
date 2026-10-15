@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import SelectorDesplegable from "@/components/panel/SelectorDesplegable";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -1975,14 +1976,30 @@ export default function ProductosClient({
           a cuál volver. El nombre es lo que se reconoce. Va cortado, porque un
           título de 140 caracteres reventaría la fila.
 
-          ── Por qué botones y no un `<select>` ──────────────────────────────
-          Con cinco como máximo, todas entran a la vista y se cambia en un clic.
-          Un desplegable esconde lo que hay hasta que lo abrís.
+          ── En la compu botones; en el celular, un desplegable ───────────────
+          En la compu, con cinco como máximo, todas entran a la vista y se cambia
+          en un clic. En el celular eran tres renglones de solapas con el nombre
+          cortado a diez letras ("Panaderia e…"): el 15/10/26 Flavio pidió el
+          mismo desplegable que la configuración, que dice cuál estás mirando y
+          al abrirlo muestra los nombres enteros. Ver `SelectorDesplegable`.
 
           `aria-pressed` y no `role="tab"`: las solapas de verdad se manejan con
           las flechas del teclado, y prometer eso en el rol sin implementarlo es
           peor que no prometerlo. Esto es un grupo de botones que se aprietan, y
           con Tab se recorren solos. */}
+      {principales.length > 1 && (
+        <SelectorDesplegable
+          className="-mt-5 lg:hidden"
+          queSeElige="Página de venta"
+          opciones={principales.map((p, i) => ({
+            id: p.id,
+            label: p.name.trim() || "Sin título",
+            marca: <span className="grid h-5 w-5 place-items-center rounded-md bg-orange-500/10 text-[11px]">{i + 1}</span>,
+          }))}
+          valor={elegido?.id ?? principales[0].id}
+          elegir={elegirPagina}
+        />
+      )}
       {principales.length > 1 && (
         <div
           role="group"
@@ -2001,7 +2018,7 @@ export default function ProductosClient({
 
              Envolviendo no se esconde nada en ningún ancho. El costo es que en
              360 son tres renglones, y para eso el nombre se acorta abajo. */
-          className="-mt-5 flex flex-wrap gap-2"
+          className="-mt-5 hidden lg:flex flex-wrap gap-2"
         >
           {principales.map((p, i) => {
             const activa = elegido?.id === p.id;
