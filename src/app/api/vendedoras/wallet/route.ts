@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
 import { sendWithdrawalRequestEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
-import { otpTokenVigente, quemarOtpToken } from "@/lib/otp-token";
+import { identidadReciente } from "@/lib/identidad-reciente";
 import { despues } from "@/lib/despues";
 
 const MIN_WITHDRAWAL = 100;
@@ -135,9 +135,18 @@ export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const otpToken = req.headers.get("x-otp-token");
-  if (!(await otpTokenVigente(otpToken, user.id))) {
-    return NextResponse.json({ error: "Se requiere verificación de identidad. Solicitá un código por email.", code: "OTP_REQUIRED" }, { status: 403 });
+  /* Con la verificación en dos pasos, la huella o la app; sin ella, el código por
+     mail de siempre. Y si hace poco se quitó el doble paso sin el segundo factor,
+     los datos de cobro están trabados. Ver `lib/identidad-reciente`. El código
+     de error sigue siendo OTP_REQUIRED: es el que la pantalla ya sabe atender. */
+  const identidad = await identidadReciente(req, user.id, { tocaDinero: true });
+  if (!identidad.ok) {
+    return NextResponse.json(
+      identidad.body.code === "VERIFICAR"
+        ? { error: "Se requiere verificación de identidad.", code: "OTP_REQUIRED" }
+        : identidad.body,
+      { status: identidad.status },
+    );
   }
 
   const body = await req.json();
@@ -181,7 +190,7 @@ export async function PUT(req: NextRequest) {
   });
 
   // Datos guardados: el token ya cumplió y no sirve para una segunda operación.
-  await quemarOtpToken(user.id, otpToken!);
+  await identidad.quemar();
 
   return NextResponse.json({
     ok: true,
@@ -195,9 +204,18 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const otpToken = req.headers.get("x-otp-token");
-  if (!(await otpTokenVigente(otpToken, user.id))) {
-    return NextResponse.json({ error: "Se requiere verificación de identidad. Solicitá un código por email.", code: "OTP_REQUIRED" }, { status: 403 });
+  /* Con la verificación en dos pasos, la huella o la app; sin ella, el código por
+     mail de siempre. Y si hace poco se quitó el doble paso sin el segundo factor,
+     los datos de cobro están trabados. Ver `lib/identidad-reciente`. El código
+     de error sigue siendo OTP_REQUIRED: es el que la pantalla ya sabe atender. */
+  const identidad = await identidadReciente(req, user.id, { tocaDinero: true });
+  if (!identidad.ok) {
+    return NextResponse.json(
+      identidad.body.code === "VERIFICAR"
+        ? { error: "Se requiere verificación de identidad.", code: "OTP_REQUIRED" }
+        : identidad.body,
+      { status: identidad.status },
+    );
   }
 
   const userId = user.id;
@@ -376,7 +394,7 @@ export async function POST(req: NextRequest) {
   /* Recién acá, con el retiro ya escrito. Si hubiera ido antes del `try`, un
      "saldo insuficiente" —el error más común de esta pantalla— le costaría a la
      persona pedir otro código por mail sólo para corregir el monto. */
-  await quemarOtpToken(userId, otpToken!);
+  await identidad.quemar();
 
   const storeNames = allocations.map((a) => a.storeName).join(" + ");
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } });

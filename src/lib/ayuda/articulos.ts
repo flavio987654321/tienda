@@ -1,6 +1,9 @@
 import type { Articulo } from "./tipos";
 import { INTENTOS_MAX, BLOQUEO_MS } from "@/lib/codigo-ingreso";
 import { DIAS_VIGENCIA } from "@/lib/busquedas";
+import {
+  CANTIDAD_CODIGOS, DIAS_DINERO_TRABADO, DIAS_ESPERA_CON_CONTRASENA, DIAS_ESPERA_SIN_CONTRASENA, HORAS_TRABA_POR_RESPALDO,
+} from "@/lib/seguridad-cuenta-reglas";
 
 /* Los artículos, como datos.
  *
@@ -2512,6 +2515,74 @@ export const ARTICULOS: Articulo[] = [
         texto:
           "Si querés, también podés **agregar una contraseña**: está en la pantalla de tu cuenta, y aparece solo si todavía no tenés una. Te sirve de respaldo si un día perdés tu cuenta de Google.",
       },
+      {
+        t: "p",
+        texto:
+          "Si activaste la **verificación en dos pasos**, después de cualquiera de las tres formas te pedimos además tu huella, tu cara o el código de tu app. Ver *La verificación en dos pasos*.",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────── seguridad
+  {
+    slug: "verificacion-en-dos-pasos",
+    titulo: "La verificación en dos pasos",
+    resumen:
+      "Cómo proteger tu cuenta con tu huella, tu cara o una app de códigos, y qué hacer si perdés el celular.",
+    grupo: "cuenta",
+    clase: "mecanica",
+    rol: "ambos",
+    actualizado: "2026-10-15",
+    relacionados: ["entrar-con-google-o-con-un-codigo", "medios-de-cobro"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Con la verificación en dos pasos, para entrar a tu cuenta hace falta **además** de tu contraseña (o del código por mail, o de Google) algo que solo tenés vos: tu **huella o tu cara**, o un **código de una app** de tu celular. Así, aunque alguien consiga tu contraseña o entre a tu mail, no puede entrar ni cambiar a dónde cobrás. Es opcional y no cuesta nada.",
+      },
+      { t: "h", texto: "Activarla" },
+      {
+        t: "pasos",
+        items: [
+          "Andá a **Seguridad**: en tu tienda está en **Configuración → Seguridad**; en productos digitales, en **Configuración**, pestaña **Seguridad**; y en afiliados, en el menú, **Seguridad**.",
+          "Tocá **Activar con huella o cara** (lo más fácil) o **Activar con app de códigos**.",
+          "La primera vez te mandamos un código al mail para confirmar que sos vos.",
+          "Con la huella: tu celular o tu compu te la pide y listo. Con la app: escaneás el código con Google Authenticator o similar y escribís el número que muestra.",
+          `Te mostramos **${CANTIDAD_CODIGOS} códigos de respaldo**. Copialos o descargalos y guardalos fuera del celular: es la única vez que se ven.`,
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Si usás tu cuenta en el celular y en la compu, activá la huella en los dos: si un día perdés uno, entrás con el otro.",
+      },
+      { t: "h", texto: "Qué cambia cuando la tenés" },
+      {
+        t: "lista",
+        items: [
+          "Al entrar, después de tu contraseña, código o Google, aparece **Verificá que sos vos**.",
+          "Antes de cambiar tus datos de cobro (CBU, alias, Mercado Pago), de pedir un retiro o de tocar la seguridad, te la pedimos de nuevo, aunque ya estés adentro.",
+          "En **Seguridad** ves dónde está abierta tu cuenta y lo último que pasó. Si ves un dispositivo que no es tuyo, tocá **Cerrar las demás sesiones** y cambiá tu contraseña.",
+        ],
+      },
+      { t: "h", texto: "Si perdés el celular" },
+      {
+        t: "tabla",
+        cols: ["Si tenés…", "Qué hacer"],
+        filas: [
+          ["La huella en otro dispositivo", "Entrá desde ese. Después, en Seguridad, quitá el que perdiste."],
+          ["Un código de respaldo", `En la pantalla de verificación tocá **Usar un código de respaldo**. Entrás al toque, pero la verificación se apaga: volvé a activarla. Por ${HORAS_TRABA_POR_RESPALDO} horas no se pueden cambiar los datos de cobro.`],
+          ["Nada de lo anterior", `Tocá **Perdí mi celular** y confirmá desde el mail. La verificación se quita a los **${DIAS_ESPERA_CON_CONTRASENA} días** si entraste con tu contraseña, o a los ${DIAS_ESPERA_SIN_CONTRASENA} si entraste con Google o un código. Después, los datos de cobro quedan trabados ${DIAS_DINERO_TRABADO} días más.`],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "La espera es lo que te protege si alguien te roba el mail: **nadie de TiendaApps puede saltearla ni quitar la verificación a mano**, aunque se lo pidas. Si te llega un aviso de \"Perdí mi celular\" que no pediste, tocá **No fui yo: cancelar** en el mail o en tu panel, y cambiá tu contraseña.",
+      },
+      { t: "ruta", label: "Ir a Seguridad", href: "/panel?seguridad=1" },
     ],
   },
 ];

@@ -1,5 +1,6 @@
 import SeguridadClient from "./SeguridadClient";
 import EventosSeguridad from "./EventosSeguridad";
+import RecuperacionesAdmin from "./RecuperacionesAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default function AdminSeguridadPage() {
         <p className="text-gray-400 text-sm">Protección de acceso y seguimiento de errores y actividad.</p>
       </div>
       <SeguridadClient />
+      <RecuperacionesAdmin />
       <EventosSeguridad />
     </div>
   );

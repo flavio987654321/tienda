@@ -1,5 +1,6 @@
 import { vencerPedidosImpagos } from "@/lib/pedidosImpagos";
 import { avisarAgendaDelDia } from "@/lib/agendaDiaria";
+import { procesarRecuperaciones, borrarHistorialViejo } from "@/lib/seguridad-cuenta";
 import { revisarTodasLasBusquedas } from "@/lib/busquedasServidor";
 import { PROVEEDORES_MP } from "@/lib/proveedoresPago";
 import { NextRequest, NextResponse } from "next/server";
@@ -118,6 +119,18 @@ export async function GET(req: NextRequest) {
     result.busquedas = await revisarTodasLasBusquedas(now);
   } catch (e) {
     console.error("[cron] búsquedas guardadas:", e);
+  }
+
+  // ── 1 quinquies. VERIFICACIÓN EN DOS PASOS ─────────────────────────────────
+  // Termina las esperas de "Perdí mi celular" cumplidas, manda los recordatorios
+  // de la espera y borra la actividad de más de 90 días. Arriba por lo mismo que
+  // los tokens: un recordatorio que no sale es una dueña que no se entera de
+  // que alguien está por quitarle la protección. Ver `lib/seguridad-cuenta`.
+  try {
+    result.dosPasos = await procesarRecuperaciones(now);
+    result.actividadBorrada = await borrarHistorialViejo(now);
+  } catch (e) {
+    console.error("[cron] verificación en dos pasos:", e);
   }
 
   // ── 2. CARRITOS ABANDONADOS ────────────────────────────────────────────────

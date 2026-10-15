@@ -53,6 +53,7 @@ const RUTAS: [href: string, slug: string][] = [
   // sus números no hay que explicarle la pantalla, hay que decirle qué hacer
   // con lo que ve.
   ["/afiliados/estadisticas",         "vender-mas-como-afiliado"],
+  ["/afiliados/seguridad",            "verificacion-en-dos-pasos"],
 ];
 
 /* Una ruta que apunte a un slug que no existe se descarta acá mismo. El `?` de

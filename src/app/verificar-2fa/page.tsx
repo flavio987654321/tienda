@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth-session";
+import { getUsuarioConSegundoPaso } from "@/lib/auth-session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Verificar2faClient from "./Verificar2faClient";
 
@@ -9,10 +9,10 @@ export const dynamic = "force-dynamic";
 // layout no la redirija en loop. Igual se protege por su cuenta: solo un admin
 // que tiene 2FA pendiente de verificar debe llegar acá.
 export default async function Verificar2faPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  // Solo el admin usa 2FA en esta etapa. Cualquier otro rol no tiene nada que verificar.
-  if (user.role !== "ADMIN") redirect("/dashboard");
+  const sesion = await getUsuarioConSegundoPaso();
+  if (!sesion) redirect("/login");
+  // Esta pantalla es la del admin. Las demás cuentas tienen la suya en /verificar.
+  if (sesion.user.role !== "ADMIN") redirect(sesion.faltaSegundoPaso ? "/verificar" : "/panel");
 
   const supabase = await createSupabaseServerClient();
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();

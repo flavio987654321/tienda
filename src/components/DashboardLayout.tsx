@@ -19,6 +19,7 @@ import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import TourGuide from "@/components/TourGuide";
 import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
+import AvisoSeguridad from "@/components/seguridad/AvisoSeguridad";
 import { useRubroDelPanel } from "@/contexts/RubroDelPanel";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import BarraDeAtajosTienda, { BotonTemaTiendas } from "@/components/dashboard/BarraDeAtajosTienda";
@@ -721,6 +722,7 @@ export default function DashboardLayout({
           />
         )}
         <div className={`flex-1 ${fullHeight ? "overflow-hidden min-h-0" : "p-4 pt-2"}`}>
+          {!fullHeight && <AvisoSeguridad className="mb-3" />}
           {!fullHeight && <TermsUpdateBanner />}
           {children}
         </div>

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { needsMfaChallenge } from "@/lib/mfa";
+import { needsMfaChallenge, faltaSegundoPaso } from "@/lib/mfa";
 import { esElSitioDeLaPlataforma } from "@/lib/hosts-plataforma";
 import {
   COOKIE_ACTIVIDAD, TOPE_MS, cuentaComoActividad, estadoDeLaSesion, firmarActividad, leerActividad, vencida,
@@ -61,6 +61,8 @@ async function runSupabaseAuth(
   response: NextResponse;
   supabase: SupabaseMiddleware | null;
   userId: string | null;
+  /** El usuario recién leído de Supabase (con sus factores), o null. */
+  user: Awaited<ReturnType<SupabaseMiddleware["auth"]["getUser"]>>["data"]["user"] | null;
   /** Las cookies que Supabase escribió hasta ahora, incluidas las de un signOut posterior. */
   cookiesDeSupabase: () => ReturnType<NextResponse["cookies"]["getAll"]>;
 }> {
@@ -69,7 +71,7 @@ async function runSupabaseAuth(
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const cookiesDeSupabase = () => response.cookies.getAll();
 
-  if (!url || !key) return { response, supabase: null, userId: null, cookiesDeSupabase };
+  if (!url || !key) return { response, supabase: null, userId: null, user: null, cookiesDeSupabase };
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -85,8 +87,17 @@ async function runSupabaseAuth(
   });
 
   const { data } = await supabase.auth.getUser();
-  return { response, supabase, userId: data?.user?.id ?? null, cookiesDeSupabase };
+  return { response, supabase, userId: data?.user?.id ?? null, user: data?.user ?? null, cookiesDeSupabase };
 }
+
+/**
+ * Las pantallas de quien tiene cuenta: los tres paneles, la de cliente y la de
+ * cambiar la contraseña (a la que se llega desde el link de "olvidé mi
+ * contraseña", que también abre una sesión). Con la verificación en dos pasos
+ * activada y sin pasarla, todas mandan a /verificar. Las APIs no van acá:
+ * `getCurrentUser` ya devuelve null en ese estado.
+ */
+const PANTALLAS_CON_CUENTA = /^\/(panel|dashboard|digitales|afiliados|mi-cuenta|actualizar-contrasena)(\/|$)/;
 
 /** Donde vive la sesión del admin: el panel, sus endpoints y la pantalla del código. */
 const RUTAS_DEL_ADMIN = /^\/(admin|api\/admin|verificar-2fa|api\/verificar-2fa)(\/|$)/;
@@ -316,7 +327,22 @@ export async function middleware(request: NextRequest) {
   const corsRes = handleCors(request);
   if (corsRes) return corsRes;
 
-  const { response: res, supabase, userId, cookiesDeSupabase } = await runSupabaseAuth(request);
+  const { response: res, supabase, userId, user, cookiesDeSupabase } = await runSupabaseAuth(request);
+
+  /* Verificación en dos pasos de tiendas, digitales y afiliados (ver
+     `lib/seguridad-cuenta`). Entró con la contraseña, el código por mail o
+     Google, pero no puso la huella ni el código de la app: a /verificar, y de
+     ahí vuelve a donde iba. El admin tiene la suya. */
+  if (supabase && user && PANTALLAS_CON_CUENTA.test(pathname)) {
+    const esAdmin = !!process.env.ADMIN_EMAIL && user.email?.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase().trim();
+    if (!esAdmin && (await faltaSegundoPaso(supabase, user))) {
+      const destino = new URL("/verificar", request.url);
+      destino.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+      const salto = NextResponse.redirect(destino);
+      for (const c of cookiesDeSupabase()) salto.cookies.set(c);
+      return salto;
+    }
+  }
 
   // La sesión del admin vence por su cuenta (ver `sesion-admin.ts`): una hora
   // sin moverse, doce horas de tope, diez minutos en la pantalla del código.

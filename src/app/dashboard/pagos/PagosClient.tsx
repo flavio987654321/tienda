@@ -20,6 +20,7 @@ import {
 } from "@/lib/legal-generator";
 import { MAX_LARGO_POLITICA } from "@/lib/politicas-tienda";
 import MpConnectButton from "./MpConnectButton";
+import { useVerificarIdentidad } from "@/components/seguridad/VerificarIdentidad";
 
 type Props = {
   initial: {
@@ -54,6 +55,7 @@ type Props = {
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function PagosClient({ initial }: Props) {
+  const { verificar, ventana: ventanaVerificar } = useVerificarIdentidad();
   const [paymentInfo, setPaymentInfo] = useState<StorePaymentInfo>(
     initial.paymentInfo ?? DEFAULT_PAYMENT_INFO
   );
@@ -184,9 +186,9 @@ export default function PagosClient({ initial }: Props) {
     setSaveState("saving");
     guardando.current = true;
     try {
-      const res = await fetch("/api/pagos", {
+      const guardar = (token?: string) => fetch("/api/pagos", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { "x-otp-token": token } : {}) },
         body: JSON.stringify({
           paymentInfo,
           shippingMethods,
@@ -204,6 +206,17 @@ export default function PagosClient({ initial }: Props) {
           originPostalCode,
         }),
       });
+      let res = await guardar();
+      /* Cambiar un CBU o alias que ya estaba cargado pide verificar que sos vos
+         (ver `lib/identidad-reciente`). Se verifica y se guarda de nuevo. */
+      if (res.status === 403) {
+        const data = await res.clone().json().catch(() => null);
+        if (data?.code === "VERIFICAR") {
+          const v = await verificar({ motivo: "cobro" });
+          if (!v) { setSaveState("idle"); return; }
+          res = await guardar(v.token);
+        }
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error || "");
@@ -224,6 +237,7 @@ export default function PagosClient({ initial }: Props) {
 
   return (
     <div className="space-y-4">
+      {ventanaVerificar}
 
       {/* How it works banner */}
       {isAutos ? (

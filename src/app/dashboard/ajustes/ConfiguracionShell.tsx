@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import {
   Search, ChevronLeft, ChevronRight, Store, Globe, Smartphone,
-  MessageCircle, DollarSign, LineChart, Archive, ShieldAlert,
+  MessageCircle, DollarSign, LineChart, Archive, ShieldAlert, ShieldCheck,
 } from "lucide-react";
 
 export type SeccionConfig = {
@@ -32,6 +32,7 @@ const ICONOS: Record<string, React.ComponentType<{ className?: string }>> = {
   seo: LineChart,
   app: Smartphone,
   datos: Archive,
+  seguridad: ShieldCheck,
   peligro: ShieldAlert,
 };
 

@@ -26,6 +26,7 @@ export const INDICE: { slug: string; titulo: string }[] = [
   { slug: "los-estados-de-un-pedido",            titulo: "Los estados de un pedido" },
   { slug: "verificar-tu-cuenta",                 titulo: "Verificar tu identidad" },
   { slug: "entrar-con-google-o-con-un-codigo", titulo: "Entrar con Google o con un código por mail" },
+  { slug: "verificacion-en-dos-pasos",          titulo: "La verificación en dos pasos" },
   { slug: "medios-de-cobro",                     titulo: "Cómo cobrar" },
   { slug: "consultas",                           titulo: "Las consultas de tus vehículos" },
   { slug: "tasaciones",                          titulo: "Tasar el usado de un cliente" },

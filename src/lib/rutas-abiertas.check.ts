@@ -35,7 +35,8 @@ const RAIZ = join(__dirname, "..", "..");
 const API = join(RAIZ, "src", "app", "api");
 
 /** Los dos porteros del repo. `getOwnerStore` además ata todo a la tienda propia. */
-const PORTEROS = /getCurrentUser|getOwnerStore/;
+/* `getUsuarioConSegundoPaso` también pide sesión: es la de la pantalla de verificación en dos pasos, que deja pasar a quien entró pero todavía no puso la huella. */
+const PORTEROS = /getCurrentUser|getOwnerStore|getUsuarioConSegundoPaso/;
 
 /** Firma de webhook o secreto de cron: la llave viaja en el pedido, no en la sesión. */
 const FIRMADO = /CRON_SECRET|x-vercel-cron|signature|Signature|webhook|Webhook/;

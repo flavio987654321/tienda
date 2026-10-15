@@ -14,6 +14,7 @@ import ArchiveDownloadCard from "./ArchiveDownloadCard";
 import { AgregarContrasena } from "@/components/AgregarContrasena";
 import { tieneContrasena } from "@/lib/alta-google-servidor";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
+import PanelSeguridad from "@/components/seguridad/PanelSeguridad";
 import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 // La conexión con MercadoPago vive en /dashboard/pagos, junto al resto de los
@@ -191,6 +192,14 @@ export default async function AjustesPage({ searchParams }: Props) {
           ),
         } satisfies SeccionConfig]
       : []),
+    {
+      id: "seguridad",
+      grupo: "Cuenta",
+      label: "Seguridad",
+      descripcion: "Verificación en dos pasos con huella, cara o app de códigos, y dónde está abierta tu cuenta.",
+      claves: ["seguridad", "dos pasos", "2fa", "huella", "cara", "autenticador", "authenticator", "codigo", "sesiones", "hackeo", "robo", "proteger"],
+      contenido: <PanelSeguridad acento="naranja" />,
+    },
     ...(sinContrasena
       ? [{
           id: "contrasena",

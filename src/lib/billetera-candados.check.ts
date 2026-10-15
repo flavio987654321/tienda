@@ -128,21 +128,31 @@ chequear(
   "no queda ni una llamada a verifyOtpToken en la ruta de la billetera",
   !/verifyOtpToken/.test(billetera)
 );
+/* Desde el 15/10/26 las dos pasan por `identidadReciente`, que con el código por
+   mail exige el token completo (otpTokenVigente) y con la verificación en dos
+   pasos, la huella o la app recién pasadas. Y suma la traba de los datos de
+   cobro después de una recuperación (`tocaDinero`). */
 chequear(
-  "las DOS operaciones sensibles usan otpTokenVigente",
-  (billetera.match(/await otpTokenVigente\(otpToken, user\.id\)/g) ?? []).length === 2,
-  (billetera.match(/await otpTokenVigente\(otpToken, user\.id\)/g) ?? []).length
+  "las DOS operaciones sensibles usan identidadReciente, con la traba de cobro",
+  (billetera.match(/await identidadReciente\(req, user\.id, \{ tocaDinero: true \}\)/g) ?? []).length === 2,
+  (billetera.match(/await identidadReciente\(req, user\.id, \{ tocaDinero: true \}\)/g) ?? []).length
 );
 chequear(
   "y las dos queman el token",
-  (billetera.match(/quemarOtpToken\(/g) ?? []).length === 2,
-  (billetera.match(/quemarOtpToken\(/g) ?? []).length
+  (billetera.match(/await identidad\.quemar\(\)/g) ?? []).length === 2,
+  (billetera.match(/await identidad\.quemar\(\)/g) ?? []).length
+);
+const identidadLib = leer("src/lib/identidad-reciente.ts");
+chequear(
+  "identidadReciente sigue exigiendo el token completo, no sólo la firma",
+  /await otpTokenVigente\(token, userId\)/.test(identidadLib) && /quemarOtpToken\(userId, token\)/.test(identidadLib)
 );
 
 console.log("\n4) El token se quema DESPUÉS de que la operación salió bien");
 
 const finTx    = billetera.indexOf("{ isolationLevel: Prisma.TransactionIsolationLevel.Serializable }");
-const quemaPost = billetera.indexOf("quemarOtpToken(userId, otpToken!)");
+// El retiro (POST) va después de los datos bancarios (PUT) en el archivo: su quema es la última.
+const quemaPost = billetera.lastIndexOf("await identidad.quemar()");
 chequear("se encontraron las dos marcas", finTx > 0 && quemaPost > 0);
 chequear(
   "en el retiro, la quema va después de la transacción",
@@ -151,7 +161,7 @@ chequear(
 );
 
 const guardado = billetera.indexOf("affiliateBankUpdatedAt: updatedAt");
-const quemaPut = billetera.indexOf("quemarOtpToken(user.id, otpToken!)");
+const quemaPut = billetera.indexOf("await identidad.quemar()");
 chequear(
   "en los datos bancarios, la quema va después del guardado",
   guardado > 0 && quemaPut > guardado,

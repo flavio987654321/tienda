@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { identidadReciente } from "@/lib/identidad-reciente";
+import { dineroTrabado, mensajeDineroTrabado } from "@/lib/seguridad-cuenta";
 import { randomBytes } from "crypto";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -8,9 +10,14 @@ import { espacioDigital } from "@/lib/espacio-digital";
 // GET /api/mp/oauth/connect
 // Redirige al dueño a la página de autorización de MercadoPago.
 // Genera un nonce aleatorio para proteger contra CSRF en el callback.
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  /* Mientras los datos de cobro están trabados (se quitó el doble paso sin el
+     segundo factor, ver `lib/seguridad-cuenta`) no se conecta ninguna cuenta. */
+  const trabado = await dineroTrabado(user.id);
+  if (trabado) return NextResponse.json({ error: mensajeDineroTrabado(trabado), code: "DINERO_TRABADO" }, { status: 403 });
 
   /* De qué panel salió, para saber a cuál volver.
    *
@@ -35,6 +42,17 @@ export async function GET() {
     });
     if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
     storeId = store.id;
+  }
+
+  /* Cambiar una cuenta YA conectada por otra es cambiar a dónde va la plata: pide
+     verificar que es la dueña. Conectar la primera vez, no. Las pantallas no
+     ofrecen conectar estando conectado (primero se desconecta, y eso ya pide
+     verificar), así que esto cubre a quien llame a la dirección a mano. */
+  const yaConectada = await prisma.store.findUnique({ where: { id: storeId }, select: { mpAccessToken: true } });
+  if (yaConectada?.mpAccessToken) {
+    const identidad = await identidadReciente(req, user.id, { tocaDinero: true });
+    if (!identidad.ok) return NextResponse.json(identidad.body, { status: identidad.status });
+    await identidad.quemar();
   }
 
   const vuelta = user.role === "DIGITAL" ? "digital" : "tienda";

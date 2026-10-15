@@ -1,13 +1,15 @@
 ﻿import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { panelDeRol } from "@/lib/panel-de-rol";
+import { panelDeRol, seguridadDelPanel } from "@/lib/panel-de-rol";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { tieneAltaPendiente, entraSinContrasena } from "@/lib/alta-google-servidor";
 
 export const dynamic = "force-dynamic";
 
-export default async function PanelPage() {
+type Props = { searchParams: Promise<{ seguridad?: string }> };
+
+export default async function PanelPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -27,5 +29,9 @@ export default async function PanelPage() {
   // ahora desde el mismo lugar. Acá sí se puede consultar la base, así que se
   // pasa `tieneTienda`: quien es dueño de una tienda va al dashboard aunque su
   // rol todavía no diga OWNER.
-  redirect(panelDeRol(user.role, !!store).href);
+  const destino = panelDeRol(user.role, !!store).href;
+  /* `/panel?seguridad=1`: los mails de seguridad llevan acá, sin saber de qué
+     panel es la cuenta, y acá se traduce a la pestaña Seguridad de cada uno. */
+  if ((await searchParams).seguridad === "1") redirect(seguridadDelPanel(destino));
+  redirect(destino);
 }

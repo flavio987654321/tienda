@@ -2118,10 +2118,13 @@ export async function sendOtpEmail({
   to,
   name,
   code,
+  motivo = "acceder a tus datos bancarios",
 }: {
   to: string;
   name: string | null;
   code: string;
+  /** Completa "Solicitaste ___ en TiendaApps". */
+  motivo?: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
   await transporter.sendMail({
@@ -2131,7 +2134,7 @@ export async function sendOtpEmail({
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;padding:32px;border-radius:16px;color:#f8fafc;">
         <p style="font-size:14px;color:#94a3b8;margin:0 0 24px;">Hola${name ? ` ${escapeHtml(name)}` : ""},</p>
-        <p style="font-size:14px;color:#cbd5e1;margin:0 0 24px;">Solicitaste acceder a tus datos bancarios en TiendaApps. Ingresá este código para continuar:</p>
+        <p style="font-size:14px;color:#cbd5e1;margin:0 0 24px;">Solicitaste ${escapeHtml(motivo)} en TiendaApps. Ingresá este código para continuar:</p>
         <div style="background:#1e293b;border:2px solid #6366f1;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
           <p style="font-size:42px;font-weight:900;letter-spacing:12px;color:#a5b4fc;margin:0;font-family:monospace;">${escapeHtml(code)}</p>
           <p style="font-size:12px;color:#64748b;margin:8px 0 0;">Válido por 10 minutos</p>
@@ -2574,5 +2577,66 @@ export async function sendArrepentimientoEmails({
     if (r.status === "rejected") {
       console.error(`[arrepentimiento] ${numero}: no salió el ${nombres[i]}:`, r.reason);
     }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SEGURIDAD DE LA CUENTA — verificación en dos pasos
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Un solo molde para todos los avisos (activó, apagó, usó un código de
+   respaldo, "Perdí mi celular" y su espera). Ver `lib/seguridad-cuenta`.
+
+   A diferencia del resto de este archivo, SIN la clave de Resend tira en vez de
+   volver callado: hay avisos de los que depende la seguridad —el link para
+   confirmar una recuperación, el de cancelarla— y que "no salió" tiene que
+   frenar el trámite, no dejarlo correr sin que nadie se entere.            */
+
+export type MailSeguridad = {
+  to: string;
+  name: string | null;
+  asunto: string;
+  titulo: string;
+  parrafos: string[];
+  /** Tono del recuadro: "alerta" en rojo para lo que pide reaccionar. */
+  tono?: "dato" | "alerta";
+  boton?: { texto: string; url: string };
+  /** Segundo link, más chico (por ejemplo "No fui yo: cancelar"). */
+  linkSecundario?: { texto: string; url: string };
+};
+
+export async function sendSeguridadEmail(m: MailSeguridad) {
+  if (!process.env.RESEND_API_KEY) throw new Error("Falta RESEND_API_KEY: el aviso de seguridad no puede salir");
+  const alerta = m.tono === "alerta";
+  const parrafos = m.parrafos
+    .map((p) => `<p style="font-size:14px;line-height:1.6;color:#334155;margin:0 0 14px;">${escapeHtml(p)}</p>`)
+    .join("");
+  const boton = m.boton
+    ? `<p style="margin:22px 0;"><a href="${escapeHtml(m.boton.url)}" style="display:inline-block;background:${alerta ? "#b91c1c" : "#0f172a"};color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;">${escapeHtml(m.boton.texto)}</a></p>`
+    : "";
+  const secundario = m.linkSecundario
+    ? `<p style="font-size:13px;margin:0 0 14px;"><a href="${escapeHtml(m.linkSecundario.url)}" style="color:#b91c1c;font-weight:700;">${escapeHtml(m.linkSecundario.texto)}</a></p>`
+    : "";
+  await transporter.sendMail({
+    from: `"TiendaApps Seguridad" <${FROM_ADDRESS}>`,
+    to: m.to,
+    subject: m.asunto,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 16px;">
+        <div style="border-left:4px solid ${alerta ? "#b91c1c" : "#0f172a"};padding:4px 0 4px 14px;margin-bottom:22px;">
+          <p style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin:0 0 4px;">Seguridad de tu cuenta</p>
+          <h1 style="font-size:19px;color:#0f172a;margin:0;">${escapeHtml(m.titulo)}</h1>
+        </div>
+        <p style="font-size:14px;color:#334155;margin:0 0 14px;">Hola${m.name ? ` ${escapeHtml(m.name)}` : ""},</p>
+        ${parrafos}
+        ${boton}
+        ${secundario}
+        <p style="font-size:12px;color:#64748b;line-height:1.6;margin:22px 0 0;border-top:1px solid #e2e8f0;padding-top:14px;">
+          TiendaApps nunca te va a pedir tu contraseña, tus códigos de respaldo ni que apagues la verificación por mail, WhatsApp o teléfono.
+          Si algo de esto no lo hiciste vos, escribinos a marketplacemitienda@gmail.com.
+        </p>
+        <p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:18px;">TiendaApps · tiendaapps.com</p>
+      </div>
+    `,
   });
 }

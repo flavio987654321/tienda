@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { panelDeRol, nombreDeCuenta } from "@/lib/panel-de-rol";
 import { getCurrentUser } from "@/lib/auth-session";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
+import AvisoSeguridad from "@/components/seguridad/AvisoSeguridad";
 import PWAManager from "@/components/PWAManager";
 import PanelSplash from "@/components/panel/PanelSplash";
 import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
@@ -106,7 +107,7 @@ export default async function AfiliadosLayout({ children }: { children: React.Re
       <PWAManager appVersion={AFILIADOS_VERSION} versionKey="pwa_afiliados_version" disableNotifPrompt scope="/afiliados" />
       <PanelSplash nombre="TiendaApps Afiliados" />
       <AfiliadosNav />
-      <div className="px-4 pt-3 max-w-5xl mx-auto"><TermsUpdateBanner /></div>
+      <div className="px-4 pt-3 max-w-5xl mx-auto"><AvisoSeguridad className="mb-3 empty:hidden" /><TermsUpdateBanner /></div>
       {children}
     </>
   );

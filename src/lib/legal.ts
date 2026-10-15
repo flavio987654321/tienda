@@ -185,11 +185,25 @@
 //     consultas, tasaciones y búsquedas de las tiendas de vehículos, que el
 //     asistente de políticas de cada tienda ya declaraba.
 //
+// 1.11 (15/10/2026) — verificación en dos pasos para tiendas, digitales y
+//     afiliados (ver lib/seguridad-cuenta). Los textos viven en
+//     lib/legal-seguridad, con los plazos sacados de las constantes del código.
+//   · Términos: "9 ter" del Dueño, "3 bis" del Afiliado y "8 ter" de Productos
+//     Digitales. Cómo se activa, los códigos de respaldo, que pide verificar
+//     antes de cambiar datos de cobro (y sin doble paso, un código por mail),
+//     "Perdí mi celular" con su espera de 7/14 días, la traba de cobros después,
+//     y que TiendaApps NUNCA quita el doble paso a mano: sólo congela un pedido.
+//     Es sustantivo para todos, no sólo para quien lo activa: cambiar un CBU ya
+//     cargado ahora pide un código por mail.
+//   · Privacidad: la llave pública de la llave de acceso, el secreto de la app
+//     (en Supabase), los códigos como huella cifrada, el historial de seguridad
+//     (90 días) y las sesiones abiertas, en las solapas de las tres cuentas.
+//
 // Ojo: este valor estuvo clavado en "1.2" desde el 23/06 mientras los términos
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.10";
+export const CURRENT_TERMS_VERSION = "1.11";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -213,9 +227,10 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Si tenés una tienda de autos o motos: quedó escrito cómo funcionan las consultas, las tasaciones de usados y \"Avisame si entra\". La oferta por un usado la ponés vos, y a quien dejó su búsqueda le escribís vos desde tu WhatsApp. También aclaramos que en estos rubros el programa de afiliados está en pausa: las consultas no generan comisión.",
-  "Las campañas de Notificaciones ahora pueden salir también por mail, a quienes se anotaron en tu tienda y confirmaron su dirección. Cuentan igual para el tope semanal, y esa lista es solo para mandar tus campañas desde el panel.",
-  "En la política de privacidad sumamos lo que guardamos de tus seguidores y de tus suscriptores por mail, y qué ves vos de cada uno.",
+  "Ahora podés proteger tu cuenta con la verificación en dos pasos: además de tu contraseña, para entrar te pedimos tu huella, tu cara o un código de una app. Es opcional y se activa desde Seguridad, en tu panel.",
+  "Para cambiar a dónde cobrás (CBU, alias o Mercado Pago) cuando ya tenías datos cargados, te vamos a pedir que verifiques que sos vos: con tu huella o tu app si tenés la verificación activada, o con un código por mail si no.",
+  "Si perdés el celular, hay una salida: códigos de respaldo, o un pedido con una espera de 7 días para que nadie que te robe el mail pueda quitártela de golpe. TiendaApps nunca la quita a mano.",
+  "En la política de privacidad sumamos lo que guardamos para esto: nunca tu huella ni tu cara, que no salen de tu dispositivo.",
 ];
 
 /**

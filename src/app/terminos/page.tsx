@@ -9,6 +9,7 @@ import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import { DIAS_DE_DOMINIO_EN_FREE, DIAS_DE_AVISO_DEL_DOMINIO } from "@/lib/configuracion-digital";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
+import { TERMINOS_DOS_PASOS } from "@/lib/legal-seguridad";
 import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
 
 const DESCRIPTION =
@@ -266,6 +267,11 @@ const CONTENT = {
         ],
       },
       {
+        title: "9 ter. Seguridad de tu cuenta y verificación en dos pasos",
+        body: null,
+        list: TERMINOS_DOS_PASOS,
+      },
+      {
         title: "10. Modificaciones",
         body: "Podemos actualizar estos términos. Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
@@ -308,6 +314,11 @@ const CONTENT = {
           "Podés afiliarte a múltiples tiendas simultáneamente según las disponibilidades de cada una.",
           "Podés prestar servicios similares a otras plataformas o marcas al mismo tiempo. TiendaApps no impone exclusividad.",
         ],
+      },
+      {
+        title: "3 bis. Seguridad de tu cuenta y verificación en dos pasos",
+        body: null,
+        list: TERMINOS_DOS_PASOS,
       },
       {
         title: "4. Responsabilidades del afiliado",
@@ -591,6 +602,11 @@ const CONTENT = {
           "Qué pasa con lo ya vendido: una baja no borra lo que alguien ya pagó. Los permisos de descarga vigentes se respetan, porque quien compró no tiene nada que ver con el motivo de la baja.",
           "Qué NO pasa: una suspensión por incumplimiento no genera derecho a devolución del período de suscripción ya abonado.",
         ],
+      },
+      {
+        title: "8 ter. Seguridad de tu cuenta y verificación en dos pasos",
+        body: null,
+        list: TERMINOS_DOS_PASOS,
       },
       {
         title: "9. Disponibilidad y cambios",

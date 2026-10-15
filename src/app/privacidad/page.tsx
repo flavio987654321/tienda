@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
+import { PRIVACIDAD_DATO_DOS_PASOS, PRIVACIDAD_PLAZO_DOS_PASOS } from "@/lib/legal-seguridad";
 import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
 /* Los días de "Avisame si entra" salen de la constante que cierra las
    búsquedas: escritos a mano, la política podía prometer un plazo y el sistema
@@ -66,6 +67,7 @@ const CONTENT = {
           "Datos de pago: procesados por Mercado Pago. No almacenamos datos de tarjetas.",
           "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
           "Eventos técnicos y de seguridad: ruta afectada, tipo de evento y su origen cuando puede determinarse. Para agrupar intentos repetidos podemos conservar una huella HMAC no legible de la IP durante un máximo de 30 días; no guardamos la IP en claro en este registro.",
+          PRIVACIDAD_DATO_DOS_PASOS,
           "Datos de verificación de identidad (voluntario y con consentimiento explícito): imágenes de DNI y selfie; número de CUIT/CUIL si lo informás voluntariamente. Ver sección 3 bis para el detalle completo.",
         ],
       },
@@ -265,6 +267,7 @@ const CONTENT = {
           "Backups automáticos de base de datos: 30 días de retención gestionados por Supabase. Los backups no permiten recuperar una cuenta eliminada.",
           "Logs técnicos del servidor (Vercel): hasta 24 horas, gestionados automáticamente por la infraestructura de Vercel. Incluyen registros de webhooks de MercadoPago y errores de sistema.",
           "Eventos técnicos y huellas HMAC de IP para seguridad: 30 días máximo. Otros logs de auditoría y seguridad: 90 días máximo.",
+          PRIVACIDAD_PLAZO_DOS_PASOS,
           "Para solicitar eliminación anticipada escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email de cuenta]'.",
         ],
       },
@@ -305,6 +308,7 @@ const CONTENT = {
           "Datos de cobro: información necesaria para liquidar comisiones (puede incluir CUIT/CUIL, CBU/alias), almacenada cifrada con AES-256-GCM.",
           "Datos de uso: acciones en el panel y tiendas visitadas.",
           "Eventos técnicos y de seguridad: ruta afectada, tipo de evento y su origen cuando puede determinarse. Para agrupar intentos repetidos podemos conservar una huella HMAC no legible de la IP durante un máximo de 30 días; no guardamos la IP en claro en este registro.",
+          PRIVACIDAD_DATO_DOS_PASOS,
         ],
       },
       {
@@ -361,6 +365,7 @@ const CONTENT = {
           "Historial de comisiones: 3 años a efectos impositivos (AFIP).",
           "Si la tienda a la que estás afiliado cambia de rubro, el detalle de comisiones de ese ciclo deja de verse en tu panel (tu saldo pendiente se liquida antes del cambio — la plataforma no permite el cambio de rubro con comisiones sin pagar). El detalle queda archivado en un respaldo interno: podés pedir una copia por email durante los 3 años de retención.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados al cerrar la cuenta.",
+          PRIVACIDAD_PLAZO_DOS_PASOS,
           "Para solicitar eliminación escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email]'.",
         ],
       },
@@ -401,6 +406,7 @@ const CONTENT = {
           "Datos de tus ventas: el email y el nombre de quien te compra, qué compró, cuánto pagó y la comisión de la plataforma. Si esa persona dejó su celular —es un campo opcional del checkout— también queda guardado, junto con esa compra.",
           "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
           "Eventos técnicos y de seguridad: ruta afectada, tipo de evento y su origen cuando puede determinarse. Para agrupar intentos repetidos podemos conservar una huella HMAC no legible de la IP durante un máximo de 30 días; no guardamos la IP en claro en este registro.",
+          PRIVACIDAD_DATO_DOS_PASOS,
         ],
       },
       {
@@ -488,6 +494,7 @@ const CONTENT = {
           "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 30 días para eliminación completa.",
           "El archivo que subís: mientras el producto exista. Si lo borrás, el archivo queda 30 días en cuarentena y después se elimina definitivamente del depósito — ese plazo existe para no dejar sin su compra a alguien que todavía tiene un permiso de descarga vigente.",
           "Permisos de descarga: 30 días desde la compra. El registro de descargas se elimina con ellos.",
+          PRIVACIDAD_PLAZO_DOS_PASOS,
           "Ventas y cobros: se conservan como documentación comercial, por las mismas razones y plazos que el resto de la plataforma (art. 328 del Código Civil y Comercial).",
           "Para eliminar tu cuenta antes del plazo escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de cuenta — [tu email]'.",
         ],

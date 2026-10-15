@@ -15,8 +15,18 @@ function hashOtp(code: string, salt: string): string {
   return createHash("sha256").update(`${code}:${salt}`).digest("hex");
 }
 
+/* El mismo código sirve para otras cosas delicadas fuera de la billetera (ver
+   `lib/identidad-reciente`): sólo cambia lo que dice el mail. Lista cerrada,
+   para que nadie pueda escribir en el mail lo que quiera. */
+const MOTIVOS: Record<string, string> = {
+  banco: "acceder a tus datos bancarios",
+  cobro: "cambiar tus datos de cobro",
+  seguridad: "activar la verificación en dos pasos",
+};
+
 // POST — solicitar código OTP
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const motivo = MOTIVOS[req.nextUrl.searchParams.get("motivo") ?? "banco"] ?? MOTIVOS.banco;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
@@ -64,7 +74,7 @@ export async function POST() {
   });
 
   try {
-    await sendOtpEmail({ to: user.email, name: user.name ?? null, code });
+    await sendOtpEmail({ to: user.email, name: user.name ?? null, code, motivo });
   } catch (err) {
     console.error("[otp] sendOtpEmail failed:", err);
     await prisma.user.update({

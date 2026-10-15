@@ -6,6 +6,8 @@ import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { limpiarTextoLegal } from "@/lib/politicas-tienda";
+import { identidadReciente } from "@/lib/identidad-reciente";
+import { dineroTrabado, mensajeDineroTrabado } from "@/lib/seguridad-cuenta";
 
 const MAX_TEXT = 2000;
 
@@ -156,6 +158,7 @@ export async function PUT(req: NextRequest) {
   const policyTermsActive = body.policyTermsActive !== false;
   const policyPrivacyActive = body.policyPrivacyActive !== false;
 
+  let pendienteDeQuemar: () => Promise<void> = async () => {};
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
     select: {
@@ -168,6 +171,28 @@ export async function PUT(req: NextRequest) {
 
   let config: Record<string, unknown> = {};
   try { config = JSON.parse(store.storeConfig || "{}"); } catch { /* noop */ }
+
+  /* A dónde le transfieren a la tienda es de lo delicado (ver
+     `lib/identidad-reciente`): cambiar un CBU, CVU, alias o titular que YA estaba
+     cargado pide verificar que es la dueña. Cargarlo por primera vez no, para no
+     trabar a quien recién arranca. Y después de quitar el doble paso sin el
+     segundo factor, no se toca ni la primera vez. */
+  const antes = (config.paymentInfo as StorePaymentInfo | undefined)?.transferencia;
+  const destino = (t: StorePaymentInfo["transferencia"] | undefined) =>
+    [t?.cbu ?? "", t?.cvu ?? "", t?.alias ?? "", t?.titular ?? ""].join("|");
+  if (destino(antes) !== destino(paymentInfo.transferencia)) {
+    const habiaDatos = destino(antes).replace(/\|/g, "") !== "";
+    const identidad = habiaDatos
+      ? await identidadReciente(req, user.id, { tocaDinero: true })
+      : await (async () => {
+          const hasta = await dineroTrabado(user.id);
+          return hasta
+            ? { ok: false as const, status: 403, body: { error: mensajeDineroTrabado(hasta), code: "DINERO_TRABADO" as const } }
+            : { ok: true as const, conDosPasos: false, quemar: async () => {} };
+        })();
+    if (!identidad.ok) return NextResponse.json(identidad.body, { status: identidad.status });
+    pendienteDeQuemar = identidad.quemar;
+  }
 
   config.paymentInfo = paymentInfo;
   config.shippingMethods = shippingMethods;
@@ -201,6 +226,8 @@ export async function PUT(req: NextRequest) {
   });
 
   revalidatePath(`/tienda/${store.slug}`, "layout");
+  // El código por mail sirve para una sola operación: se gasta recién con todo guardado.
+  await pendienteDeQuemar();
 
   return NextResponse.json({ ok: true });
 }

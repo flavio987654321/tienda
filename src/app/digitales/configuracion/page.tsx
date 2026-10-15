@@ -42,7 +42,7 @@ export default async function ConfiguracionPage({
      la tarea, no en la puerta de Configuración para que la busque.
      Se compara contra la lista nuestra y nunca se pasa el texto crudo — una
      solapa inventada dibujaría una pantalla vacía. */
-  const SOLAPAS = ["general", "pagos", "meta", "legales"] as const;
+  const SOLAPAS = ["general", "pagos", "meta", "legales", "seguridad"] as const;
   const abrirEn = SOLAPAS.find((s) => s === tab) ?? null;
 
   const user = await getCurrentUser();

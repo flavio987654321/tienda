@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useVerificarIdentidad } from "@/components/seguridad/VerificarIdentidad";
+import { useOscuroDelSitio } from "@/components/seguridad/useOscuroDelSitio";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Wallet, ArrowDownLeft, Clock, CheckCircle, Loader2,
@@ -124,98 +126,31 @@ function clearOtpToken() {
   try { sessionStorage.removeItem(OTP_SESSION_KEY); } catch { /* ignore */ }
 }
 
+/**
+ * "Verificá tu identidad" antes de ver o cambiar los datos bancarios o pedir un
+ * retiro. Desde el 15/10/26 es la ventana compartida de `VerificarIdentidad`:
+ * con la verificación en dos pasos pide la huella o la app (el mail solo no
+ * alcanza: es lo que tiene quien se lo robó); sin ella, el código por mail de
+ * siempre. Con doble paso no hay token: el servidor mira la sesión, y lo que se
+ * pasa como "token" no se usa.
+ */
 function OtpModal({ onVerified, onClose }: { onVerified: (token: string) => void; onClose: () => void }) {
-  const [step, setStep] = useState<"request" | "verify">("request");
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const { verificar, ventana } = useVerificarIdentidad();
+  const oscuro = useOscuroDelSitio();
+  const pedido = useRef(false);
 
-  async function requestCode() {
-    setError("");
-    setLoading(true);
-    const res = await fetch("/api/vendedoras/wallet/otp", { method: "POST" });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error || "Error al enviar el código"); return; }
-    setExpiresAt(data.expiresAt);
-    setStep("verify");
-  }
-
-  async function verifyCode() {
-    setError("");
-    if (!code.trim()) { setError("Ingresá el código"); return; }
-    setLoading(true);
-    const res = await fetch("/api/vendedoras/wallet/otp", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code.trim() }),
+  useEffect(() => {
+    if (pedido.current) return;
+    pedido.current = true;
+    verificar({ motivo: "banco" }).then((r) => {
+      if (!r) { onClose(); return; }
+      if (r.token) saveOtpToken(r.token);
+      onVerified(r.token ?? "dos-pasos");
     });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error || "Código incorrecto"); return; }
-    saveOtpToken(data.token);
-    onVerified(data.token);
-  }
+  }, [verificar, onVerified, onClose]);
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-xl border border-gray-100 dark:border-white/10">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10">
-          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-indigo-500" /> Verificá tu identidad
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="p-6 space-y-4">
-          {step === "request" ? (
-            <>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Para acceder a tus datos bancarios necesitamos verificar tu identidad. Te enviaremos un código de 6 dígitos a tu email.
-              </p>
-              {error && <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm"><AlertTriangle className="h-4 w-4 shrink-0" />{error}</div>}
-              <div className="flex gap-3 pt-2">
-                <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
-                <button onClick={requestCode} disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Enviando..." : "Enviar código"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Te enviamos el código a tu email. Ingresalo acá:
-                {expiresAt && <span className="text-xs text-gray-400 block mt-1">Válido hasta las {new Date(expiresAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</span>}
-              </p>
-              <input
-                type="text" inputMode="numeric" maxLength={6}
-                value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
-                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-4 text-2xl font-mono text-center tracking-widest text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                autoFocus
-              />
-              {error && <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm"><AlertTriangle className="h-4 w-4 shrink-0" />{error}</div>}
-              <p className="text-xs text-gray-500 text-center">
-                ¿No llegó?{" "}
-                <button onClick={() => { setStep("request"); setCode(""); setError(""); }} className="text-indigo-600 hover:underline">Reenviar código</button>
-              </p>
-              <div className="flex gap-3">
-                <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
-                <button onClick={verifyCode} disabled={loading || code.length !== 6}
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Verificando..." : "Verificar"}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </motion.div>
-    </div>
-  );
+  // El panel de afiliados pinta el oscuro con `dark:`; la ventana, con `panel-oscuro:`.
+  return <div data-panel-tema={oscuro ? "oscuro" : "claro"}>{ventana}</div>;
 }
 
 // ── BankForm modal ────────────────────────────────────────────────────────────

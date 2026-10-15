@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock } from "lucide-react";
+import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock, ShieldCheck } from "lucide-react";
+import PanelSeguridad from "@/components/seguridad/PanelSeguridad";
+import { useVerificarIdentidad } from "@/components/seguridad/VerificarIdentidad";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   normalizarSlug, validarSlug, validarNombre, validarCheckoutName, validarEmail,
@@ -45,7 +47,7 @@ type Props = {
    * puerta de Configuración para que la busque. El servidor ya la comparó contra
    * la lista, así que acá no puede llegar una inventada.
    */
-  abrirEn: "general" | "pagos" | "meta" | "legales" | null;
+  abrirEn: "general" | "pagos" | "meta" | "legales" | "seguridad" | null;
   /** Los dominios propios conectados hoy, para la solapa de Dominio. */
   dominios: string[];
   /**
@@ -79,6 +81,8 @@ const PESTANAS = [
      primera venta. */
   { id: "legales", label: "Legales", Icon: Scale, lista: true },
   { id: "dominio", label: "Dominio", Icon: Globe, lista: true },
+  /* La verificación en dos pasos y las sesiones abiertas. Ver `lib/seguridad-cuenta`. */
+  { id: "seguridad", label: "Seguridad", Icon: ShieldCheck, lista: true },
 ] as const;
 
 type Pestana = (typeof PESTANAS)[number]["id"];
@@ -106,6 +110,7 @@ export default function ConfiguracionClient(p: Props) {
   /* El aviso de Mercado Pago gana: si la persona vuelve de conectar, lo primero
      que tiene que ver es cómo salió, aunque haya pedido otra solapa. */
   const [pestana, setPestana] = useState<Pestana>(p.avisoMp ? "pagos" : (p.abrirEn ?? "general"));
+  const { verificar, ventana: ventanaVerificar } = useVerificarIdentidad();
 
   const [nom, setNom] = useState(p.nombre);
   const [checkout, setCheckout] = useState(p.checkoutName);
@@ -246,7 +251,17 @@ export default function ConfiguracionClient(p: Props) {
     enVuelo.current = true;
     setGuardando("cobro");
     try {
-      const r = await fetch("/api/mp/oauth/disconnect", { method: "POST" });
+      let r = await fetch("/api/mp/oauth/disconnect", { method: "POST" });
+      /* Desconectar el cobro es de lo delicado: pide verificar que sos vos (ver
+         `lib/identidad-reciente`). Se verifica y se vuelve a pedir una vez. */
+      if (r.status === 403) {
+        const data = await r.clone().json().catch(() => ({}));
+        if (data.code === "VERIFICAR") {
+          const v = await verificar({ motivo: "cobro" });
+          if (!v) { enVuelo.current = false; setGuardando(null); return; }
+          r = await fetch("/api/mp/oauth/disconnect", { method: "POST", headers: v.token ? { "x-otp-token": v.token } : {} });
+        }
+      }
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
         setError(data.error ?? "No pudimos desconectarlo.");
@@ -264,6 +279,7 @@ export default function ConfiguracionClient(p: Props) {
 
   return (
     <div>
+      {ventanaVerificar}
       {/* ── Las pestañas ───────────────────────────────────────────────────
           Se van para los costados en el celular en vez de apilarse: apiladas
           se comen la pantalla entera antes de llegar al primer campo. */}
@@ -362,6 +378,8 @@ export default function ConfiguracionClient(p: Props) {
           problemaGa={problemaGa}
         />
       )}
+
+      {pestana === "seguridad" && <PanelSeguridad acento="naranja" />}
 
       {pestana === "dominio" && (
         <Seccion

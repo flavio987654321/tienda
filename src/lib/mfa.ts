@@ -29,6 +29,34 @@ export async function needsMfaChallenge(supabase: SupabaseClient): Promise<boole
 }
 
 /**
+ * Lo mismo que `needsMfaChallenge`, pero para las cuentas de tiendas, digitales
+ * y afiliados (ver `lib/seguridad-cuenta`). Dos diferencias, las dos a propósito:
+ *
+ * 1. Los factores salen del usuario que devolvió `getUser()` —recién leído de
+ *    Supabase— y no de la sesión guardada en la cookie. La cookie se arma al
+ *    entrar: si la persona activó la huella en el celular, la sesión vieja de la
+ *    compu seguía diciendo "sin factores" hasta renovarse, hasta una hora.
+ *
+ * 2. Falla CERRADO: si no se puede leer el nivel de la sesión, cuenta como que
+ *    falta. El admin falla abierto para no quedar afuera de su panel; acá lo
+ *    peor que pasa es reintentar.
+ */
+export async function faltaSegundoPaso(
+  supabase: SupabaseClient,
+  user: { factors?: { status: string }[] | null } | null | undefined,
+): Promise<boolean> {
+  if (!user) return false;
+  if (!(user.factors ?? []).some((f) => f.status === "verified")) return false;
+  try {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !data) return true;
+    return data.currentLevel !== "aal2";
+  } catch {
+    return true;
+  }
+}
+
+/**
  * ¿Esta cuenta ya tiene el segundo factor configurado?
  *
  * Distinto de `needsMfaChallenge`, que responde "¿falta pasarlo en ESTA sesión?".

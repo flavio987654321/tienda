@@ -14,7 +14,7 @@ import FavoritesDrawer from "@/components/FavoritesDrawer";
 import {
   ShoppingBag, Wallet, Award, BarChart3, Trophy, Store,
   X, XCircle, Menu, LogOut, HelpCircle, Sun, Moon,
-  Download, MessageSquare, Target, ShoppingCart, Share2, Home, ChevronDown, LifeBuoy,
+  Download, MessageSquare, Target, ShoppingCart, Share2, Home, ChevronDown, LifeBuoy, ShieldCheck,
 } from "lucide-react";
 
 // ── Modal de ayuda para afiliados ─────────────────────────────────────────────
@@ -29,6 +29,7 @@ const HELP_SECTIONS: { icon: React.ElementType; iconColor: string; title: string
   { icon: Download,      iconColor: "text-indigo-500",  title: "Kit de contenido",    body: "Fotos y videos de los productos de tus tiendas para usar en tus publicaciones, sin tener que pedírselos al dueño." },
   { icon: Target,        iconColor: "text-orange-500",  title: "Mis metas",           body: "Objetivos mensuales de ventas que podés fijarte para hacer seguimiento de tu progreso." },
   { icon: ShoppingBag,   iconColor: "text-green-500",   title: "Mis pedidos",         body: "Listado de las ventas generadas con tu link, con su estado y la comisión que te corresponde por cada una." },
+  { icon: ShieldCheck,   iconColor: "text-emerald-500", title: "Seguridad",           body: "Activá la verificación en dos pasos con tu huella, tu cara o una app de códigos: así nadie puede entrar ni cambiar a dónde cobrás, aunque consiga tu contraseña." },
 ];
 
 function HelpModal({ onClose }: { onClose: () => void }) {
@@ -99,6 +100,7 @@ const LINKS: { href: string; label: string; Icon: React.ElementType; color: stri
   { href: "/afiliados/plantillas",   label: "Plantillas",       Icon: MessageSquare,  color: "text-purple-500"  },
   { href: "/afiliados/kit",          label: "Kit de contenido", Icon: Download,       color: "text-indigo-500"  },
   { href: "/afiliados/metas",        label: "Mis metas",        Icon: Target,         color: "text-orange-500"  },
+  { href: "/afiliados/seguridad",    label: "Seguridad",        Icon: ShieldCheck,    color: "text-emerald-500" },
 ];
 
 /* Cuántas entran sueltas en la barra ancha. Cuatro, y no es al voleo: la barra

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, CheckCircle, Lightbulb, Loader2, Unlink, X, XCircle, Zap } from "lucide-react";
+import { useVerificarIdentidad } from "@/components/seguridad/VerificarIdentidad";
 
 type Props = {
   connected: boolean;
@@ -14,17 +15,41 @@ type Props = {
 export default function MpConnectButton({ connected, connectedAt, mpSellerId, mpStatus, activeAffiliatesCount }: Props) {
   const [disconnecting, setDisconnecting] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [errorDesconectar, setErrorDesconectar] = useState("");
+  const { verificar, ventana } = useVerificarIdentidad();
 
   async function confirmDisconnect() {
     // Guard síncrono: el `disabled` llega recién en el re-render.
     if (disconnecting) return;
     setDisconnecting(true);
-    await fetch("/api/mp/oauth/disconnect", { method: "POST" });
-    window.location.href = "/dashboard/pagos";
+    setErrorDesconectar("");
+    try {
+      let r = await fetch("/api/mp/oauth/disconnect", { method: "POST" });
+      /* Desconectar el cobro pide verificar que sos vos (ver `lib/identidad-reciente`). */
+      if (r.status === 403) {
+        const data = await r.clone().json().catch(() => ({}));
+        if (data.code === "VERIFICAR") {
+          const v = await verificar({ motivo: "cobro" });
+          if (!v) { setDisconnecting(false); return; }
+          r = await fetch("/api/mp/oauth/disconnect", { method: "POST", headers: v.token ? { "x-otp-token": v.token } : {} });
+        }
+      }
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        setErrorDesconectar(data.error ?? "No pudimos desconectarlo. Probá de nuevo.");
+        setDisconnecting(false);
+        return;
+      }
+      window.location.href = "/dashboard/pagos";
+    } catch {
+      setErrorDesconectar("No pudimos conectar. Revisá tu internet y probá de nuevo.");
+      setDisconnecting(false);
+    }
   }
 
   return (
     <>
+      {ventana}
       <div className="rounded-xl border border-slate-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 shadow-sm p-5">
         <div className="flex items-center gap-3 mb-4">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -202,6 +227,9 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
                   El dinero que ya cobraste no se toca: está en tu cuenta de MercadoPago. Podés volver a conectar
                   cuando quieras.
                 </p>
+              )}
+              {errorDesconectar && (
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorDesconectar}</p>
               )}
             </div>
 

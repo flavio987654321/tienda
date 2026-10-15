@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient, hasSupabaseServerConfig } from "@/lib/supabase/server";
+import { faltaSegundoPaso } from "@/lib/mfa";
 
 const profileSelect = {
   id: true,
@@ -34,7 +35,31 @@ async function toSessionUser(profile: UserProfile, isAdminEmail: boolean): Promi
   return user;
 }
 
+/**
+ * La persona de la sesión. Si la cuenta tiene la verificación en dos pasos y
+ * esta sesión todavía no la pasó, devuelve null: para todo el sistema, quien
+ * puso la contraseña pero no la huella todavía no entró. Es lo que cierra de una
+ * todas las APIs con sesión, incluidas las que se agreguen después. Ver
+ * `lib/seguridad-cuenta`.
+ *
+ * El admin es la excepción: tiene su propio segundo paso (`/verificar-2fa`), que
+ * su layout y el middleware exigen por su cuenta.
+ */
 export async function getCurrentUser(): Promise<AppSessionUser | null> {
+  const r = await cargarUsuario();
+  return r && !r.faltaSegundoPaso ? r.user : null;
+}
+
+/**
+ * Como `getCurrentUser`, pero también devuelve a quien le falta el segundo paso,
+ * con la marca. Sólo para la pantalla de verificación y sus endpoints: es lo
+ * único que alguien en ese estado puede usar.
+ */
+export async function getUsuarioConSegundoPaso(): Promise<{ user: AppSessionUser; faltaSegundoPaso: boolean } | null> {
+  return cargarUsuario();
+}
+
+async function cargarUsuario(): Promise<{ user: AppSessionUser; faltaSegundoPaso: boolean } | null> {
   if (!hasSupabaseServerConfig()) return null;
 
   const supabase = await createSupabaseServerClient();
@@ -43,6 +68,16 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
   if (error || !data.user?.email) return null;
 
   const isAdminEmail = Boolean(ADMIN_EMAIL && data.user.email.toLowerCase() === ADMIN_EMAIL);
+  const falta = !isAdminEmail && (await faltaSegundoPaso(supabase, data.user));
+  const user = await perfilDe(data.user as typeof data.user & { email: string }, isAdminEmail);
+  return user ? { user, faltaSegundoPaso: falta } : null;
+}
+
+async function perfilDe(
+  authUser: { id: string; email: string; user_metadata?: { name?: string } | null },
+  isAdminEmail: boolean,
+): Promise<AppSessionUser | null> {
+  const data = { user: authUser };
 
   const profile = await prisma.user.findFirst({
     where: {

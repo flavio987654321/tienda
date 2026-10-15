@@ -45,6 +45,11 @@ model User {
   otpExpiresAt           DateTime?
   otpPurpose             String?
   otpAttempts            Int       @default(0) // intentos fallidos; se resetea al verificar o al generar nuevo código
+  /// Hasta cuándo no se pueden tocar los datos de cobro (CBU, alias, Mercado
+  /// Pago) ni pedir retiros. Se pone cuando la verificación en dos pasos se
+  /// apagó sin el segundo factor: por un código de respaldo o al terminar una
+  /// recuperación. Ver `lib/seguridad-cuenta`.
+  dineroTrabadoHasta     DateTime?
 
   accounts           Account[]
   sessions           Session[]
@@ -70,6 +75,10 @@ model User {
   avisosVistos       AvisoAdminVisto[]
   /// Los avisos que el admin le escribió sólo a esta persona.
   avisosParaMi       AvisoAdmin[]        @relation("AvisoParaUsuario")
+  /// Verificación en dos pasos. Ver `lib/seguridad-cuenta`.
+  codigosRespaldo    CodigoRespaldo[]
+  recuperaciones     RecuperacionDosPasos[]
+  eventosCuenta      EventoCuenta[]
 }
 
 // Historial de chat con Sasha (asistente IA del dashboard). Se guarda en la base
@@ -2613,4 +2622,63 @@ model AdminSectionView {
   seenAt  DateTime @default(now())
 
   @@unique([userId, section])
+}
+
+// VERIFICACIÓN EN DOS PASOS — lo que Supabase no guarda. Los factores (huella y
+// app de códigos) viven en auth.mfa_factors y los maneja Supabase; acá van los
+// códigos de respaldo, los pedidos de "Perdí mi celular" y el historial que ve
+// la persona en Seguridad. Ver `lib/seguridad-cuenta`.
+
+/// Uno de los 8 códigos de respaldo. Se guarda la huella HMAC, nunca el código:
+/// leer la tabla no sirve para entrar.
+model CodigoRespaldo {
+  id       String    @id @default(cuid())
+  userId   String
+  huella   String    @unique
+  usadoAt  DateTime?
+  creadoAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// "Perdí mi celular". estado: confirmar (falta tocar el link del mail),
+/// esperando (corren los días), congelada (la frenó el admin a pedido),
+/// cancelada, completada o vencida (nunca confirmó el link).
+model RecuperacionDosPasos {
+  id              String    @id @default(cuid())
+  userId          String
+  estado          String
+  huellaConfirmar String?   @unique
+  huellaCancelar  String    @unique
+  /// Si al pedirla había entrado con la contraseña: sin ella la espera es más larga.
+  conContrasena   Boolean
+  creadoAt        DateTime  @default(now())
+  confirmadaAt    DateTime?
+  venceAt         DateTime?
+  cerradaAt       DateTime?
+  motivoCierre    String?
+  ultimoAvisoAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, estado])
+  @@index([estado, venceAt])
+}
+
+/// Lo que se muestra en "Actividad de seguridad": activaciones, ingresos con el
+/// segundo paso, códigos de respaldo usados, recuperaciones. Se borra a los 90 días.
+model EventoCuenta {
+  id          String   @id @default(cuid())
+  userId      String
+  creadoAt    DateTime @default(now())
+  tipo        String
+  detalle     String?
+  dispositivo String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, creadoAt(sort: Desc)])
+  @@index([creadoAt])
 }

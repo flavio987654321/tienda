@@ -72,3 +72,11 @@ export function nombreDeCuenta(role: string | null | undefined): string {
   if (role === "DIGITAL") return "de productos digitales";
   return "de cliente";
 }
+
+/** La pestaña Seguridad del panel al que lleva `href` (ver `lib/seguridad-cuenta`). */
+export function seguridadDelPanel(href: string): string {
+  if (href.startsWith("/dashboard")) return "/dashboard/ajustes?s=seguridad";
+  if (href.startsWith("/digitales")) return "/digitales/configuracion?tab=seguridad";
+  if (href.startsWith("/afiliados")) return "/afiliados/seguridad";
+  return href;
+}
