@@ -69,19 +69,99 @@ const PASOS = [
   {
     icon: Upload,
     titulo: "Subís tu archivo",
+    corta: "Tu PDF, de hasta 50 MB, guardado en privado.",
     texto: "Tu PDF, de hasta 50 MB. Queda guardado en un lugar privado al que sólo llega quien pagó: el link de descarga se arma en el momento y vence.",
   },
   {
     icon: Wand2,
     titulo: "Se arma tu página de venta",
+    corta: "Con su dirección y los textos escritos por la IA.",
     texto: "Cada producto tiene la suya, con su propia dirección. La IA te escribe los textos y después los editás a mano — o, si ya tenés un diseño hecho, subís el tuyo y usás ese.",
   },
   {
     icon: CreditCard,
     titulo: "Cobrás y se entrega sola",
+    corta: "La plata a tu Mercado Pago y el archivo al que compró.",
     texto: "La plata entra a tu cuenta de Mercado Pago. El archivo le llega al comprador apenas se aprueba el pago, sin que vos hagas nada.",
   },
 ];
+
+/* Los dos caminos: foto, título y una línea; lo demás detrás del "+". */
+const CAMINOS = [
+  {
+    icon: Upload, foto: "/digitales/ya-lo-tengo.webp",
+    chapa: "Ya lo tengo",
+    titulo: "Subilo y publicá hoy",
+    corta: "Cargás el archivo, le ponés precio y ya tenés página de venta.",
+    texto: "Si querés, la IA te escribe los textos de la página a partir de una descripción corta.",
+    puntos: ["Tu PDF, hasta 50 MB", "La página se arma sola, con IA", "Lo editás todo a mano"],
+  },
+  {
+    icon: Wand2, foto: "/digitales/de-cero.webp",
+    chapa: "Arranco de cero",
+    titulo: "Que la IA te escriba el ebook",
+    corta: "Le contás de qué se trata y te arma el PDF entero, con tapa.",
+    texto: "Te propone el índice, lo aprobás, y escribe el PDF entero con su tapa. Viene con los planes Starter y Pro.",
+    puntos: ["Vos aprobás el índice antes", "Sale en PDF con tapa", "Desde el plan Starter"],
+  },
+];
+
+/* El "+" que abre el detalle. A la vista va lo corto; esto es para quien quiere saber más. */
+function MasDetalle({ abierto, onToggle, children }: { abierto: boolean; onToggle: () => void; children: React.ReactNode }) {
+  return (
+    <>
+      <button type="button" onClick={onToggle} aria-expanded={abierto}
+        className="mt-3 flex w-fit items-center gap-1.5 text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors">
+        {abierto ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+        {abierto ? "Menos" : "Más detalle"}
+      </button>
+      <AnimatePresence initial={false}>
+        {abierto && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }} className="overflow-hidden">
+            <div className="pt-3">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+/* El dibujito de cada paso: muestra lo que pasa en vez de contarlo. */
+function EscenaPaso({ i }: { i: number }) {
+  const caja = "mt-4 inline-flex items-center gap-3 bg-white rounded-2xl border border-black/[0.06] shadow-md shadow-gray-200/60 px-4 py-3";
+  if (i === 0) return (
+    <div className={caja}>
+      <div className="w-9 h-11 rounded-md bg-rose-50 border border-rose-100 flex items-end justify-center pb-1 text-[9px] font-black text-rose-500">PDF</div>
+      <div className="w-36">
+        <p className="text-xs font-bold text-gray-800 mb-1.5 truncate">mi-ebook.pdf</p>
+        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden"><div className="pd-carga h-full rounded-full bg-orange-500" /></div>
+      </div>
+    </div>
+  );
+  if (i === 1) return (
+    <div className={caja}>
+      <div className="relative w-9 h-14 rounded-md overflow-hidden border-2 border-gray-900 bg-white">
+        <Image src="/marketing/pagina-de-venta-ejemplo.png" alt="" fill sizes="36px" className="object-cover object-top" />
+      </div>
+      <div>
+        <p className="text-[11px] text-gray-400 font-semibold leading-none mb-1">Tu página, con su dirección</p>
+        <p className="text-xs font-bold text-gray-800">tiendaapps.com/p/…</p>
+      </div>
+    </div>
+  );
+  return (
+    <div className={caja}>
+      <div className="pd-latido w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+        <Check className="h-4 w-4 text-white" strokeWidth={3} />
+      </div>
+      <div>
+        <p className="text-[11px] text-gray-400 font-semibold leading-none mb-1">Venta aprobada · archivo enviado</p>
+        <p className="text-sm font-black text-gray-900 leading-none">$ 9.900</p>
+      </div>
+    </div>
+  );
+}
 
 const ADENTRO = [
   { icon: Gift, titulo: "Bonos que regalás", texto: "Sumás archivos de regalo a la compra. Se ven en la página como parte del paquete y se entregan junto con el principal." },
@@ -175,15 +255,15 @@ function Contador({ hasta, sufijo = "" }: { hasta: number; sufijo?: string }) {
 
 export default function ProductosDigitalesPage() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start end", "end start"] });
 
   /* ⚠️ El parallax también se apaga con "menos movimiento", y hay que apagarlo
      ACÁ: lo mueve framer-motion, así que el `@media (prefers-reduced-motion)`
      del `<style>` no lo toca —ese sólo alcanza a las animaciones CSS—. Un
      parallax es de lo que peor le cae a quien pidió menos movimiento. */
   const menosMovimiento = useReducedMotion();
-  const celularY = useTransform(scrollYProgress, [0, 1], [0, menosMovimiento ? 0 : -90]);
-  const celularEscala = useTransform(scrollYProgress, [0, 1], [1, menosMovimiento ? 1 : 0.94]);
+  const celularY = useTransform(scrollYProgress, [0, 1], [menosMovimiento ? 0 : 50, menosMovimiento ? 0 : -50]);
+  const celularEscala = useTransform(scrollYProgress, [0, 0.5, 1], [menosMovimiento ? 1 : 0.96, 1, menosMovimiento ? 1 : 0.96]);
 
   const [abierta, setAbierta] = useState<number | null>(0);
 
@@ -191,21 +271,9 @@ export default function ProductosDigitalesPage() {
   const { scrollYProgress: pasosProg } = useScroll({ target: pasosRef, offset: ["start 80%", "end 60%"] });
   const lineaPasos = useTransform(pasosProg, [0, 1], [menosMovimiento ? 1 : 0, 1]);
 
-  /* "Lo que trae": en el celular es una tira que se desliza; el puntito que
-     se marca sale de cuánto se corrió. */
-  const tiraRef = useRef<HTMLDivElement>(null);
-  const [enTira, setEnTira] = useState(0);
-  function alDeslizar() {
-    const el = tiraRef.current;
-    const primera = el?.firstElementChild as HTMLElement | null;
-    if (!el || !primera) return;
-    setEnTira(Math.round(el.scrollLeft / (primera.offsetWidth + 16)));
-  }
-  function irATira(i: number) {
-    const el = tiraRef.current;
-    const tarjeta = el?.children[i] as HTMLElement | undefined;
-    if (el && tarjeta) el.scrollTo({ left: tarjeta.offsetLeft - el.offsetLeft - 24, behavior: "smooth" });
-  }
+  // Qué "+" están abiertos (caminos, pasos y lo que trae), por su título.
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
+  const alternar = (k: string) => setAbiertos((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
   /* La misma llave que mira la home, el registro y los precios. Con el producto
      apagado esta página no existe: ver el `notFound` de más abajo no sirve acá
@@ -242,6 +310,8 @@ export default function ProductosDigitalesPage() {
         .pd-flota { animation: pd-flotar 5s ease-in-out infinite; }
         @keyframes pd-cinta { from { transform: translateX(0) } to { transform: translateX(-50%) } }
         .pd-cinta { animation: pd-cinta 38s linear infinite; display: flex; width: max-content; }
+        @keyframes pd-cargando { 0% { width: 0 } 70%, 100% { width: 100% } }
+        .pd-carga { width: 100%; animation: pd-cargando 2.6s ease-out infinite; }
         @keyframes pd-latido { 0%,100%{ box-shadow:0 0 0 0 rgba(16,185,129,.45) } 50%{ box-shadow:0 0 0 9px rgba(16,185,129,0) } }
         .pd-latido { animation: pd-latido 2.4s ease-in-out infinite; }
 
@@ -297,7 +367,7 @@ export default function ProductosDigitalesPage() {
 
         /* Quien pidió menos movimiento no recibe ninguno de estos efectos. */
         @media (prefers-reduced-motion: reduce) {
-          .pd-texto-degrade, .pd-flota, .pd-cinta, .pd-latido { animation: none !important; }
+          .pd-texto-degrade, .pd-flota, .pd-cinta, .pd-latido, .pd-carga { animation: none !important; }
           .pd-entra > *, .pd-reveal > *, .pd-reveal-uno, .pd-prende { animation: none !important; }
         }
       `}</style>
@@ -305,78 +375,97 @@ export default function ProductosDigitalesPage() {
       <SiteNav active="digitales" />
 
       {/* ═══ HERO ═══ */}
-      <section ref={heroRef} className="relative overflow-hidden pd-grilla bg-white pt-8 pb-20 sm:pt-16 sm:pb-24 lg:pt-24 lg:pb-32">
-        <div className="absolute -top-40 -left-40 w-[560px] h-[560px] bg-orange-200/35 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-20 -right-40 w-[520px] h-[520px] bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
+      {/* Foto entera con el texto encima (15/10/26), como la home: alguien
+          leyendo un ebook en la tablet, que es lo que se vende acá. La foto va
+          espejada para que la tablet quede a la derecha y el texto no la tape.
+          Propia y achicada (public/digitales): 28 KB en el celular, 46 en la
+          compu. El celular con la página de venta pasó a la sección de abajo. */}
+      <section className="relative overflow-hidden bg-gray-950 min-h-[560px] sm:min-h-[620px] lg:min-h-[640px] flex items-end lg:items-center">
+        <picture>
+          <source media="(max-width: 767px)" srcSet="/digitales/portada-celu.webp" />
+          <img src="/digitales/portada.webp" alt="" fetchPriority="high" decoding="async" className="absolute inset-0 w-full h-full object-cover object-[70%_40%] lg:object-[80%_45%]" />
+        </picture>
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-gray-950/10 lg:bg-gradient-to-r lg:from-gray-950/95 lg:via-gray-950/60 lg:to-transparent" />
+        <div aria-hidden className="absolute -bottom-40 -left-40 w-[480px] h-[480px] rounded-full bg-orange-600/25 blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-14 lg:gap-16 items-center">
-          {/* La entrada de acá es CSS (`pd-entra`) y no framer-motion. Ver el
-              comentario largo en el `<style>`: con variantes, este texto se
-              quedaba invisible y el hero aparecía vacío. */}
-          <div className="pd-entra">
-            <span className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-600 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-5">
+        {/* La entrada de acá es CSS (`pd-entra`) y no framer-motion. Ver el
+            comentario largo en el `<style>`: con variantes, este texto se
+            quedaba invisible y el hero aparecía vacío. */}
+        <div className="relative max-w-6xl mx-auto px-6 w-full pt-24 pb-12 lg:py-20">
+          <div className="pd-entra max-w-xl text-white">
+            <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 backdrop-blur-sm text-white text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-5">
               <Download className="h-3.5 w-3.5" /> Productos digitales
             </span>
 
-            <h1 className="text-[34px] sm:text-5xl lg:text-6xl font-black text-gray-950 leading-[1.05] tracking-tight mb-4 sm:mb-6">
+            <h1 className="text-[38px] sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mb-4 sm:mb-6">
               Vendé lo que sabés,<br />
               <span className="pd-texto-degrade">sin tener una tienda.</span>
             </h1>
 
-            <p className="text-gray-500 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8 max-w-lg">
-              Subís tu archivo y te queda una página de venta con su propia dirección. Cobrás con Mercado Pago y la entrega sale sola, apenas se aprueba el pago.
+            <p className="text-white/80 text-base sm:text-lg leading-relaxed mb-7 sm:mb-8">
+              Subís tu archivo, te queda una página de venta y la entrega sale sola apenas te pagan.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
               <Link
                 href="/registro?plan=digital"
-                className="inline-flex items-center gap-2 bg-gray-950 text-white px-6 py-3.5 sm:px-7 sm:py-4 rounded-2xl font-bold hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+                className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-6 py-3.5 sm:px-7 sm:py-4 rounded-2xl font-bold transition-colors shadow-lg shadow-orange-600/30"
               >
                 Empezá gratis <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="#como-funciona"
-                className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-6 py-3.5 sm:px-7 sm:py-4 rounded-2xl font-bold hover:border-gray-300 hover:text-gray-950 transition-colors"
+                className="inline-flex items-center gap-2 border border-white/30 hover:border-white/60 hover:bg-white/10 text-white px-6 py-3.5 sm:px-7 sm:py-4 rounded-2xl font-bold transition-colors backdrop-blur-sm"
               >
-                <span className="sm:hidden">Cómo funciona</span><span className="hidden sm:inline">Ver cómo funciona</span>
+                Cómo funciona
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 text-[13px] sm:text-sm text-gray-500">
+            <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 text-[13px] sm:text-sm text-white/70">
               {["Sin tarjeta", "El plan gratis no vence", "Cobrás vos, a tu cuenta"].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-orange-600" /> {t}
+                  <Check className="h-4 w-4 text-orange-400" /> {t}
                 </span>
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ═══ ASÍ QUEDA ═══ */}
+      {/* El celular con una página de venta de ejemplo y las ventas entrando:
+          una línea y la imagen, que es lo que convence. */}
+      <section ref={heroRef} className="relative overflow-hidden pd-grilla bg-white py-16 sm:py-20">
+        <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className="pd-reveal text-center lg:text-left">
+            <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Así queda</p>
+            <h2 className="text-3xl lg:text-5xl font-black text-gray-950 leading-tight mb-4">
+              Tu página de venta,<br className="hidden sm:block" /> lista para compartir.
+            </h2>
+            <p className="text-gray-500 text-lg">Con su propia dirección. La pegás en Instagram o WhatsApp y empieza a vender.</p>
+          </div>
 
           {/* El celular, con parallax y las ventas entrando de a una */}
-          <motion.div style={{ y: celularY, scale: celularEscala }} className="relative mx-auto w-[230px] sm:w-[300px]">
-            <div className="pd-flota relative h-[400px] sm:h-[520px] rounded-[2.4rem] overflow-hidden border-[8px] border-gray-900 shadow-2xl shadow-orange-200/60 bg-white">
+          <motion.div style={{ y: celularY, scale: celularEscala }} className="relative mx-auto w-[230px] sm:w-[280px]">
+            <div className="pd-flota relative h-[400px] sm:h-[480px] rounded-[2.4rem] overflow-hidden border-[8px] border-gray-900 shadow-2xl shadow-orange-200/60 bg-white">
               <Image
                 src="/marketing/pagina-de-venta-ejemplo.png"
                 alt="Ejemplo de una página de venta de un producto digital"
-                fill sizes="300px" priority
+                fill sizes="280px"
                 className="object-cover object-top"
               />
             </div>
 
-            {/* Las dos van en la MITAD DE ABAJO, sobre la tapa del ebook. Arriba
-                —donde estaban— le tapaban el título y la bajada a la pantalla,
-                que es justo lo que la captura tiene para mostrar.
+            {/* Las dos van en la MITAD DE ABAJO, sobre la tapa del ebook: arriba
+                le tapaban el título a la pantalla.
 
-                ⚠️ Y la inclinación va como PROP de motion, no en `style`:
-                framer-motion arma su propio `transform` con lo que anima (x,
-                scale) y al escribirlo pisa el del `style`, así que la tarjeta
-                salía derecha. Puesta entre lo que anima, entra en el mismo
-                transform y sobrevive. */}
-            {/* En el celular también se ven (antes iban escondidas): más arriba,
-                saliendo por los costados del marco, porque el celular asoma recién
-                al final de la primera pantalla y es lo primero que se ve de él. */}
+                ⚠️ La inclinación va como PROP de motion, no en `style`:
+                framer-motion arma su propio `transform` con lo que anima y pisa
+                el del `style`. Puesta entre lo que anima, sobrevive. */}
             {[
-              { monto: "$ 9.900", donde: "-right-10 top-20 sm:top-auto sm:-right-14 sm:bottom-40", retraso: 0.8, giro: 3 },
-              { monto: "$ 14.500", donde: "-left-10 top-52 sm:top-auto sm:-left-16 sm:bottom-16", retraso: 1.5, giro: -3 },
+              { monto: "$ 9.900", donde: "-right-10 bottom-40 sm:-right-14", retraso: 0.4, giro: 3 },
+              { monto: "$ 14.500", donde: "-left-10 bottom-16 sm:-left-16", retraso: 1.1, giro: -3 },
             ].map((v) => (
               <motion.div
                 key={v.monto}
@@ -414,60 +503,54 @@ export default function ProductosDigitalesPage() {
       </section>
 
       {/* ═══ LOS DOS CAMINOS ═══ */}
-      <section className="py-24 bg-white">
+      {/* Foto, título y una línea a la vista; el resto detrás del "+" (15/10/26):
+          la gente no lee bloques, pero el que quiere el detalle lo encuentra. */}
+      <section className="py-20 lg:py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6">
-          <motion.div className="pd-reveal text-center mb-14">
-            <motion.p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Por dónde empezás</motion.p>
-            <motion.h2 className="text-4xl lg:text-5xl font-black text-gray-950 mb-4">
+          <div className="pd-reveal text-center mb-12">
+            <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Por dónde empezás</p>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-950">
               ¿Ya lo tenés hecho, o arrancás de cero?
-            </motion.h2>
-            <motion.p className="text-gray-500 text-lg max-w-2xl mx-auto">
-              Los dos caminos terminan en el mismo lugar: tu producto publicado y cobrando.
-            </motion.p>
-          </motion.div>
+            </h2>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              {
-                icon: Upload,
-                chapa: "Ya lo tengo",
-                titulo: "Subilo y publicá hoy",
-                texto: "Cargás el archivo, le ponés precio y ya tenés página de venta. Si querés, la IA te escribe los textos a partir de una descripción corta.",
-                puntos: ["Tu PDF, hasta 50 MB", "La página se arma sola, con IA", "Lo editás todo a mano"],
-              },
-              {
-                icon: Wand2,
-                chapa: "Arranco de cero",
-                titulo: "Que la IA te escriba el ebook",
-                texto: "Le contás de qué se trata y a quién le hablás. Te propone el índice, lo aprobás, y escribe el PDF entero con su tapa. Viene con los planes Starter y Pro.",
-                puntos: ["Vos aprobás el índice antes", "Sale en PDF con tapa", "Desde el plan Starter"],
-              },
-            ].map((c) => (
-              /* El de afuera entra, el de adentro se levanta: ver el aviso en el
-                 <style> sobre por que no pueden ser el mismo elemento. */
-              <div key={c.chapa} className="pd-reveal-uno">
-              <motion.div
-                className="group relative h-full bg-white border border-black/[0.07] rounded-3xl p-8 shadow-sm hover:shadow-2xl hover:shadow-orange-100 transition-shadow"
-                whileHover={{ y: -6 }}
-              >
-                <div className="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-orange-500 to-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <c.icon className="h-6 w-6 text-orange-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {CAMINOS.map((c) => {
+              const abierto = abiertos.has(c.chapa);
+              return (
+                /* El de afuera entra, el de adentro se levanta: ver el aviso en el
+                   <style> sobre por que no pueden ser el mismo elemento. */
+                <div key={c.chapa} className="pd-reveal-uno">
+                <motion.div
+                  className="group relative bg-white border border-black/[0.07] rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-orange-100 transition-shadow"
+                  whileHover={{ y: -6 }}
+                >
+                  <div className="relative aspect-[16/9] overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- foto propia ya achicada (public/digitales) */}
+                    <img src={c.foto} alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 bg-white/90 backdrop-blur text-gray-900 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full">
+                      <c.icon className="h-3.5 w-3.5 text-orange-600" /> {c.chapa}
+                    </span>
+                  </div>
+                  <div className="p-6 sm:p-7">
+                    <h3 className="text-2xl font-black text-gray-950 mb-2">{c.titulo}</h3>
+                    <p className="text-gray-500 leading-relaxed">{c.corta}</p>
+                    <MasDetalle abierto={abierto} onToggle={() => alternar(c.chapa)}>
+                      <p className="text-gray-500 leading-relaxed mb-4">{c.texto}</p>
+                      <div className="space-y-2.5">
+                        {c.puntos.map((p) => (
+                          <div key={p} className="flex items-start gap-2.5">
+                            <Check className="h-4 w-4 text-orange-600 flex-shrink-0 mt-1" />
+                            <span className="text-gray-700 text-sm">{p}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </MasDetalle>
+                  </div>
+                </motion.div>
                 </div>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{c.chapa}</p>
-                <h3 className="text-2xl font-black text-gray-950 mb-3">{c.titulo}</h3>
-                <p className="text-gray-500 leading-relaxed mb-6">{c.texto}</p>
-                <div className="space-y-2.5">
-                  {c.puntos.map((p) => (
-                    <div key={p} className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-orange-600 flex-shrink-0 mt-1" />
-                      <span className="text-gray-700 text-sm">{p}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -509,9 +592,13 @@ export default function ProductosDigitalesPage() {
                     {i + 1}
                   </span>
                 </div>
-                <div className="pt-1 md:pt-0">
-                  <h3 className="text-xl font-black text-gray-950 mb-2.5">{p.titulo}</h3>
-                  <p className="text-gray-500 leading-relaxed">{p.texto}</p>
+                <div className="pt-1 md:pt-0 flex-1 min-w-0">
+                  <h3 className="text-xl font-black text-gray-950 mb-1.5">{p.titulo}</h3>
+                  <p className="text-gray-500 leading-relaxed">{p.corta}</p>
+                  <EscenaPaso i={i} />
+                  <MasDetalle abierto={abiertos.has(p.titulo)} onToggle={() => alternar(p.titulo)}>
+                    <p className="text-gray-500 leading-relaxed">{p.texto}</p>
+                  </MasDetalle>
                 </div>
               </motion.div>
             ))}
@@ -520,54 +607,51 @@ export default function ProductosDigitalesPage() {
       </section>
 
       {/* ═══ LA PÁGINA POR DENTRO ═══ */}
-      <section className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div className="pd-reveal text-center mb-14">
-            <motion.p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Lo que trae cada producto</motion.p>
-            <motion.h2 className="text-4xl lg:text-5xl font-black text-gray-950 mb-4">
+      {/* Sólo el ícono y el nombre de cada cosa; tocándola se abre lo que hace
+          (15/10/26). Antes eran seis tarjetas con su párrafo a la vista. */}
+      <section className="py-20 lg:py-24 bg-white">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="pd-reveal text-center mb-12">
+            <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Lo que trae cada producto</p>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-950 mb-4">
               No es un botón de pago.<br className="hidden sm:block" /> Es el embudo entero.
-            </motion.h2>
-            <motion.p className="text-gray-500 text-lg max-w-2xl mx-auto">
-              Viene armado y se prende desde el panel, producto por producto. Algunas cosas dependen del plan, y está aclarado en cada una.
-            </motion.p>
-          </motion.div>
+            </h2>
+            <p className="text-gray-500 text-lg">Tocá cada una para ver qué hace.</p>
+          </div>
 
-          {/* En el celular, una tira que se desliza de a una (antes eran seis
-              tarjetas apiladas, casi una pantalla y media de lo mismo); desde sm,
-              la grilla. La aparición va en el envoltorio y no en cada tarjeta:
-              adentro de una tira horizontal, `animation-timeline: view()` mira
-              el scroll de la tira y no el de la página. */}
-          <div className="pd-reveal-uno">
-          <div
-            ref={tiraRef} onScroll={alDeslizar}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-6 px-6 pb-2 [scrollbar-width:none] sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-5 sm:overflow-visible sm:mx-0 sm:px-0 sm:pb-0"
-          >
-            {ADENTRO.map((c) => (
-              <div key={c.titulo} className="snap-center flex-shrink-0 w-[82%] sm:w-auto">
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="h-full bg-gray-50 hover:bg-white border border-transparent hover:border-black/[0.06] rounded-2xl p-6 transition-all hover:shadow-xl hover:shadow-gray-200/60"
-              >
-                <div className="w-11 h-11 rounded-xl bg-white shadow-sm flex items-center justify-center mb-4">
-                  <c.icon className="h-5 w-5 text-orange-600" />
-                </div>
-                <h3 className="font-black text-gray-950 mb-2">{c.titulo}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{c.texto}</p>
-              </motion.div>
-              </div>
-            ))}
+          <div className="pd-reveal-uno grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 items-start">
+            {ADENTRO.map((c) => {
+              const abierto = abiertos.has(c.titulo);
+              return (
+                <button
+                  key={c.titulo} type="button" onClick={() => alternar(c.titulo)} aria-expanded={abierto}
+                  className={`text-left rounded-2xl border p-4 sm:p-5 transition-all ${abierto
+                    ? "sm:col-span-2 lg:col-span-1 bg-white border-orange-200 shadow-xl shadow-orange-100/60"
+                    : "bg-gray-50 border-transparent hover:bg-white hover:border-black/[0.06] hover:shadow-lg hover:-translate-y-0.5"}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${abierto ? "bg-orange-600 text-white" : "bg-white text-orange-600 shadow-sm"}`}>
+                      <c.icon className="h-5 w-5" />
+                    </span>
+                    <span className="font-black text-gray-950 text-sm sm:text-base leading-tight flex-1">{c.titulo}</span>
+                    {abierto ? <Minus className="h-4 w-4 text-orange-600 flex-shrink-0" /> : <Plus className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                  </span>
+                  <AnimatePresence initial={false}>
+                    {abierto && (
+                      <motion.span
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="block overflow-hidden"
+                      >
+                        <span className="block pt-3 text-gray-500 text-sm leading-relaxed">{c.texto}</span>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </button>
+              );
+            })}
           </div>
-          <div className="flex justify-center gap-1.5 mt-5 sm:hidden">
-            {ADENTRO.map((c, i) => (
-              <button
-                key={c.titulo} type="button" onClick={() => irATira(i)}
-                aria-label={`Ver ${c.titulo}`} aria-current={i === enTira}
-                className="h-2 rounded-full transition-all duration-300"
-                style={{ width: i === enTira ? 22 : 8, background: i === enTira ? "var(--color-marca)" : "#e5e7eb" }}
-              />
-            ))}
-          </div>
-          </div>
+          <p className="text-center text-gray-400 text-sm mt-6">Algunas dependen del plan, y está aclarado en cada una.</p>
         </div>
       </section>
 
