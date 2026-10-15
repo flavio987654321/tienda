@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { fotoLiviana } from "@/lib/foto-liviana";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 
 type Promotion = { id: string; imageUrl: string; link: string | null };
 
@@ -42,9 +43,11 @@ export default function PromotionsCarousel() {
     return () => clearTimeout(t);
   }, [firma]);
 
-  if (!visible) return null;
-
   const total = promotions.length;
+  // En el celular se pasa con el dedo (las flechas son sólo para el mouse).
+  const swipe = useTouchSwipe(() => { if (total > 1) next(); }, () => { if (total > 1) prev(); });
+
+  if (!visible) return null;
   if (total === 0) return null;
 
   /* Todas las salidas pasan por acá —la cruz y tocar afuera— para que la casilla
@@ -89,6 +92,10 @@ export default function PromotionsCarousel() {
           from { opacity: 0; transform: translateX(-36px) scale(0.97) }
           to   { opacity: 1; transform: translateX(0)     scale(1)    }
         }
+        /* Pantallas táctiles: sin flechas, alcanza con el dedo y los puntitos. */
+        @media (hover: none), (pointer: coarse) {
+          .promo-flecha { display: none !important; }
+        }
       `}</style>
 
       <div
@@ -97,6 +104,7 @@ export default function PromotionsCarousel() {
           animation: "flyerSlideUp 0.4s cubic-bezier(0.22,1,0.36,1)",
         }}
         onClick={(e) => e.stopPropagation()}
+        {...swipe}
       >
         {/* Botón cerrar */}
         <button
@@ -149,7 +157,7 @@ export default function PromotionsCarousel() {
         {/* Flechas */}
         {total > 1 && (
           <>
-            <button onClick={prev} aria-label="Anterior"
+            <button onClick={prev} aria-label="Anterior" className="promo-flecha"
               style={{
                 position: "absolute", left: -36, top: "50%", transform: "translateY(-50%)",
                 width: 36, background: "none", border: "none",
@@ -158,7 +166,7 @@ export default function PromotionsCarousel() {
                 filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
               }}
             >‹</button>
-            <button onClick={next} aria-label="Siguiente"
+            <button onClick={next} aria-label="Siguiente" className="promo-flecha"
               style={{
                 position: "absolute", right: -36, top: "50%", transform: "translateY(-50%)",
                 width: 36, background: "none", border: "none",
