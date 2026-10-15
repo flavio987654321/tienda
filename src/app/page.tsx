@@ -1161,7 +1161,7 @@ export default function Home() {
                 },
               ].map((step) => (
                 <motion.div
-                  key={step.n} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.8 }}
+                  key={step.n} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.5 }}
                   className="flex gap-5 pb-10 last:pb-0 relative"
                 >
                   <motion.div
