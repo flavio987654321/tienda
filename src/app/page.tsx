@@ -323,6 +323,14 @@ export default function Home() {
   const heroFotoScale = useTransform(heroProg, [0, 1], [1.04, 1.14]);
   const heroTextoY = useTransform(heroProg, [0, 1], [0, -90]);
   const heroTextoOp = useTransform(heroProg, [0, 0.75], [1, 0]);
+  // Afiliados: la foto se desliza un poco mientras la sección cruza la pantalla,
+  // y la línea de los pasos se dibuja a medida que se baja por ellos.
+  const afRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: afProg } = useScroll({ target: afRef, offset: ["start end", "end start"] });
+  const afFotoY = useTransform(afProg, [0, 1], ["-6%", "6%"]);
+  const pasosRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: pasosProg } = useScroll({ target: pasosRef, offset: ["start 75%", "end 55%"] });
+  const pasosLinea = useSpring(pasosProg, { stiffness: 120, damping: 24 });
 
   function dismissAnnouncement() {
     localStorage.setItem(ANNOUNCEMENT_KEY, "1");
@@ -891,113 +899,83 @@ export default function Home() {
       </section>
 
       {/* ── AFILIADOS ── */}
-      <section className="py-24 relative overflow-hidden" style={{ background: "linear-gradient(150deg,#fffbeb 0%,#fff7ed 50%,#fff1f2 100%)" }}>
-        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-rose-200/25 rounded-full blur-3xl pointer-events-none" />
+      {/* Foto y pasos (15/10/26), en el mismo idioma que la portada. Antes el
+          collage de tres fotos estaba sólo en la compu (`hidden lg:block`) y en
+          el celular el bloque era texto puro. Ahora la foto va en todos los
+          anchos: arriba y con el título encima en el celular, a la derecha a
+          todo el alto en la compu. Es vertical a propósito (33 KB): una sola
+          foto sirve para los dos recortes. Los pasos llevan una línea que se
+          dibuja al bajar y cada número se prende cuando llega. */}
+      <section ref={afRef} className="relative bg-gray-950 text-white overflow-hidden">
+        <div aria-hidden className="absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-orange-600/20 blur-3xl pointer-events-none" />
+        <div className="relative h-[78svh] max-h-[620px] lg:absolute lg:inset-y-0 lg:right-0 lg:w-[46%] lg:h-auto lg:max-h-none overflow-hidden">
+          <motion.img
+            src="/home/afiliados.webp" alt="" loading="lazy" decoding="async"
+            style={reducirMov ? undefined : { y: afFotoY, scale: 1.12 }}
+            className="absolute inset-0 w-full h-full object-cover object-[50%_25%]"
+          />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/35 to-transparent lg:bg-gradient-to-r lg:from-gray-950 lg:via-gray-950/30 lg:to-transparent" />
+        </div>
 
-        <div className="relative max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-
-            {/* Izquierda: copy + pasos */}
+        <div className="relative max-w-6xl mx-auto px-6 -mt-48 lg:mt-0 pb-20 lg:py-28">
+          <div className="lg:max-w-[50%]">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-              <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-4">Para afiliados</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-6 leading-tight">
+              <motion.p variants={fadeUp} className="text-orange-400 font-semibold text-sm uppercase tracking-widest mb-4">Para afiliados</motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black mb-6 leading-tight">
                 Representá marcas<br className="hidden sm:block" /> que te gustan.
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-500 text-lg leading-relaxed mb-10">
+              <motion.p variants={fadeUp} className="text-white/70 text-lg leading-relaxed mb-12">
                 Un afiliado no maneja stock, no cobra pagos, no hace envíos. Representa una tienda, comparte su link y suma comisiones con cada venta que genera. La forma más flexible de vender online.
               </motion.p>
-
-              {/* Pasos numerados */}
-              <div className="space-y-0">
-                {[
-                  {
-                    n: "01",
-                    title: "Elegís la tienda",
-                    desc: "Buscás entre las tiendas disponibles y te postulás a la que va con tu estilo o tu audiencia. El dueño decide quién lo representa.",
-                  },
-                  {
-                    n: "02",
-                    title: "Compartís tu link",
-                    desc: "Te aprueban y recibís un link único. Lo compartís donde quieras: redes sociales, WhatsApp, stories — donde tengas llegada.",
-                  },
-                  {
-                    n: "03",
-                    title: "Seguís todo desde tu panel",
-                    desc: "Ves en tiempo real las visitas que generaste, las ventas que se concretaron y tus comisiones acumuladas. Sin llamar a nadie.",
-                  },
-                ].map((step, i) => (
-                  <motion.div key={i} variants={fadeUp} className="flex gap-5 pb-8 last:pb-0 relative">
-                    {i < 2 && <div className="absolute left-5 top-10 bottom-0 w-px bg-amber-200 pointer-events-none" />}
-                    <div className="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-black z-10 shadow-lg shadow-orange-200">
-                      {step.n}
-                    </div>
-                    <div className="pt-1">
-                      <p className="font-black text-gray-950 text-base mb-1">{step.title}</p>
-                      <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Centrado hasta `lg` como los demás: acá la columna del collage de
-                  fotos está oculta en celular (`hidden lg:block`), así que el botón
-                  quedaba solo contra el margen izquierdo debajo de los tres pasos. */}
-              <motion.div variants={fadeUp} className="mt-10 text-center lg:text-left">
-                <Link href="/registro?plan=seller" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-7 py-3.5 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
-                  Quiero ser afiliado <ArrowRight className="h-4 w-4" />
-                </Link>
-              </motion.div>
             </motion.div>
 
-            {/* Derecha: collage de fotos */}
-            <div className="relative h-[480px] hidden lg:block">
-              <motion.div
-                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}
-                className="absolute left-0 top-10 w-56 h-[280px] rounded-2xl overflow-hidden shadow-2xl shadow-amber-100/80"
-                style={{ transform: "rotate(-3deg)", border: "5px solid white" }}
-              >
-                <Image
-                  src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80"
-                  alt="Afiliado compartiendo en redes"
-                  fill unoptimized className="object-cover"
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.22 }}
-                className="absolute left-40 top-32 w-52 h-64 rounded-2xl overflow-hidden shadow-2xl shadow-orange-100/80 z-10"
-                style={{ transform: "rotate(2deg)", border: "5px solid white" }}
-              >
-                <Image
-                  src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80"
-                  alt="Trabajando desde cualquier lugar"
-                  fill unoptimized className="object-cover"
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.34 }}
-                className="absolute right-0 top-6 w-48 h-56 rounded-2xl overflow-hidden shadow-2xl shadow-rose-100/80 z-20"
-                style={{ transform: "rotate(-1.5deg)", border: "5px solid white" }}
-              >
-                <Image
-                  src="https://images.unsplash.com/photo-1523206489230-c012c64b2b48?auto=format&fit=crop&w=600&q=80"
-                  alt="Ventas desde el celular"
-                  fill unoptimized className="object-cover"
-                />
-              </motion.div>
-
-              {/* Dot decorativo */}
-              <motion.div
-                animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute bottom-10 left-1/2 -translate-x-1/2 w-3 h-3 bg-orange-400 rounded-full shadow-lg shadow-orange-300"
-              />
+            {/* Pasos: la línea crece con el scroll; cada número se prende al llegar. */}
+            <div ref={pasosRef} className="relative">
+              <div aria-hidden className="absolute left-5 top-5 bottom-5 w-px bg-white/10" />
+              <motion.div aria-hidden style={reducirMov ? undefined : { scaleY: pasosLinea }} className="absolute left-5 top-5 bottom-5 w-px bg-gradient-to-b from-orange-500 to-amber-400 origin-top" />
+              {[
+                {
+                  n: "01",
+                  title: "Elegís la tienda",
+                  desc: "Buscás entre las tiendas disponibles y te postulás a la que va con tu estilo o tu audiencia. El dueño decide quién lo representa.",
+                },
+                {
+                  n: "02",
+                  title: "Compartís tu link",
+                  desc: "Te aprueban y recibís un link único. Lo compartís donde quieras: redes sociales, WhatsApp, stories — donde tengas llegada.",
+                },
+                {
+                  n: "03",
+                  title: "Seguís todo desde tu panel",
+                  desc: "Ves en tiempo real las visitas que generaste, las ventas que se concretaron y tus comisiones acumuladas. Sin llamar a nadie.",
+                },
+              ].map((step) => (
+                <motion.div
+                  key={step.n} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.8 }}
+                  className="flex gap-5 pb-10 last:pb-0 relative"
+                >
+                  <motion.div
+                    variants={{
+                      hidden: { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.2)", scale: 0.85 },
+                      show: { backgroundColor: "#ea580c", borderColor: "#ea580c", scale: 1, transition: { duration: 0.45, delay: 0.15 } },
+                    }}
+                    className="w-10 h-10 rounded-full border flex items-center justify-center flex-shrink-0 text-white text-xs font-black z-10 shadow-lg shadow-orange-600/20"
+                  >
+                    {step.n}
+                  </motion.div>
+                  <motion.div variants={deCostado(false)} className="pt-1">
+                    <p className="font-black text-base mb-1">{step.title}</p>
+                    <p className="text-white/60 text-sm leading-relaxed">{step.desc}</p>
+                  </motion.div>
+                </motion.div>
+              ))}
             </div>
 
+            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="mt-12">
+              <Link href="/registro?plan=seller" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-7 py-3.5 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-600/30 hover:scale-105">
+                Quiero ser afiliado <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -1050,16 +1028,16 @@ export default function Home() {
               Vendés guías, plantillas o recetarios sin tener una tienda: te armamos la página de venta, cobrás con Mercado Pago y el archivo le llega solo al que compra.
             </motion.p>
 
-            <motion.div variants={fadeUp} className="space-y-3 mb-9">
+            <motion.div variants={stagger} className="space-y-3 mb-9">
               {[
                 "Su propia página de venta, lista para publicar",
                 "Cobrás con Mercado Pago, a tu cuenta",
                 "La entrega es automática: se manda sola al pagar",
               ].map((t) => (
-                <div key={t} className="flex items-start gap-3">
+                <motion.div key={t} variants={deCostado(false)} className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                   <p className="text-gray-700 text-base">{t}</p>
-                </div>
+                </motion.div>
               ))}
             </motion.div>
 
@@ -1086,9 +1064,10 @@ export default function Home() {
               El recorte es a propósito: se ve la parte de arriba —la tapa y el
               título, que es lo que convence— y el resto se va abajo del marco.
               Mostrar la página entera achicada no dejaría leer nada. */}
+          {/* Entra subiendo y enderezándose, como un celular que se levanta para mirar. */}
           <motion.div
-            initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, y: 70, rotate: -7 }} whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+            viewport={{ once: true, amount: 0.3 }} transition={{ type: "spring", stiffness: 70, damping: 16 }}
             className="relative mx-auto w-[248px] sm:w-[276px]"
           >
             <div className="relative h-[420px] sm:h-[470px] rounded-[2.2rem] overflow-hidden border-[7px] border-gray-900 shadow-2xl shadow-gray-300/70 bg-white">
@@ -1108,13 +1087,13 @@ export default function Home() {
                 derecha —donde estaba— le tapaba el título a la pantalla, que es
                 justo lo que la captura tiene para mostrar.
 
-                Se esconde en el celular: ahí el marco ocupa casi todo el ancho y
-                cualquier cosa encima tapa algo. */}
+                En el celular va más abajo, sobre el borde de abajo del marco: ahí
+                sólo tapa la parte de la página que ya quedaba cortada. Aparece
+                con un rebote, después de que el celular termina de entrar. */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.45 }}
-              className="hidden sm:flex absolute -left-10 bottom-16 items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-xl shadow-gray-300/60 border border-black/5"
-              style={{ transform: "rotate(-3deg)" }}
+              initial={{ opacity: 0, scale: 0.5, rotate: -3 }} whileInView={{ opacity: 1, scale: 1, rotate: -3 }}
+              viewport={{ once: true }} transition={{ type: "spring", stiffness: 260, damping: 12, delay: 0.7 }}
+              className="flex absolute -left-5 -bottom-5 sm:-left-10 sm:bottom-16 items-center gap-2.5 bg-white rounded-2xl px-4 py-3 shadow-xl shadow-gray-300/60 border border-black/5"
             >
               <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="h-4 w-4 text-white" />
