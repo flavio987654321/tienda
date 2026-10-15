@@ -64,7 +64,7 @@ export default function RecuperacionCliente({ accion, token }: { accion: "confir
               <ShieldCheck className="h-8 w-8 text-gray-900 mb-3" />
               <h1 className="text-xl font-black text-gray-950">Cancelar el pedido</h1>
               <p className="mt-2 text-sm text-gray-700 leading-relaxed">
-                Se cancela el pedido de quitar la verificación en dos pasos. Tu cuenta sigue pidiendo tu huella o tu app para entrar.
+                Se cancela el pedido de quitar la verificación en dos pasos. Tu cuenta sigue pidiendo el segundo paso para entrar.
               </p>
               <button type="button" onClick={hacer} disabled={estado === "ocupado"} className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl bg-red-700 py-3.5 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50">
                 {estado === "ocupado" && <Loader2 className="h-4 w-4 animate-spin" />}

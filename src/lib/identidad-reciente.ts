@@ -42,8 +42,11 @@ export async function identidadReciente(
   let conDosPasos = false;
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: u } = await supabase.auth.getUser();
-    conDosPasos = (u?.user?.factors ?? []).some((f) => f.status === "verified");
+    const { data: u, error } = await supabase.auth.getUser();
+    /* Sin poder leer la cuenta no se sabe si tiene doble paso, y suponer que no
+       dejaría pasar con el código por mail a una que sí lo tiene. */
+    if (error || !u?.user) throw new Error(error?.message ?? "sin usuario");
+    conDosPasos = (u.user.factors ?? []).some((f) => f.status === "verified");
     if (conDosPasos) {
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       const desde = aal?.currentLevel === "aal2" ? segundoPasoDesde(aal.currentAuthenticationMethods) : null;

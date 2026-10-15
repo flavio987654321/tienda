@@ -227,10 +227,10 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Ahora podés proteger tu cuenta con la verificación en dos pasos: además de tu contraseña, para entrar te pedimos tu huella, tu cara o un código de una app. Es opcional y se activa desde Seguridad, en tu panel.",
-  "Para cambiar a dónde cobrás (CBU, alias o Mercado Pago) cuando ya tenías datos cargados, te vamos a pedir que verifiques que sos vos: con tu huella o tu app si tenés la verificación activada, o con un código por mail si no.",
+  "Ahora podés proteger tu cuenta con la verificación en dos pasos: además de tu contraseña, para entrar te pedimos un código de una app de tu celular. Es opcional y se activa desde Seguridad, en tu panel.",
+  "Para cambiar a dónde cobrás (CBU, alias o Mercado Pago) cuando ya tenías datos cargados, te vamos a pedir que verifiques que sos vos: con tu app de códigos si tenés la verificación activada, o con un código por mail si no.",
   "Si perdés el celular, hay una salida: códigos de respaldo, o un pedido con una espera de 7 días para que nadie que te robe el mail pueda quitártela de golpe. TiendaApps nunca la quita a mano.",
-  "En la política de privacidad sumamos lo que guardamos para esto: nunca tu huella ni tu cara, que no salen de tu dispositivo.",
+  "En la política de privacidad sumamos lo que guardamos para esto, y por cuánto tiempo.",
 ];
 
 /**

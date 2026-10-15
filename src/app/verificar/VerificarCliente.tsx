@@ -262,7 +262,7 @@ export default function VerificarCliente({ destino, email, huellas, tieneApp, ti
               </ol>
               <p className="mt-4 text-xs text-gray-500 leading-relaxed">
                 La espera es lo que te protege si alguien te robó el mail: nadie de TiendaApps puede saltearla ni quitar la verificación a mano.
-                ¿Tenés la huella guardada en otro dispositivo, o un código de respaldo? Probá eso primero: es inmediato.
+                ¿Tenés la app de códigos en otro dispositivo, o un código de respaldo? Probá eso primero: es inmediato.
               </p>
               <button type="button" onClick={perdiElCelular} disabled={!!ocupado} className={`${boton} mt-5 border border-gray-300 bg-white text-gray-900 hover:bg-gray-50`}>
                 {ocupado === "perdi" && <Loader2 className="h-4 w-4 animate-spin" />}

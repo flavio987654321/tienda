@@ -5,6 +5,7 @@ import { sendSeguridadEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/site";
 import {
   CANTIDAD_CODIGOS, DIAS_DINERO_TRABADO, DIAS_HISTORIAL, HORAS_TRABA_POR_RESPALDO, MINUTOS_LINK_CONFIRMAR,
+  MINUTOS_PARA_CONFIRMAR_ACTIVACION,
   describirDispositivo, diasDeEspera, formatearCodigo, normalizarCodigoRespaldo, venceLaEspera,
 } from "@/lib/seguridad-cuenta-reglas";
 
@@ -119,6 +120,56 @@ export async function apagarDosPasos(userId: string): Promise<void> {
     if (e) throw new Error(`No se pudo borrar un factor: ${e.message}`);
   }
   await prisma.codigoRespaldo.deleteMany({ where: { userId } });
+}
+
+/**
+ * Una activación que nunca pasó por `/api/seguridad/activado` no vale.
+ *
+ * El navegador activa el factor directo con Supabase, y recién después nos
+ * avisa; nuestra ruta es la que pide el código por mail para el PRIMER factor.
+ * Quien tenía una sesión abierta ajena podía saltearse el aviso —hablarle a
+ * Supabase sin nuestra página— y dejar puesta SU app en la cuenta de otro, sin
+ * mail y sin aviso. La dueña quedaba afuera.
+ *
+ * La marca de que pasó por la ruta son los códigos de respaldo: se crean ahí con
+ * el primer factor y no desaparecen mientras haya factores (usados quedan
+ * anotados; "Generar nuevos" los reemplaza en una transacción; se borran sólo
+ * al apagar el doble paso). Factores verificados y ninguna fila de códigos es
+ * una activación trucha: se borra, lo que además cierra todas las sesiones.
+ *
+ * Se le da un margen a la activación recién hecha, que todavía puede estar
+ * camino a la ruta. Devuelve si quitó algo.
+ */
+export async function quitarActivacionSinConfirmar(
+  u: { id: string; email: string; name: string | null },
+  ahora = new Date(),
+): Promise<boolean> {
+  if ((await prisma.codigoRespaldo.count({ where: { userId: u.id } })) > 0) return false;
+  const factores = await factoresDe(u.id);
+  const truchos = factores.filter(
+    (f) => ahora.getTime() - new Date(f.creadoAt).getTime() > MINUTOS_PARA_CONFIRMAR_ACTIVACION * 60_000,
+  );
+  if (truchos.length === 0) return false;
+  const admin = createSupabaseAdminClient();
+  for (const f of truchos) {
+    const { error } = await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId: u.id });
+    if (error) throw new Error(`No se pudo quitar una activación sin confirmar: ${error.message}`);
+  }
+  await registrarEvento(u.id, "activacion_sin_confirmar");
+  await sendSeguridadEmail({
+    to: u.email,
+    name: u.name,
+    tono: "alerta",
+    asunto: "Quitamos una verificación en dos pasos que no confirmaste",
+    titulo: "Se activó la verificación sin confirmar tu mail",
+    parrafos: [
+      "En tu cuenta se activó la verificación en dos pasos sin pasar por la confirmación con el código por mail, así que la quitamos y cerramos todas las sesiones abiertas.",
+      "Si fuiste vos, volvé a activarla desde Seguridad.",
+      "Si no fuiste vos, alguien tuvo tu sesión abierta: cambiá tu contraseña.",
+    ],
+    boton: { texto: "Entrar", url: siteUrl("/login") },
+  }).catch((e) => console.error("[seguridad] mail de activación sin confirmar:", e instanceof Error ? e.message : e));
+  return true;
 }
 
 // ─── Códigos de respaldo ────────────────────────────────────────────────────
@@ -319,7 +370,7 @@ export async function pedirRecuperacion(
       asunto: "Confirmá el pedido para quitar la verificación en dos pasos",
       titulo: "¿Perdiste tu celular?",
       parrafos: [
-        `Desde ${dispositivo} se pidió quitar la verificación en dos pasos de tu cuenta, porque no se tiene la huella, la app ni un código de respaldo.`,
+        `Desde ${dispositivo} se pidió quitar la verificación en dos pasos de tu cuenta, porque no se tiene el segundo paso ni un código de respaldo.`,
         `Si fuiste vos, confirmalo con el botón. Por seguridad, la verificación se quita recién ${dias} días después de confirmar, y durante ese tiempo te vamos a avisar por acá.`,
         `El link vence en ${MINUTOS_LINK_CONFIRMAR} minutos.`,
         "Si no fuiste vos, no toques nada: sin confirmar, el pedido no avanza. Igual te conviene cambiar la contraseña.",
@@ -448,9 +499,22 @@ export async function procesarRecuperaciones(ahora = new Date()) {
           data: { estado: "completada", cerradaAt: ahora, motivoCierre: "terminó la espera" },
         });
         if (cambio.count === 0) continue;
-        await apagarDosPasos(r.userId);
+        /* La traba ANTES de quitar el doble paso: nunca puede quedar la cuenta
+           sin doble paso y con los cobros libres. Y si algo falla, el pedido
+           vuelve a "esperando" para que la próxima pasada lo termine: marcado
+           "completada" con los factores todavía puestos, la persona tendría que
+           empezar de cero otra espera. */
         const hasta = new Date(ahora.getTime() + DIAS_DINERO_TRABADO * DIA_MS);
-        await trabarDinero(r.userId, hasta);
+        try {
+          await trabarDinero(r.userId, hasta);
+          await apagarDosPasos(r.userId);
+        } catch (e) {
+          await prisma.recuperacionDosPasos.updateMany({
+            where: { id: r.id, estado: "completada" },
+            data: { estado: "esperando", cerradaAt: null, motivoCierre: null },
+          }).catch(() => {});
+          throw e;
+        }
         await registrarEvento(r.userId, "recuperacion_completada");
         resultado.completadas++;
         await sendSeguridadEmail({
@@ -486,7 +550,7 @@ export async function procesarRecuperaciones(ahora = new Date()) {
         parrafos: [
           `A partir del ${fechaLarga(r.venceAt)} se quita la verificación en dos pasos de tu cuenta, como se pidió desde "Perdí mi celular".`,
           "Si fuiste vos, no hace falta que hagas nada.",
-          "Si no fuiste vos, cancelalo con el link de abajo, o entrá a tu cuenta con tu huella o tu app: eso también lo cancela.",
+          "Si no fuiste vos, cancelalo con el link de abajo, o entrá a tu cuenta con el segundo paso: eso también lo cancela.",
         ],
         linkSecundario: { texto: "No fui yo: cancelar el pedido", url: urlCancelar(r.id) },
       });

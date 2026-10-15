@@ -83,7 +83,7 @@ ver("la página del link no llama a la API sola", !/useEffect/.test(codigo("src/
 const activado = codigo("src/app/api/seguridad/activado/route.ts");
 ver("el primer método pide el código por mail, y si no está lo deshace", /factores\.length === 1/.test(activado) && /deleteFactor\(\{ id: factorId, userId: user\.id \}\)/.test(activado));
 const nucleo = codigo("src/lib/seguridad-cuenta.ts");
-ver("al terminar la espera se traban los cobros", /await apagarDosPasos\(r\.userId\);\s*const hasta = new Date\(ahora\.getTime\(\) \+ DIAS_DINERO_TRABADO \* DIA_MS\);\s*await trabarDinero\(r\.userId, hasta\);/.test(nucleo));
+ver("al terminar la espera se traban los cobros", /const hasta = new Date\(ahora\.getTime\(\) \+ DIAS_DINERO_TRABADO \* DIA_MS\);[\s\S]{0,80}await trabarDinero\(r\.userId, hasta\);/.test(nucleo));
 ver("y con un código de respaldo también", /entrarConCodigoRespaldo[\s\S]{0,300}trabarDinero\(u\.id/.test(nucleo));
 ver("pasar el segundo paso cancela el pedido abierto", /cancelarRecuperacionesDe\(userId, "entró con el segundo paso"\)/.test(nucleo));
 ver("el cron sólo termina las que están esperando (no las congeladas)", /where: \{ id: r\.id, estado: "esperando" \},\s*data: \{ estado: "completada"/.test(nucleo));
@@ -100,6 +100,18 @@ ver("cambiar una cuenta de Mercado Pago ya conectada", /if \(yaConectada\?\.mpAc
 ver("y no se conecta nada con los cobros trabados", /const trabado = await dineroTrabado\(user\.id\);/.test(conectar));
 const identidad = codigo("src/lib/identidad-reciente.ts");
 ver("con doble paso, el mail solo no alcanza", /if \(conDosPasos\) \{[\s\S]*?return \{ ok: false, status: 403/.test(identidad));
+ver("si no se puede leer la cuenta, no pasa (no la toma como sin doble paso)", /if \(error \|\| !u\?\.user\) throw/.test(identidad));
+
+console.log("\n8 bis) Una activación que no pasó por la confirmación con el mail");
+const verificarPagina = codigo("src/app/verificar/page.tsx");
+ver("la pantalla de verificación la quita, y antes de mostrar los métodos",
+  verificarPagina.indexOf("quitarActivacionSinConfirmar(") > 0 &&
+  verificarPagina.indexOf("quitarActivacionSinConfirmar(") < verificarPagina.indexOf("factoresDe("));
+ver("la marca son los códigos de respaldo, con margen para la recién hecha",
+  /codigoRespaldo\.count\(\{ where: \{ userId: u\.id \} \}\)\) > 0\) return false/.test(codigo("src/lib/seguridad-cuenta.ts")) &&
+  /MINUTOS_PARA_CONFIRMAR_ACTIVACION \* 60_000/.test(codigo("src/lib/seguridad-cuenta.ts")));
+ver("el cron traba los cobros ANTES de quitar el doble paso, y si falla devuelve el pedido a la espera",
+  /await trabarDinero\(r\.userId, hasta\);\s*await apagarDosPasos\(r\.userId\);[\s\S]{0,200}estado: "esperando", cerradaAt: null/.test(codigo("src/lib/seguridad-cuenta.ts")));
 
 console.log("\n9) Los documentos");
 ver("los términos usan los plazos del código", TERMINOS_DOS_PASOS.some((t) => t.includes(`${DIAS_ESPERA_CON_CONTRASENA} días`)) && TERMINOS_DOS_PASOS.some((t) => t.includes("nunca quita")));

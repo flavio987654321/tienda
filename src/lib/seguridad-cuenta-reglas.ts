@@ -34,6 +34,8 @@ export const DIAS_DINERO_TRABADO = 7;
 export const HORAS_TRABA_POR_RESPALDO = 48;
 /** El link de confirmación del mail de "Perdí mi celular" vence a la hora. */
 export const MINUTOS_LINK_CONFIRMAR = 60;
+/** Lo que se espera a que una activación pase por `/api/seguridad/activado` antes de darla por trucha. */
+export const MINUTOS_PARA_CONFIRMAR_ACTIVACION = 10;
 /** Cuánto vale una verificación para hacer algo delicado (cambiar el CBU, apagar el doble paso). */
 export const MINUTOS_VERIFICACION_RECIENTE = 5;
 /** Lo que se ve en "Actividad de seguridad". */
@@ -114,6 +116,7 @@ export const TEXTO_EVENTO: Record<string, string> = {
   recuperacion_congelada: "TiendaApps frenó el pedido de quitar la verificación",
   recuperacion_completada: "Se quitó la verificación al terminar la espera",
   sesiones_cerradas: "Cerraste las sesiones de los otros dispositivos",
+  activacion_sin_confirmar: "Quitamos una verificación que se activó sin confirmar tu mail",
 };
 
 /** Lo que muestra el nivel de la pestaña Seguridad. */
