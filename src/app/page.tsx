@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useState, useRef, useEffect, useSyncExternalStore } from "react";
-import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import Link from "next/link";
 import Image from "next/image";
 import { useSesion } from "@/components/AuthProvider";
@@ -11,13 +10,9 @@ import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { LINKS_PUBLICOS } from "@/lib/nav-publico";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent, useReducedMotion, useInView, animate } from "framer-motion";
 import {
-  ArrowRight, X, Store, Users, TrendingUp, CheckCircle,
-  ShoppingBag, Star, Send, MessageCircle, HeartHandshake,
-  Package, ShoppingCart, ChevronRight, ChevronLeft, Menu,
-  BadgeCheck, Sparkles, Download,
-  Bell, Tag, Shield, Clock,
+  ArrowRight, X, Users, CheckCircle, Star, Send, MessageCircle, HeartHandshake, Menu, BadgeCheck, Sparkles, Download, Shield, Clock,
 } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
 
@@ -228,64 +223,57 @@ const SASHA_QUESTIONS = [
 const SASHA_POS_WIDE: [number, number][]   = [[14, 24], [22, 66], [45, 37], [52, 71], [74, 29], [82, 60]];
 const SASHA_POS_NARROW: [number, number][] = [[6, 48], [23, 45], [40, 55], [57, 44], [74, 55], [91, 49]];
 
-const FEATURES = [
+/* Las cuatro filas de "Todo para vender". Las fotos están en public/home. */
+const FILAS = [
   {
-    icon: Store, tab: "Tu tienda", color: "var(--color-marca)",
-    title: "Una tienda que enamora desde el primer click",
-    desc: "Elegís entre 10 diseños profesionales, personalizás colores, logo y contenido — y en menos de una hora tenés tu tienda lista para vender.",
-    bullets: ["10 plantillas listas para usar", "URL propia: tiendaapps.com/tutienda", "Galería de productos con variantes", "Optimizada para celular"],
-    img: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80",
+    etiqueta: "Tu tienda", color: "var(--color-marca)", img: "/home/tienda.webp",
+    titulo: "Una tienda con tu marca, lista en una tarde",
+    texto: "Elegís el diseño, cargás tus productos y compartís tu link. Se ve impecable en el celular, que es donde compran tus clientes.",
+    puntos: ["Diseños pensados para cada rubro", "URL propia: tiendaapps.com/tutienda", "Productos con variantes y fotos", "Optimizada para celular"],
   },
   {
-    icon: ShoppingCart, tab: "Pagos", color: "#0d9488",
-    title: "Cobrá sin complicaciones, desde el día uno",
-    desc: "Mercado Pago integrado de entrada. Tus clientes pagan como quieran y vos recibís el dinero sin configuraciones técnicas ni vueltas.",
-    bullets: ["Mercado Pago incluido", "Tarjeta, transferencia y más", "Precios mayoristas y minoristas", "Historial de cobros siempre disponible"],
-    img: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80",
+    etiqueta: "Pagos", color: "#0d9488", img: "/home/pagos.webp",
+    titulo: "Cobrá sin complicaciones, desde el día uno",
+    texto: "Mercado Pago integrado de entrada. Tus clientes pagan como quieran y vos recibís la plata sin configuraciones técnicas ni vueltas.",
+    puntos: ["Mercado Pago incluido", "Tarjeta, transferencia y más", "Precios mayoristas y minoristas"],
   },
   {
-    icon: Package, tab: "Pedidos", color: "#e11d48",
-    title: "Cada pedido, bajo control",
-    desc: "Cuando entra una venta, te llega al panel al instante. Lo confirmás, lo preparás y lo enviás — con seguimiento en tiempo real para vos y para tu cliente.",
-    bullets: ["Panel de pedidos en tiempo real", "Estados: pendiente, en camino, entregado", "Historial completo por cliente", "Seguimiento de envíos integrado"],
-    img: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80",
+    etiqueta: "Pedidos", color: "#e11d48", img: "/home/pedidos.webp",
+    titulo: "Cada pedido, bajo control",
+    texto: "Cuando entra una venta te llega al panel al instante. La confirmás, la preparás y la enviás, con seguimiento para vos y para tu cliente.",
+    puntos: ["Pedidos en tiempo real", "Estados: pendiente, en camino, entregado", "Seguimiento de envíos integrado"],
   },
   {
-    icon: Sparkles, tab: "Sasha IA", color: "#7c3aed",
-    title: "Tu asistente que nunca duerme",
-    desc: "Sasha te avisa cuándo tenés pedidos pendientes, te cuenta qué está pasando en tu tienda y responde tus preguntas sobre el panel — directo en el chat, con tus datos reales.",
-    bullets: ["Alertas de pedidos y stock bajo", "Ideas para fechas clave (Hot Sale, Navidad...)", "Responde tus dudas del panel", "Disponible las 24 horas"],
-    img: "https://images.unsplash.com/photo-1531746790731-6c087fecd65a?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: Users, tab: "Afiliados", color: "#f59e0b",
-    title: "Crecé con un equipo que vende por vos",
-    desc: "Cuando querés escalar, sumás afiliados que llevan tu marca a todos lados. Ellos venden con su propio link, vos aprobás quién representa tu marca.",
-    bullets: ["Afiliados sin sueldos fijos", "Cada uno con su link propio", "Comisiones automáticas o manuales", "Metas mensuales con bonos extra"],
-    img: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: Tag, tab: "Cupones", color: "#16a34a",
-    title: "Descuentos que generan urgencia",
-    desc: "Creás un cupón en segundos y lo compartís con tus clientes o afiliados. Fijás el porcentaje, la fecha de vencimiento y cuántas veces se puede usar.",
-    bullets: ["Porcentaje o monto fijo", "Límite de usos y fecha de expiración", "Compatible con campañas de afiliados", "Historial de canjes en tiempo real"],
-    img: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: Bell, tab: "Notificaciones", color: "#3b82f6",
-    title: "Llegá a tus clientes cuando más importa",
-    desc: "Enviás una notificación push o un email en segundos. Carritos abandonados, lanzamientos de productos, descuentos exclusivos — sin apps de terceros ni costo extra.",
-    bullets: ["Notificaciones push a suscriptores", "Emails de carrito abandonado automáticos", "Avisos de promos y novedades", "Sin integraciones ni costos extras"],
-    img: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    icon: TrendingUp, tab: "Estadísticas", color: "#6366f1",
-    title: "Datos reales para decisiones inteligentes",
-    desc: "Ves exactamente qué productos se venden más, de dónde vienen tus clientes y cómo crece tu tienda mes a mes. Integración nativa con Google Analytics y Pixel de Facebook.",
-    bullets: ["Panel de ventas en tiempo real", "Google Analytics integrado", "Pixel de Facebook para remarketing", "Productos más vendidos y tendencias"],
-    img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
+    etiqueta: "Tus clientes", color: "#3b82f6", img: "/home/clientes.webp",
+    titulo: "Volvé a venderle a quien ya te compró",
+    texto: "Cupones, notificaciones al celular y mails de carrito abandonado. Y con las estadísticas sabés qué se vende y de dónde llegan.",
+    puntos: ["Cupones con vencimiento y límite de usos", "Notificaciones push y mails automáticos", "Google Analytics y Pixel de Facebook"],
   },
 ];
+
+/* Entrada de costado de cada fila: el texto llega desde el lado de la foto. */
+const deCostado = (derecha: boolean) => ({
+  hidden: { opacity: 0, x: derecha ? -36 : 36 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
+});
+
+/* Un número que cuenta desde cero la primera vez que aparece. */
+function Contador({ hasta, antes = "", despues = "" }: { hasta: number; antes?: string; despues?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const visto = useInView(ref, { once: true });
+  const quieto = useReducedMotion();
+  useEffect(() => {
+    if (!visto || !ref.current) return;
+    if (quieto || hasta === 0) { ref.current.textContent = `${antes}${hasta}${despues}`; return; }
+    const ctl = animate(0, hasta, {
+      duration: 1.4, ease: "easeOut",
+      onUpdate: (v) => { if (ref.current) ref.current.textContent = `${antes}${Math.round(v)}${despues}`; },
+    });
+    return () => ctl.stop();
+  }, [visto, quieto, hasta, antes, despues]);
+  // En el HTML del servidor va el número final: sin JS (o para un buscador) se lee bien.
+  return <span ref={ref}>{antes}{hasta}{despues}</span>;
+}
 
 const ANNOUNCEMENT_H = 40;
 const ANNOUNCEMENT_KEY = "announcement_v2";
@@ -318,23 +306,23 @@ export default function Home() {
   const [comunidadHref, setComunidadHref] = useState("/comunidad");
   const [cloudNarrow, setCloudNarrow] = useState(false);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
-  const [featureSlide, setFeatureSlide] = useState<[number, number]>([0, 1]);
   // Los tres estados con nombre, del mismo hook que usan el nav compartido y
   // los once templates de tienda. Ver `useSesion`: leer solo `user` hacía que
   // esto afirmara "no estás logueado" mientras todavía se estaba averiguando.
   const { cargando: authCargando, logueado, nombre: userName, panelHref, panelLabel } = useSesion();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
+  // Arriba de todo la barra va transparente sobre la foto oscura de la portada: letras blancas.
+  const sobreFoto = !navScrolled;
 
-  // Pasar de herramienta. Se definen una sola vez y los usan las flechas, los
-  // puntos y el deslizar con el dedo — así los tres se mueven igual, incluida la
-  // dirección de la animación (el 2do valor del par).
-  const featureNext = () => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]);
-  const featurePrev = () => setFeatureSlide(([i]) => [i === 0 ? FEATURES.length - 1 : i - 1, -1]);
-  // En celular y tablet no hay mouse: sin esto, las flechas y los puntitos eran
-  // la única forma de pasar de tarjeta. El hook ya distingue el gesto horizontal
-  // del scroll vertical, así que no interfiere con bajar la página.
-  const featureSwipe = useTouchSwipe(featureNext, featurePrev);
+  // Paralaje de la portada: la foto se queda un poco atrás y el texto se va antes.
+  const heroRef = useRef<HTMLElement>(null);
+  const reducirMov = useReducedMotion();
+  const { scrollYProgress: heroProg } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroFotoY = useTransform(heroProg, [0, 1], ["0%", "22%"]);
+  const heroFotoScale = useTransform(heroProg, [0, 1], [1.04, 1.14]);
+  const heroTextoY = useTransform(heroProg, [0, 1], [0, -90]);
+  const heroTextoOp = useTransform(heroProg, [0, 0.75], [1, 0]);
 
   function dismissAnnouncement() {
     localStorage.setItem(ANNOUNCEMENT_KEY, "1");
@@ -356,20 +344,6 @@ export default function Home() {
     const timer = setInterval(() => setRotatingWordIdx((i) => (i + 1) % ROTATING_WORDS.length), 2500);
     return () => clearInterval(timer);
   }, []);
-
-  // El reloj arranca de cero cada vez que cambia la vista, la cambie el timer o
-  // la persona. Antes las deps eran [] : el intervalo se creaba al montar y
-  // corría por su cuenta, así que si tocabas una pestaña a mitad del ciclo te
-  // quedaba solo el resto del tiempo para mirarla (a veces menos de un segundo).
-  // Depende de featureSlide entero y no solo del índice porque cada clic
-  // reemplaza el array — así también se reinicia si tocás la pestaña que ya
-  // estaba activa, que es justo cuando alguien quiere quedarse mirándola.
-  // setTimeout en vez de setInterval: ahora dispara una sola vez por ciclo y el
-  // efecto lo vuelve a armar.
-  useEffect(() => {
-    const timer = setTimeout(() => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]), 17000);
-    return () => clearTimeout(timer);
-  }, [featureSlide]);
 
   useEffect(() => {
     const update = () => {
@@ -446,6 +420,9 @@ export default function Home() {
         .grid-bg { background-image: linear-gradient(rgba(249,115,22,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(249,115,22,.05) 1px, transparent 1px); background-size: 48px 48px; }
         @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
         .marquee { animation: marquee 30s linear infinite; display: flex; width: max-content; }
+        @keyframes baja-seña { from { transform: translateY(-100%) } to { transform: translateY(200%) } }
+        .baja-seña { animation: baja-seña 1.8s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .baja-seña { animation: none; } }
       `}</style>
 
       {/* ── NAVBAR ── */}
@@ -456,7 +433,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-1.5">
             <AppLogo size={72} />
-            <span className="text-lg font-bold text-gray-900">TiendaApps</span>
+            <span className={`text-lg font-bold transition-colors ${sobreFoto ? "text-white" : "text-gray-900"}`}>TiendaApps</span>
           </Link>
 
           {/* Mismo criterio que el nav compartido (SiteNav): el menú completo no
@@ -474,7 +451,7 @@ export default function Home() {
               <Link
                 key={key}
                 href={href}
-                className={`text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors${Icon ? " flex items-center gap-1.5" : ""}`}
+                className={`${sobreFoto ? "text-white/80 hover:text-white" : "text-gray-500 hover:text-gray-900"} text-sm font-medium whitespace-nowrap transition-colors${Icon ? " flex items-center gap-1.5" : ""}`}
               >
                 {Icon && <Icon className="h-4 w-4" />}
                 {label}
@@ -493,14 +470,14 @@ export default function Home() {
               </div>
             ) : logueado ? (
               <>
-                <span className="text-gray-500 text-sm whitespace-nowrap">Hola, {userName ?? "!"}</span>
+                <span className={`${sobreFoto ? "text-white/80" : "text-gray-500"} text-sm whitespace-nowrap`}>Hola, {userName ?? "!"}</span>
                 <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
                   {panelLabel}
                 </Link>
               </>
             ) : (
               <>
-                <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium whitespace-nowrap px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+                <Link href="/login" className={`${sobreFoto ? "text-white border-white/30 hover:border-white/60 hover:bg-white/10" : "text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-300 hover:bg-gray-50"} text-sm font-medium whitespace-nowrap px-5 py-2.5 rounded-xl border transition-all`}>
                   Iniciar sesión
                 </Link>
                 <Link href="/registro" className="relative bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
@@ -510,7 +487,7 @@ export default function Home() {
             )}
           </div>
 
-          <button onClick={() => setMobileMenu(!mobileMenu)} className="lg:hidden text-gray-500 hover:text-gray-900">
+          <button onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú" className={`lg:hidden transition-colors ${sobreFoto ? "text-white" : "text-gray-500 hover:text-gray-900"}`}>
             <Menu className="h-6 w-6" />
           </button>
         </div>
@@ -575,205 +552,117 @@ export default function Home() {
       </AnimatePresence>
 
       {/* ── HERO ── */}
-      <section className="relative min-h-screen flex items-center grid-bg">
-        {/* Gradient blobs */}
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-orange-200/40 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-100/30 rounded-full blur-3xl pointer-events-none" />
+      {/* Una foto a pantalla entera con el texto encima (15/10/26), en vez del
+          celular dibujado: una mano con el teléfono mirando una tienda, que sirve
+          para todos los que entran acá —quien vende, quien vende productos
+          digitales, el afiliado y el que compra— sin mostrar ningún rubro.
+          La foto es propia (public/home), achicada: 38 KB la del celular (recorte
+          cuadrado centrado en el teléfono) y 70 KB la de la compu. Al bajar, la
+          foto se queda un poco atrás y el texto se va antes (paralaje suave);
+          con "reducir movimiento" no se mueve nada. */}
+      <section ref={heroRef} className="relative min-h-[100svh] flex items-end lg:items-center overflow-hidden bg-gray-950">
+        <motion.div aria-hidden style={reducirMov ? undefined : { y: heroFotoY, scale: heroFotoScale }} className="absolute inset-0 will-change-transform">
+          <picture>
+            <source media="(max-width: 767px)" srcSet="/home/portada-celu.webp" />
+            <img src="/home/portada.webp" alt="" fetchPriority="high" decoding="async" className="w-full h-full object-cover object-[45%_50%] lg:object-[62%_50%]" />
+          </picture>
+        </motion.div>
+        {/* Velo: abajo en el celular (el texto va abajo), a la izquierda en la compu. */}
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/75 to-gray-950/25 lg:bg-gradient-to-r lg:from-gray-950/95 lg:via-gray-950/60 lg:to-gray-950/10" />
+        <div aria-hidden className="absolute -bottom-40 -left-40 w-[480px] h-[480px] rounded-full bg-orange-600/25 blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-7xl mx-auto px-6 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full" style={{ paddingTop: announcementClosed ? 112 : 152 }}>
-          <motion.div initial="hidden" animate="show" variants={stagger}>
-            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
-              <span className="flex gap-0.5">
-                {[1,2,3,4,5].map(s => <Star key={s} className="h-3 w-3 fill-orange-500 text-orange-500" />)}
-              </span>
-              Plataforma nueva · Sumate de los primeros
-            </motion.div>
-
-            <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight text-gray-950">
-              Tu marca.<br />
-              <span className="gradient-text">Lista</span><br />
-              para{" "}
-              <motion.span
-                key={rotatingWordIdx}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="gradient-text"
-              >
-                {ROTATING_WORDS[rotatingWordIdx]}
-              </motion.span>
-              .
-            </motion.h1>
-
-            <motion.p variants={fadeUp} className="text-lg text-gray-600 mb-10 leading-relaxed max-w-lg">
-              Tienda online + Mercado Pago integrado + afiliados que venden por vos — todo en un panel, sin técnicos ni inversión inicial.
-            </motion.p>
-
-            {/* Centrados hasta `lg`, igual que el bloque de Diseño Propio: mientras
-                el hero es una sola columna los botones pegados al margen izquierdo
-                quedan sueltos debajo de un título que ocupa todo el ancho. Desde
-                `lg` el hero se parte en dos y vuelven a alinearse con el texto. */}
-            <motion.div variants={fadeUp} className="flex flex-wrap justify-center lg:justify-start gap-4 mb-5">
-              <Link
-                href="/registro"
-                className="group flex items-center gap-2.5 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105"
-              >
-                Crear mi tienda gratis
-                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href="/registro?plan=seller"
-                className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-gray-50"
-              >
-                <Users className="h-5 w-5" />
-                Quiero ser afiliado
-              </Link>
-            </motion.div>
-
-            {/* ── TRUST STACK ── */}
-            {/* Acompaña a los botones de arriba: si se centran solo ellos, esta
-                fila queda colgada contra el margen izquierdo. */}
-            <motion.div variants={fadeUp} className="flex flex-wrap justify-center lg:justify-start items-center gap-x-5 gap-y-2 mb-10 text-gray-500 text-xs">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Shield className="h-3.5 w-3.5 text-emerald-500" />
-                Pago seguro
-              </span>
-              <span className="text-gray-300 hidden sm:inline">|</span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
-                Mercado Pago incluido
-              </span>
-              <span className="text-gray-300 hidden sm:inline">|</span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <Clock className="h-3.5 w-3.5 text-orange-400" />
-                7 días gratis · sin tarjeta
-              </span>
-              <span className="text-gray-300 hidden sm:inline">|</span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <BadgeCheck className="h-3.5 w-3.5 text-orange-500" />
-                Cancelás cuando quieras
-              </span>
-            </motion.div>
-
-            <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4 sm:gap-6">
-              {[
-                { value: "24hs", label: "Primera venta" },
-                { value: "50+", label: "Afiliados gratis" },
-                { value: "$0", label: "Para arrancar" },
-              ].map((s) => (
-                <div key={s.label} className="border-l border-orange-300 pl-3 sm:pl-4">
-                  <p className="text-2xl sm:text-3xl font-black gradient-text">{s.value}</p>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">{s.label}</p>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
-
-          {/* Phone mockup — storefront del cliente */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="hidden lg:flex justify-center items-center"
-          >
-            <div className="relative">
-              {/* Blob decorativo detrás */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-orange-100 rounded-full blur-3xl opacity-70 pointer-events-none" />
-
-              {/* Phone */}
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                className="relative z-10 w-72 bg-white border-[6px] border-gray-900 rounded-[2.8rem] shadow-2xl shadow-gray-900/25 overflow-hidden"
-              >
-                {/* Notch */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-900 rounded-b-xl z-20" />
-
-                {/* Store banner */}
-                <div className="relative h-44">
-                  {/* `unoptimized` en todas las fotos de Unsplash de esta página:
-                      vienen de la URL ya redimensionadas y comprimidas por Unsplash
-                      (`w=600&q=80&auto=format`, que ya devuelve WebP). Pasarlas por el
-                      optimizador de Vercel es pagar una transformación por cada ancho
-                      para rehacer un trabajo que ya está hecho, y no se gana nitidez:
-                      nadie puede agregarle detalle a una foto de 600px.
-                      Son decorativas y de stock — las fotos que sí importan, las de los
-                      productos de cada tienda, se siguen optimizando. */}
-                  <Image
-                    src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=600&q=80"
-                    alt=""
-                    fill
-                    unoptimized
-                    className="object-cover"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 via-gray-950/20 to-transparent" />
-                  {/* Nav bar mínima */}
-                  <div className="absolute top-6 left-0 right-0 flex items-center justify-between px-4">
-                    <div className="w-6 h-6 bg-white/20 rounded-lg backdrop-blur-sm flex items-center justify-center">
-                      <ShoppingBag className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <div className="w-6 h-6 bg-white/20 rounded-lg backdrop-blur-sm flex items-center justify-center">
-                      <ShoppingCart className="h-3.5 w-3.5 text-white" />
-                    </div>
-                  </div>
-                  {/* Store name */}
-                  <div className="absolute bottom-3 left-4">
-                    <p className="text-white/70 text-[9px] font-medium uppercase tracking-widest">tiendaapps.com/lunamoda</p>
-                    <p className="text-white text-xl font-black leading-tight">Luna Moda</p>
-                  </div>
-                </div>
-
-                {/* Products */}
-                <div className="bg-white p-4 space-y-3">
-                  <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Destacados</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[
-                      { name: "Vestido floral", price: "$9.900", img: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=300&q=80" },
-                      { name: "Jean cargo", price: "$7.500", img: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=300&q=80" },
-                    ].map((p) => (
-                      <div key={p.name} className="rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
-                        <div className="relative h-24">
-                          <Image src={p.img} alt={p.name} fill unoptimized className="object-cover" />
-                        </div>
-                        <div className="p-2">
-                          <p className="text-gray-800 text-[10px] font-semibold truncate">{p.name}</p>
-                          <p className="text-orange-600 text-[10px] font-bold">{p.price}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="w-full bg-orange-600 text-white text-[10px] font-bold py-2.5 rounded-xl text-center">
-                    Ver tienda completa →
-                  </div>
-                </div>
+        <motion.div
+          style={reducirMov ? undefined : { y: heroTextoY, opacity: heroTextoOp }}
+          className="relative max-w-7xl mx-auto px-6 pb-14 lg:pb-16 w-full"
+        >
+          <div className="max-w-2xl" style={{ paddingTop: announcementClosed ? 112 : 152 }}>
+            <motion.div initial="hidden" animate="show" variants={stagger}>
+              <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-white/10 border border-white/20 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-medium mb-6 lg:mb-8">
+                <span className="flex gap-0.5">
+                  {[1,2,3,4,5].map(s => <Star key={s} className="h-3 w-3 fill-orange-400 text-orange-400" />)}
+                </span>
+                Plataforma nueva · Sumate de los primeros
               </motion.div>
 
-              {/* Badge — nueva venta */}
-              <motion.div
-                animate={{ y: [-5, 5, -5] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-4 -right-8 bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-xl z-20"
-              >
-                <p className="text-gray-900 text-xs font-bold">Nueva venta 🎉</p>
-                <p className="text-orange-600 text-xs font-semibold mt-0.5">Tu tienda está activa</p>
+              <motion.h1 variants={fadeUp} className="text-[44px] leading-[1.02] sm:text-6xl lg:text-7xl font-black mb-5 lg:mb-6 tracking-tight text-white">
+                Tu marca.<br />
+                <span className="gradient-text">Lista</span>{" "}
+                para{" "}
+                <motion.span
+                  key={rotatingWordIdx}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.45 }}
+                  className="gradient-text"
+                >
+                  {ROTATING_WORDS[rotatingWordIdx]}
+                </motion.span>
+                .
+              </motion.h1>
+
+              <motion.p variants={fadeUp} className="text-base sm:text-lg text-white/80 mb-8 lg:mb-10 leading-relaxed max-w-xl">
+                Tu tienda online, tus productos digitales y afiliados que venden por vos. Mercado Pago integrado y todo en un panel, sin técnicos ni inversión inicial.
+              </motion.p>
+
+              <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+                <Link
+                  href="/registro"
+                  className="group flex items-center justify-center gap-2.5 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-600/30 hover:shadow-orange-500/50 hover:scale-105"
+                >
+                  Crear mi tienda gratis
+                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link
+                  href="/registro?plan=seller"
+                  className="flex items-center justify-center gap-2 border border-white/30 hover:border-white/60 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-white/10 backdrop-blur-sm"
+                >
+                  <Users className="h-5 w-5" />
+                  Quiero ser afiliado
+                </Link>
               </motion.div>
 
-              {/* Badge — afiliados */}
-              <motion.div
-                animate={{ y: [5, -5, 5] }}
-                transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                className="absolute -bottom-4 -left-8 bg-orange-600 text-white rounded-2xl px-4 py-3 shadow-xl shadow-orange-500/30 flex items-center gap-2.5 z-20"
-              >
-                <Users className="h-4 w-4 flex-shrink-0" />
-                <div>
-                  <p className="text-xs font-bold">8 afiliados activos</p>
-                  <p className="text-orange-200 text-xs">vendiendo ahora mismo</p>
-                </div>
+              {/* ── TRUST STACK ── */}
+              <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-8 lg:mb-10 text-white/70 text-xs">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Shield className="h-3.5 w-3.5 text-emerald-400" />
+                  Pago seguro
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <CheckCircle className="h-3.5 w-3.5 text-sky-400" />
+                  Mercado Pago incluido
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Clock className="h-3.5 w-3.5 text-orange-400" />
+                  7 días gratis · sin tarjeta
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  <BadgeCheck className="h-3.5 w-3.5 text-orange-400" />
+                  Cancelás cuando quieras
+                </span>
               </motion.div>
-            </div>
-          </motion.div>
+
+              {/* Los números cuentan desde cero cuando aparecen. */}
+              <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4 sm:gap-6 max-w-md">
+                {[
+                  { hasta: 24, despues: "hs", label: "Primera venta" },
+                  { hasta: 50, despues: "+", label: "Afiliados gratis" },
+                  { hasta: 0, antes: "$", label: "Para arrancar" },
+                ].map((s) => (
+                  <div key={s.label} className="border-l-2 border-orange-500 pl-3 sm:pl-4">
+                    <p className="text-2xl sm:text-3xl font-black text-white tabular-nums">
+                      <Contador hasta={s.hasta} antes={s.antes} despues={s.despues} />
+                    </p>
+                    <p className="text-xs sm:text-sm text-white/60 mt-1">{s.label}</p>
+                  </div>
+                ))}
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Seña para bajar: una línea que cae, sólo donde sobra alto. */}
+        <div aria-hidden className="hidden lg:block absolute bottom-6 left-1/2 -translate-x-1/2 w-px h-12 bg-white/15 overflow-hidden">
+          <span className="block w-px h-1/2 bg-white/70 baja-seña" />
         </div>
       </section>
 
@@ -816,119 +705,72 @@ export default function Home() {
           siguen accesibles: "Crear cuenta" en el nav, "Tiendas" en el nav y
           "Quiero ser afiliado" en el footer y en el hero. */}
 
-      {/* ── HERRAMIENTAS (Feature showcase) ── */}
-      <section className="py-24 bg-white relative overflow-hidden">
+      {/* ── HERRAMIENTAS ── */}
+      {/* Cuatro filas con foto que entran al bajar (15/10/26). Antes eran ocho
+          pestañas con un carrusel: en el celular la grilla de botones ocupaba
+          media pantalla antes de mostrar nada. Lo que quedó afuera de las filas
+          no se perdió: los afiliados, los productos digitales y Sasha tienen su
+          bloque más abajo, y cupones, avisos y estadísticas van en "Tus clientes".
+          Las fotos son propias (public/home), de 13 a 20 KB cada una. */}
+      <section className="py-20 lg:py-28 bg-white relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40" />
         <div className="relative max-w-6xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-12">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14 lg:mb-20">
             <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">La plataforma completa</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-4">Todo lo que necesitás,<br className="hidden sm:block" /> en un solo lugar.</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, pagos, pedidos, cupones, notificaciones push, estadísticas, Pixel de Facebook, afiliados — todo en un solo panel, sin instalar nada.</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-4 leading-tight">Todo para vender,<br className="hidden sm:block" /> en un solo panel.</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Sin instalar nada y sin saber de sistemas.</motion.p>
           </motion.div>
 
-          {/* Tabs. En celular van en grilla de 2 columnas parejas: con
-              `flex-wrap` cada pastilla tomaba el ancho de su texto y, centradas,
-              las filas quedaban de distinto ancho y sin alinear (se veian
-              desordenadas). Desde `sm` vuelve al tab bar centrado de siempre, que
-              en pantalla ancha se ve bien. */}
-          <div className="grid grid-cols-2 gap-2 mb-8 sm:flex sm:flex-wrap sm:justify-center">
-            {FEATURES.map((f, i) => {
-              const Icon = f.icon;
-              const active = featureSlide[0] === i;
+          <div className="space-y-20 lg:space-y-28">
+            {FILAS.map((f, i) => {
+              const derecha = i % 2 === 1;
               return (
-                <button
-                  key={i}
-                  onClick={() => setFeatureSlide([i, i >= featureSlide[0] ? 1 : -1])}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-semibold text-sm border transition-all sm:px-5"
-                  style={active
-                    ? { backgroundColor: f.color, borderColor: f.color, color: "#fff", boxShadow: `0 4px 14px ${f.color}44` }
-                    : { backgroundColor: "#fff", borderColor: "#e5e7eb", color: "#6b7280" }
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  {f.tab}
-                </button>
+                <div key={f.etiqueta} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+                  {/* La foto se descubre de costado y se acomoda. Lo dispara el
+                      envoltorio y no la foto: el navegador no da por "a la vista"
+                      algo recortado del todo, y la foto se quedaba tapada. */}
+                  <motion.div
+                    initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.35 }}
+                    className={derecha ? "lg:order-2" : ""}
+                  >
+                  <motion.div
+                    variants={{
+                      hidden: { clipPath: derecha ? "inset(0% 0% 0% 100%)" : "inset(0% 100% 0% 0%)" },
+                      show: { clipPath: "inset(0% 0% 0% 0%)", transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } },
+                    }}
+                    className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl shadow-gray-900/15"
+                  >
+                    <motion.img
+                      src={f.img} alt="" loading="lazy" decoding="async"
+                      variants={{ hidden: { scale: 1.18 }, show: { scale: 1, transition: { duration: 1.4, ease: [0.22, 1, 0.36, 1] } } }}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${f.color}55 0%, transparent 55%)` }} />
+                    <span className="absolute left-5 bottom-4 text-white/90 text-6xl lg:text-7xl font-black leading-none drop-shadow-[0_4px_18px_rgba(0,0,0,.45)]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                  </motion.div>
+                  </motion.div>
+
+                  <motion.div
+                    initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.35 }}
+                    variants={{ hidden: {}, show: { transition: { staggerChildren: 0.09, delayChildren: 0.15 } } }}
+                  >
+                    <motion.p variants={deCostado(derecha)} className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: f.color }}>{f.etiqueta}</motion.p>
+                    <motion.h3 variants={deCostado(derecha)} className="text-3xl lg:text-4xl font-black text-gray-950 mb-4 leading-tight">{f.titulo}</motion.h3>
+                    <motion.p variants={deCostado(derecha)} className="text-gray-500 leading-relaxed mb-6 text-base lg:text-lg">{f.texto}</motion.p>
+                    <ul className="space-y-3">
+                      {f.puntos.map((b) => (
+                        <motion.li key={b} variants={deCostado(derecha)} className="flex items-center gap-3 text-sm lg:text-base text-gray-700">
+                          <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color: f.color }} />
+                          {b}
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                </div>
               );
             })}
-          </div>
-
-          {/* Slider — se puede pasar con el dedo en celular y tablet */}
-          <div {...featureSwipe} className="relative overflow-hidden rounded-3xl border border-gray-200 shadow-xl shadow-gray-100 min-h-[420px]">
-            <AnimatePresence mode="wait" custom={featureSlide[1]}>
-              <motion.div
-                key={featureSlide[0]}
-                custom={featureSlide[1]}
-                variants={{
-                  enter: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 0 }),
-                  center: { x: 0, opacity: 1 },
-                  exit: (dir: number) => ({ x: dir > 0 ? "-40%" : "40%", opacity: 0 }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="grid grid-cols-1 lg:grid-cols-2"
-              >
-                {/* Texto */}
-                <div className="p-10 lg:p-14 flex flex-col justify-center bg-white">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: FEATURES[featureSlide[0]].color + "18" }}>
-                    {(() => { const Icon = FEATURES[featureSlide[0]].icon; return <Icon className="h-7 w-7" style={{ color: FEATURES[featureSlide[0]].color }} />; })()}
-                  </div>
-                  <h3 className="text-2xl lg:text-3xl font-black text-gray-950 mb-4 leading-tight">{FEATURES[featureSlide[0]].title}</h3>
-                  <p className="text-gray-500 leading-relaxed mb-8 text-base">{FEATURES[featureSlide[0]].desc}</p>
-                  <ul className="space-y-3">
-                    {FEATURES[featureSlide[0]].bullets.map((b) => (
-                      <li key={b} className="flex items-center gap-3 text-sm text-gray-700">
-                        <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color: FEATURES[featureSlide[0]].color }} />
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Foto */}
-                <div className="relative min-h-[280px] lg:min-h-0">
-                  <Image
-                    src={FEATURES[featureSlide[0]].img}
-                    alt={FEATURES[featureSlide[0]].title}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${FEATURES[featureSlide[0]].color}55 0%, transparent 55%)` }} />
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Controles */}
-          <div className="flex items-center justify-center gap-4 mt-8">
-            <button
-              onClick={featurePrev}
-              aria-label="Herramienta anterior"
-              className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-all"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-2">
-              {FEATURES.map((f, i) => (
-                <button
-                  key={i}
-                  onClick={() => setFeatureSlide([i, i >= featureSlide[0] ? 1 : -1])}
-                  className="h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: i === featureSlide[0] ? 28 : 8, backgroundColor: i === featureSlide[0] ? FEATURES[featureSlide[0]].color : "#e5e7eb" }}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={featureNext}
-              aria-label="Herramienta siguiente"
-              className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-all"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </section>
