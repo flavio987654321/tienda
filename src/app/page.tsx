@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import Link from "next/link";
 import Image from "next/image";
 import { useSesion } from "@/components/AuthProvider";
@@ -10,43 +11,11 @@ import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { LINKS_PUBLICOS } from "@/lib/nav-publico";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent, useReducedMotion, useInView, animate } from "framer-motion";
+import { motion, AnimatePresence, useTransform, useSpring, useScroll, useMotionValueEvent, useReducedMotion, useInView, animate } from "framer-motion";
 import {
   ArrowRight, X, Users, CheckCircle, Star, Send, MessageCircle, HeartHandshake, Menu, BadgeCheck, Sparkles, Download, Shield, Clock, Store,
 } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
-
-/* ─── 3D Tilt Card ─── */
-function Card3D({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(x, [-0.5, 0.5], [-10, 10]);
-  const sRotX = useSpring(rotateX, { stiffness: 180, damping: 18 });
-  const sRotY = useSpring(rotateY, { stiffness: 180, damping: 18 });
-
-  function onMove(e: React.MouseEvent<HTMLDivElement>) {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
-    x.set((e.clientX - r.left) / r.width - 0.5);
-    y.set((e.clientY - r.top) / r.height - 0.5);
-  }
-  function onLeave() { x.set(0); y.set(0); }
-
-  return (
-    <motion.div
-      ref={ref}
-      style={{ rotateX: sRotX, rotateY: sRotY, transformStyle: "preserve-3d" }}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
@@ -289,6 +258,122 @@ function subscribeAnnouncement(onChange: () => void) {
   return () => window.removeEventListener(ANNOUNCEMENT_EVENT, onChange);
 }
 
+/* ─── Testimonios: una cita grande, de a una ───
+   (15/10/26) Antes eran tarjetas chicas en cursiva con "Ver más": con dos
+   historias la pantalla quedaba vacía y costaba leerlas. Ahora va una por vez,
+   en letra grande, y pasan solas cada 8 segundos (se frenan con el mouse o el
+   foco adentro; con "reducir movimiento" no pasan solas). Todas están apiladas
+   en la misma celda de la grilla, así el bloque mide lo que la más larga y no
+   salta de alto al cambiar. Sólo historias reales y aprobadas: con una, queda
+   fija y sin rayitas. */
+const CITA_MS = 8000;
+// Hasta acá se lee entera; más larga, se corta y aparece "Ver más".
+const CITA_LARGA = 420;
+
+function CitaRotativa({ historias }: { historias: RealTestimonial[] }) {
+  const lista = historias.slice(0, 6);
+  const n = lista.length;
+  const [actual, setActual] = useState(0);
+  const [pausa, setPausa] = useState(false);
+  const [abierta, setAbierta] = useState<string | null>(null);
+  const quieto = useReducedMotion();
+  const pos = Math.min(actual, Math.max(n - 1, 0));
+  const ir = (k: number) => { setAbierta(null); setActual(((k % n) + n) % n); };
+  const swipe = useTouchSwipe(() => ir(pos + 1), () => ir(pos - 1));
+  const corre = n > 1 && !pausa && !quieto && abierta === null;
+
+  useEffect(() => {
+    if (!corre) return;
+    const id = window.setTimeout(() => { setAbierta(null); setActual((a) => (a + 1) % n); }, CITA_MS);
+    return () => window.clearTimeout(id);
+  }, [corre, pos, n]);
+
+  if (n === 0) return null;
+
+  return (
+    <div
+      role="region" aria-roledescription="carrusel" aria-label="Historias de usuarios"
+      onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)}
+      onFocus={() => setPausa(true)} onBlur={() => setPausa(false)}
+      {...swipe}
+      className="relative"
+    >
+      {/* La comilla de fondo, arriba a la derecha (dibujada: la tipografía la hacía dos rayas) */}
+      <svg aria-hidden viewBox="0 0 48 36" className="absolute -top-2 right-0 w-16 sm:w-24 text-orange-500/15 pointer-events-none" fill="currentColor"><path d="M0 36V22C0 9.5 6.5 2.2 19 0l2 5.2C14 7.4 10.6 11.6 10.2 18H19v18H0Zm27 0V22C27 9.5 33.5 2.2 46 0l2 5.2C41 7.4 37.6 11.6 37.2 18H46v18H27Z" /></svg>
+
+      <div className="grid">
+        {lista.map((t, k) => {
+          const activa = k === pos;
+          const esLarga = t.text.length > CITA_LARGA;
+          const abiertaEsta = abierta === t.id;
+          return (
+            <motion.figure
+              key={t.id}
+              aria-hidden={!activa}
+              initial={false}
+              animate={activa ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              style={{ gridArea: "1 / 1", pointerEvents: activa ? "auto" : "none" }}
+              className="relative"
+            >
+              <div className="flex gap-1 mb-6" aria-label={`${t.rating} de 5 estrellas`}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star key={s} className={`h-5 w-5 ${s <= t.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />
+                ))}
+              </div>
+              <blockquote className={`text-gray-900 text-xl sm:text-2xl lg:text-[28px] font-semibold leading-snug tracking-tight ${esLarga && !abiertaEsta ? "line-clamp-6" : ""}`}>
+                {t.text}
+              </blockquote>
+              {esLarga && (
+                <button
+                  type="button" tabIndex={activa ? 0 : -1}
+                  onClick={() => setAbierta(abiertaEsta ? null : t.id)}
+                  className="mt-3 text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+                >
+                  {abiertaEsta ? "Ver menos" : "Ver más"}
+                </button>
+              )}
+              <figcaption className="flex items-center gap-4 mt-8">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/25">
+                  <span className="text-white font-black">{t.name[0]}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-950">{t.name}</p>
+                  <p className="text-gray-500 text-sm">{t.role}{t.location ? ` · ${t.location}` : ""}</p>
+                </div>
+                <span className="ml-auto text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2.5 py-1 rounded-full font-medium flex-shrink-0">Verificado</span>
+              </figcaption>
+            </motion.figure>
+          );
+        })}
+      </div>
+
+      {/* Las rayitas: la actual se llena mientras corre su tiempo. */}
+      {n > 1 && (
+        <div className="flex gap-2 mt-10 max-w-xs">
+          {lista.map((t, k) => (
+            <button
+              key={t.id} type="button" onClick={() => ir(k)}
+              aria-label={`Ver historia ${k + 1} de ${n}`} aria-current={k === pos}
+              className="flex-1 py-3"
+            >
+              <span className="block h-1 rounded-full bg-gray-200 overflow-hidden">
+                <span
+                  key={`${pos}-${corre}`}
+                  className="block h-full rounded-full bg-orange-500 origin-left"
+                  style={k < pos || (k === pos && !corre)
+                    ? { transform: "none" }
+                    : k === pos ? { animation: `cita-llena ${CITA_MS}ms linear forwards` } : { transform: "scaleX(0)" }}
+                />
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
@@ -299,10 +384,6 @@ export default function Home() {
   );
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
-  // Qué historias están expandidas. Un Set y no un solo id: si fuera uno solo,
-  // abrir la segunda tarjeta cerraría la primera de golpe mientras se está
-  // leyendo.
-  const [historiasAbiertas, setHistoriasAbiertas] = useState<Set<string>>(new Set());
   const [comunidadHref, setComunidadHref] = useState("/comunidad");
   const [cloudNarrow, setCloudNarrow] = useState(false);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
@@ -430,6 +511,7 @@ export default function Home() {
         .marquee { animation: marquee 30s linear infinite; display: flex; width: max-content; }
         @keyframes baja-seña { from { transform: translateY(-100%) } to { transform: translateY(200%) } }
         .baja-seña { animation: baja-seña 1.8s ease-in-out infinite; }
+        @keyframes cita-llena { from { transform: scaleX(0) } to { transform: scaleX(1) } }
         @media (prefers-reduced-motion: reduce) { .baja-seña { animation: none; } }
       `}</style>
 
@@ -1238,83 +1320,15 @@ export default function Home() {
             </motion.p>
           </motion.div>
 
-          {/* Solo historias reales y aprobadas. Antes había además una lista de
-              relleno que estaba vacía desde siempre: todo el armado que la mezclaba
-              con las reales, y las ramas de foto y de "Verificado" que servían para
-              distinguirlas, no se ejecutaban nunca. Si no hay ninguna, la grilla no
-              se dibuja — el texto de arriba ya explica que todavía no hay.
-
-              `items-start` es lo que hace que al expandir una historia crezca
-              solo esa tarjeta y no toda la fila. Y el ancho se acomoda a cuántas
-              hay: con tres columnas fijas, dos testimonios dejaban un hueco.
-
-              (Este párrafo vivía abajo, entre el `&& (` y el `<motion.div>`. Ahí
-              no se puede: después del `&&` va una expresión, y un comentario JSX
-              en ese lugar JavaScript lo lee como el arranque de un objeto.
-              Rompía el parseo y dejaba todas las páginas en 500.) */}
+          {/* Solo historias reales y aprobadas; si no hay ninguna no se dibuja
+              (el subtítulo de arriba ya lo explica). Ver CitaRotativa. */}
           {realTestimonials.length > 0 && (
             <motion.div
-              initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger}
-              className={`grid grid-cols-1 gap-6 mb-10 items-start ${
-                realTestimonials.length === 1 ? "max-w-md mx-auto"
-                : realTestimonials.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto"
-                : "md:grid-cols-3"
-              }`}
+              initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="max-w-3xl mx-auto mb-14 bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/60 px-6 py-10 sm:px-12 sm:py-14"
             >
-              {realTestimonials.slice(0, 3).map((t) => {
-                const abierta = historiasAbiertas.has(t.id);
-                // El umbral es por caracteres y no por líneas porque las líneas
-                // reales dependen del ancho: a 360 px entran muchas menos que a
-                // 1280. 260 es lo que ocupan cinco líneas en la columna más ancha,
-                // así que por debajo de eso el "Ver más" no tendría nada que abrir.
-                const esLarga = t.text.length > 260;
-                return (
-                <motion.div key={t.id} variants={fadeUp}>
-                  <Card3D className="h-full">
-                    <div className="h-full bg-white rounded-3xl p-7 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col">
-                      {/* Las estrellas vacías van en gris. Antes las dos ramas del
-                          ternario eran idénticas (ámbar en las dos), así que quien
-                          puntuaba con 3 aparecía publicado con 5. */}
-                      <div className="flex gap-0.5 mb-4" aria-label={`${t.rating} de 5 estrellas`}>
-                        {[1,2,3,4,5].map((s) => (
-                          <Star key={s} className={`h-4 w-4 ${s <= t.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />
-                        ))}
-                      </div>
-                      <p className={`text-gray-700 text-sm leading-relaxed italic flex-1 ${abierta ? "" : "line-clamp-5"}`}>
-                        &ldquo;{t.text}&rdquo;
-                      </p>
-                      {esLarga && (
-                        <button
-                          type="button"
-                          onClick={() => setHistoriasAbiertas((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(t.id)) next.delete(t.id); else next.add(t.id);
-                            return next;
-                          })}
-                          className="self-start mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
-                        >
-                          {abierta ? "Ver menos" : "Ver más"}
-                        </button>
-                      )}
-                      <div className="flex items-center gap-3 mt-6">
-                        <div className="w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-orange-600 font-bold text-sm">{t.name[0]}</span>
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-900 text-sm">{t.name}</p>
-                          <p className="text-gray-500 text-xs">
-                            {t.role}{t.location ? ` · ${t.location}` : ""}
-                          </p>
-                        </div>
-                        <div className="ml-auto">
-                          <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-medium">Verificado</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card3D>
-                </motion.div>
-                );
-              })}
+              <CitaRotativa historias={realTestimonials} />
             </motion.div>
           )}
 
