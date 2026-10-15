@@ -27,6 +27,8 @@ const POR_TIPO: Record<string, string> = {
   tasar: "Permite que te consulten para tasar su usado y que te dejen qué unidad están buscando. Las consultas llegan a la agencia con los datos enviados.",
   stats: "Una franja con números para destacar datos de la agencia. Editá cada cifra y su texto, y asegurate de que describan algo real de tu negocio.",
   servicios: "Explica los pasos para comprar: desde elegir una unidad hasta coordinar una visita. Podés editar los textos para contar cómo trabaja tu agencia.",
+  cartelera: "Hasta tres carteles grandes con foto, título, texto y botón, que pasan solos: para contar lo que querés empujar (lo que acaba de entrar, que tomás usados, la financiación). Tocá cada foto para cambiarla y elegir cada cuánto pasa. En tu tienda aparecen sólo los carteles con foto propia; sin ninguna, el bloque no se ve.",
+  comparar: "Pone hasta tres vehículos lado a lado, con sus datos fila por fila, para decidir sin abrir pestañas. Cada persona elige cuáles con \"Comparar\" en el showroom; mientras no elige, muestra los dos primeros. Aparece cuando tenés al menos dos vehículos.",
   presupuesto: "Una selección automática de vehículos agrupados por rango de precio, para que cada persona explore opciones según cuánto quiere gastar. Aparece cuando hay al menos cuatro vehículos con precio.",
 
   // Portada y catálogo
@@ -62,6 +64,8 @@ const POR_TIPO: Record<string, string> = {
 };
 
 const POR_ID: Record<string, string> = {
+  // En Auto Ruta, sin fotos propias la cartelera muestra tres carteles de ejemplo (como su portada).
+  "rt-cartelera": "Hasta tres carteles grandes con foto, título, texto y botón, que pasan solos: para contar lo que querés empujar (lo que acaba de entrar, que tomás usados, la financiación). Tocá cada foto para cambiarla y elegir cada cuánto pasa. Mientras no cargues fotos propias, en tu tienda se ven tres de ejemplo de camiones.",
   "au-coleccion": "Una categoría en primer plano, con tres de sus productos, como una vidriera. Si no elegís ninguna, va la que más productos tiene.",
   "bt-ofertas": "Lo que está más barato hoy: los productos con precio rebajado (un precio anterior tachado). Se arma solo; si no tenés ninguno rebajado, en tu tienda no aparece.",
   "bt-coleccion": "Un carrusel con tus productos, para recorrerlos de a varios sin salir de la portada.",

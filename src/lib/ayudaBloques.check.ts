@@ -20,7 +20,8 @@ const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
   else { fallos++; console.log(`  FALLA ${titulo}`, detalle !== undefined ? JSON.stringify(detalle) : ""); }
 };
 
-const MODA = ["Aire", "BohoTerra", "UrbanPulse", "ChicParis", "Aurora"];
+// Moda y, desde el 15/10/26, los de autos y motos (a la cartelera y al comparador les faltaba).
+const MODA = ["Aire", "BohoTerra", "UrbanPulse", "ChicParis", "Aurora", "AutoMotor", "AutoDrive", "AutoVolt", "AutoRuta"];
 const dir = join(process.cwd(), "src/components/store/templates");
 
 for (const t of MODA) {

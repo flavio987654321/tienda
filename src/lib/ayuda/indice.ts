@@ -30,6 +30,8 @@ export const INDICE: { slug: string; titulo: string }[] = [
   { slug: "consultas",                           titulo: "Las consultas de tus vehículos" },
   { slug: "tasaciones",                          titulo: "Tasar el usado de un cliente" },
   { slug: "busquedas",                           titulo: "\"Avisame si entra\": la gente que espera un auto" },
+  { slug: "la-ficha-de-un-vehiculo",             titulo: "Cargar un vehículo: los datos y la ficha técnica" },
+  { slug: "el-diseno-de-una-tienda-de-vehiculos", titulo: "El diseño de una tienda de vehículos" },
   { slug: "las-fotos-de-tus-productos",          titulo: "Las fotos: cuál va primera y por qué importa" },
   { slug: "afiliados",                           titulo: "Que otros vendan lo tuyo" },
   { slug: "notificaciones",                      titulo: "Avisarle a tus clientes" },

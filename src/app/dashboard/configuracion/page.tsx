@@ -1329,16 +1329,9 @@ function ImageFieldEditor({
             </label>
           </>
         )}
-        {(field.startsWith("heroBanner") || field.startsWith("promoBanner")) && (
-          <>
-            <div style={{ width: 1, height: 18, background: "#e2e8f0" }} />
-            <span title="El tiempo de rotación del carrusel se configura en ⚙ Configuración avanzada → Carrusel de banner (es el mismo para los 3 banners)."
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, ...dkMuted, whiteSpace: "nowrap", cursor: "help" }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", border: `1px solid ${P.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, flexShrink: 0 }}>?</span>
-              Velocidad del carrusel: en ⚙ Configuración avanzada
-            </span>
-          </>
-        )}
+        {/* Acá había un "Velocidad del carrusel: en ⚙ Configuración avanzada" que
+            mandaba a un control que ya no existe allá: se mudó al bloque "Cada
+            cuánto pasa" de este mismo panel (4ed6e093). Sacado el 15/10/26. */}
         <div style={{ flex: 1 }} />
         {hasChanges && (
           <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined, hideContent: undefined, posX: undefined, posY: undefined, posXMobile: undefined, posYMobile: undefined })}

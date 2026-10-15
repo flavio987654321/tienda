@@ -943,7 +943,8 @@ export const ARTICULOS: Articulo[] = [
     rol: "dueno",
     pantalla: { label: "Tasaciones", href: "/dashboard/tasaciones" },
     checkout: "inquiry",
-    actualizado: "2026-10-08",
+    /* 15/10/26: la tasación de unidades de trabajo (tipo, carrocería, horas). */
+    actualizado: "2026-10-15",
     relacionados: ["consultas", "busquedas"],
     cuerpo: [
       {
@@ -956,11 +957,16 @@ export const ARTICULOS: Articulo[] = [
         texto:
           "Ves a la persona, si lo deja como **parte de pago** o si **quiere venderlo**, y el auto: marca, modelo, año, kilómetros, estado y lo que haya comentado. Si vino desde un vehículo tuyo, también cuál le interesa.",
       },
+      {
+        t: "p",
+        texto:
+          "Si el pedido viene de la página de un camión, un utilitario o una máquina —o de una tienda con el diseño Auto Ruta—, el formulario pregunta como para unidades de trabajo: el tipo (camión, utilitario, pickup, máquina o auto), la carrocería o el equipo y, si es una máquina, las **horas de uso** en vez de los kilómetros. Lo ves arriba del comentario, y las horas aparecen con *h*.",
+      },
       { t: "h", texto: "Los pasos" },
       {
         t: "pasos",
         items: [
-          "**Pedir fotos** abre tu WhatsApp con el pedido armado: frente, costados, interior y el tablero con los kilómetros.",
+          "**Pedir fotos** abre tu WhatsApp con el pedido armado: frente, costados, interior y el tablero con los kilómetros (en una máquina, el horímetro).",
           "Cargás **Cuánto se lo tomás** —con una nota para vos, si querés— y tocás **Guardar oferta**.",
           "**Mandar la oferta** abre WhatsApp con el número escrito. El mensaje lo mandás vos.",
           "Cuando te contesta: **Aceptó** o **Descartar**. Si te arrepentís, **Reabrir**.",
@@ -1025,6 +1031,142 @@ export const ARTICULOS: Articulo[] = [
   },
 
   // ─────────────────────────────────────────────────────────── encontrar (2)
+  {
+    slug: "la-ficha-de-un-vehiculo",
+    titulo: "Cargar un vehículo: los datos y la ficha técnica",
+    resumen:
+      "Qué te pide el formulario según el tipo de vehículo, y cómo armar la ficha técnica que el comprador descarga en PDF.",
+    grupo: "arrancar",
+    clase: "mecanica",
+    rol: "dueno",
+    pantalla: { label: "Vehículos", href: "/dashboard/productos" },
+    checkout: "inquiry",
+    actualizado: "2026-10-15",
+    relacionados: ["como-cargar-un-producto", "las-fotos-de-tus-productos", "el-diseno-de-una-tienda-de-vehiculos"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "En **Vehículos → Publicar vehículo**, lo primero es la **categoría**: autos, camionetas, motos, camiones, utilitarios, maquinaria o cuatriciclos. De eso depende qué te pide el resto del formulario, y hasta los ejemplos que aparecen adentro de cada campo.",
+      },
+      { t: "h", texto: "Lo que cambia según el tipo" },
+      {
+        t: "tabla",
+        cols: ["Tipo", "Lo que tiene de propio"],
+        filas: [
+          ["Camiones", "La subcategoría es el tamaño (liviano, mediano o pesado). Carrocería (caja seca, volcador, tractor…), tracción de 4x2 a 8x4 y **Cabina**: simple o dormitorio."],
+          ["Utilitarios", "Furgón, combi, chasis cabina o minibús, con su carrocería."],
+          ["Maquinaria", "Agrícola o de obra (retroexcavadora, pala cargadora, autoelevador…). Se mide en **horas de uso**, no en kilómetros."],
+          ["Autos, camionetas, motos y cuatriciclos", "Los datos de siempre: marca, modelo, versión, año, kilómetros, motor, transmisión, tracción y carrocería."],
+        ],
+      },
+      {
+        t: "p",
+        texto:
+          "El **Historial de servicios** también cambia: a un camión le ofrece sistema de aire, embrague y diferencial; a una máquina, sistema hidráulico y toma de fuerza; a una moto, kit de transmisión y bujías. Si cambiás la categoría, al guardar quedan sólo los del tipo nuevo.",
+      },
+      { t: "h", texto: "La ficha técnica" },
+      {
+        t: "p",
+        texto:
+          "Más abajo está **Ficha técnica completa**. Es opcional, y lo que cargues aparece en la página del vehículo y en una ficha en PDF que el comprador puede descargar y compartir.",
+      },
+      {
+        t: "lista",
+        items: [
+          "**Equipamiento**: casillas, distintas para cada tipo de vehículo.",
+          "**Papeles y condiciones**: único dueño, VTV al día, patentes sin deuda, listo para transferir, acepta permuta, financiación…",
+          "**Motor y prestaciones** y **Medidas**: números con su unidad. En un camión, por ejemplo, potencia, ejes, carga útil y peso bruto total.",
+          "**Folleto propio**: si tenés un PDF —el folleto de fábrica de un 0 km, o tu ficha con tu diseño—, subilo y aparece al lado. Hasta 4 MB.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "La carga útil, los ejes y los papeles van en la ficha técnica y no en los atributos sueltos: así salen ordenados en la página y en el PDF. Con el vehículo guardado, **Ver el PDF** te muestra la ficha como la va a ver el comprador.",
+      },
+      { t: "ruta", label: "Ir a mis vehículos", href: "/dashboard/productos" },
+    ],
+  },
+
+  {
+    slug: "el-diseno-de-una-tienda-de-vehiculos",
+    titulo: "El diseño de una tienda de vehículos",
+    resumen:
+      "Los cuatro diseños para autos y motos, y cómo usar el vehículo destacado, la cartelera y la página de la agencia.",
+    grupo: "arrancar",
+    clase: "mecanica",
+    rol: "dueno",
+    pantalla: { label: "Diseño", href: "/dashboard/configuracion" },
+    checkout: "inquiry",
+    actualizado: "2026-10-15",
+    relacionados: ["elegir-y-editar-el-diseno", "la-ficha-de-un-vehiculo", "configuracion-de-la-tienda"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Hay cuatro diseños pensados para vender vehículos. Se eligen en **Diseño** como cualquier otro, y pasar de uno a otro no toca tus vehículos ni tus consultas.",
+      },
+      {
+        t: "tabla",
+        cols: ["Diseño", "Cómo es"],
+        filas: [
+          ["Auto Motor", "Oscuro y premium, de concesionaria."],
+          ["Auto Drive", "Claro, tipo marketplace, fácil de recorrer."],
+          ["Auto Volt", "Oscuro y futurista: los vehículos giran en un showroom 3D y se comparan lado a lado."],
+          ["Auto Ruta", "Para camiones, utilitarios y maquinaria: la portada pregunta para qué trabajo lo necesitan."],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Mientras mirás un diseño que no tenés guardado, los vehículos, las fotos y los textos que ves son de ejemplo. Los tuyos aparecen cuando lo guardás.",
+      },
+      { t: "h", texto: "El vehículo destacado" },
+      {
+        t: "p",
+        texto:
+          "Cada diseño tiene una unidad en grande: en Motor es **Vehículo en foco**, en Drive **Vehículo destacado**, en Ruta **Unidad de la semana** y en Volt la que arranca girando en el showroom. En el editor, arriba del bloque, está **Vehículo para destacar**: dejalo en *Automático* o elegí uno. Sólo aparecen los que no están vendidos ni reservados.",
+      },
+      { t: "h", texto: "La cartelera" },
+      {
+        t: "p",
+        texto:
+          "Hasta tres carteles grandes que pasan solos, cada uno con foto, título, texto y botón. Sirven para empujar algo puntual: lo que acaba de entrar, que tomás usados, la financiación.",
+      },
+      {
+        t: "pasos",
+        items: [
+          "En **Diseño**, tocá la foto de un cartel y subí la tuya.",
+          "Tocá el título, el texto o el botón para cambiarlos.",
+          "En el panel de la foto, **Cada cuánto pasa** define los segundos de todos los carteles.",
+          "Guardá.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "En Motor, Drive y Volt la cartelera aparece en tu tienda recién cuando cargás al menos una foto propia, y sólo se ven los carteles que tienen foto. En Ruta, mientras no cargues fotos, se ven tres de ejemplo.",
+      },
+      { t: "h", texto: "La agencia" },
+      {
+        t: "p",
+        texto:
+          "**La agencia** muestra lo que alguien necesita saber antes de ir: dónde están, cuándo atienden, cómo se paga, quién atiende, la garantía y fotos del salón.",
+      },
+      {
+        t: "lista",
+        items: [
+          "La **dirección y los horarios** se cargan en **Configuración → Contacto y redes**, en *La agencia: dirección y horarios*. Se puede poner horario cortado.",
+          "Lo demás —pagos, equipo, garantía y fotos del salón— se edita en **Diseño**: en la vista previa, tocá *La agencia* en el menú de la tienda.",
+        ],
+      },
+      { t: "ruta", label: "Ir a Diseño", href: "/dashboard/configuracion" },
+    ],
+  },
   {
     slug: "las-fotos-de-tus-productos",
     titulo: "Las fotos: cuál va primera y por qué importa",
