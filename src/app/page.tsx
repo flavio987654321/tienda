@@ -390,10 +390,15 @@ function TextoSasha({ texto }: { texto: string }) {
 function SashaDemo({ children }: { children: React.ReactNode }) {
   const raiz = useRef<HTMLDivElement>(null);
   const chat = useRef<HTMLDivElement>(null);
-  const visto = useInView(raiz, { once: true, amount: 0.35 });
+  /* Arranca cuando se ve el CHAT, no el bloque entero: en el celular el bloque
+     mide más de una pantalla y, acostado, el 35% de él no entraba nunca, así
+     que la charla no empezaba y las preguntas quedaban bloqueadas para siempre. */
+  const visto = useInView(chat, { once: true, amount: 0.3 });
   const [msgs, setMsgs] = useState<MsgSasha[]>([]);
   const [escribiendo, setEscribiendo] = useState(false);
-  const [ocupado, setOcupado] = useState(true);
+  const [ocupado, setOcupado] = useState(false);
+  // Si alguien pregunta antes de que arranque la charla de ejemplo, gana su pregunta.
+  const introHecha = useRef(false);
   const relojes = useRef<number[]>([]);
   const sig = useRef(0);
   const despues = (ms: number, fn: () => void) => { relojes.current.push(window.setTimeout(fn, ms)); };
@@ -402,7 +407,9 @@ function SashaDemo({ children }: { children: React.ReactNode }) {
 
   // La charla de ejemplo, de a un mensaje, la primera vez que se ve el bloque.
   useEffect(() => {
-    if (!visto) return;
+    if (!visto || introHecha.current) return;
+    introHecha.current = true;
+    despues(0, () => setOcupado(true));
     let t = 300;
     SASHA_CHARLA.forEach((m) => {
       if (m.de === "sasha") {
@@ -427,6 +434,7 @@ function SashaDemo({ children }: { children: React.ReactNode }) {
 
   function preguntar(p: { q: string; a: string }) {
     if (ocupado) return;
+    introHecha.current = true;
     setOcupado(true);
     agregar("yo", p.q);
     // En el celular el chat queda abajo de los botones: se lo acerca a la vista.
@@ -654,17 +662,17 @@ export default function Home() {
             <span className={`text-lg font-bold transition-colors ${sobreFoto ? "text-white" : "text-gray-900"}`}>TiendaApps</span>
           </Link>
 
-          {/* Mismo criterio que el nav compartido (SiteNav): el menú completo no
-              entra en 768px, así que aparece recién en lg (1024px) y abajo de eso
-              manda la hamburguesa. whitespace-nowrap para que ningún link ni botón
-              se parta a dos líneas. El gap arranca chico y crece en xl.
+          {/* Mismo criterio que el nav compartido (SiteNav): el menú completo
+              aparece recién en xl (1280px) y abajo de eso manda la hamburguesa
+              (en lg, 1024px, tampoco entraba: el logo pisaba "Tiendas").
+              whitespace-nowrap para que ningún link ni botón se parta a dos líneas.
 
               Los links salen de `@/lib/nav-publico`, el mismo array que usa
               SiteNav. La home mantiene su barra propia (arranca transparente
               sobre el hero, y abajo abre un cajón lateral) pero ya no tiene su
               propia lista: agregar un link en un solo archivo lo hace aparecer
               en las dos barras y en los dos menús. */}
-          <div className="hidden lg:flex items-center gap-6 xl:gap-8">
+          <div className="hidden xl:flex items-center gap-8">
             {LINKS_PUBLICOS.map(({ key, href, label, icon: Icon }) => (
               <Link
                 key={key}
@@ -677,7 +685,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-3">
             {/* El hueco mide lo mismo que los botones reales (px-5 py-2.5 sobre
                 texto de 14px = 42px de alto) para que al resolverse la sesión no
                 salte nada de lugar. */}
@@ -705,7 +713,7 @@ export default function Home() {
             )}
           </div>
 
-          <button onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú" className={`lg:hidden transition-colors ${sobreFoto ? "text-white" : "text-gray-500 hover:text-gray-900"}`}>
+          <button onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú" className={`xl:hidden transition-colors ${sobreFoto ? "text-white" : "text-gray-500 hover:text-gray-900"}`}>
             <Menu className="h-6 w-6" />
           </button>
         </div>
@@ -716,7 +724,7 @@ export default function Home() {
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm xl:hidden"
               onClick={() => setMobileMenu(false)}
             />
             <motion.div
@@ -728,7 +736,7 @@ export default function Home() {
                  medido a 360px, el botón caía en y=22 y el click lo comía la
                  barra. Se podía cerrar tocando afuera, pero la X no respondía. */
               style={{ top: announcementClosed ? 0 : ANNOUNCEMENT_H }}
-              className="fixed right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 flex flex-col lg:hidden"
+              className="fixed right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 flex flex-col xl:hidden"
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
                 <span className="text-gray-900 font-bold">Menú</span>
@@ -1050,7 +1058,7 @@ export default function Home() {
               <div className="absolute -inset-4 bg-gradient-to-br from-amber-200/40 to-orange-200/30 rounded-[2rem] blur-2xl pointer-events-none" />
               <div className="relative rounded-3xl overflow-hidden shadow-xl aspect-[4/3] lg:aspect-[5/6]">
                 <Image
-                  src="https://images.unsplash.com/photo-1552960562-daf630e9278b?auto=format&fit=crop&w=900&q=80"
+                  src="/home/diseno-propio.webp"
                   alt="Dos emprendedores diseñando su tienda online juntos frente a una laptop"
                   fill
                   unoptimized

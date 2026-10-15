@@ -36,12 +36,11 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
           <span className="text-lg font-bold text-gray-950">TiendaApps</span>
         </Link>
 
-        {/* El menú completo (6 links + logo + 2 botones) no entra en 768px: en
-            tablet se encimaban el logo y el primer link. Aparece recién en `lg`
-            (1024px), que es donde hay ancho de sobra; abajo de eso manda la
-            hamburguesa. El gap arranca chico y se agranda en `xl` para respetar
-            el desktop grande, que ya se veía bien. */}
-        <div className="hidden lg:flex items-center gap-6 xl:gap-8">
+        {/* El menú completo (6 links + logo + 2 botones) aparece recién en `xl`
+            (1280px); abajo de eso manda la hamburguesa. Estaba en `lg` (1024px)
+            y ahí tampoco entraba: medido el 15/10/26, "TiendaApps" pisaba el link
+            "Tiendas" y "Contacto" quedaba pegado a "Iniciar sesión". */}
+        <div className="hidden xl:flex items-center gap-8">
           {LINKS_PUBLICOS.map(({ key, href, label, icon: Icon }) => (
             <Link
               key={key}
@@ -54,7 +53,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
           ))}
         </div>
 
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden xl:flex items-center gap-3">
           {/* El hueco mide lo mismo que los botones reales (px-5 py-2.5 sobre
               texto de 14px = 42px de alto) para que al resolverse la sesión no
               salte nada de lugar. */}
@@ -85,7 +84,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
         <button
           onClick={() => setMobileMenu(true)}
           aria-label="Abrir menú"
-          className="lg:hidden text-gray-600 hover:text-gray-900 transition-colors"
+          className="xl:hidden text-gray-600 hover:text-gray-900 transition-colors"
         >
           <Menu className="h-6 w-6" />
         </button>
@@ -102,7 +101,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
         que el panel era transparente. Afuera del nav, `inset-0` vuelve a ser la
         pantalla entera. */}
     {mobileMenu && (
-      <div className="lg:hidden fixed inset-0 z-[60] bg-white flex flex-col">
+      <div className="xl:hidden fixed inset-0 z-[60] bg-white flex flex-col">
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
             <span className="text-gray-900 font-bold">Menú</span>
             <button onClick={() => setMobileMenu(false)} aria-label="Cerrar menú" className="text-gray-500 hover:text-gray-900">
