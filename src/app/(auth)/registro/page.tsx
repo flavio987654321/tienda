@@ -48,8 +48,8 @@ const TYPES = [
     key: "owner" as AccountType,
     icon: Store,
     color: "orange",
-    title: "Tengo una tienda",
-    desc: "Creá tu tienda online y gestioná afiliados que vendan por vos.",
+    title: "Tengo productos para vender",
+    desc: "Ropa, autos, lo que sea: armá tu tienda online, aunque recién empieces.",
     perks: [
       "Tienda con subdominio incluido",
       `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`,
@@ -71,8 +71,8 @@ const TYPES = [
     key: "seller" as AccountType,
     icon: Users,
     color: "amber",
-    title: "Soy vendedor/a",
-    desc: "Vendé productos de otras tiendas y ganá comisiones sin tener stock.",
+    title: "Quiero vender sin tener stock",
+    desc: "Vendé productos de otras tiendas y ganá una comisión por cada venta.",
     perks: [
       "Sin inversión inicial requerida",
       "Acceso a todas las tiendas activas",
@@ -105,7 +105,7 @@ const TYPES = [
 
      Comparte el naranja y el ícono con la tarjeta de /precios a propósito: es el
      mismo producto visto dos veces, y quien viene de ahí tiene que reconocerlo.
-     Queda en la punta opuesta a "Tengo una tienda", que es la otra naranja. */
+     Queda en la punta opuesta a "Tengo productos para vender", que es la otra naranja. */
   {
     key: "digital" as AccountType,
     icon: Download,

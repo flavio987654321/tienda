@@ -134,7 +134,7 @@ function LoginForm() {
                 <Store className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-white text-sm font-bold mb-0.5">Tengo una tienda</p>
+                <p className="text-white text-sm font-bold mb-0.5">Tengo productos para vender</p>
                 <p className="text-orange-50/70 text-xs leading-relaxed">Gestioná productos, pedidos, afiliados y stock desde tu panel.</p>
               </div>
             </div>
@@ -145,7 +145,7 @@ function LoginForm() {
                 <Users className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-white text-sm font-bold mb-0.5">Soy vendedor/a</p>
+                <p className="text-white text-sm font-bold mb-0.5">Quiero vender sin tener stock</p>
                 <p className="text-orange-50/70 text-xs leading-relaxed">Postulate a tiendas, compartí tu link y cobrá comisiones automáticas.</p>
               </div>
             </div>
