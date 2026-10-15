@@ -177,21 +177,6 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
 
 const ROTATING_WORDS = ["vender", "crecer", "todo", "despegar"];
 
-// Preguntas de ejemplo de Sasha, para la "nube flotante": aparecen y desaparecen
-// flotando en distintos puntos del bloque. Cada una tiene su posición [top%, left%].
-// Hay dos disposiciones porque en celular no hay ancho para dispersarlas sin que se
-// pisen: WIDE se esparce, NARROW va más centrada y en ritmo vertical.
-const SASHA_QUESTIONS = [
-  "¿Cuánto vendí esta semana?",
-  "Armame un cupón para el Hot Sale",
-  "¿Qué productos se venden más?",
-  "Tengo un pedido sin confirmar",
-  "¿Cómo conecto Mercado Pago?",
-  "Ideas para el Día del Padre",
-];
-const SASHA_POS_WIDE: [number, number][]   = [[14, 24], [22, 66], [45, 37], [52, 71], [74, 29], [82, 60]];
-const SASHA_POS_NARROW: [number, number][] = [[6, 48], [23, 45], [40, 55], [57, 44], [74, 55], [91, 49]];
-
 /* Las cuatro filas de "Todo para vender". Las fotos están en public/home. */
 const FILAS = [
   {
@@ -374,6 +359,164 @@ function CitaRotativa({ historias }: { historias: RealTestimonial[] }) {
   );
 }
 
+/* ─── Sasha: un chat de muestra que se puede tocar ───
+   (15/10/26) Antes eran preguntas que flotaban y se pisaban, al lado de un chat
+   quieto con los puntitos de "escribiendo" para siempre. Ahora al llegar al
+   bloque la charla de ejemplo se cuenta sola, mensaje por mensaje, y cada
+   pregunta de la izquierda es un botón: aparece en el chat, Sasha "escribe" y
+   responde. Las respuestas están armadas acá (es una muestra, no la IA de
+   verdad) y cada una nombra la sección real del panel donde se hace. */
+const SASHA_PREGUNTAS: { q: string; a: string }[] = [
+  { q: "¿Cuánto vendí esta semana?", a: "Esta semana entraron 12 pedidos, un 18% más que la anterior. El detalle por día lo tenés en Panel → Estadísticas." },
+  { q: "Armame un cupón para el Hot Sale", a: "Dale. Andá a Panel → Cupones → Nuevo. Te sugiero HOTSALE15: 15% de descuento, que venza el último día del Hot Sale y con límite de usos para que haya urgencia." },
+  { q: "¿Qué productos se venden más?", a: "Tus más vendidos del mes están en Panel → Estadísticas, ordenados por unidades. Si alguno se está quedando sin stock, te aviso antes de que se agote." },
+  { q: "Tengo un pedido sin confirmar", a: "Sí, es el que entró ayer a la tarde. Lo encontrás en Panel → Pedidos: lo confirmás y tu cliente puede seguirlo desde su celular." },
+  { q: "¿Cómo conecto Mercado Pago?", a: "En Panel → Pagos tocás para conectar Mercado Pago, entrás con tu cuenta y listo: desde ahí cobrás directo a tu cuenta." },
+  { q: "Ideas para el Día del Padre", a: "Armá un combo de regalo con dos o tres productos, un cupón PAPA10 en Panel → Cupones y avisales a tus clientes una semana antes." },
+];
+const SASHA_CHARLA: { de: "sasha" | "yo"; texto: string }[] = [
+  { de: "sasha", texto: "¡Hola! Tenés 3 pedidos sin confirmar y se acerca el Día de la Madre: buen momento para armar algo especial." },
+  { de: "yo", texto: "armame un cupón de descuento para esa fecha" },
+  { de: "sasha", texto: "Listo, te explico: andá a Panel → Cupones → Nuevo. Ponés el porcentaje, la fecha y el nombre. ¿Querés que te sugiera un nombre para la campaña?" },
+];
+type MsgSasha = { id: number; de: "sasha" | "yo"; texto: string };
+
+/* "Panel → Cupones → Nuevo" va resaltado: es lo que la persona tiene que encontrar. */
+function TextoSasha({ texto }: { texto: string }) {
+  const partes = texto.split(/(Panel(?: → [A-ZÁÉÍÓÚ][a-záéíóúñ]+)+)/);
+  return <>{partes.map((p, i) => (i % 2 ? <span key={i} className="font-semibold text-orange-600">{p}</span> : p))}</>;
+}
+
+function SashaDemo({ children }: { children: React.ReactNode }) {
+  const raiz = useRef<HTMLDivElement>(null);
+  const chat = useRef<HTMLDivElement>(null);
+  const visto = useInView(raiz, { once: true, amount: 0.35 });
+  const [msgs, setMsgs] = useState<MsgSasha[]>([]);
+  const [escribiendo, setEscribiendo] = useState(false);
+  const [ocupado, setOcupado] = useState(true);
+  const relojes = useRef<number[]>([]);
+  const sig = useRef(0);
+  const despues = (ms: number, fn: () => void) => { relojes.current.push(window.setTimeout(fn, ms)); };
+  const agregar = (de: MsgSasha["de"], texto: string) =>
+    setMsgs((m) => [...m, { id: sig.current++, de, texto }].slice(-8));
+
+  // La charla de ejemplo, de a un mensaje, la primera vez que se ve el bloque.
+  useEffect(() => {
+    if (!visto) return;
+    let t = 300;
+    SASHA_CHARLA.forEach((m) => {
+      if (m.de === "sasha") {
+        despues(t, () => setEscribiendo(true));
+        t += 1100;
+        despues(t, () => { setEscribiendo(false); agregar("sasha", m.texto); });
+      } else {
+        despues(t, () => agregar("yo", m.texto));
+      }
+      t += 900;
+    });
+    despues(t, () => setOcupado(false));
+    const r = relojes.current;
+    return () => { r.forEach(clearTimeout); };
+  }, [visto]);
+
+  // Siempre mostrando lo último: se mueve el chat, no la página.
+  useEffect(() => {
+    const el = chat.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [msgs, escribiendo]);
+
+  function preguntar(p: { q: string; a: string }) {
+    if (ocupado) return;
+    setOcupado(true);
+    agregar("yo", p.q);
+    // En el celular el chat queda abajo de los botones: se lo acerca a la vista.
+    if (window.innerWidth < 1024) chat.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    despues(350, () => setEscribiendo(true));
+    despues(1500, () => { setEscribiendo(false); agregar("sasha", p.a); setOcupado(false); });
+  }
+
+  return (
+    <div ref={raiz} className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 items-center">
+      <div>
+        {children}
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="lg:mb-8">
+          <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Probá preguntarle:</motion.p>
+          {/* En el celular, una tira que se desliza con el dedo; desde sm, en filas. */}
+          <motion.div variants={fadeUp} className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-2 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible [scrollbar-width:none]">
+            {SASHA_PREGUNTAS.map((p) => (
+              <button
+                key={p.q} type="button" onClick={() => preguntar(p)} disabled={ocupado}
+                className="flex-shrink-0 inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-full shadow-sm whitespace-nowrap transition-all hover:border-orange-400 hover:text-orange-700 hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+              >
+                <MessageCircle className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                {p.q}
+              </button>
+            ))}
+          </motion.div>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="hidden lg:flex">
+          <Link href="/registro" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
+            Creá tu tienda y probalo <ArrowRight className="h-4 w-4" />
+          </Link>
+        </motion.div>
+      </div>
+
+      <div>
+        <motion.div
+          initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-3xl border border-gray-100 shadow-2xl shadow-orange-200/40 bg-white overflow-hidden max-w-sm mx-auto"
+        >
+          <div className="flex items-center gap-3 border-b border-gray-100 p-4">
+            <AsistentePersonaje estado="sonriente" size={36} />
+            <div className="flex-1">
+              <p className="font-bold text-gray-950 text-sm">Sasha</p>
+              <p className="text-xs text-gray-400">Tu asistente de TiendaApps</p>
+            </div>
+            <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              En línea
+            </span>
+          </div>
+
+          <div ref={chat} aria-live="polite" className="h-[360px] overflow-y-auto p-4 space-y-3 bg-gray-50/50 [scrollbar-width:thin]">
+            <AnimatePresence initial={false}>
+              {msgs.map((m) => (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex ${m.de === "yo" ? "justify-end" : "justify-start"}`}
+                >
+                  <div className={m.de === "yo"
+                    ? "max-w-[85%] rounded-2xl rounded-tr-sm bg-orange-600 px-4 py-2.5 text-sm text-white leading-relaxed"
+                    : "max-w-[85%] rounded-2xl rounded-tl-sm bg-white border border-gray-100 shadow-sm px-4 py-2.5 text-sm text-gray-800 leading-relaxed"}>
+                    {m.de === "sasha" ? <TextoSasha texto={m.texto} /> : m.texto}
+                  </div>
+                </motion.div>
+              ))}
+              {escribiendo && (
+                <motion.div key="escribiendo" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex justify-start">
+                  <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1.5 items-center" aria-label="Sasha está escribiendo">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+        <p className="text-center text-xs text-gray-400 mt-3">Conversación de ejemplo</p>
+        <div className="flex justify-center mt-6 lg:hidden">
+          <Link href="/registro" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
+            Creá tu tienda y probalo <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
@@ -385,7 +528,6 @@ export default function Home() {
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
   const [comunidadHref, setComunidadHref] = useState("/comunidad");
-  const [cloudNarrow, setCloudNarrow] = useState(false);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
   // Los tres estados con nombre, del mismo hook que usan el nav compartido y
   // los once templates de tienda. Ver `useSesion`: leer solo `user` hacía que
@@ -432,20 +574,6 @@ export default function Home() {
   useEffect(() => {
     const timer = setInterval(() => setRotatingWordIdx((i) => (i + 1) % ROTATING_WORDS.length), 2500);
     return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const update = () => {
-      // clientWidth, NO innerWidth: innerWidth incluye la barra de scroll (en
-      // DevTools son ~15px reales) y acá se decide un corte por ancho, así que
-      // esos pixeles de más movían el resultado. clientWidth es el ancho real
-      // disponible —sin la barra— y en un celular de verdad da lo mismo (ahí la
-      // barra no ocupa espacio).
-      setCloudNarrow(document.documentElement.clientWidth < 640);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
   }, []);
 
   return (
@@ -1193,116 +1321,22 @@ export default function Home() {
 
       {/* ── SASHA (asistente de IA) ── */}
       <section className="py-24 bg-gray-50 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-            <motion.span variants={fadeUp} className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-600 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-4">
-              <Sparkles className="h-3.5 w-3.5" /> Nuevo en TiendaApps
-            </motion.span>
-            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-950 mb-5">
-              Alguien que cuida tu tienda cuando vos no podés.
-            </motion.h2>
-            <motion.p variants={fadeUp} style={{ color: "#4b5563" }} className="leading-relaxed mb-4 text-base">
-              Sasha es tu asistente dentro del panel. Te avisa cuando tenés pedidos sin confirmar, te recuerda fechas clave para vender más y responde tus dudas sobre la plataforma — con tus datos reales, en segundos.
-            </motion.p>
-            <motion.p variants={fadeUp} style={{ color: "#4b5563" }} className="leading-relaxed mb-7 text-base">
-              No necesitás saber de tecnología. Le preguntás como si le hablaras a una persona, y te responde como una persona.
-            </motion.p>
-
-            {/* Nube flotante de preguntas de ejemplo. En vez de una lista quieta,
-                las preguntas aparecen y desaparecen flotando en distintos puntos
-                del bloque. Cada una está en una posición absoluta fija (para que no
-                se pisen) y anima opacidad + una deriva suave en Y, con el ciclo
-                escalonado (delay i*0.75) para que en todo momento haya ~3-4
-                legibles mientras las otras entran/salen. Las posiciones cambian
-                según el ancho: dispersas en desktop, más centradas en celular. */}
-            <motion.div variants={fadeUp} className="mb-8">
-              <p style={{ color: "#6b7280" }} className="text-xs font-semibold uppercase tracking-wider mb-3">Por ejemplo, le podés preguntar:</p>
-              <div className="relative w-full h-[260px] sm:h-[220px]">
-                {SASHA_QUESTIONS.map((q, i) => {
-                  const [top, left] = (cloudNarrow ? SASHA_POS_NARROW : SASHA_POS_WIDE)[i];
-                  return (
-                    <div key={q} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ top: `${top}%`, left: `${left}%` }}>
-                      <motion.span
-                        className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-[11px] sm:text-xs font-medium px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: [0, 1, 1, 0], y: [7, 0, -5, -9], scale: [0.92, 1, 1, 0.95] }}
-                        transition={{ duration: 5, delay: i * 0.75, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut", times: [0, 0.22, 0.72, 1] }}
-                      >
-                        <MessageCircle className="h-3 w-3 text-orange-400 flex-shrink-0" />
-                        {q}
-                      </motion.span>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-
-            {/* En celular el botón se centra: la nube de arriba y el chat de
-                abajo van centrados, así que pegado a la izquierda quedaba
-                descolgado. En desktop se mantiene a la izquierda, acompañando los
-                párrafos de texto que están alineados a la izquierda. */}
-            <motion.div variants={fadeUp} className="flex justify-center sm:justify-start">
-              <Link href="/registro" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
-                Creá tu tienda y probalo <ArrowRight className="h-4 w-4" />
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
-            className="relative"
-          >
-            <motion.div
-              animate={{ y: [0, -8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-              className="rounded-3xl border border-gray-100 shadow-2xl shadow-orange-200/40 bg-white overflow-hidden max-w-sm mx-auto"
-            >
-              {/* Header del chat */}
-              <div className="flex items-center gap-3 border-b border-gray-100 p-4">
-                <AsistentePersonaje estado="sonriente" size={36} />
-                <div className="flex-1">
-                  <p className="font-bold text-gray-950 text-sm">Sasha</p>
-                  <p className="text-xs text-gray-400">Tu asistente de TiendaApps</p>
-                </div>
-                <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                  En línea
-                </span>
-              </div>
-
-              {/* Mensajes */}
-              <div className="p-4 space-y-3 bg-gray-50/50">
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white border border-gray-100 shadow-sm px-4 py-2.5 text-sm text-gray-800 leading-relaxed">
-                    ¡Hola! Tenés 3 pedidos sin confirmar y se acerca el Día de la Madre — buen momento para armar algo especial.
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-orange-600 px-4 py-2.5 text-sm text-white leading-relaxed">
-                    armame un cupón de descuento para esa fecha
-                  </div>
-                </div>
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white border border-gray-100 shadow-sm px-4 py-2.5 text-sm text-gray-800 leading-relaxed">
-                    Listo, te explico: andá a <span className="font-semibold text-orange-600">Panel → Cupones → Nuevo</span>. Ponés el porcentaje, la fecha y el nombre. ¿Querés que te sugiera un nombre para la campaña?
-                  </div>
-                </div>
-                {/* Typing indicator */}
-                <div className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-orange-600 px-4 py-2.5 text-sm text-white">
-                    sí dale, algo creativo
-                  </div>
-                </div>
-                <div className="flex justify-start items-end gap-2">
-                  <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1.5 items-center">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
+        <SashaDemo>
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
+          <motion.span variants={fadeUp} className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-600 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-4">
+            <Sparkles className="h-3.5 w-3.5" /> Nuevo en TiendaApps
+          </motion.span>
+          <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-950 mb-5">
+            Alguien que cuida tu tienda cuando vos no podés.
+          </motion.h2>
+          <motion.p variants={fadeUp} style={{ color: "#4b5563" }} className="leading-relaxed mb-4 text-base">
+            Sasha es tu asistente dentro del panel. Te avisa cuando tenés pedidos sin confirmar, te recuerda fechas clave para vender más y responde tus dudas sobre la plataforma — con tus datos reales, en segundos.
+          </motion.p>
+          <motion.p variants={fadeUp} style={{ color: "#4b5563" }} className="leading-relaxed mb-7 text-base">
+            No necesitás saber de tecnología. Le preguntás como si le hablaras a una persona, y te responde como una persona.
+          </motion.p>
+        </motion.div>
+        </SashaDemo>
       </section>
 
       {/* ── TESTIMONIOS ── */}
