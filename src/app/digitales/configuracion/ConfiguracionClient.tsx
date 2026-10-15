@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock, ShieldCheck } from "lucide-react";
+import { Settings, CreditCard, BarChart3, Globe, Scale, ArrowRight, Lock, ShieldCheck, ChevronDown, Check } from "lucide-react";
 import PanelSeguridad from "@/components/seguridad/PanelSeguridad";
 import { useVerificarIdentidad } from "@/components/seguridad/VerificarIdentidad";
 import type { TierDigital } from "@/lib/planes-digitales";
@@ -280,35 +280,35 @@ export default function ConfiguracionClient(p: Props) {
   return (
     <div>
       {ventanaVerificar}
-      {/* En la compu, las pestañas son un menú a la izquierda y el contenido
+      {/* En la compu, las secciones son un menú a la izquierda y el contenido
           ocupa el resto: arriba en fila no entraban y salía una barrita para
           deslizarlas, con media pantalla vacía a los costados. */}
       <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8 lg:items-start">
-      {/* ── Las pestañas ───────────────────────────────────────────────────
-          Se van para los costados en el celular en vez de apilarse: apiladas
-          se comen la pantalla entera antes de llegar al primer campo. */}
-      <nav aria-label="Secciones de la configuración" className="-mx-4 sm:mx-0 px-4 sm:px-0 mb-5 overflow-x-auto lg:overflow-visible lg:mb-0 lg:sticky lg:top-6">
-        <div className="flex items-center gap-2 w-max lg:w-auto lg:flex-col lg:items-stretch lg:gap-1">
-          {PESTANAS.map(({ id, label, Icon, lista }) => {
+      {/* ── En el celular y la tablet: un desplegable ─────────────────────────
+          Antes era una fila que se deslizaba de costado, con una barrita gris y
+          la última pestaña cortada a la mitad. Apiladas se comían la pantalla
+          antes del primer campo. Un botón que dice dónde estás ocupa un renglón
+          y muestra todas de una. Sin ícono de hamburguesa a propósito: el de
+          arriba ya abre el menú principal. */}
+      <SelectorDeSeccion pestana={pestana} elegir={setPestana} />
+
+      <nav aria-label="Secciones de la configuración" className="hidden lg:block lg:sticky lg:top-6">
+        <div className="flex flex-col gap-1">
+          {PESTANAS.map(({ id, label, Icon }) => {
             const activa = pestana === id;
             return (
               <button
                 key={id}
                 onClick={() => setPestana(id)}
                 aria-current={activa ? "page" : undefined}
-                className={`inline-flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors lg:w-full lg:text-left ${
+                className={`flex w-full items-center gap-2 px-4 py-2.5 rounded-xl text-left text-sm font-bold transition-colors ${
                   activa
-                    ? "bg-gray-900 text-white border-gray-900 lg:bg-orange-500/10 lg:panel-oscuro:bg-orange-500/15 lg:text-orange-700 lg:panel-oscuro:text-orange-300 lg:border-transparent"
-                    : "bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700 hover:border-gray-300 panel-oscuro:hover:border-gray-600 lg:bg-transparent lg:panel-oscuro:bg-transparent lg:border-transparent lg:panel-oscuro:border-transparent lg:hover:bg-gray-100 lg:panel-oscuro:hover:bg-gray-800/60"
+                    ? "bg-orange-500/10 panel-oscuro:bg-orange-500/15 text-orange-700 panel-oscuro:text-orange-300"
+                    : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-100 panel-oscuro:hover:bg-gray-800/60"
                 }`}
               >
                 <Icon className="h-4 w-4" />
                 {label}
-                {!lista && (
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full lg:ml-auto ${activa ? "bg-white panel-oscuro:bg-gray-900/50 lg:bg-orange-500 lg:panel-oscuro:bg-orange-400" : "bg-gray-300"}`}
-                  />
-                )}
               </button>
             );
           })}
@@ -465,6 +465,65 @@ export default function ConfiguracionClient(p: Props) {
       )}
       </div>
       </div>
+    </div>
+  );
+}
+
+/** El desplegable de secciones del celular y la tablet (en la compu está el menú de la izquierda). */
+function SelectorDeSeccion({ pestana, elegir }: { pestana: Pestana; elegir: (p: Pestana) => void }) {
+  const [abierto, setAbierto] = useState(false);
+  const caja = useRef<HTMLDivElement>(null);
+  const actual = PESTANAS.find((t) => t.id === pestana) ?? PESTANAS[0];
+
+  // Se cierra tocando afuera o con Escape, como cualquier desplegable.
+  useEffect(() => {
+    if (!abierto) return;
+    const afuera = (e: PointerEvent) => { if (!caja.current?.contains(e.target as Node)) setAbierto(false); };
+    const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") setAbierto(false); };
+    document.addEventListener("pointerdown", afuera);
+    document.addEventListener("keydown", tecla);
+    return () => { document.removeEventListener("pointerdown", afuera); document.removeEventListener("keydown", tecla); };
+  }, [abierto]);
+
+  return (
+    <div ref={caja} className="relative mb-5 lg:hidden">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        aria-haspopup="true"
+        aria-label={`Sección: ${actual.label}. Cambiar de sección`}
+        className="flex w-full items-center gap-2.5 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-4 py-3 text-left text-sm font-bold text-gray-900 panel-oscuro:text-gray-100"
+      >
+        <actual.Icon className="h-4 w-4 text-orange-600 panel-oscuro:text-orange-400" />
+        <span className="flex-1">{actual.label}</span>
+        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${abierto ? "rotate-180" : ""}`} />
+      </button>
+
+      {abierto && (
+        <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-1.5 shadow-xl">
+          {PESTANAS.map(({ id, label, Icon }) => {
+            const activa = pestana === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => { elegir(id); setAbierto(false); }}
+                aria-current={activa ? "page" : undefined}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 py-3 text-left text-sm font-bold transition-colors ${
+                  activa
+                    ? "bg-orange-500/10 panel-oscuro:bg-orange-500/15 text-orange-700 panel-oscuro:text-orange-300"
+                    : "text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="flex-1">{label}</span>
+                {activa && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
