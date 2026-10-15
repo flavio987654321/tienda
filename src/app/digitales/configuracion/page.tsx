@@ -128,7 +128,7 @@ export default async function ConfiguracionPage({
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
+    <div className="mx-auto w-full max-w-3xl lg:max-w-6xl px-4 sm:px-6 py-8">
       <BotonVolver />
 
       <div className="mb-6">

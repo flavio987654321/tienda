@@ -280,36 +280,42 @@ export default function ConfiguracionClient(p: Props) {
   return (
     <div>
       {ventanaVerificar}
+      {/* En la compu, las pestañas son un menú a la izquierda y el contenido
+          ocupa el resto: arriba en fila no entraban y salía una barrita para
+          deslizarlas, con media pantalla vacía a los costados. */}
+      <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8 lg:items-start">
       {/* ── Las pestañas ───────────────────────────────────────────────────
           Se van para los costados en el celular en vez de apilarse: apiladas
           se comen la pantalla entera antes de llegar al primer campo. */}
-      <div className="-mx-4 sm:mx-0 px-4 sm:px-0 mb-5 overflow-x-auto">
-        <div className="flex items-center gap-2 w-max">
+      <nav aria-label="Secciones de la configuración" className="-mx-4 sm:mx-0 px-4 sm:px-0 mb-5 overflow-x-auto lg:overflow-visible lg:mb-0 lg:sticky lg:top-6">
+        <div className="flex items-center gap-2 w-max lg:w-auto lg:flex-col lg:items-stretch lg:gap-1">
           {PESTANAS.map(({ id, label, Icon, lista }) => {
             const activa = pestana === id;
             return (
               <button
                 key={id}
                 onClick={() => setPestana(id)}
-                className={`inline-flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                aria-current={activa ? "page" : undefined}
+                className={`inline-flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors lg:w-full lg:text-left ${
                   activa
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700 hover:border-gray-300 panel-oscuro:hover:border-gray-600"
+                    ? "bg-gray-900 text-white border-gray-900 lg:bg-orange-500/10 lg:panel-oscuro:bg-orange-500/15 lg:text-orange-700 lg:panel-oscuro:text-orange-300 lg:border-transparent"
+                    : "bg-white panel-oscuro:bg-gray-900 text-gray-600 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700 hover:border-gray-300 panel-oscuro:hover:border-gray-600 lg:bg-transparent lg:panel-oscuro:bg-transparent lg:border-transparent lg:panel-oscuro:border-transparent lg:hover:bg-gray-100 lg:panel-oscuro:hover:bg-gray-800/60"
                 }`}
               >
                 <Icon className="h-4 w-4" />
                 {label}
                 {!lista && (
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${activa ? "bg-white panel-oscuro:bg-gray-900/50" : "bg-gray-300"}`}
+                    className={`w-1.5 h-1.5 rounded-full lg:ml-auto ${activa ? "bg-white panel-oscuro:bg-gray-900/50 lg:bg-orange-500 lg:panel-oscuro:bg-orange-400" : "bg-gray-300"}`}
                   />
                 )}
               </button>
             );
           })}
         </div>
-      </div>
+      </nav>
 
+      <div className="min-w-0">
       {error && (
         <div className="rounded-2xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-5 py-4 mb-5">
           <p className="text-sm font-medium text-red-700 panel-oscuro:text-red-300 break-words">{error}</p>
@@ -457,6 +463,8 @@ export default function ConfiguracionClient(p: Props) {
           )}
         </Seccion>
       )}
+      </div>
+      </div>
     </div>
   );
 }
