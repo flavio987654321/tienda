@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },
     select: {
-      name: true, description: true, logo: true, tagline: true, storeConfig: true, isPublished: true,
+      name: true, description: true, logo: true, tagline: true, storeConfig: true, isPublished: true, closedAt: true,
       owner: { select: { subscription: { select: { tier: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true } } } },
     },
   });
@@ -61,6 +61,11 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
   return {
     title,
     description,
+    /* "Próximamente" o cerrada: la página existe pero no hay nada que buscar.
+       Indexada, en Google salía "Tiendaapps — Próximamente" como resultado. El
+       sitemap ya las dejaba afuera; esto le dice lo mismo al robot que llega
+       por un link. */
+    ...(!store.isPublished || store.closedAt ? { robots: { index: false, follow: false } } : {}),
     /* iOS no lee el manifest para esto: el ícono de "Agregar a pantalla de inicio"
        lo saca del `apple-touch-icon` del HTML, y si no hay ninguno usa una captura
        de la página. O sea que hasta acá, en iPhone, la tienda se instalaba con una

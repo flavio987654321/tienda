@@ -117,9 +117,9 @@ async function getProductEntries() {
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // En paralelo: son dos consultas independientes y encadenarlas sólo haría al
+  // En paralelo: son consultas independientes y encadenarlas sólo haría al
   // robot esperar la suma de las dos.
-  const [stores, products] = await Promise.all([getStoreEntries(), getProductEntries()]);
+  const [stores, products, digitales] = await Promise.all([getStoreEntries(), getProductEntries(), getDigitalEntries()]);
 
   const storeRoutes: MetadataRoute.Sitemap = stores.map((store) => ({
     url: `${BASE_URL}/tienda/${store.slug}`,
@@ -142,5 +142,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...STATIC_ROUTES, ...AYUDA_ROUTES, ...storeRoutes, ...productRoutes];
+  const digitalRoutes: MetadataRoute.Sitemap = digitales.map((p) => ({
+    url: `${BASE_URL}/p/${p.id}`,
+    lastModified: p.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  return [...STATIC_ROUTES, ...AYUDA_ROUTES, ...storeRoutes, ...productRoutes, ...digitalRoutes];
+}
+
+/* ── Las páginas de venta de productos digitales ─────────────────────────────
+   Viven en `/p/[id]` y no adentro de una tienda: la cuenta digital no se publica
+   como tienda (`isPublished` queda en false), así que las consultas de arriba
+   nunca las encontraban y no había ni una en el sitemap.
+
+   El filtro es el mismo que decide `/p/[id]`: el producto principal, activo y
+   sin borrar. Un borrador ahí sólo lo ve su dueña y lleva noindex. */
+async function getDigitalEntries() {
+  try {
+    return await prisma.product.findMany({
+      where: { rolDigital: "PRINCIPAL", isActive: true, deletedAt: null, store: { isActive: true } },
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 5000,
+    });
+  } catch (e) {
+    console.error("[sitemap] no se pudieron leer los productos digitales:", e);
+    return [];
+  }
 }

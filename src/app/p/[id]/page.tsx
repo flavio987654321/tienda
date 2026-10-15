@@ -129,6 +129,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descripcion,
     /* Un borrador no se indexa aunque su dueña lo esté mirando. */
     robots: fila.isActive ? undefined : { index: false, follow: false },
+    /* La dirección limpia: el mismo link circula con `?utm_…`, `?fbclid=…` y
+       `?ref=…` de cada anuncio y cada afiliado, y sin esto Google las cuenta como
+       páginas distintas con el mismo texto. */
+    alternates: { canonical: `/p/${fila.id}` },
     openGraph: {
       title: titulo,
       description: descripcion,
