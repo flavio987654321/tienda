@@ -12,7 +12,7 @@ import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { LINKS_PUBLICOS } from "@/lib/nav-publico";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent, useReducedMotion, useInView, animate } from "framer-motion";
 import {
-  ArrowRight, X, Users, CheckCircle, Star, Send, MessageCircle, HeartHandshake, Menu, BadgeCheck, Sparkles, Download, Shield, Clock,
+  ArrowRight, X, Users, CheckCircle, Star, Send, MessageCircle, HeartHandshake, Menu, BadgeCheck, Sparkles, Download, Shield, Clock, Store,
 } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
 
@@ -1331,35 +1331,56 @@ export default function Home() {
       </section>
 
       {/* ── CTA FINAL ── */}
-      <section className="py-24 bg-gray-50 relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-6">
+      {/* "¿Por dónde arrancás?" (15/10/26). Antes era una tarjeta naranja con
+          dos botones (tienda y afiliado) y los productos digitales no
+          aparecían. Ahora son los tres caminos, cada uno a su registro.
+          La foto de fondo es LA MISMA de la portada, desenfocada: la página
+          cierra como abre y no se baja nada nuevo (ya está en caché). */}
+      <section className="relative overflow-hidden bg-gray-950 text-white">
+        <picture>
+          <source media="(max-width: 767px)" srcSet="/home/portada-celu.webp" />
+          <img src="/home/portada.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover scale-110 blur-md opacity-45" />
+        </picture>
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-gray-950/80 via-gray-950/60 to-gray-950/90" />
+        <div aria-hidden className="absolute -top-40 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-orange-600/25 blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-6xl mx-auto px-6 py-20 lg:py-28">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-12 lg:mb-16">
+            <motion.h2 variants={fadeUp} className="text-5xl lg:text-6xl font-black leading-tight mb-5">
+              Arrancá hoy.<br /><span className="gradient-text">Sin vueltas.</span>
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-white/75 text-lg lg:text-xl max-w-xl mx-auto">
+              Probá la plataforma completa durante 7 días. Sin tarjeta, sin letra chica. Si no es para vos, no pasa nada.
+            </motion.p>
+            <motion.p variants={fadeUp} className="mt-8 text-orange-400 font-semibold text-sm uppercase tracking-widest">¿Por dónde arrancás?</motion.p>
+          </motion.div>
+
           <motion.div
-            initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="relative text-center rounded-[2.5rem] bg-gradient-to-br from-orange-600 via-orange-600 to-rose-600 px-8 py-16 overflow-hidden"
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.12 } } }}
+            className={`grid grid-cols-1 gap-4 lg:gap-6 ${DIGITALES_ABIERTO ? "lg:grid-cols-3 max-w-xl lg:max-w-none mx-auto" : "md:grid-cols-2 max-w-3xl mx-auto"}`}
           >
-            <div className="absolute inset-0 grid-bg opacity-20" style={{ filter: "invert(1)" }} />
-            <h2 className="relative text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
-              Arrancá hoy.<br />Sin vueltas.
-            </h2>
-            <p className="relative text-orange-50 text-xl mb-10">
-              Probá la plataforma completa durante 7 días.<br />
-              Sin tarjeta, sin letra chica. Si no es para vos, no pasa nada.
-            </p>
-            <div className="relative flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/registro?plan=owner"
-                className="group flex items-center justify-center gap-2.5 bg-white hover:bg-orange-50 text-orange-700 px-8 py-5 rounded-2xl font-bold text-lg transition-all shadow-2xl hover:scale-105"
-              >
-                Crear mi tienda gratis
-                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href="/registro?plan=seller"
-                className="flex items-center justify-center gap-2 border border-white/40 hover:border-white text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all hover:bg-white/10"
-              >
-                <Users className="h-5 w-5" /> Quiero ser afiliado
-              </Link>
-            </div>
+            {[
+              { href: "/registro?plan=owner", icon: Store, titulo: "Abrí tu tienda", texto: "Vendé tus productos con tu marca y cobrá con Mercado Pago.", boton: "Crear mi tienda gratis" },
+              ...(DIGITALES_ABIERTO ? [{ href: "/registro?plan=digital", icon: Download, titulo: "Vendé lo digital", texto: "Tu ebook, guía o plantilla con su página de venta y entrega automática.", boton: "Empezar gratis" }] : []),
+              { href: "/registro?plan=seller", icon: Users, titulo: "Ganá como afiliado", texto: "Representá tiendas que te gustan y cobrá comisión por cada venta.", boton: "Quiero ser afiliado" },
+            ].map(({ href, icon: Icon, titulo, texto, boton }) => (
+              <motion.div key={href} variants={{ hidden: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } } }}>
+                <Link
+                  href={href}
+                  className="group flex h-full flex-col rounded-3xl border border-white/15 bg-white/[0.06] backdrop-blur-md p-6 lg:p-7 transition-all duration-300 hover:-translate-y-1 hover:border-orange-500 hover:bg-orange-600 hover:shadow-2xl hover:shadow-orange-600/30"
+                >
+                  <span className="w-12 h-12 rounded-2xl bg-orange-600/20 text-orange-400 flex items-center justify-center mb-4 lg:mb-6 transition-colors group-hover:bg-white/20 group-hover:text-white">
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <span className="text-2xl font-black mb-2">{titulo}</span>
+                  <span className="text-white/65 leading-relaxed mb-6 lg:mb-8 transition-colors group-hover:text-white/90">{texto}</span>
+                  <span className="mt-auto inline-flex items-center gap-2 font-bold text-orange-400 transition-colors group-hover:text-white">
+                    {boton} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
       </section>
