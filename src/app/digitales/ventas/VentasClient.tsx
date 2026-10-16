@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import DesplegableDeEnlaces from "@/components/panel/DesplegableDeEnlaces";
 import { useRouter } from "next/navigation";
 import { LinkDelPanel as Link } from "../SalidaSinGuardar";
 import {
@@ -137,6 +138,14 @@ export default function VentasClient({
           desplaza de costado en vez de apilarse: con seis productos, apilados
           empujan el resumen fuera de la pantalla. */}
       {productos.length > 1 && (
+        <DesplegableDeEnlaces
+          className="mb-2 sm:hidden"
+          queSeElige="Producto"
+          opciones={[{ href: ir({ p: null }), label: "Todos los productos" }, ...productos.map((prod) => ({ href: ir({ p: prod.id }), label: prod.name }))]}
+          actual={ir({ p: elegido ?? null })}
+        />
+      )}
+      {productos.length > 1 && (
         <Fila>
           <Chip href={ir({ p: null })} activo={!elegido}>Todos</Chip>
           {productos.map((prod) => (
@@ -148,6 +157,12 @@ export default function VentasClient({
       {/* ── Por fecha ───────────────────────────────────────────────────────
           Los rangos de quien hace cuentas: "este mes" y "el mes pasado" son
           los que se cotejan contra lo que liquidó Mercado Pago. */}
+      <DesplegableDeEnlaces
+        className="mb-2 sm:hidden"
+        queSeElige="Período"
+        opciones={RANGOS_VENTAS.map((r) => ({ href: ir({ rango: r }), label: NOMBRE_RANGO_VENTAS[r] }))}
+        actual={ir({ rango })}
+      />
       <Fila>
         {RANGOS_VENTAS.map((r) => (
           <Chip key={r} href={ir({ rango: r })} activo={rango === r}>{NOMBRE_RANGO_VENTAS[r]}</Chip>
@@ -282,12 +297,12 @@ export default function VentasClient({
   );
 }
 
-/** Una fila de chips que en el celular se desplaza de costado. */
+/** Una fila de chips, en la compu y la tablet. */
 function Fila({ children }: { children: React.ReactNode }) {
   return (
-    <div className="-mx-4 sm:mx-0 px-4 sm:px-0 mb-2 overflow-x-auto">
-      <div className="flex gap-2 w-max sm:w-auto sm:flex-wrap">{children}</div>
-    </div>
+    /* Sólo de `sm` para arriba: en el celular la fila se deslizaba de costado
+       con una barrita, y ahí va el desplegable (`DesplegableDeEnlaces`). */
+    <div className="mb-2 hidden sm:flex sm:flex-wrap gap-2">{children}</div>
   );
 }
 

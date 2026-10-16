@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DesplegableDeEnlaces from "@/components/panel/DesplegableDeEnlaces";
 import { Lock, ArrowRight, TrendingUp, Receipt, Wallet, Percent, Download, Undo2, PackagePlus, Mail, Users, Smartphone, FileDown, Lightbulb } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -128,6 +129,14 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
 
       {/* ── Los selectores ─────────────────────────────────────────────────── */}
       {principales.length > 1 && (
+        <DesplegableDeEnlaces
+          className="sm:hidden"
+          queSeElige="Producto"
+          opciones={[{ href: href({ p: null }), label: "Todos los productos" }, ...principales.map((p) => ({ href: href({ p: p.id }), label: p.name }))]}
+          actual={href({ p: elegido ?? null })}
+        />
+      )}
+      {principales.length > 1 && (
         <Fila>
           <Chip href={href({ p: null })} activo={!elegido}>Todos</Chip>
           {principales.map((p) => (
@@ -135,6 +144,12 @@ export default function EstadisticasClient({ tier, principales, elegido, datos, 
           ))}
         </Fila>
       )}
+      <DesplegableDeEnlaces
+        className="sm:hidden"
+        queSeElige="Período"
+        opciones={RANGOS.map((r) => ({ href: href({ rango: r }), label: NOMBRE_RANGO[r] }))}
+        actual={href({ rango: rango.clave })}
+      />
       <Fila>
         {RANGOS.map((r) => (
           <Chip key={r} href={href({ rango: r })} activo={rango.clave === r}>{NOMBRE_RANGO[r]}</Chip>
@@ -405,9 +420,9 @@ function muestra(cuantos: number, tope: number): Punto[] {
 
 function Fila({ children }: { children: React.ReactNode }) {
   return (
-    <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto">
-      <div className="flex gap-2 w-max sm:w-auto sm:flex-wrap">{children}</div>
-    </div>
+    /* Sólo de `sm` para arriba: en el celular la fila se deslizaba de costado
+       con una barrita, y ahí va el desplegable (`DesplegableDeEnlaces`). */
+    <div className="hidden sm:flex sm:flex-wrap gap-2">{children}</div>
   );
 }
 

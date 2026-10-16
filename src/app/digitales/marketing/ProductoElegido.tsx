@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Package } from "lucide-react";
+import SelectorDesplegable from "@/components/panel/SelectorDesplegable";
+import DesplegableDeEnlaces from "@/components/panel/DesplegableDeEnlaces";
 
 /**
  * "¿De qué producto?" — la fila de arriba de las pantallas de Marketing que
@@ -41,15 +43,39 @@ export default function ProductoElegido({ productos, elegidoId, ruta, onElegir }
         ? "bg-gray-900 panel-oscuro:bg-gray-100 text-white panel-oscuro:text-gray-900"
         : "bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-800 text-gray-600 panel-oscuro:text-gray-400 hover:border-orange-300"
     }`;
+  /* En el celular, con más de uno, un desplegable: la fila se deslizaba de
+     costado con una barrita y los nombres largos quedaban cortados. Con uno
+     solo queda la ficha, que entra y dice de qué producto es la pantalla. */
+  const etiqueta = (p: FichaDeProducto) => (p.nota ? `${p.name} · ${p.nota}` : p.name);
+  const desplegable = productos.length > 1 && (
+    ruta ? (
+      <DesplegableDeEnlaces
+        className="sm:hidden"
+        queSeElige="Producto"
+        opciones={productos.map((p) => ({ href: `${ruta}?p=${p.id}`, label: etiqueta(p) }))}
+        actual={`${ruta}?p=${elegidoId ?? productos[0].id}`}
+      />
+    ) : (
+      <SelectorDesplegable
+        className="sm:hidden"
+        queSeElige="Producto"
+        opciones={productos.map((p) => ({ id: p.id, label: etiqueta(p) }))}
+        valor={elegidoId ?? productos[0].id}
+        elegir={(id) => onElegir?.(id)}
+      />
+    )
+  );
   return (
-    <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto">
-      <div className="flex items-center gap-2 w-max sm:w-auto sm:flex-wrap">
+    <>
+    {desplegable}
+    <div className={productos.length > 1 ? "hidden sm:block" : ""}>
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="mr-1 inline-flex shrink-0 items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-gray-400">
           <Package className="h-3.5 w-3.5" /> Producto
         </span>
         {productos.map((p) => {
           const activa = p.id === elegidoId;
-          const texto = p.nota ? `${p.name} · ${p.nota}` : p.name;
+          const texto = etiqueta(p);
           return ruta ? (
             <Link key={p.id} href={`${ruta}?p=${p.id}`} aria-current={activa ? "page" : undefined} title={texto} className={clase(activa)}>{texto}</Link>
           ) : (
@@ -61,5 +87,6 @@ export default function ProductoElegido({ productos, elegidoId, ruta, onElegir }
         )}
       </div>
     </div>
+    </>
   );
 }

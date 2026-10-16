@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DesplegableDeEnlaces from "@/components/panel/DesplegableDeEnlaces";
 import {
   UserRound, Package, Receipt, ArrowRight, Globe, Pencil, Settings, Plus,
   AlertTriangle, Clock, CircleDot, ExternalLink, Sparkles, ShoppingCart,
@@ -295,8 +296,17 @@ export default async function DigitalesPage({
           de un producto se puede compartir. Aparece recién con dos productos —
           con uno solo, un selector de un elemento es ruido. */}
       {productos.length > 1 && (
-        <div className="mt-5 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto">
-          <div className="flex gap-2 w-max sm:w-auto sm:flex-wrap">
+        <DesplegableDeEnlaces
+          className="mt-5 sm:hidden"
+          queSeElige="Producto"
+          opciones={[{ href: "/digitales", label: "Todos los productos" }, ...productos.map((prod) => ({ href: `/digitales?p=${prod.id}`, label: prod.nombre }))]}
+          actual={elegido ? `/digitales?p=${elegido.id}` : "/digitales"}
+        />
+      )}
+      {/* En la compu, las fichas. En el celular se deslizaban con una barrita. */}
+      {productos.length > 1 && (
+        <div className="mt-5 hidden sm:block">
+          <div className="flex gap-2 flex-wrap">
             <Chip href="/digitales" activo={!elegido}>Todos</Chip>
             {productos.map((prod) => (
               <Chip key={prod.id} href={`/digitales?p=${prod.id}`} activo={elegido?.id === prod.id}>
