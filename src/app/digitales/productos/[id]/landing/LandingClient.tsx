@@ -1039,7 +1039,10 @@ export default function LandingClient({ productoId, nombre, publicado, esPago, e
             <>
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">{sinPoner ? "Así queda · todavía no la ve nadie" : "Así queda"}</p>
-            <div role="tablist" aria-label="Dónde se ve" className="inline-flex rounded-full border border-gray-200 panel-oscuro:border-gray-700 p-0.5">
+            {/* Sólo de `md` para arriba. En un teléfono la previa se dibuja al
+                ancho del teléfono elija lo que elija, así que "Computadora"
+                mostraba lo mismo que "Celular" y confundía. */}
+            <div role="tablist" aria-label="Dónde se ve" className="hidden md:inline-flex rounded-full border border-gray-200 panel-oscuro:border-gray-700 p-0.5">
               {([["pc", Monitor, "Computadora"], ["celular", Smartphone, "Celular"]] as const).map(([clave, Icono, texto]) => (
                 <button
                   key={clave} type="button" role="tab" aria-selected={pantalla === clave} onClick={() => setPantalla(clave)}

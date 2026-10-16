@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Lock, ArrowRight, DoorOpen, Monitor, Smartphone } from "lucide-react";
@@ -60,6 +60,13 @@ export default function SalidaClient({ esPago, productos, elegidoId, estilo }: {
   /* La previa en computadora (modal en el medio) o en celular (sube desde
      abajo). Es el mismo cartel: cambia el marco y dónde se apoya. */
   const [pantalla, setPantalla] = useState<"pc" | "celular">("pc");
+  /* Desde un teléfono arranca en "Celular": es como lo va a ver quien compra
+     desde ahí, y la de computadora no entra en esa pantalla. Después de
+     montar y no en el estado inicial, porque el servidor no sabe el ancho. */
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- el ancho de la pantalla sólo existe en el navegador
+    if (window.matchMedia("(max-width: 767px)").matches) setPantalla("celular");
+  }, []);
   function irA(parte: ParteDelCartel) {
     const el = (parte === "titulo" ? refTitulo : parte === "texto" ? refTexto : refBoton).current;
     if (!el) return;
