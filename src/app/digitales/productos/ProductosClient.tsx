@@ -500,6 +500,15 @@ function Tarjeta({ p, acc, incrustada = false }: {
               bajarlo y corregirlo. Es el único bloque de la tarjeta que aparece
               sólo cuando hay algo para entregar, y por eso se distingue del
               resto: es el estado que la persona está persiguiendo. */}
+          {/* ⚠️ EN EL CELULAR, DE ACÁ PARA ABAJO VA A TODO EL ANCHO, debajo de
+              la portada y no al lado. Al lado quedaba una columna de 200 px:
+              los botones medían 100 y cada rótulo se partía en dos o tres
+              renglones ("Editar la / página / (apagada)"). El margen negativo
+              es justo lo que ocupan la portada y el hueco (64 + 16 px); el
+              título y el precio de arriba son más altos que la portada, así que
+              nunca se pisan. En la versión incrustada no hay portada y no hace
+              falta. Desde `sm` la portada es más grande y hay lugar. */}
+          <div className={incrustada ? "" : "-ml-20 sm:ml-0"}>
           <Rotulo>El archivo que se entrega</Rotulo>
 
           {p.tieneArchivo && (
@@ -549,7 +558,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
                 {acc.deMentira ? (
                   <span
                     title={porQueApagado}
-                    className="inline-flex cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-400 panel-oscuro:text-gray-600 opacity-60"
+                    className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-1.5 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-400 panel-oscuro:text-gray-600 opacity-60"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Descargar
@@ -559,7 +568,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
                     href={`/api/digitales/productos/${p.id}/archivo`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800 transition-colors"
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800 transition-colors"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Descargar
@@ -580,7 +589,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
                   && sePuedeEditarElTexto(p.ebook.estado) && (
                   <Link
                     href={`/digitales/productos/${p.id}/ebook`}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 px-3 py-2 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-center sm:min-h-0 border border-orange-200 panel-oscuro:border-orange-500/30 px-3 py-2 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     Editar el contenido
@@ -671,7 +680,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
                               papel="#FCFAF7"
                             />
                           </span>
-                          <span className="mt-1 block text-center text-[10.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+                          <span className="mt-1 block truncate text-center text-[10px] sm:text-[10.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
                             {QUE_ES_CADA_ESTILO[x].nombre}
                           </span>
                         </button>
@@ -844,7 +853,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
             <label
               aria-busy={subiendoEste}
               title={porQueApagado}
-              className={`relative inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
+              className={`relative inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
                 subiendoEste || apagado
                   ? "opacity-50 cursor-not-allowed border border-gray-200 panel-oscuro:border-gray-700 text-gray-500"
                   : p.tieneArchivo
@@ -899,8 +908,8 @@ function Tarjeta({ p, acc, incrustada = false }: {
               }
               className={
                 IA_LISTA && acc.tier !== "FREE"
-                  ? "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
-                  : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 cursor-not-allowed"
+                  ? "inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
+                  : "inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 cursor-not-allowed"
               }
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -954,7 +963,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
               }
               disabled={apagado}
               title={porQueApagado}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
               {/* ⚠️ Decía "Editar" a secas, y era el TERCER botón con esa
                   palabra en la misma tarjeta: estaban también "Editar el
@@ -975,7 +984,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
                  botón, así que "Publicar, apagado" pasa a ser "Publicar, falta
                  el archivo". Sin él, el botón está gris y no se sabe por qué. */
               aria-describedby={!p.publicado && (falta || sinLugar) ? `falta-${p.id}` : undefined}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {ocupado ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -991,7 +1000,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
               onClick={() => acc.borrar(p)}
               disabled={apagado}
               title={porQueApagado}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              className="col-span-2 sm:col-span-1 inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" /> Borrar
             </button>
@@ -1048,7 +1057,7 @@ function Tarjeta({ p, acc, incrustada = false }: {
                   href={`/digitales/productos/${p.id}/pagina`}
                   apagado={acc.deMentira}
                   motivo={porQueApagado}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" /> {p.landingPrendida ? "Editar la página (apagada)" : "Editar la página"}
                 </Enlace>
@@ -1060,8 +1069,8 @@ function Tarjeta({ p, acc, incrustada = false }: {
                   apagado={acc.deMentira}
                   motivo={porQueApagado}
                   className={p.landingPrendida
-                    ? "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
-                    : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"}
+                    ? "inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                    : "inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"}
                 >
                   <FileText className="h-3.5 w-3.5" /> {p.landingPrendida ? "Tu propio diseño · prendido" : "Tu propio diseño"}
                 </Enlace>
@@ -1074,8 +1083,8 @@ function Tarjeta({ p, acc, incrustada = false }: {
                        poder repartir el producto, y en una fila de botones
                        grises no lo vería nadie. */
                     p.slugDigital
-                      ? "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
-                      : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                      ? "inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                      : "inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
                   }
                 >
                   <Globe className="h-3.5 w-3.5" />
@@ -1101,13 +1110,14 @@ function Tarjeta({ p, acc, incrustada = false }: {
                   externo
                   apagado={acc.deMentira}
                   motivo={porQueApagado}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-center sm:min-h-0 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Ver cómo quedó
                 </Enlace>
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
     </div>
