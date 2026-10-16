@@ -17,9 +17,15 @@ import { useCartelera, fotoDelCartel, CARTELES_AUTOS } from "@/components/store/
 const EJEMPLOS = [261985, 11936975, 5864155];
 
 const CSS = `
-  .cm-cartel { position: relative; overflow: hidden; background: #050506; width: 100%; height: clamp(380px, 42vw, 540px); display: grid; grid-template-columns: minmax(0,1fr) 300px; }
+  /* Sin fondo propio: la foto se funde con el de la página (ver .cm-funde). */
+  .cm-cartel { position: relative; overflow: hidden; width: 100%; height: clamp(380px, 42vw, 540px); display: grid; grid-template-columns: minmax(0,1fr) 300px; }
   .cm-slide { position: absolute; inset: 0; transition: opacity .9s ease; }
   .cm-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* La foto y su sombra se apagan arriba y abajo hasta desaparecer: antes el
+     bloque arrancaba y terminaba con un corte recto contra la grilla y contra
+     "En foco", y se leía como algo cortado (lo marcó Flavio el 15/10/26). El
+     texto y los botones no llevan esto: se apaga sólo lo de atrás. */
+  .cm-funde { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%); }
   .cm-placa { position: absolute; left: clamp(20px,4vw,56px); bottom: clamp(36px,5vw,64px); max-width: min(560px, calc(100% - 360px)); z-index: 2; }
   /* Con un solo cartel no hay índice: el texto usa todo el ancho. */
   .cm-cartel[data-solo] { grid-template-columns: minmax(0,1fr); }
@@ -72,8 +78,8 @@ export function CarteleraMotor({ fotos, acento, intervalMs, editMode, ejemplosEn
           <div key={ranura} className="cm-slide" aria-hidden={!activo} role="group" aria-roledescription="cartel" aria-label={`${k + 1} de ${n}`}
             style={{ opacity: activo ? 1 : 0, pointerEvents: activo ? "auto" : "none" }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- foto propia achicada con fotoLiviana, o de ejemplo con su srcSet */}
-            <img alt="" decoding="async" loading={k === 0 ? "eager" : "lazy"} {...fotoDelCartel(ov, EJEMPLOS[ranura])} />
-            <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(5,5,6,.88) 0%, rgba(5,5,6,.45) 45%, rgba(5,5,6,.65) 100%), linear-gradient(to top, rgba(5,5,6,.8), rgba(5,5,6,0) 55%)" }} />
+            <img alt="" className="cm-funde" decoding="async" loading={k === 0 ? "eager" : "lazy"} {...fotoDelCartel(ov, EJEMPLOS[ranura])} />
+            <span aria-hidden="true" className="cm-funde" style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(5,5,6,.88) 0%, rgba(5,5,6,.45) 45%, rgba(5,5,6,.65) 100%), linear-gradient(to top, rgba(5,5,6,.8), rgba(5,5,6,0) 55%)" }} />
             {editMode && activo && (
               <>
                 <BgDragHandle imgKey={`promoBanner${ranura + 1}`} />

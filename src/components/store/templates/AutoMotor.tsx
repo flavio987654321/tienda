@@ -673,7 +673,9 @@ export default function AutoMotor() {
            En la tienda sólo aparece cuando la agencia sube una foto propia. */}
       <SectionBlock id="am-cartelera" label="Cartelera" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
         {(isPreview || hayFotosDeCartelera(iovr)) && (
-          <section id="cartelera" aria-label="Cartelera" style={{ position:"relative" }}>
+          /* Con aire arriba y abajo, que viaja con el bloque si la agencia lo
+             cambia de lugar. La foto se funde en ese aire (ver CarteleraMotor). */
+          <section id="cartelera" aria-label="Cartelera" style={{ position:"relative", padding:"clamp(16px,3vw,40px) 0 clamp(40px,6vw,72px)" }}>
             <CarteleraMotor fotos={[iovr["promoBanner1"], iovr["promoBanner2"], iovr["promoBanner3"]]} acento={accent}
               intervalMs={carruselMs("auto-motor", config?.bannerInterval)} editMode={editMode && isPreview} ejemplosEnTienda={isPreview} hrefStock={todos} />
           </section>
