@@ -1116,7 +1116,7 @@ export const ARTICULOS: Articulo[] = [
         cols: ["Diseño", "Cómo es"],
         filas: [
           ["Auto Motor", "Oscuro y premium, de concesionaria."],
-          ["Auto Drive", "Claro, tipo marketplace: buscador en la portada, un showroom donde los vehículos giran y un comparador lado a lado."],
+          ["Auto Drive", "Claro, tipo marketplace: buscador en la portada, \"¿Para qué lo vas a usar?\" para elegir por uso, y todos los vehículos en una planilla."],
           ["Auto Volt", "Oscuro y futurista: los vehículos giran en un showroom 3D y se comparan lado a lado."],
           ["Auto Ruta", "Para camiones, utilitarios y maquinaria: la portada pregunta para qué trabajo lo necesitan."],
         ],
@@ -1131,7 +1131,7 @@ export const ARTICULOS: Articulo[] = [
       {
         t: "p",
         texto:
-          "Cada diseño tiene una unidad en grande: en Motor es **Vehículo en foco**, en Ruta **Unidad de la semana**, y en Drive y Volt la que arranca girando en el showroom. En el editor, arriba del bloque, está **Vehículo para destacar**: dejalo en *Automático* o elegí uno. Sólo aparecen los que no están vendidos ni reservados.",
+          "Cada diseño tiene una unidad en grande: en Motor es **Vehículo en foco**, en Drive **Vehículo de la semana**, en Ruta **Unidad de la semana** y en Volt la que arranca girando en el showroom. En el editor, arriba del bloque, está **Vehículo para destacar**: dejalo en *Automático* o elegí uno. Sólo aparecen los que no están vendidos ni reservados.",
       },
       { t: "h", texto: "La cartelera" },
       {

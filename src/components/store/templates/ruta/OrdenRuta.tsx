@@ -21,7 +21,8 @@ import { linkWhatsApp, mensajeDeVehiculo } from "@/lib/whatsappTienda";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { FOTO_VACIA } from "@/lib/foto-vacia";
 import { getContrastColor } from "@/contexts/EditContext";
-import { PAPEL, TINTA, TENUE, LINEA, TITULAR, CUERPO, alfa, rayaDeRuta } from "./estiloRuta";
+import { usosDe, NOMBRE_USO } from "@/lib/usoVehiculo";
+import { PAPEL, TINTA, TENUE, LINEA, CUERPO, alfa, rayaDeRuta, estiloDe, type ModoRuta } from "./estiloRuta";
 
 const sinCambios = () => () => {};
 
@@ -42,9 +43,11 @@ export const ORDEN_RUTA_CSS = `
     .or-acciones > * { flex: 1 1 100%; }
   }
   @media (prefers-reduced-motion: reduce) { .or-foto img { transition: none; } }
+  /* En Drive (modo "uso"): las esquinas redondeadas de Drive. */
+  .or-uso { border-radius: 18px; }
 `;
 
-export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
+export function OrdenRuta({ p, numero, acento, currency, href, whatsapp, modo = "trabajo" }: {
   p: StorefrontProduct;
   /** El número de la orden: la posición de la unidad en el stock. */
   numero: number;
@@ -52,14 +55,18 @@ export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
   currency: string;
   href: string;
   whatsapp?: string | null;
+  /** "trabajo" en Ruta (una orden de trabajo); "uso" en Drive: la selección de la semana, con su letra y sus usos. */
+  modo?: ModoRuta;
 }) {
+  const deUso = modo === "uso";
+  const E = estiloDe(modo);
   const sobreAcento = getContrastColor(acento) === "dark" ? TINTA : "#fff";
   const moneda = monedaDe(p, currency);
   const precio = p.price > 0 ? fmtPrice(p.price, moneda) : "Consultar precio";
   const oferta = !!p.comparePrice && p.comparePrice > p.price;
   const anio = attr(p, "Año");
   const tipo = NOMBRE_TIPO[(p.category ?? "").toLowerCase() as CategoriaVehiculo];
-  const trabajos = trabajosDe(p);
+  const trabajos = deUso ? usosDe(p).map((u) => NOMBRE_USO[u].titulo) : trabajosDe(p).map((t) => NOMBRE_TRABAJO[t].titulo);
   const tipoFicha = tipoDeFicha(p.category);
   const bloques = tipoFicha ? bloquesDeFicha(leerFicha(p.attributes), tipoFicha) : null;
   // De la ficha técnica, lo que más pesa en una unidad de trabajo, en este orden.
@@ -83,7 +90,7 @@ export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
   const etiqueta: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: 1.6, textTransform: "uppercase", color: TENUE };
 
   return (
-    <article className="or-hoja" aria-label={`Unidad de la semana: ${p.name}`} style={{ fontFamily: CUERPO, color: TINTA }}>
+    <article className={`or-hoja${deUso ? " or-uso" : ""}`} aria-label={`${deUso ? "El vehículo de la semana" : "Unidad de la semana"}: ${p.name}`} style={{ fontFamily: CUERPO, color: TINTA }}>
       <style>{ORDEN_RUTA_CSS}</style>
 
       {/* La foto, con la raya de la ruta abajo */}
@@ -91,36 +98,36 @@ export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
         {/* eslint-disable-next-line @next/next/no-img-element -- foto de la tienda ya achicada con fotoLiviana */}
         <img src={foto} alt="" loading="lazy" decoding="async" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
         {anio && (
-          <span style={{ position: "absolute", top: 14, left: 14, background: TINTA, color: "#fff", fontFamily: TITULAR, fontSize: 16, fontWeight: 700, padding: "5px 10px", borderRadius: 3 }}>{anio}</span>
+          <span style={{ position: "absolute", top: 14, left: 14, background: TINTA, color: "#fff", fontFamily: E.titular, fontSize: 16, fontWeight: 700, padding: "5px 10px", borderRadius: E.sello }}>{anio}</span>
         )}
-        <span aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 6, background: rayaDeRuta(acento) }} />
+        <span aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: deUso ? 4 : 6, background: deUso ? acento : rayaDeRuta(acento) }} />
       </Link>
 
       {/* La hoja */}
       <div style={{ padding: "clamp(18px,2.6vw,30px)", display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ ...etiqueta, margin: 0 }}>Orden de trabajo · N° {String(numero).padStart(3, "0")}</p>
-            <h3 style={{ margin: "6px 0 0", fontFamily: TITULAR, fontSize: "clamp(26px,3.4vw,40px)", fontWeight: 700, lineHeight: 1, textTransform: "uppercase", overflowWrap: "anywhere" }}>{p.name}</h3>
+            <p style={{ ...etiqueta, margin: 0 }}>{deUso ? "Selección de la semana" : `Orden de trabajo · N° ${String(numero).padStart(3, "0")}`}</p>
+            <h3 style={{ margin: "6px 0 0", fontFamily: E.titular, fontSize: "clamp(26px,3.4vw,40px)", fontWeight: E.peso, letterSpacing: deUso ? -1 : undefined, lineHeight: 1.05, textTransform: E.mayus, overflowWrap: "anywhere" }}>{p.name}</h3>
           </div>
           {/* El sello: una línea gruesa del acento, inclinado como uno de goma */}
-          <span aria-hidden="true" className="or-sello" style={{ flexShrink: 0, border: `2px solid ${acento}`, color: TINTA, background: alfa(acento, 0.12), fontFamily: TITULAR, fontSize: 12, fontWeight: 700, letterSpacing: 1.2,
-            textTransform: "uppercase", lineHeight: 1.15, textAlign: "center", padding: "6px 9px", borderRadius: 3, transform: "rotate(-4deg)" }}>Unidad<br />de la semana</span>
+          {!deUso && <span aria-hidden="true" className="or-sello" style={{ flexShrink: 0, border: `2px solid ${acento}`, color: TINTA, background: alfa(acento, 0.12), fontFamily: E.titular, fontSize: 12, fontWeight: 700, letterSpacing: 1.2,
+            textTransform: "uppercase", lineHeight: 1.15, textAlign: "center", padding: "6px 9px", borderRadius: E.sello, transform: "rotate(-4deg)" }}>Unidad<br />de la semana</span>}
         </div>
 
         {trabajos.length > 0 && (
           <p style={{ margin: 0, fontSize: 14 }}>
-            <span style={{ ...etiqueta, marginRight: 8 }}>Sirve para</span>
-            {trabajos.map((t) => NOMBRE_TRABAJO[t].titulo).join(" · ")}
+            <span style={{ ...etiqueta, marginRight: 8 }}>{deUso ? "Ideal" : "Sirve para"}</span>
+            {trabajos.join(" · ")}
           </p>
         )}
 
-        <div className="or-numeros" style={{ border: `1px solid ${LINEA}`, borderRadius: 3 }}>
+        <div className="or-numeros" style={{ border: `1px solid ${LINEA}`, borderRadius: E.sello }}>
           {numeros.map(([l, v]) => (
             <div key={l} style={{ padding: "10px 12px", minWidth: 0 }}>
               <p style={{ ...etiqueta, fontSize: 10, margin: 0 }}>{l}</p>
               <p {...(l === "Kilómetros" || l === "Horas" ? { "data-ef-contar": "", className: "rt-odometro" } : {})}
-                style={{ margin: "4px 0 0", fontFamily: TITULAR, fontSize: 19, fontWeight: 700, overflowWrap: "anywhere" }}>{v}</p>
+                style={{ margin: "4px 0 0", fontFamily: E.titular, fontSize: 19, fontWeight: 700, overflowWrap: "anywhere" }}>{v}</p>
             </div>
           ))}
         </div>
@@ -151,16 +158,16 @@ export function OrdenRuta({ p, numero, acento, currency, href, whatsapp }: {
           </div>
         )}
 
-        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `3px solid ${TINTA}`, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: deUso ? `1px solid ${LINEA}` : `3px solid ${TINTA}`, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
           <div>
             {oferta && <p style={{ margin: 0, fontSize: 14, color: TENUE, textDecoration: "line-through" }}>{fmtPrice(p.comparePrice!, moneda)}</p>}
-            <p style={{ margin: 0, fontFamily: TITULAR, fontSize: "clamp(28px,3.2vw,36px)", fontWeight: 700, lineHeight: 1 }}>{precio}</p>
+            <p style={{ margin: 0, fontFamily: E.titular, fontSize: "clamp(28px,3.2vw,36px)", fontWeight: 700, lineHeight: 1 }}>{precio}</p>
           </div>
           <div className="or-acciones">
-            <Link href={href} style={{ background: acento, color: sobreAcento, borderRadius: 3, padding: "0 18px", minHeight: 46, fontWeight: 800, fontSize: 14, letterSpacing: 0.4,
-              textTransform: "uppercase", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>Ver la unidad</Link>
+            <Link href={href} style={{ background: acento, color: sobreAcento, borderRadius: E.sello, padding: "0 18px", minHeight: 46, fontWeight: 800, fontSize: 14, letterSpacing: 0.4,
+              textTransform: E.mayus, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{deUso ? "Ver el vehículo" : "Ver la unidad"}</Link>
             {wa && (
-              <a href={wa} target="_blank" rel="noopener noreferrer" style={{ border: `1.5px solid ${TINTA}`, color: TINTA, borderRadius: 3, padding: "0 16px", minHeight: 46, fontWeight: 800, fontSize: 14,
+              <a href={wa} target="_blank" rel="noopener noreferrer" style={{ border: `1.5px solid ${TINTA}`, color: TINTA, borderRadius: E.sello, padding: "0 16px", minHeight: 46, fontWeight: 800, fontSize: 14,
                 textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <WaIcon size={18} /> Consultar
               </a>

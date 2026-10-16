@@ -1,17 +1,17 @@
 /**
- * Los colores de las piezas de Auto Volt (portada, showroom, comparador, tira),
- * para poder usarlas también sobre fondo claro.
+ * Los colores de la portada de Auto Volt, para usarla también sobre fondo claro.
  *
- * Nacieron oscuras, con los colores escritos a mano. El 16/10/26 Flavio pidió
- * llevar la portada, el showroom que gira y el comparador a Auto Drive, que es
- * claro: en vez de copiarlas (dos copias que se desincronizan), cada pieza
- * recibe un tema. Volt no pasa nada y queda con el oscuro de siempre.
+ * Nació oscura, con los colores escritos a mano. El 16/10/26 Flavio pidió la
+ * portada de Volt en Auto Drive, que es claro: en vez de copiarla (dos copias
+ * que se desincronizan), la portada recibe un tema. A Volt no le cambia nada: queda
+ * con el oscuro de siempre. (Se probaron también el showroom y el comparador en
+ * claro, y se sacaron: Drive no tenía que quedar igual a Volt.)
  */
 export type TemaVolt = {
   claro: boolean;
-  /** El fondo de la portada y del showroom. */
+  /** El fondo de la portada. */
   fondo: string;
-  /** Tablas y tarjetas (el comparador). */
+  /** Las opciones de los desplegables. */
   panel: string;
   /** Lo que se ve detrás de una foto mientras carga o si no hay. */
   hondo: string;

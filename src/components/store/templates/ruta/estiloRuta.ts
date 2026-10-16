@@ -29,3 +29,15 @@ export function alfa(hex: string, a: number): string {
 export function rayaDeRuta(color: string): string {
   return `repeating-linear-gradient(90deg, ${color} 0 18px, transparent 18px 30px)`;
 }
+
+/* ── Las piezas de Ruta en Auto Drive (16/10/26) ──────────────────────────────
+   Drive usa el selector, la planilla y la unidad de la semana de Ruta, pero con
+   su propia cara: la letra de siempre (no la angosta en mayúscula) y esquinas
+   redondeadas. `modo: "uso"` además cambia las opciones (ver lib/usoVehiculo). */
+export type ModoRuta = "trabajo" | "uso";
+
+export function estiloDe(modo: ModoRuta) {
+  return modo === "uso"
+    ? { titular: "inherit", mayus: "none" as const, radio: 12, caja: 18, sello: 10, peso: 900 }
+    : { titular: TITULAR, mayus: "uppercase" as const, radio: 4, caja: 6, sello: 3, peso: 700 };
+}

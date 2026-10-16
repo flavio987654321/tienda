@@ -13,8 +13,9 @@ import VehiculosGenerico from "./VehiculosGenerico";
  * Volt trae su catálogo propio —una ficha técnica que se ordena por columna—,
  * que lo dibuja el mismo template entre su barra y su pie: acá se le pasa la
  * página de la tienda, y el template mira la dirección y muestra el catálogo
- * (ver `useVistaTemplate`, con `catalogo: "vehiculos"`). Motor y Drive siguen
- * con la página de siempre, movida entera a `VehiculosGenerico.tsx`.
+ * (ver `useVistaTemplate`, con `catalogo: "vehiculos"`). Ruta y Drive hacen lo
+ * mismo con la planilla de flota. Motor sigue con la página de siempre, movida
+ * entera a `VehiculosGenerico.tsx`.
  *
  * `from=editor`: Volt no navega desde el editor (cambia de pantalla ahí
  * adentro), así que si se llega con eso es desde OTRO template mirado en la
@@ -22,7 +23,8 @@ import VehiculosGenerico from "./VehiculosGenerico";
  * que tiene "Volver al editor". */
 export const dynamic = "force-dynamic";
 
-const CON_CATALOGO_PROPIO = new Set(["auto-volt", "auto-ruta"]);
+/* Drive desde el 16/10/26: dibuja la planilla de flota de Ruta. */
+const CON_CATALOGO_PROPIO = new Set(["auto-volt", "auto-ruta", "auto-drive"]);
 
 type Props = {
   params: Promise<{ slug: string }>;

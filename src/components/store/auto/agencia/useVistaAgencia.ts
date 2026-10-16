@@ -25,17 +25,18 @@ export function useVistaAgencia({ isPreview, slug, templateId, conPagina }: {
   const vista = useVistaTemplate({ isPreview, slug, templateId, catalogo: "vehiculos" });
   const [pendiente, setPendiente] = useState<string | null>(null);
   useEffect(() => {
-    if (!pendiente || vista.enNosotros) return;
+    if (!pendiente || !vista.enPortada) return;
     const t = setTimeout(() => { irASeccion(pendiente); setPendiente(null); }, 80);
     return () => clearTimeout(t);
-  }, [pendiente, vista.enNosotros]);
+  }, [pendiente, vista.enPortada]);
 
   const ir = (id: string) => {
     if (id === MENU_AGENCIA) {
       if (conPagina) { if (!vista.enNosotros) vista.irANosotros(); return; }
       id = "nosotros";
     }
-    if (vista.enNosotros) { setPendiente(id); vista.irALaPortada(); return; }
+    // Desde la agencia o la planilla: primero a la portada, y la sección se busca cuando ya está.
+    if (!vista.enPortada) { setPendiente(id); vista.irALaPortada(); return; }
     irASeccion(id);
   };
 
@@ -48,5 +49,9 @@ export function useVistaAgencia({ isPreview, slug, templateId, conPagina }: {
     irALaAgencia: vista.irANosotros,
     irALaPortada: vista.irALaPortada,
     hrefAgencia: `${vista.urlTienda}/nosotros${vista.sufijoEditor}`,
+    /* La planilla de vehículos dentro del template (Drive, 16/10/26). Motor no la
+       usa: su "Ver todos" sigue yendo a la página genérica. */
+    enCatalogo: vista.enCatalogo,
+    irAlCatalogo: vista.irAlCatalogo,
   };
 }

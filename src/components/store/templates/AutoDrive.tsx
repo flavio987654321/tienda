@@ -9,7 +9,7 @@ import { linkWhatsApp } from "@/lib/whatsappTienda";
 import { barraMs, carruselMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -24,7 +24,7 @@ import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
-import { opcionesDeFiltro, linkAVehiculo, filtrarVehiculos, filtroVacio, filtroAUrl, datosDe, type FiltroVehiculos } from "@/lib/filtroVehiculos";
+import { opcionesDeFiltro, linkAVehiculo, filtrarVehiculos, filtroVacio, filtroAUrl, filtroDesdeUrl, datosDe, type FiltroVehiculos } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { CAPAS } from "@/lib/capas-tienda";
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
@@ -35,16 +35,22 @@ import { PresupuestoDrive, PRESUPUESTO_DRIVE_CSS, tramosDePrecio } from "@/compo
 import { VideosDrive, VIDEOS_DRIVE_CSS } from "@/components/store/templates/drive/VideosDrive";
 import { VenderDrive, VENDER_DRIVE_CSS } from "@/components/store/templates/drive/VenderDrive";
 import { PreguntasDrive } from "@/components/store/templates/drive/PreguntasDrive";
-/* De Auto Volt, en claro (16/10/26, a pedido de Flavio): la portada centrada,
-   el showroom que gira, el comparador y lo que pasa al bajar. Ver volt/temaVolt. */
+/* De Auto Volt, en claro (16/10/26, a pedido de Flavio): sólo la portada
+   centrada. El showroom, el comparador y lo que pasaba al bajar se probaron y
+   se sacaron: Drive no tenía que quedar igual a Volt. Ver volt/temaVolt. */
 import { PortadaVolt, PORTADA_VOLT_CSS } from "@/components/store/templates/volt/PortadaVolt";
-import { EscenarioVolt, ESCENARIO_VOLT_CSS } from "@/components/store/templates/volt/EscenarioVolt";
-import { ComparadorVolt, COMPARADOR_VOLT_CSS } from "@/components/store/templates/volt/ComparadorVolt";
-import { TIRA_VOLT_CSS } from "@/components/store/templates/volt/TiraVolt";
-import { EscenaVolt, ESCENA_VOLT_CSS, conAlfa, MONO } from "@/components/store/templates/volt/EscenaVolt";
-import { useDesplazamientoVolt, LineaDeProgreso } from "@/components/store/templates/volt/desplazamientoVolt";
 import { TEMA_CLARO } from "@/components/store/templates/volt/temaVolt";
-import { irASeccion } from "@/components/store/templates/shared/irASeccion";
+/* De Auto Ruta (16/10/26, también a pedido de Flavio), con opciones y textos de
+   Drive (`modo: "uso"`, ver lib/usoVehiculo): "¿Para qué lo vas a usar?", la
+   planilla como catálogo y el vehículo de la semana. */
+import { SelectorRuta, SELECTOR_RUTA_CSS, type SeleccionRuta } from "@/components/store/templates/ruta/SelectorRuta";
+import { CatalogoRuta, CATALOGO_RUTA_CSS } from "@/components/store/templates/ruta/CatalogoRuta";
+import { OrdenRuta, ORDEN_RUTA_CSS } from "@/components/store/templates/ruta/OrdenRuta";
+import { TARJETA_RUTA_CSS } from "@/components/store/templates/ruta/TarjetaRuta";
+import { esUso, type Uso } from "@/lib/usoVehiculo";
+import { VentanaAuto } from "@/components/store/auto/VentanaAuto";
+import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
+import type { Moneda } from "@/lib/monedaVehiculo";
 import { CarteleraDrive } from "@/components/store/templates/drive/CarteleraDrive";
 import { hayFotosDeCartelera } from "@/components/store/auto/useCartelera";
 import { elegirFoco } from "@/lib/vehiculoFoco";
@@ -86,7 +92,7 @@ const FONDO = "#f4f6f9";
 const TINTA = "#0f172a";
 const LINEA = "#e8ebf0";
 
-const AD_SECTION_IDS = ["ad-comparar", "ad-filtros", "ad-catalogo", "ad-cartelera", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
+const AD_SECTION_IDS = ["ad-foco", "ad-filtros", "ad-catalogo", "ad-cartelera", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
 
 /** El título de cada bloque: etiqueta en pastilla y título grande. */
 function Titulo({ acento, tinta = TINTA, kicker, titulo, derecha, centrado }: { acento: string; tinta?: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode; centrado?: boolean }) {
@@ -173,10 +179,12 @@ export default function AutoDrive() {
 
   const carteleraBg = sc["bgCartelera"] ?? "#f5f7fa";
   const carteleraImg = iovr["sectionbg_bgCartelera"];
-  const compararBg = sc["bgComparar"] ?? "#ffffff";
-  const compararImg = iovr["sectionbg_bgComparar"];
-  const compararText = secText(compararImg, compararBg);
-  const compararMid = secMid(compararImg, compararBg);
+  const usoBg = sc["bgUso"] ?? "#ffffff";
+  const usoImg = iovr["sectionbg_bgUso"];
+  const focoBg = sc["bgFoco"] ?? FONDO;
+  const focoImg = iovr["sectionbg_bgFoco"];
+  const focoText = secText(focoImg, focoBg);
+  const focoMid = secMid(focoImg, focoBg);
   const presupuestoBg = sc["bgPresupuesto"] ?? "#ffffff";
   const presupuestoImg = iovr["sectionbg_bgPresupuesto"];
   const presupuestoText = secText(presupuestoImg, presupuestoBg);
@@ -229,9 +237,6 @@ export default function AutoDrive() {
   /** Cada vehículo tiene su página (07/10/26; antes, una ventana sobre la portada). */
   const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, isPreview);
   const [scrolled,   setScrolled]   = useState(false);
-  /* Al bajar (de Volt): la línea de progreso de arriba, la foto de la portada que
-     va más lento y la barra que se esconde bajando y vuelve apenas se sube. */
-  const raizRef = useRef<HTMLDivElement>(null);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
@@ -286,8 +291,6 @@ export default function AutoDrive() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const { barraOculta } = useDesplazamientoVolt(raizRef, { activo: !isPreview, puedeEsconder: !menuOpen && !searchOpen && !userDropdownOpen && !favoritesOpen });
-
   // Favoritos: sin sesión quedan en este navegador (ver hooks/useFavoritosVehiculos).
   const fav = useFavoritosVehiculos(isPreview);
   const favorites = fav.favoritos;
@@ -329,19 +332,6 @@ export default function AutoDrive() {
     { fv:"stat4", fl:"statLabel4", n:String(opciones.marcas.length), l:"Marcas", propio:false },
   ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0"));
 
-  /* Lo que se compara (igual que en Volt): mientras no eligió nada, los dos
-     primeros; al tocar "Comparar" en el showroom manda su elección, tres como
-     mucho. `null` = todavía no tocó nada. */
-  const [eleccion, setEleccion] = useState<string[] | null>(null);
-  const comparando = eleccion ?? [];
-  const idsComparados = (eleccion ?? products.slice(0, 2).map(p => p.id)).filter(id => products.some(p => p.id === id));
-  const alternarComparar = (id: string) => setEleccion(c => {
-    const antes = c ?? [];
-    if (antes.includes(id)) return antes.filter(x => x !== id);
-    if (!antes.length) { const otro = products.find(p => p.id !== id); return otro ? [id, otro.id] : [id]; }
-    return [...antes, id].slice(-3);
-  });
-
   /* Los tres datos de abajo del buscador: salen del stock, nada inventado. */
   const masBarato = products.filter(p => p.price > 0 && monedaDe(p, currency) === principal).reduce<number | null>((m, p) => m == null || p.price < m ? p.price : m, null);
   const datosPortada = loadingProducts || !products.length ? [] : [
@@ -349,20 +339,39 @@ export default function AutoDrive() {
     ...(opciones.marcas.length > 1 ? [{ valor: String(opciones.marcas.length), etiqueta: "marcas" }] : []),
     ...(masBarato != null ? [{ valor: fmtPrice(masBarato, principal), etiqueta: "desde" }] : []),
   ];
-  /* Buscar desde la portada lleva a /vehiculos con el filtro en la dirección. */
-  const buscar = (f: Partial<FiltroVehiculos>) => {
-    const sp = filtroAUrl({ ...filtroVacio(principal), ...f }, principal);
-    if (isPreview) sp.set("from", "editor");
-    const q = sp.toString();
-    router.push(`/tienda/${slug}/vehiculos${q ? `?${q}` : ""}`);
+  /* ── La planilla de flota (de Ruta) ───────────────────────────────────────
+     "Ver todos" ya no va a la página genérica de vehículos: la planilla la
+     dibuja Drive entre su barra y su pie, en /vehiculos (ver useVistaAgencia y
+     app/tienda/[slug]/vehiculos). Entrando por un link con filtro, el filtro se
+     lee UNA vez, el de entrada (ver AutoRuta). */
+  const parametros = useSearchParams();
+  const [busquedaDeEntrada] = useState(() => isPreview ? "" : parametros?.toString() ?? "");
+  const deEntrada = useMemo(() => {
+    const sp = new URLSearchParams(busquedaDeEntrada);
+    const u = sp.get("uso");
+    return { filtro: filtroDesdeUrl(sp, principal), uso: esUso(u) ? u : null };
+  }, [busquedaDeEntrada, principal]);
+  const [pedido, setPedido] = useState<{ filtro: FiltroVehiculos; uso: Uso | null } | null>(null);
+  const enPlanilla = pedido ?? deEntrada;
+  const abrirPlanilla = (c: { filtro?: Partial<FiltroVehiculos>; uso?: Uso | null } = {}) => {
+    const f = { ...filtroVacio(principal), ...(c.filtro ?? {}) };
+    const nuevo = { filtro: f, uso: c.uso ?? null };
+    setPedido(nuevo);
+    const sp = filtroAUrl(f, principal);
+    if (nuevo.uso) sp.set("uso", nuevo.uso);
+    agenciaNav.irAlCatalogo(sp.toString());
   };
+  const alClicTodos = (e: React.MouseEvent) => { e.preventDefault(); abrirPlanilla(); };
+  const buscar = (f: Partial<FiltroVehiculos>) => abrirPlanilla({ filtro: f });
+  const desdeSelector = (sel: SeleccionRuta) => abrirPlanilla({ filtro: { precioHasta: sel.precioHasta, moneda: sel.moneda }, uso: sel.uso ?? null });
+  const [avisame, setAvisame] = useState(false);
 
   const avisoVacio = (texto: string) => (
     <p style={{ margin:0, padding:"28px 22px", border:`1.5px dashed #cbd5e1`, borderRadius:18, color:"#475569", fontSize:14, lineHeight:1.6, background:"#fff" }}>{texto}</p>
   );
 
   return (
-    <div ref={raizRef} data-template-raiz style={{ background:FONDO, color:TINTA,
+    <div data-template-raiz style={{ background:FONDO, color:TINTA,
       fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh",
       // El candado del cambio de pantalla (ver useVistaTemplate): el segundo toque de un doble clic no cae en la pantalla nueva.
       pointerEvents: agenciaNav.cambiando ? "none" : undefined }}>
@@ -374,10 +383,10 @@ export default function AutoDrive() {
         ${VIDEOS_DRIVE_CSS}
         ${VENDER_DRIVE_CSS}
         ${PORTADA_VOLT_CSS}
-        ${ESCENA_VOLT_CSS}
-        ${ESCENARIO_VOLT_CSS}
-        ${COMPARADOR_VOLT_CSS}
-        ${TIRA_VOLT_CSS}
+        ${TARJETA_RUTA_CSS}
+        ${SELECTOR_RUTA_CSS}
+        ${CATALOGO_RUTA_CSS}
+        ${ORDEN_RUTA_CSS}
         .ad-nav-links { display:none }
         @media(min-width:960px){ .ad-nav-links { display:flex } .ad-burger { display:none } .ad-menu { display:none !important } }
         /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
@@ -443,12 +452,9 @@ export default function AutoDrive() {
         @media (prefers-reduced-motion: reduce) { .ad-entra, .ad-esqueleto { animation:none } .ad-svc-card:hover { transform:none } }
       `}</style>
 
-      <LineaDeProgreso acento={accent} enPanel={isPreview} capa={isPreview ? CAPAS.previaNavAlto + 1 : 120} />
-
       {/* ── BARRA DE AVISOS ── */}
       {showAnn && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
-          transform: barraOculta ? "translateY(-100%)" : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)",
           left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
           zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:PROMO_H, background:TINTA,
           display:"flex", alignItems:"center", justifyContent:"center", padding:"0 40px" }}>
@@ -478,8 +484,7 @@ export default function AutoDrive() {
         background: navBg,
         borderBottom: `1px solid ${scrolled ? navBorderColor : "transparent"}`,
         boxShadow: scrolled ? (navDark ? "0 2px 16px rgba(0,0,0,0.25)" : "0 4px 20px rgba(15,23,42,0.06)") : "none",
-        transform: barraOculta ? `translateY(-${(showAnn ? PROMO_H : 0) + NAV_H + 8}px)` : "none",
-        transition: "box-shadow .3s, border-color .3s, transform .4s cubic-bezier(.2,.8,.2,1)", padding:"0 clamp(16px,3vw,28px)" }}>
+        transition: "box-shadow .3s, border-color .3s", padding:"0 clamp(16px,3vw,28px)" }}>
         <div style={{ maxWidth:1240, margin:"0 auto", height: scrolled && !isPreview ? NAV_H - 12 : NAV_H, transition:"height .3s cubic-bezier(.2,.7,.2,1)", gap:12,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0,
@@ -589,7 +594,7 @@ export default function AutoDrive() {
                 </div>
               )}
             </div>
-            <Link href={linkTodos} className="ad-nav-links"
+            <Link href={linkTodos} onClick={alClicTodos} className="ad-nav-links"
               style={{ marginLeft:6, alignItems:"center", background:accent, color:sobreAcento, padding:"0 18px", minHeight:42, fontSize:14, fontWeight:800,
                 textDecoration:"none", borderRadius:12 }}>
               Ver vehículos
@@ -621,7 +626,7 @@ export default function AutoDrive() {
                 </button>
               </div>
             )}
-            <Link href={linkTodos} onClick={() => setMenuOpen(false)}
+            <Link href={linkTodos} onClick={e => { setMenuOpen(false); alClicTodos(e); }}
               style={{ display:"flex", alignItems:"center", justifyContent:"center", marginTop:14, minHeight:48, borderRadius:12,
                 background:accent, color:sobreAcento, fontSize:15, fontWeight:800, textDecoration:"none" }}>
               Ver todos los vehículos
@@ -637,53 +642,65 @@ export default function AutoDrive() {
             <AgenciaDrive acento={accent} nombreTienda={storeName} waLink={waLink} todosHref={linkTodos} fotoDeRespaldo={iovr["nosotrosImage"]?.url ?? (isPreview ? nosotrosUrl : undefined)} enPrevia={isPreview} />
           </div>
         </section>
+      ) : agenciaNav.enCatalogo ? (
+        /* ── LA PLANILLA ── todo el stock (ver ruta/CatalogoRuta). */
+        <section aria-label="Todos los vehículos" style={{ background: FONDO, minHeight: "80vh", paddingTop: (isPreview ? 0 : (showAnn ? PROMO_H : 0) + NAV_H) + 24 }}>
+          <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 clamp(16px,3vw,28px) clamp(52px,7vw,88px)", boxSizing: "border-box" }}>
+            {loadingProducts ? (
+              <div className="ad-esqueleto" role="status" aria-label="Cargando vehículos" style={{ minHeight: "50vh", borderRadius: 20 }} />
+            ) : (
+              <CatalogoRuta modo="uso" key={JSON.stringify(pedido)} productos={products} opciones={opciones} filtroInicial={enPlanilla.filtro} usoInicial={enPlanilla.uso} trabajoInicial={null} tamanoInicial={null}
+                escribirUrl={!isPreview && !!slug} acento={accent} moneda={currency} hrefDe={paginaDe} favoritos={favorites} onFavorito={toggleFavorite}
+                onVolver={agenciaNav.irALaPortada} whatsapp={whatsapp.enabled ? whatsapp.number : null} storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
+            )}
+          </div>
+        </section>
       ) : (<>
       {/* ── PORTADA ── la de Volt en claro: centrada, buscador en cápsula y tres datos del stock. */}
       <PortadaVolt tema={TEMA_CLARO} campoFoto="heroImage" ov={iovr["heroImage"]} fotoDeFabrica={heroImgUrl}
         textos={{ etiqueta: "Usados y 0 km", titulo: "Encontrá tu próximo vehículo", bajada: "Con la ficha técnica completa y el precio a la vista. Buscá, tasá tu usado o dejanos lo que buscás y te avisamos." }}
         acento={accent} opciones={opciones} principal={principal} cuantos={loadingProducts ? 0 : products.length} waLink={waLink} datos={datosPortada}
-        arriba={isPreview ? 0 : (showAnn ? PROMO_H : 0) + NAV_H} onBuscar={buscar} onVerTodos={() => {}} todosHref={linkTodos} />
+        arriba={isPreview ? 0 : (showAnn ? PROMO_H : 0) + NAV_H} onBuscar={buscar} onVerTodos={alClicTodos} todosHref={linkTodos} />
 
-      {/* ── EL SHOWROOM ── los vehículos giran y el elegido muestra sus datos. Arranca
-           con el vehículo para destacar (reemplaza a la vieja vidriera). */}
-      <section id="showroom" aria-label="Showroom" style={{ position:"relative", overflow:"hidden", background:TEMA_CLARO.fondo, paddingTop:"clamp(40px,6vw,72px)" }}>
-        <EscenaVolt acento={accent} quieta={isPreview} />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", padding:"clamp(12px,2.5vh,32px) clamp(16px,3vw,28px) clamp(48px,8vh,88px)", boxSizing:"border-box" }}>
+      {/* ── POR USO ── "¿Para qué lo vas a usar?" (el selector de Ruta en modo "uso"):
+           se elige el uso y aparecen los que sirven; "Verlos todos" abre la planilla. */}
+      <section id="uso" aria-label="Elegí por uso" style={{ position:"relative", padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", ...secBg(usoImg, usoBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgUso" /><SectionOverlay ov={usoImg} />
+        <EditableSectionBg field="bgUso" label="Fondo de la búsqueda por uso" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
           {loadingProducts ? (
-            <div role="status" aria-label="Cargando vehículos" style={{ minHeight:"40vh", display:"grid", placeItems:"center" }}>
-              <div className="ad-esqueleto" style={{ width:"min(600px,74vw)", aspectRatio:"16/10", borderRadius:22 }} />
-            </div>
+            <div className="ad-esqueleto" role="status" aria-label="Cargando vehículos" style={{ minHeight:320, borderRadius:20 }} />
           ) : (
-            <EscenarioVolt tema={TEMA_CLARO} productos={products} opciones={opciones} inicialId={foco?.id} acento={accent} moneda={currency} whatsapp={whatsapp} hrefDe={paginaDe}
-              favoritos={favorites} onFavorito={toggleFavorite} comparando={comparando} onComparar={ocultas.includes("ad-comparar") ? undefined : alternarComparar}
-              selector={editMode && isPreview ? <div style={{ marginBottom:16 }}><SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} onChange={setFeaturedVehicleId} /></div> : undefined}
-              cabecera={<>
-                <Titulo acento={accent}
-                  kicker={<EditableZone field="showroomKicker" label="Etiqueta del showroom">Showroom</EditableZone>}
-                  titulo={<EditableZone field="showroomHeading" label="Título del showroom">Recorré el showroom</EditableZone>} />
-                <p style={{ margin:"-14px 0 0", fontSize:"clamp(14px,1.4vw,16px)", color:"#475569", lineHeight:1.6 }}>
-                  <EditableZone field="showroomSubtext" label="Subtítulo del showroom">Pasalos con las flechas o deslizando, y tocá el que te guste para ver todo.</EditableZone>
-                </p>
-              </>} />
+            <SelectorRuta modo="uso" tarjeta={p => <TarjetaDrive p={p} acento={accent} moneda={currency} href={paginaDe(p)} favorito={favorites.includes(p.id)} onFavorito={() => toggleFavorite(p.id)} />}
+              productos={products} acento={accent} currency={currency} principal={principal} monedas={opciones.monedas as Moneda[]} hrefDe={paginaDe}
+              favoritos={favorites} onFavorito={toggleFavorite} onVerPlanilla={desdeSelector} onAvisame={() => setAvisame(true)}
+              pregunta={<EditableZone field="usoPregunta" label="Pregunta de la búsqueda por uso">¿Para qué lo vas a usar?</EditableZone>} />
           )}
         </div>
       </section>
 
       <div style={{ display:"flex", flexDirection:"column" }}>
-      {/* ── COMPARADOR ── hasta tres lado a lado (ver volt/ComparadorVolt). */}
-      <SectionBlock id="ad-comparar" label="Comparador" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
-      {products.length >= 2 ? (
-        <section id="comparar" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", position:"relative", ...secBg(compararImg, compararBg) }}>
-          <BgDragHandle imgKey="sectionbg_bgComparar" /><SectionOverlay ov={compararImg} />
-          <EditableSectionBg field="bgComparar" label="Fondo del comparador" />
+      {/* ── EL VEHÍCULO DE LA SEMANA ── el destacado (la pieza de Ruta en modo "uso", sin el sello ni la orden de trabajo). */}
+      <SectionBlock id="ad-foco" label="Vehículo de la semana" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
+      {(foco || (editMode && isPreview)) ? (
+        <section id="semana" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", position:"relative", ...secBg(focoImg, focoBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgFoco" /><SectionOverlay ov={focoImg} />
+          <EditableSectionBg field="bgFoco" label="Fondo del vehículo de la semana" />
           <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
-            <Titulo acento={accent} tinta={compararText}
-              kicker={<EditableZone field="compararKicker" label="Etiqueta del comparador">Comparador</EditableZone>}
-              titulo={<EditableZone field="compararHeading" label="Título del comparador">Ponelos lado a lado</EditableZone>}
-              derecha={<p style={{ margin:0, maxWidth:340, fontSize:14, lineHeight:1.55, color:compararMid }}>Sumá vehículos con <strong style={{ color:compararText }}>⇄ Comparar</strong> en el showroom, o elegilos acá.</p>} />
-            <ComparadorVolt tema={TEMA_CLARO} productos={products} ids={idsComparados} acento={accent} moneda={currency} hrefDe={paginaDe}
-              onQuitar={id => setEleccion(idsComparados.filter(x => x !== id))}
-              onAgregar={id => setEleccion([...idsComparados, id].slice(-3))} />
+            {editMode && isPreview && <div style={{ marginBottom:18 }}>
+              <SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} onChange={setFeaturedVehicleId} />
+            </div>}
+            <Titulo acento={accent} tinta={focoText}
+              kicker={<EditableZone field="focoDriveKicker" label="Etiqueta del vehículo de la semana">Nuestra selección</EditableZone>}
+              titulo={<EditableZone field="focoDriveHeading" label="Título del vehículo de la semana">El vehículo de la semana</EditableZone>} />
+            {foco ? (
+              <OrdenRuta modo="uso" p={foco} numero={products.findIndex(x => x.id === foco.id) + 1} acento={accent} currency={currency} href={paginaDe(foco)}
+                whatsapp={whatsapp.enabled ? whatsapp.number : null} />
+            ) : (
+              <p style={{ margin:0, padding:24, color:focoText, border:`1px dashed ${focoMid}`, borderRadius:16, textAlign:"center" }}>
+                {loadingProducts ? "Cargando vehículos…" : "Todavía no hay vehículos para mostrar acá."}
+              </p>
+            )}
           </div>
         </section>
       ) : null}
@@ -717,7 +734,7 @@ export default function AutoDrive() {
             kicker={<EditableZone field="catalogKicker" label="Etiqueta de los vehículos">Recién ingresados</EditableZone>}
             titulo={<EditableZone field="catalogHeading" label="Título de los vehículos">Lo último que entró</EditableZone>}
             derecha={products.length > 0 ? (
-              <Link href={linkTodos} style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:14, fontWeight:800, color:catText, textDecoration:"none",
+              <Link href={linkTodos} onClick={alClicTodos} style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:14, fontWeight:800, color:catText, textDecoration:"none",
                 padding:"10px 16px", borderRadius:12, background: catText === "#ffffff" ? "rgba(255,255,255,0.12)" : "#fff", border:`1px solid ${catText === "#ffffff" ? "rgba(255,255,255,0.2)" : LINEA}` }}>
                 Ver los {products.length} →
               </Link>
@@ -762,7 +779,7 @@ export default function AutoDrive() {
           )}
           {delTipo.length > showcased.length && (
             <div style={{ textAlign:"center", marginTop:28 }}>
-              <Link href={linkTodos}
+              <Link href={linkTodos} onClick={alClicTodos}
                 style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minHeight:52, padding:"0 32px", borderRadius:14,
                   background:TINTA, color:"#fff", textDecoration:"none", fontWeight:800, fontSize:15 }}>
                 Ver todos los vehículos
@@ -1097,7 +1114,7 @@ export default function AutoDrive() {
                   <EditableZone field="contactWhatsApp" label="Texto del botón de WhatsApp">Escribinos por WhatsApp</EditableZone>
                 </a>
               )}
-              <Link href={linkTodos}
+              <Link href={linkTodos} onClick={alClicTodos}
                 style={{ display:"inline-flex", alignItems:"center", minHeight:54, padding:"0 28px", borderRadius:14, fontWeight:800, fontSize:15,
                   color:"#fff", textDecoration:"none", border:"1.5px solid rgba(255,255,255,0.3)" }}>
                 Ver los vehículos
@@ -1121,16 +1138,11 @@ export default function AutoDrive() {
       </SectionBlock>
       </div>
 
-      {/* La barra de comparación (de Volt): aparece con dos o más elegidos y baja al comparador. */}
-      {comparando.length > 1 && !editMode && !searchOpen && !ocultas.includes("ad-comparar") && (
-        <div role="status" data-cel-bloque-oculto={ocultasCelu.includes("ad-comparar") ? "" : undefined} style={{ position:"fixed", left:16, bottom:24, zIndex: isPreview ? CAPAS.previaModal : CAPAS.panel,
-          display:"flex", alignItems:"center", gap:10, padding:"8px 8px 8px 14px", borderRadius:16, background:"rgba(255,255,255,0.94)", backdropFilter:"blur(14px)",
-          border:`1px solid ${conAlfa(accent, 0.35)}`, boxShadow:"0 18px 40px -16px rgba(15,23,42,0.35)", maxWidth:"calc(100vw - 104px)", boxSizing:"border-box" }}>
-          <span style={{ fontFamily:MONO, fontSize:12, color:TINTA, whiteSpace:"nowrap" }}><span style={{ color:accent }}>⇄</span> {comparando.length} para comparar</span>
-          <button type="button" onClick={() => irASeccion("comparar")} style={{ minHeight:38, padding:"0 14px", borderRadius:10, border:"none", background:accent, color:sobreAcento, fontWeight:800, fontSize:13, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>Ver</button>
-        </div>
-      )}
       </>)}
+
+      <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={() => setAvisame(false)}>
+        <BusquedaVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} deTrabajo />
+      </VentanaAuto>
 
       {/* ── PIE ── */}
       <footer style={{ position:"relative", padding:"clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", ...secBg(footerImg, footerBg) }}>
