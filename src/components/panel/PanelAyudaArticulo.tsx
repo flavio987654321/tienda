@@ -84,11 +84,11 @@ export default function PanelAyudaArticulo({
   );
 
   return (
-    <div className="min-h-screen bg-white panel-oscuro:bg-gray-900 [color-scheme:light]">
+    <div className="min-h-screen bg-white panel-oscuro:bg-gray-900 [color-scheme:light] panel-oscuro:[color-scheme:dark]">
       <div className="mx-auto max-w-3xl px-5 py-6 sm:px-8 sm:py-10">
         <Link
           href={base}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 transition-colors hover:text-gray-950"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 panel-oscuro:text-gray-400 transition-colors hover:text-gray-950 panel-oscuro:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Centro de ayuda
@@ -96,8 +96,8 @@ export default function PanelAyudaArticulo({
 
         <article className="mt-6 min-w-0">
           <header className="flex flex-col gap-3 border-b border-gray-200 panel-oscuro:border-gray-700 pb-7">
-            <Chip clase={articulo.clase} />
-            <h1 className="text-2xl font-black tracking-tight text-balance text-gray-950 sm:text-3xl">
+            <span className="self-start"><Chip clase={articulo.clase} /></span>
+            <h1 className="text-2xl font-black tracking-tight text-balance text-gray-950 sm:text-3xl panel-oscuro:text-gray-100">
               {articulo.titulo}
             </h1>
             <p className="text-[15px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">{articulo.resumen}</p>
@@ -135,7 +135,7 @@ export default function PanelAyudaArticulo({
                     >
                       <div className="flex min-w-0 flex-1 flex-col gap-1">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <span className="font-semibold tracking-tight text-gray-950">{a.titulo}</span>
+                          <span className="font-semibold tracking-tight text-gray-950 panel-oscuro:text-gray-100">{a.titulo}</span>
                           <Chip clase={a.clase} />
                         </div>
                         <span className="text-sm leading-6 text-gray-500 panel-oscuro:text-gray-400">{a.resumen}</span>

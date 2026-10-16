@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PanelAyudaArticulo from "@/components/panel/PanelAyudaArticulo";
+import TemaComoPanel from "@/components/panel/TemaComoPanel";
 import { buscarArticulo } from "@/lib/ayuda";
 import { getCurrentUser } from "@/lib/auth-session";
 
@@ -21,5 +22,6 @@ export default async function ArticuloDelAfiliado({ params }: Props) {
   if (!user || user.role !== "SELLER") return null;
 
   const { slug } = await params;
-  return <PanelAyudaArticulo base="/afiliados/ayuda" rol="afiliado" slug={slug} />;
+  // El oscuro de afiliados, traducido al de los paneles (ver TemaComoPanel).
+  return <TemaComoPanel><PanelAyudaArticulo base="/afiliados/ayuda" rol="afiliado" slug={slug} /></TemaComoPanel>;
 }

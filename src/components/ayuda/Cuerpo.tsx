@@ -20,7 +20,7 @@ function inline(texto: string) {
     .map((frag, i) => {
       if (frag.startsWith("**") && frag.endsWith("**")) {
         return (
-          <strong key={i} className="font-semibold text-gray-950">
+          <strong key={i} className="font-semibold text-gray-950 panel-oscuro:text-gray-100">
             {frag.slice(2, -2)}
           </strong>
         );
@@ -32,7 +32,7 @@ function inline(texto: string) {
     });
 }
 
-const PARRAFO = "text-[15px] leading-7 text-gray-600";
+const PARRAFO = "text-[15px] leading-7 text-gray-600 panel-oscuro:text-gray-300";
 
 function Bloque({ b }: { b: Bloque }) {
   switch (b.t) {
@@ -44,7 +44,7 @@ function Bloque({ b }: { b: Bloque }) {
        continuo: no se veía dónde terminaba una pregunta y empezaba otra. */
     case "h":
       return (
-        <h2 className="mt-4 border-t border-gray-200 pt-8 text-lg font-bold tracking-tight text-gray-950 text-balance">
+        <h2 className="mt-4 border-t border-gray-200 pt-8 text-lg font-bold tracking-tight text-gray-950 text-balance panel-oscuro:border-gray-700 panel-oscuro:text-gray-100">
           {inline(b.texto)}
         </h2>
       );
@@ -65,7 +65,7 @@ function Bloque({ b }: { b: Bloque }) {
         <ol className="flex flex-col gap-3">
           {b.items.map((item, i) => (
             <li key={i} className="flex gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-50 text-xs font-semibold tabular-nums text-orange-700">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-50 text-xs font-semibold tabular-nums text-orange-700 panel-oscuro:bg-orange-500/10 panel-oscuro:text-orange-300">
                 {i + 1}
               </span>
               <span className={PARRAFO}>{inline(item)}</span>
@@ -80,14 +80,14 @@ function Bloque({ b }: { b: Bloque }) {
       return (
         <div
           className={`flex gap-3 rounded-xl border p-4 ${
-            esOjo ? "border-amber-200 bg-amber-50/60" : "border-gray-200 bg-gray-50"
+            esOjo ? "border-amber-200 bg-amber-50/60 panel-oscuro:border-amber-500/30 panel-oscuro:bg-amber-500/10" : "border-gray-200 bg-gray-50 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-800/60"
           }`}
         >
           <Icono
-            className={`mt-0.5 h-4 w-4 shrink-0 ${esOjo ? "text-amber-600" : "text-gray-400"}`}
+            className={`mt-0.5 h-4 w-4 shrink-0 ${esOjo ? "text-amber-600 panel-oscuro:text-amber-400" : "text-gray-400 panel-oscuro:text-gray-500"}`}
             aria-hidden="true"
           />
-          <p className={`text-sm leading-6 ${esOjo ? "text-amber-950" : "text-gray-600"}`}>
+          <p className={`text-sm leading-6 ${esOjo ? "text-amber-950 panel-oscuro:text-amber-100" : "text-gray-600 panel-oscuro:text-gray-300"}`}>
             {inline(b.texto)}
           </p>
         </div>
@@ -101,12 +101,12 @@ function Bloque({ b }: { b: Bloque }) {
         <div className="-mx-1 overflow-x-auto px-1">
           <table className="w-full min-w-[30rem] border-collapse text-left">
             <thead>
-              <tr className="border-b border-gray-200">
+              <tr className="border-b border-gray-200 panel-oscuro:border-gray-700">
                 {b.cols.map((col) => (
                   <th
                     key={col}
                     scope="col"
-                    className="pb-2 pr-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400"
+                    className="pb-2 pr-6 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400 panel-oscuro:text-gray-500"
                   >
                     {col}
                   </th>
@@ -115,14 +115,14 @@ function Bloque({ b }: { b: Bloque }) {
             </thead>
             <tbody>
               {b.filas.map(([izq, der], i) => (
-                <tr key={i} className="border-b border-gray-100 last:border-0">
+                <tr key={i} className="border-b border-gray-100 last:border-0 panel-oscuro:border-gray-800">
                   <th
                     scope="row"
-                    className="w-40 py-3 pr-6 align-top text-sm font-semibold text-gray-950"
+                    className="w-40 py-3 pr-6 align-top text-sm font-semibold text-gray-950 panel-oscuro:text-gray-100"
                   >
                     {inline(izq)}
                   </th>
-                  <td className="py-3 align-top text-sm leading-6 text-gray-600">{inline(der)}</td>
+                  <td className="py-3 align-top text-sm leading-6 text-gray-600 panel-oscuro:text-gray-300">{inline(der)}</td>
                 </tr>
               ))}
             </tbody>
@@ -134,7 +134,7 @@ function Bloque({ b }: { b: Bloque }) {
       return (
         <Link
           href={b.href}
-          className="group inline-flex items-center gap-2 self-start rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+          className="group inline-flex items-center gap-2 self-start rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 panel-oscuro:border-orange-500/30 panel-oscuro:bg-orange-500/10 panel-oscuro:text-orange-300 panel-oscuro:hover:border-orange-500/50 panel-oscuro:hover:bg-orange-500/20"
         >
           {b.label}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

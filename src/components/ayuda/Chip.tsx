@@ -7,7 +7,7 @@ export default function Chip({ clase }: { clase: Clase }) {
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${
-        esMecanica ? "bg-gray-100 text-gray-500" : "bg-orange-50 text-orange-700"
+        esMecanica ? "bg-gray-100 text-gray-500 panel-oscuro:bg-gray-800 panel-oscuro:text-gray-400" : "bg-orange-50 text-orange-700 panel-oscuro:bg-orange-500/10 panel-oscuro:text-orange-300"
       }`}
     >
       {esMecanica ? "Cómo se hace" : "Qué conviene"}

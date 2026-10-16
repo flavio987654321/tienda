@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PanelAyuda from "@/components/panel/PanelAyuda";
+import TemaComoPanel from "@/components/panel/TemaComoPanel";
 import { getCurrentUser } from "@/lib/auth-session";
 
 /* La ayuda del afiliado, adentro del `scope` de su app.
@@ -42,6 +43,9 @@ export default async function AyudaDelAfiliado({
 
   const { q } = await searchParams;
   return (
-    <PanelAyuda base="/afiliados/ayuda" rol="afiliado" volverA="/afiliados" consulta={q ?? ""} />
+    // El oscuro de afiliados, traducido al de los paneles (ver TemaComoPanel).
+    <TemaComoPanel>
+      <PanelAyuda base="/afiliados/ayuda" rol="afiliado" volverA="/afiliados" consulta={q ?? ""} />
+    </TemaComoPanel>
   );
 }

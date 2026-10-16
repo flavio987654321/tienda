@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PanelTutoriales from "@/components/panel/PanelTutoriales";
+import TemaComoPanel from "@/components/panel/TemaComoPanel";
 import { getCurrentUser } from "@/lib/auth-session";
 import { tutorialesPara } from "@/lib/tutoriales";
 
@@ -13,7 +14,9 @@ export default async function TutorialesDelAfiliado() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <PanelTutoriales secciones={tutorialesPara("afiliado")} acento="indigo" volverA="/afiliados" />
+        <TemaComoPanel>
+          <PanelTutoriales secciones={tutorialesPara("afiliado")} acento="indigo" volverA="/afiliados" />
+        </TemaComoPanel>
       </div>
     </div>
   );
