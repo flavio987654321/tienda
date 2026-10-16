@@ -598,7 +598,7 @@ export default function AutoMotor() {
             <EditableZone field="heroSubtext" label="Subtítulo de la portada">Autos, camionetas, motos y más, con la ficha técnica completa y el precio a la vista.</EditableZone>
           </p>
           <div className="am-entra" style={{ animationDelay:".24s", maxWidth:960 }}>
-            <BuscadorMotor slug={slug} opciones={opciones} principal={principal} acento={accent} enEditor={isPreview} />
+            <BuscadorMotor slug={slug} opciones={opciones} principal={principal} acento={accent} enEditor={desdeEditor} />
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:"10px 24px", flexWrap:"wrap", marginTop:22 }}>
             {!loadingProducts && products.length > 0 && (
@@ -625,7 +625,7 @@ export default function AutoMotor() {
           <BgDragHandle imgKey="sectionbg_bgTipos" /><SectionOverlay ov={tiposImg} />
           <EditableSectionBg field="bgTipos" label="Fondo de los tipos" />
           <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
-            <TiposMotor productos={products} opciones={opciones} moneda={currency} slug={slug} enEditor={isPreview} acento={accent} tinta={tiposText} tintaSuave={tiposMid}
+            <TiposMotor productos={products} opciones={opciones} moneda={currency} slug={slug} enEditor={desdeEditor} acento={accent} tinta={tiposText} tintaSuave={tiposMid}
               titulo={<EditableZone field="tiposHeading" label="Título de los tipos">{opciones.tipos.length > 1 ? "Explorá por tipo" : "Explorá por marca"}</EditableZone>} />
           </div>
         </section>
@@ -972,7 +972,7 @@ export default function AutoMotor() {
         <EditableSectionBg field="bgFooter" label="Fondo del pie" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
           {/* El pie ordenado (08/10/26): ver components/store/auto/PieDeAutos. */}
-          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
+          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={desdeEditor}
             whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="motor"
             colores={pieOscuro
               ? { tinta: "#ffffff", suave: ftMid, linea: "rgba(255,255,255,0.1)" }

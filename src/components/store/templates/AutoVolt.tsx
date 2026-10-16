@@ -781,7 +781,7 @@ export default function AutoVolt() {
       <footer id="contacto" style={{ position: "relative", padding: "clamp(40px,6vw,64px) clamp(16px,4vw,32px) 24px", scrollMarginTop: (showAnn ? PROMO_H : 0) + NAV_H + NAV_TOP + 16, ...fPie.estilo, borderTop: `1px solid ${conAlfa(accent, 0.25)}` }}>
         {capa("bgFooter", "Fondo del pie", fPie.ov, "Pie de la tienda")}
         <div style={ancho}>
-          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
+          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview && "auto-volt"}
             whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="volt" onVerVehiculos={tipo => abrirCatalogo(tipo ? { tipo } : {})}
             colores={fPie.claro ? { tinta: TINTA_CLARA, suave: fPie.tenue, linea: "rgba(11,16,32,0.12)" } : { tinta: "#ffffff", suave: fPie.tenue, linea: "rgba(255,255,255,0.1)" }}
             descripcion={<EditableZone field="footerFrase" label="Frase del pie">{FRASE_PIE}</EditableZone>}

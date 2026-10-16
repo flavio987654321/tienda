@@ -164,8 +164,7 @@ export function VehiculoDetailRuta({ view }: { view: ProductDetailViewProps }) {
 
   /* En el editor esta página es otra dirección: los links llevan `t=auto-ruta`
      (si no, se dibujaba con el template GUARDADO) y "volver" vuelve al editor. */
-  const deEditor = isPreview ? "&t=auto-ruta" : "";
-  const aVehiculo = (id: string) => `${linkAVehiculo(slug, id, isPreview)}${deEditor}`;
+  const aVehiculo = (id: string) => linkAVehiculo(slug, id, isPreview && "auto-ruta");
   const volver = isPreview ? "/dashboard/configuracion" : linkAVehiculos(slug, {});
   const inicio = isPreview ? "/dashboard/configuracion" : `/tienda/${slug}`;
 
@@ -357,7 +356,7 @@ export function VehiculoDetailRuta({ view }: { view: ProductDetailViewProps }) {
       </main>
 
       <PieDeAutos slug={slug} storeName={storeName} descripcion={fraseDelPie} whatsapp={whatsapp} redes={socialLinks} products={products ?? []}
-        legales={legales} enEditor={isPreview} acento={acento} estilo="ruta"
+        legales={legales} enEditor={isPreview && "auto-ruta"} acento={acento} estilo="ruta"
         onVerVehiculos={isPreview ? () => router.push("/dashboard/configuracion") : undefined}
         colores={{ fondo: footerBg ?? ASFALTO, tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.12)" }} />
 

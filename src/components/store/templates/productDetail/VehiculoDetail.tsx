@@ -146,11 +146,11 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
     try { const j = JSON.parse(attr(p, "Servicios") || "{}"); return j && typeof j === "object" ? j as Record<string, boolean> : {}; } catch { return {}; }
   }, [p]);
   const hayServices = Object.keys(services).length > 0;
-  const inicio = `/tienda/${slug}${isPreview ? "?from=editor" : ""}`;
   /* Desde el editor, los links dicen qué diseño se mira (ver linkAVehiculo): sin eso
      salían con el template guardado. */
   const desdeEditor = isPreview ? (tema === "oscuro" ? "auto-motor" : "auto-drive") : false;
   const catalogo = linkAVehiculos(slug, {}, desdeEditor);
+  const inicio = `/tienda/${slug}${desdeEditor ? `?from=editor&t=${desdeEditor}` : ""}`;
 
   const compartir = async () => {
     const url = window.location.href.split("?")[0];

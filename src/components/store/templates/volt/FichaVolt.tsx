@@ -214,8 +214,7 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
      (si no, la ficha de al lado se dibujaba con el template GUARDADO) y
      "volver" vuelve al editor, porque el catálogo de Volt vive adentro del
      template y desde acá no hay forma de abrirlo sin salir de Diseño. */
-  const deEditor = isPreview ? "&t=auto-volt" : "";
-  const aVehiculo = (id: string) => `${linkAVehiculo(slug, id, isPreview)}${deEditor}`;
+  const aVehiculo = (id: string) => linkAVehiculo(slug, id, isPreview && "auto-volt");
   const volver = isPreview ? "/dashboard/configuracion" : linkAVehiculos(slug, {});
   const inicio = isPreview ? "/dashboard/configuracion" : `/tienda/${slug}`;
 
@@ -479,7 +478,7 @@ export function VehiculoDetailVolt({ view }: { view: ProductDetailViewProps }) {
       </main>
 
       <PieDeAutos slug={slug} storeName={storeName} descripcion={fraseDelPie} whatsapp={whatsapp} redes={socialLinks} products={products ?? []}
-        legales={legales} enEditor={isPreview} acento={acento} estilo="volt"
+        legales={legales} enEditor={isPreview && "auto-volt"} acento={acento} estilo="volt"
         onVerVehiculos={isPreview ? () => router.push("/dashboard/configuracion") : undefined}
         colores={{ fondo: footerBg ?? "#03040a", tinta: "#ffffff", suave: "rgba(232,236,246,0.62)", linea: "rgba(255,255,255,0.1)" }} />
 

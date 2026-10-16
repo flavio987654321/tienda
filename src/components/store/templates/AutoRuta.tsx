@@ -771,7 +771,7 @@ export default function AutoRuta() {
         {capa("bgFooter", "Fondo del pie", fPie.ov, "Pie de la tienda")}
         <span aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: rayaDeRuta(accent) }} />
         <div style={ancho}>
-          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
+          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview && "auto-ruta"}
             whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="ruta" onVerVehiculos={tipo => abrirPlanilla({ filtro: tipo ? { tipo } : {} })}
             colores={fPie.oscuro ? { tinta: "#ffffff", suave: fPie.tenue, linea: "rgba(255,255,255,0.12)" } : { tinta: TINTA, suave: fPie.tenue, linea: LINEA }}
             descripcion={<EditableZone field="footerFrase" label="Frase del pie">{FRASE_PIE}</EditableZone>}

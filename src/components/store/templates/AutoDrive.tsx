@@ -1143,7 +1143,7 @@ export default function AutoDrive() {
       </>)}
 
       <VentanaAuto abierta={avisame} titulo="Avisame si entra" onClose={() => setAvisame(false)}>
-        <BusquedaVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} deTrabajo />
+        <BusquedaVehiculo storeId={config?.storeId} accent={accent} isOwner={isOwner} isPreview={isPreview} />
       </VentanaAuto>
 
       {/* ── PIE ── */}
@@ -1153,7 +1153,7 @@ export default function AutoDrive() {
         <EditableSectionBg field="bgFooter" label="Fondo del pie" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1280, margin:"0 auto" }}>
           {/* El pie ordenado (08/10/26): ver components/store/auto/PieDeAutos. */}
-          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={isPreview}
+          <ContenidoPieAutos slug={slug} storeName={storeName} products={products} legales={config?.legales} enEditor={desdeEditor}
             whatsapp={whatsapp.enabled ? whatsapp.number : null} redes={config?.socialLinks} acento={accent} estilo="drive"
             colores={pieOscuro
               ? { tinta: "#ffffff", suave: ftMid, linea: "rgba(255,255,255,0.1)" }

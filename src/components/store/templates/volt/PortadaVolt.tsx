@@ -83,7 +83,10 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
   const [moneda, setMoneda] = useState<Moneda>(principal);
   const sobreAcento = getContrastColor(acento) === "dark" ? "#05070d" : "#fff";
   const url = ov?.url ?? fotoDeFabrica;
-  const velo = ov?.overlayType ?? (tema.claro ? "light" : "dark");
+  /* En claro el texto es oscuro: el velo es siempre el claro, aunque la dueña
+     haya elegido otro para la foto que Drive tenía al costado (si no, quedaba
+     texto oscuro sobre velo oscuro, o sobre la foto pelada). */
+  const velo = tema.claro ? "light" : ov?.overlayType ?? "dark";
   const opacidad = ov?.overlayOpacity ?? 0.55;
 
   const buscar = (e: React.FormEvent) => {
