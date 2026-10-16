@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { filtroAUrl, filtroVacio, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
+import { filtroAUrl, filtroVacio, type OpcionesDeFiltro, type DesdeEditor, marcarDesdeEditor } from "@/lib/filtroVehiculos";
 import { conPuntos, sinPuntos, type Moneda } from "@/lib/monedaVehiculo";
 import { getContrastColor } from "@/contexts/EditContext";
 
@@ -16,7 +16,7 @@ export function BuscadorMotor({ slug, opciones, principal, acento, enEditor }: {
   opciones: OpcionesDeFiltro;
   principal: Moneda;
   acento: string;
-  enEditor: boolean;
+  enEditor: DesdeEditor;
 }) {
   const router = useRouter();
   const [tipo, setTipo] = useState("");
@@ -32,7 +32,7 @@ export function BuscadorMotor({ slug, opciones, principal, acento, enEditor }: {
     const n = Number(sinPuntos(precio));
     const sp = filtroAUrl({ ...filtroVacio(principal), tipo: tipo || null, marca: marca || null,
       precioHasta: n > 0 ? n : null, moneda }, principal);
-    if (enEditor) sp.set("from", "editor");
+    marcarDesdeEditor(sp, enEditor);
     const s = sp.toString();
     router.push(`/tienda/${slug}/vehiculos${s ? `?${s}` : ""}`);
   };

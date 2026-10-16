@@ -147,7 +147,10 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
   }, [p]);
   const hayServices = Object.keys(services).length > 0;
   const inicio = `/tienda/${slug}${isPreview ? "?from=editor" : ""}`;
-  const catalogo = linkAVehiculos(slug, {}, isPreview);
+  /* Desde el editor, los links dicen qué diseño se mira (ver linkAVehiculo): sin eso
+     salían con el template guardado. */
+  const desdeEditor = isPreview ? (tema === "oscuro" ? "auto-motor" : "auto-drive") : false;
+  const catalogo = linkAVehiculos(slug, {}, desdeEditor);
 
   const compartir = async () => {
     const url = window.location.href.split("?")[0];
@@ -222,7 +225,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
           <span aria-hidden="true">/</span>
           <Link href={catalogo} className="vd-link" style={{ color: c.suave, textDecoration: "none" }}>Vehículos</Link>
           {tipo && <><span aria-hidden="true">/</span>
-            <Link href={linkAVehiculos(slug, { tipo: (p.category ?? "").toLowerCase() }, isPreview)} className="vd-link" style={{ color: c.suave, textDecoration: "none" }}>{tipo.varios}</Link></>}
+            <Link href={linkAVehiculos(slug, { tipo: (p.category ?? "").toLowerCase() }, desdeEditor)} className="vd-link" style={{ color: c.suave, textDecoration: "none" }}>{tipo.varios}</Link></>}
         </nav>
 
         <div className="vd-grilla">
@@ -379,9 +382,9 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
             {tituloBloque("También te pueden interesar")}
             <div className="vd-similares">
               {similares.map(s => tema === "oscuro"
-                ? <TarjetaMotor key={s.id} p={s} acento={acento} moneda={currency} href={linkAVehiculo(slug, s.id, isPreview)}
+                ? <TarjetaMotor key={s.id} p={s} acento={acento} moneda={currency} href={linkAVehiculo(slug, s.id, desdeEditor)}
                     favorito={fav.esFavorito(s.id)} onFavorito={() => fav.alternar(s.id)} />
-                : <VehicleCard key={s.id} product={s} accent={acento} currency={currency} href={linkAVehiculo(slug, s.id, isPreview)}
+                : <VehicleCard key={s.id} product={s} accent={acento} currency={currency} href={linkAVehiculo(slug, s.id, desdeEditor)}
                     isFavorite={fav.esFavorito(s.id)} onToggleFavorite={() => fav.alternar(s.id)} />)}
             </div>
           </section>
@@ -390,7 +393,7 @@ function VehiculoDetail({ view, tema }: { view: ProductDetailViewProps; tema: Te
 
       {/* El mismo pie que la portada, con su fondo si la dueña lo cambió. */}
       <PieDeAutos slug={slug} storeName={storeName} descripcion={fraseDelPie} whatsapp={whatsapp} redes={socialLinks} products={products ?? []}
-        legales={legales} enEditor={isPreview} acento={acento} estilo={tema === "oscuro" ? "motor" : "drive"}
+        legales={legales} enEditor={desdeEditor} acento={acento} estilo={tema === "oscuro" ? "motor" : "drive"}
         colores={tema === "oscuro" || footerBg
           ? { fondo: footerBg ?? "#070809", tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.1)" }
           : { fondo: "#111827", tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.12)" }} />

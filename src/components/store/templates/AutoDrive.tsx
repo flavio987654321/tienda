@@ -235,7 +235,9 @@ export default function AutoDrive() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   /** Cada vehículo tiene su página (07/10/26; antes, una ventana sobre la portada). */
-  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, isPreview);
+  /** Desde el editor, el link dice que se mira Drive (ver linkAVehiculo). */
+  const desdeEditor = isPreview ? "auto-drive" : false;
+  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, desdeEditor);
   const [scrolled,   setScrolled]   = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
@@ -278,8 +280,8 @@ export default function AutoDrive() {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
     // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página del vehículo.
-    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, isPreview));
-  }, [products, router, slug, isPreview]);
+    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, desdeEditor));
+  }, [products, router, slug, desdeEditor]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -321,7 +323,7 @@ export default function AutoDrive() {
   const showcased = delTipo.slice(0, 8);
   // Los reservados se ven en la lista, pero no son "disponibles".
   const disponibles = products.filter(p => !esReservado(p)).length;
-  const linkTodos = `/tienda/${slug}/vehiculos${isPreview ? "?from=editor" : ""}`;
+  const linkTodos = `/tienda/${slug}/vehiculos${isPreview ? "?from=editor&t=auto-drive" : ""}`;
 
   /* Números: vehículos y marcas se cuentan de verdad; años y satisfacción son
      del negocio, y se ven sólo si el dueño los escribió (en el editor, siempre). */
@@ -717,7 +719,7 @@ export default function AutoDrive() {
           <Titulo acento={accent} tinta={catsText}
             kicker={<EditableZone field="tiposKicker" label="Etiqueta de los tipos">{opciones.tipos.length > 1 ? "Por tipo" : "Por marca"}</EditableZone>}
             titulo={<EditableZone field="tiposHeading" label="Título de los tipos">¿Qué estás buscando?</EditableZone>} />
-          <TiposDrive opciones={opciones} slug={slug} enEditor={isPreview} acento={accent} />
+          <TiposDrive opciones={opciones} slug={slug} enEditor={desdeEditor} acento={accent} />
         </div>
       </section>
       ) : null}
@@ -816,7 +818,7 @@ export default function AutoDrive() {
             kicker={<EditableZone field="presupuestoKicker" label="Etiqueta de presupuesto">Por presupuesto</EditableZone>}
             titulo={<EditableZone field="presupuestoHeading" label="Título de presupuesto">¿Cuánto querés gastar?</EditableZone>} />
           {hayTramos
-            ? <PresupuestoDrive productos={products} principal={principal} slug={slug} enEditor={isPreview} acento={accent} />
+            ? <PresupuestoDrive productos={products} principal={principal} slug={slug} enEditor={desdeEditor} acento={accent} />
             : avisoVacio("Con cuatro vehículos con precio o más, acá aparecen los tramos de precio armados con lo que publicaste. Mientras tanto, este bloque no se muestra en la tienda.")}
         </div>
       </section>
@@ -899,7 +901,7 @@ export default function AutoDrive() {
           <Titulo acento={accent} tinta={videosText}
             kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
             titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos antes de venir</EditableZone>} />
-          <VideosDrive videos={videos} acento={accent} moneda={currency} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
+          <VideosDrive videos={videos} acento={accent} moneda={currency} hrefDe={id => linkAVehiculo(slug, id, desdeEditor)}
             vacio={avisoVacio("Acá aparecen los videos que subas en cada vehículo (en Productos → el vehículo → Videos). Cada uno lleva a su vehículo. Mientras no haya ninguno, este bloque no se muestra en la tienda.")} />
         </div>
       </section>

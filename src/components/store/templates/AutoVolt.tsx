@@ -164,7 +164,7 @@ export default function AutoVolt() {
   const router = useRouter();
   /* La página del vehículo. Desde el editor lleva `t=auto-volt`: si no, se
      dibujaba con el template GUARDADO (Motor o Drive) y Volt se mezclaba. */
-  const paginaDeId = (id: string) => `${linkAVehiculo(slug, id, isPreview)}${isPreview ? "&t=auto-volt" : ""}`;
+  const paginaDeId = (id: string) => linkAVehiculo(slug, id, isPreview && "auto-volt");
   const paginaDe = (p: StorefrontProduct) => paginaDeId(p.id);
   const [showReport, setShowReport] = useState(false);
   const [annIdx, setAnnIdx] = useState(0);
@@ -197,7 +197,7 @@ export default function AutoVolt() {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
     // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página del vehículo.
-    if (id && products.some(pr => pr.id === id)) router.replace(`${linkAVehiculo(slug, id, isPreview)}${isPreview ? "&t=auto-volt" : ""}`);
+    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, isPreview && "auto-volt"));
   }, [products, router, slug, isPreview]);
 
   useEffect(() => {
@@ -240,7 +240,7 @@ export default function AutoVolt() {
     if (!antes.length) { const otro = products.find(p => p.id !== id); return otro ? [id, otro.id] : [id]; }
     return [...antes, id].slice(-3);
   });
-  const todos = linkAVehiculos(slug, {}, isPreview);
+  const todos = linkAVehiculos(slug, {}, isPreview && "auto-volt");
 
   /* ── Portada o catálogo ─────────────────────────────────────────────────────
      El catálogo (ver volt/CatalogoVolt) lo dibuja el template en `/vehiculos`,
@@ -826,7 +826,7 @@ export default function AutoVolt() {
                 ))}
               </div>
               {searchResults.length > 24 && (
-                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview)}
+                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview && "auto-volt")}
                   onClick={e => { alClicTodos(e, { q: searchQuery.trim() }); setSearchOpen(false); setSearchQuery(""); }} style={{ display: "block", textAlign: "center", marginTop: 18, color: accent, fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
                   Ver los {searchResults.length} resultados →
                 </Link>

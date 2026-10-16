@@ -17,7 +17,7 @@ import { monedaDeTienda, precioEn, conPuntos, sinPuntos } from "@/lib/monedaVehi
 import { usaHoras } from "@/lib/fichaVehiculo";
 import {
   filtrarVehiculos, opcionesDeFiltro, filtroDesdeUrl, filtroAUrl, filtroVacio, cuantosFiltros,
-  ORDENES, linkAVehiculo, type FiltroVehiculos, type OrdenVehiculos,
+  ORDENES, linkAVehiculo, marcarDesdeEditor, type FiltroVehiculos, type OrdenVehiculos,
 } from "@/lib/filtroVehiculos";
 import TasacionVehiculo from "@/components/store/auto/TasacionVehiculo";
 import BusquedaVehiculo from "@/components/store/auto/BusquedaVehiculo";
@@ -94,6 +94,9 @@ function VehiculosPageInner() {
   const searchParams = useSearchParams();
   const slug         = params?.slug as string;
   const fromEditor   = searchParams?.get("from") === "editor";
+  /* Desde el editor, el diseño que se está mirando (no el guardado). Ver linkAVehiculo. */
+  const tParam       = fromEditor ? searchParams?.get("t") ?? null : null;
+  const desdeEditor  = fromEditor ? (tParam ?? true) : false;
 
   const [products,    setProducts]    = useState<StorefrontProduct[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -105,7 +108,7 @@ function VehiculosPageInner() {
   const [redes, setRedes] = useState<Record<string, string>>({});
   const [accent,      setAccent]      = useState("#c9a227");
   const [currency,    setCurrency]    = useState("ARS");
-  const [templateId,  setTemplateId]  = useState("");
+  const [templateId,  setTemplateId]  = useState(() => searchParams?.get("from") === "editor" ? searchParams?.get("t") ?? "" : "");
   const [navBgColor,  setNavBgColor]  = useState<string | null>(null);
   const [storeId,     setStoreId]     = useState<string | undefined>(undefined);
   const [isOwner,     setIsOwner]     = useState(false);
@@ -175,7 +178,7 @@ function VehiculosPageInner() {
             // El "precio hasta" arranca en la moneda principal, salvo que la dirección diga otra.
             if (!searchParams?.get("moneda")) cambiar({ moneda: monedaDeTienda(cfg) });
           }
-          if (cfg.templateId ?? cfg.template) setTemplateId(cfg.templateId ?? cfg.template);
+          if (!tParam && (cfg.templateId ?? cfg.template)) setTemplateId(cfg.templateId ?? cfg.template);
           if (cfg.sectionColors?.navBg)    setNavBgColor(cfg.sectionColors.navBg);
         } catch {}
         if (Array.isArray(data.legales)) setLegales(data.legales);
@@ -196,11 +199,11 @@ function VehiculosPageInner() {
   // El filtro a la dirección, sin sumar al historial (atrás vuelve a la tienda).
   useEffect(() => {
     const sp = filtroAUrl(filtro, monedaDeTienda({ currency }));
-    if (fromEditor) sp.set("from", "editor");
+    marcarDesdeEditor(sp, desdeEditor);
     const s = sp.toString();
     const nueva = `${window.location.pathname}${s ? `?${s}` : ""}`;
     if (nueva !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, "", nueva);
-  }, [filtro, currency, fromEditor]);
+  }, [filtro, currency, desdeEditor]);
 
   const opciones = useMemo(() => opcionesDeFiltro(products, currency), [products, currency]);
   const filtered = useMemo(() => filtrarVehiculos(products, filtro, currency), [products, filtro, currency]);
@@ -637,7 +640,7 @@ function VehiculosPageInner() {
           <div className="av-grid">
             {filtered.map(p => (
               <VehicleCard key={p.id} product={p} accent={accent} currency={currency}
-                theme="light" href={linkAVehiculo(slug, p.id, fromEditor)} />
+                theme="light" href={linkAVehiculo(slug, p.id, desdeEditor)} />
             ))}
           </div>
         )}
@@ -653,7 +656,7 @@ function VehiculosPageInner() {
           devoluciones, y prometer "Política de envíos" sería mentirle al que
           compra. */}
       <PieDeAutos slug={slug} storeName={storeName} descripcion={contacto.descripcion} whatsapp={contacto.whatsapp} redes={redes}
-        products={products} legales={legales} enEditor={fromEditor} acento={accent} estilo={isAD ? "drive" : "motor"}
+        products={products} legales={legales} enEditor={desdeEditor} acento={accent} estilo={isAD ? "drive" : "motor"}
         onReportar={isOwner ? undefined : () => setShowReport(true)}
         colores={{ fondo: isAD ? "#111827" : "#070809", tinta: "#ffffff", suave: "rgba(255,255,255,0.62)", linea: "rgba(255,255,255,0.1)" }} />
 

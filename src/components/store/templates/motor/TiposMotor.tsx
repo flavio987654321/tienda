@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
-import { datosDe, linkAVehiculos, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
+import { datosDe, linkAVehiculos, type OpcionesDeFiltro, type DesdeEditor } from "@/lib/filtroVehiculos";
 import { useEditContext } from "@/contexts/EditContext";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { subirImagenDeDiseno } from "@/lib/subir-imagen-diseno";
@@ -106,7 +106,7 @@ export function TiposMotor({ productos, opciones, moneda, slug, enEditor, titulo
   opciones: OpcionesDeFiltro;
   moneda: string;
   slug: string;
-  enEditor: boolean;
+  enEditor: DesdeEditor;
   titulo: React.ReactNode;
 }) {
   const { editMode, imageOverrides, setImageOverride } = useEditContext();
@@ -134,7 +134,7 @@ export function TiposMotor({ productos, opciones, moneda, slug, enEditor, titulo
           const encuadre = imageOverrides[campoFoto];
           return <TarjetaTipo key={g.valor} g={g}
             href={linkAVehiculos(slug, porTipo ? { tipo:g.valor } : { marca:g.valor }, enEditor)}
-            foto={encuadre?.url || fotoDe(g.valor)} fotoPropia={!!encuadre?.url} campoFoto={campoFoto} editando={editMode && enEditor}
+            foto={encuadre?.url || fotoDe(g.valor)} fotoPropia={!!encuadre?.url} campoFoto={campoFoto} editando={editMode && !!enEditor}
             posX={encuadre?.posX ?? 50} posY={encuadre?.posY ?? 50} cambiarEncuadre={setImageOverride} />;
         })}
       </div>

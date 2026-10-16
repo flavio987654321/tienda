@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
-import { filtroAUrl, filtroVacio } from "@/lib/filtroVehiculos";
+import { filtroAUrl, filtroVacio, type DesdeEditor, marcarDesdeEditor } from "@/lib/filtroVehiculos";
 import { monedaDe, type Moneda } from "@/lib/monedaVehiculo";
 import { fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 
@@ -31,7 +31,7 @@ export function PresupuestoDrive({ productos, principal, slug, enEditor, acento 
   productos: StorefrontProduct[];
   principal: Moneda;
   slug: string;
-  enEditor: boolean;
+  enEditor: DesdeEditor;
   acento: string;
 }) {
   const tramos = tramosDePrecio(productos, principal);
@@ -39,7 +39,7 @@ export function PresupuestoDrive({ productos, principal, slug, enEditor, acento 
   const total = productos.filter(p => p.price > 0 && monedaDe(p, principal) === principal).length;
   const link = (hasta: number | null) => {
     const sp = filtroAUrl({ ...filtroVacio(principal), precioHasta: hasta, moneda: principal, orden: hasta ? "precio_desc" : "recientes" }, principal);
-    if (enEditor) sp.set("from", "editor");
+    marcarDesdeEditor(sp, enEditor);
     const s = sp.toString();
     return `/tienda/${slug}/vehiculos${s ? `?${s}` : ""}`;
   };

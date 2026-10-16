@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { linkWhatsApp } from "@/lib/whatsappTienda";
-import { linkAVehiculos } from "@/lib/filtroVehiculos";
+import { linkAVehiculos, type DesdeEditor } from "@/lib/filtroVehiculos";
 import { NOMBRE_TIPO, type CategoriaVehiculo } from "@/lib/fichaVehiculo";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
@@ -29,7 +29,7 @@ export type ColoresPie = { fondo: string; tinta: string; suave: string; linea: s
 export type EstiloPie = "motor" | "drive" | "volt" | "ruta";
 
 /** Los tipos que la tienda tiene publicados, con cuántos hay, para la columna "Vehículos". */
-export function tiposParaPie(products: StorefrontProduct[], slug: string, enEditor: boolean) {
+export function tiposParaPie(products: StorefrontProduct[], slug: string, enEditor: DesdeEditor = false) {
   const cuenta = new Map<string, number>();
   for (const p of products) {
     const c = (p.category ?? "").toLowerCase();
@@ -63,7 +63,7 @@ export function ContenidoPieAutos({
   redes?: Record<string, string> | null;
   products: StorefrontProduct[];
   legales: ClaveLegal[] | undefined;
-  enEditor: boolean;
+  enEditor: DesdeEditor;
   colores: Omit<ColoresPie, "fondo">;
   acento: string;
   estilo: EstiloPie;
@@ -82,8 +82,8 @@ export function ContenidoPieAutos({
   const wa = linkWhatsApp(whatsapp, `Hola ${storeName}, vi los vehículos en la tienda y quería consultar.`);
   const susRedes = REDES.map(([k, label]) => ({ k, label, href: linkSeguro(redes?.[k]) })).filter((r) => r.href);
   const tipos = tiposParaPie(products, slug, enEditor);
-  const inicio = `/tienda/${slug}${enEditor ? "?from=editor" : ""}`;
-  const legal = linksLegales(slug, legales, { esAutos: true, enEditor });
+  const inicio = `/tienda/${slug}${enEditor ? `?from=editor${typeof enEditor === "string" ? `&t=${enEditor}` : ""}` : ""}`;
+  const legal = linksLegales(slug, legales, { esAutos: true, enEditor: !!enEditor });
 
   const titulo = { margin: "0 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: motor || volt || ruta ? 2.5 : 1.2, textTransform: "uppercase" as const, color: volt ? acento : colores.tinta,
     ...(volt ? { fontFamily: "ui-monospace,'SF Mono','Cascadia Code',Menlo,Consolas,monospace", fontWeight: 600 } : {}) };

@@ -217,7 +217,9 @@ export default function AutoMotor() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   /** Cada vehículo tiene su página (07/10/26; antes, una ventana sobre la portada). */
-  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, isPreview);
+  /** Desde el editor, el link dice que se mira Motor (ver linkAVehiculo). */
+  const desdeEditor = isPreview ? "auto-motor" : false;
+  const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, desdeEditor);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
@@ -251,8 +253,8 @@ export default function AutoMotor() {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
     // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página del vehículo.
-    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, isPreview));
-  }, [products, router, slug, isPreview]);
+    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, desdeEditor));
+  }, [products, router, slug, desdeEditor]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -292,7 +294,7 @@ export default function AutoMotor() {
 
   // Recién ingresados: los más nuevos, sin el que está en foco (no se repite dos bloques seguidos).
   const recientes = products.filter(p => p.id !== foco?.id || products.length <= 4).slice(0, 8);
-  const todos = linkAVehiculos(slug, {}, isPreview);
+  const todos = linkAVehiculos(slug, {}, desdeEditor);
 
   /* Estadísticas: lo que se cuenta sale de los datos; lo que es del negocio
      (años, clientes) se ve sólo si el dueño lo escribió (en el editor, siempre,
@@ -711,7 +713,7 @@ export default function AutoMotor() {
             <Encabezado acento={accent} tinta={videosText}
               kicker={<EditableZone field="videosKicker" label="Etiqueta de videos">En video</EditableZone>}
               titulo={<EditableZone field="videosHeading" label="Título de videos">Miralos andar</EditableZone>} />
-            <VideosMotor videos={videos} acento={accent} moneda={currency} tinta={videosText} hrefDe={id => linkAVehiculo(slug, id, isPreview)}
+            <VideosMotor videos={videos} acento={accent} moneda={currency} tinta={videosText} hrefDe={id => linkAVehiculo(slug, id, desdeEditor)}
               vacio={<p style={{ margin:0, padding:"28px 20px", border:`1px dashed ${LINEA}`, borderRadius:4, color:videosText === "#111111" ? "rgba(0,0,0,.62)" : "rgba(255,255,255,0.6)", fontSize:14, lineHeight:1.6 }}>
                 Acá aparecen los videos que subas en cada vehículo (en Productos → el vehículo → Videos). Cada uno lleva a su vehículo. Mientras no haya ninguno, este bloque no se muestra en la tienda.
               </p>} />
@@ -1021,7 +1023,7 @@ export default function AutoMotor() {
                 ))}
               </div>
               {searchResults.length > 24 && (
-                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview)} style={{ display:"block", textAlign:"center", marginTop:18, color:accent, fontWeight:700, fontSize:14, textDecoration:"none" }}>
+                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, desdeEditor)} style={{ display:"block", textAlign:"center", marginTop:18, color:accent, fontWeight:700, fontSize:14, textDecoration:"none" }}>
                   Ver los {searchResults.length} resultados →
                 </Link>
               )}

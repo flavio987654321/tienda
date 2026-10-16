@@ -155,7 +155,7 @@ export default function AutoRuta() {
   const router = useRouter();
   /* La página de la unidad. Desde el editor lleva `t=auto-ruta`: si no, se
      dibujaba con el template GUARDADO y Ruta se mezclaba con otro. */
-  const paginaDeId = (id: string) => `${linkAVehiculo(slug, id, isPreview)}${isPreview ? "&t=auto-ruta" : ""}`;
+  const paginaDeId = (id: string) => linkAVehiculo(slug, id, isPreview && "auto-ruta");
   const paginaDe = (p: StorefrontProduct) => paginaDeId(p.id);
   const [showReport, setShowReport] = useState(false);
   const [annIdx, setAnnIdx] = useState(0);
@@ -186,7 +186,7 @@ export default function AutoRuta() {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
     // Los links viejos (`?producto=`, de WhatsApp, del PDF o del panel) van a la página de la unidad.
-    if (id && products.some(pr => pr.id === id)) router.replace(`${linkAVehiculo(slug, id, isPreview)}${isPreview ? "&t=auto-ruta" : ""}`);
+    if (id && products.some(pr => pr.id === id)) router.replace(linkAVehiculo(slug, id, isPreview && "auto-ruta"));
   }, [products, router, slug, isPreview]);
 
   useEffect(() => {
@@ -213,7 +213,7 @@ export default function AutoRuta() {
     return () => window.removeEventListener("keydown", onKey);
   }, [searchOpen, favoritesOpen, menuOpen]);
 
-  const todos = linkAVehiculos(slug, {}, isPreview);
+  const todos = linkAVehiculos(slug, {}, isPreview && "auto-ruta");
 
   /* ── Portada, planilla o agencia ─────────────────────────────────────────────
      La planilla vive en `/vehiculos` y la agencia en `/nosotros`, dibujadas por
@@ -820,7 +820,7 @@ export default function AutoRuta() {
                 ))}
               </div>
               {searchResults.length > 24 && (
-                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview)}
+                <Link href={linkAVehiculos(slug, { q: searchQuery.trim() }, isPreview && "auto-ruta")}
                   onClick={e => { alClicTodos(e, { q: searchQuery.trim() }); setSearchOpen(false); setSearchQuery(""); }} style={{ display: "block", textAlign: "center", marginTop: 18, color: TINTA, fontWeight: 800, fontSize: 14, textDecoration: "underline" }}>
                   Ver los {searchResults.length} resultados en la planilla →
                 </Link>

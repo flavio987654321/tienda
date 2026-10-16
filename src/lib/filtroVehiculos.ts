@@ -297,16 +297,41 @@ export function filtroAUrl(f: FiltroVehiculos, principal: Moneda): URLSearchPara
   return sp;
 }
 
+/**
+ * Desde el editor, de qué template viene el link: `true` dice sólo "del
+ * editor"; el id del template dice además CUÁL se está mirando (`?t=`).
+ *
+ * ⚠️ Sin el id, la página de un vehículo —y la de todos— se dibujaba con el
+ * template GUARDADO: con Volt guardado y mirando Drive en Diseño, tocar un auto
+ * mostraba la ficha de Volt (lo vio Flavio el 16/10/26). Los templates pasan el
+ * suyo; `true` queda para quien no lo sabe.
+ */
+export type DesdeEditor = boolean | string;
+
+function marcarEditor(sp: URLSearchParams, deEditor: DesdeEditor) {
+  if (!deEditor) return;
+  sp.set("from", "editor");
+  if (typeof deEditor === "string") sp.set("t", deEditor);
+}
+
 /** El link a `/vehiculos` con un filtro puesto, para las portadas de los templates. */
-export function linkAVehiculos(slug: string, filtro: Partial<Record<"tipo" | "marca" | "q", string>> = {}, deEditor = false): string {
+export function linkAVehiculos(slug: string, filtro: Partial<Record<"tipo" | "marca" | "q", string>> = {}, deEditor: DesdeEditor = false): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(filtro)) if (v) sp.set(k, v);
-  if (deEditor) sp.set("from", "editor");
+  marcarEditor(sp, deEditor);
   const s = sp.toString();
   return `/tienda/${slug}/vehiculos${s ? `?${s}` : ""}`;
 }
 
 /** La página de un vehículo (07/10/26: dejó de ser una ventana sobre la portada). */
-export function linkAVehiculo(slug: string, id: string, deEditor = false): string {
-  return `/tienda/${slug}/producto/${encodeURIComponent(id)}${deEditor ? "?from=editor" : ""}`;
+export function linkAVehiculo(slug: string, id: string, deEditor: DesdeEditor = false): string {
+  const sp = new URLSearchParams();
+  marcarEditor(sp, deEditor);
+  const s = sp.toString();
+  return `/tienda/${slug}/producto/${encodeURIComponent(id)}${s ? `?${s}` : ""}`;
+}
+
+/** Para los que arman la dirección a mano (`filtroAUrl` + `/vehiculos`). */
+export function marcarDesdeEditor(sp: URLSearchParams, deEditor: DesdeEditor) {
+  marcarEditor(sp, deEditor);
 }

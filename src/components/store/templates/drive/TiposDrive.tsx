@@ -1,7 +1,7 @@
 "use client";
 import { getContrastColor } from "@/contexts/EditContext";
 import Link from "next/link";
-import { linkAVehiculos, type OpcionesDeFiltro } from "@/lib/filtroVehiculos";
+import { linkAVehiculos, type OpcionesDeFiltro, type DesdeEditor } from "@/lib/filtroVehiculos";
 import { IconoTipo } from "./IconoTipo";
 
 /**
@@ -12,7 +12,7 @@ import { IconoTipo } from "./IconoTipo";
 export function TiposDrive({ opciones, slug, enEditor, acento }: {
   opciones: OpcionesDeFiltro;
   slug: string;
-  enEditor: boolean;
+  enEditor: DesdeEditor;
   acento: string;
 }) {
   const porTipo = opciones.tipos.length > 1;
