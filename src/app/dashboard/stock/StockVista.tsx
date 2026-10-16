@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DesplegableDeEnlaces from "@/components/panel/DesplegableDeEnlaces";
 import { Warehouse, AlertTriangle, Clock, MessageCircle, Eye } from "lucide-react";
 import type { FilaDeStock } from "@/lib/stockPanel";
 import { precioEn } from "@/lib/monedaVehiculo";
@@ -102,7 +103,16 @@ export default function StockVista({ enStock, vendidos, moneda, orden }: { enSto
       <section className="bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 overflow-hidden mb-6">
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-gray-100 panel-oscuro:border-gray-800">
           <h2 className="font-bold text-gray-900 panel-oscuro:text-gray-100">En stock ({enStock.length})</h2>
-          <nav aria-label="Ordenar" className="flex gap-1.5 overflow-x-auto">
+          {/* En el celular, un desplegable: los tres botones no entraban y salía
+              una barrita para deslizarlos. */}
+          <DesplegableDeEnlaces
+            className="w-full sm:hidden"
+            acento="indigo"
+            queSeElige="Ordenar"
+            opciones={(Object.keys(ORDENES) as Orden[]).map((o) => ({ href: `/dashboard/stock?orden=${o}`, label: ORDENES[o].label }))}
+            actual={`/dashboard/stock?orden=${orden}`}
+          />
+          <nav aria-label="Ordenar" className="hidden sm:flex gap-1.5">
             {(Object.keys(ORDENES) as Orden[]).map((o) => (
               <Link key={o} href={`/dashboard/stock?orden=${o}`} aria-current={o === orden ? "true" : undefined}
                 className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold ${o === orden ? "bg-indigo-600 text-white" : "bg-gray-50 panel-oscuro:bg-gray-800/50 text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-100"}`}>

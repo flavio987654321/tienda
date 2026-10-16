@@ -26,11 +26,24 @@ export type OpcionDesplegable<T extends string> = {
   marca?: ReactNode;
 };
 
+/** El color de cada panel: naranja en digitales, índigo en tiendas. */
+const ACENTOS = {
+  naranja: {
+    marca: "text-orange-600 panel-oscuro:text-orange-400",
+    activa: "bg-orange-500/10 panel-oscuro:bg-orange-500/15 text-orange-700 panel-oscuro:text-orange-300",
+  },
+  indigo: {
+    marca: "text-indigo-600 panel-oscuro:text-indigo-400",
+    activa: "bg-indigo-500/10 panel-oscuro:bg-indigo-500/15 text-indigo-700 panel-oscuro:text-indigo-300",
+  },
+} as const;
+
 export default function SelectorDesplegable<T extends string>({
   opciones,
   valor,
   elegir,
   queSeElige,
+  acento = "naranja",
   className = "",
 }: {
   opciones: readonly OpcionDesplegable<T>[];
@@ -38,6 +51,7 @@ export default function SelectorDesplegable<T extends string>({
   elegir: (id: T) => void;
   /** Para los lectores de pantalla: "Sección", "Página de venta". */
   queSeElige: string;
+  acento?: keyof typeof ACENTOS;
   className?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -68,7 +82,7 @@ export default function SelectorDesplegable<T extends string>({
         aria-label={`${queSeElige}: ${actual.label}. Cambiar`}
         className="flex w-full items-center gap-2.5 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-4 py-3 text-left text-sm font-bold text-gray-900 panel-oscuro:text-gray-100"
       >
-        {actual.marca && <span className="shrink-0 text-orange-600 panel-oscuro:text-orange-400">{actual.marca}</span>}
+        {actual.marca && <span className={`shrink-0 ${ACENTOS[acento].marca}`}>{actual.marca}</span>}
         <span className="min-w-0 flex-1 truncate">{actual.label}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${abierto ? "rotate-180" : ""}`} />
       </button>
@@ -85,7 +99,7 @@ export default function SelectorDesplegable<T extends string>({
                 aria-current={activa ? "true" : undefined}
                 className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 py-3 text-left text-sm font-bold transition-colors ${
                   activa
-                    ? "bg-orange-500/10 panel-oscuro:bg-orange-500/15 text-orange-700 panel-oscuro:text-orange-300"
+                    ? ACENTOS[acento].activa
                     : "text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
                 }`}
               >

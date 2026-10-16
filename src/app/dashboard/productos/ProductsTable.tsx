@@ -14,6 +14,7 @@ import { Boxes } from "lucide-react";
 import { calcVehicleCostTotal } from "@/lib/margin";
 import { precioEn } from "@/lib/monedaVehiculo";
 import { SITE_URL } from "@/lib/site";
+import MenuDeAcciones from "@/components/panel/MenuDeAcciones";
 
 interface Variant { id: string; name: string; value: string; stock: number; lowStockThreshold?: number | null }
 
@@ -1035,7 +1036,7 @@ export default function ProductsTable({
               <div
                 key={product.id}
                 data-destacado={destacado ? "" : undefined}
-                className={`bg-white panel-oscuro:bg-gray-900 rounded-2xl overflow-hidden group transition-shadow ${
+                className={`flex flex-col bg-white panel-oscuro:bg-gray-900 rounded-2xl overflow-hidden group transition-shadow ${
                   destacado
                     ? "border-2 border-amber-400 ring-2 ring-amber-200 panel-oscuro:ring-amber-500/30 animate-destacado"
                     : "border border-gray-100 panel-oscuro:border-gray-800 hover:shadow-md"
@@ -1075,13 +1076,40 @@ export default function ProductsTable({
                     </div>
                   )}
                 </div>
-                <div className="p-3">
+                <div className="flex flex-1 flex-col p-3">
                   <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 capitalize truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ""}</p>
                   <p className="text-sm font-semibold text-gray-900 panel-oscuro:text-gray-100 mt-0.5 line-clamp-2 leading-tight">{product.name}</p>
                   <p className="text-sm font-bold text-indigo-600 panel-oscuro:text-indigo-400 mt-1">{precioEn(product.price, product.moneda)}</p>
-                  {/* Acciones: todos íconos a igual ancho (flex-1) — así ninguno queda
-                      apretado ni "perdido" al final de la fila (incluido Eliminar). */}
-                  <div className="mt-3 flex gap-1.5">
+                  {/* ── En el celular y la tablet: "Editar" grande y el resto en ⋯ ──
+                      Eran seis íconos de 40 px en media pantalla, chicos para el
+                      dedo y que había que adivinar. Lo eligió Flavio el 15/10/26.
+                      `mt-auto` en los dos: los botones van pegados al fondo de la
+                      tarjeta, así quedan a la misma altura aunque un título ocupe
+                      dos renglones y el de al lado uno. */}
+                  <div className="mt-auto flex gap-1.5 pt-3 lg:hidden">
+                    <Link href={`/dashboard/productos/nuevo?edit=${product.id}`}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-50 panel-oscuro:bg-indigo-500/10 py-2.5 text-sm font-bold text-indigo-600 panel-oscuro:text-indigo-400 transition-colors hover:bg-indigo-100 panel-oscuro:hover:bg-indigo-500/15">
+                      <Edit className="h-4 w-4" /> Editar
+                    </Link>
+                    <MenuDeAcciones
+                      className="w-11"
+                      titulo={product.name}
+                      acciones={[
+                        ...(!showStock ? [{
+                          label: "Cambiar estado", icono: <Car />,
+                          onClick: () => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []), moneda: product.moneda }),
+                        }] : []),
+                        ...(showStock ? [{ label: "Ajustar stock", icono: <Boxes />, onClick: () => setStockModal(product) }] : []),
+                        ...(storeSlug && product.isActive ? [{ label: "Ver en la tienda", icono: <Eye />, externo: `/tienda/${storeSlug}?p=${product.id}` }] : []),
+                        { label: "Código QR", icono: <QrCode />, onClick: () => openQr(product), disabled: qrLoading },
+                        { label: "Duplicar", icono: <Copy />, onClick: () => duplicateProduct(product), disabled: duplicatingId === product.id },
+                        { label: "Eliminar", icono: <Trash2 />, peligro: true, onClick: () => setPendingDelete({ id: product.id, name: product.name }), disabled: deletingId === product.id },
+                      ]}
+                    />
+                  </div>
+                  {/* En la compu (lg), todos íconos a igual ancho (flex-1) — así ninguno
+                      queda apretado ni "perdido" al final de la fila (incluido Eliminar). */}
+                  <div className="mt-auto hidden gap-1.5 pt-3 lg:flex">
                     {!showStock && (
                       <button
                         onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []), moneda: product.moneda })}
