@@ -38,8 +38,13 @@ export default async function ConsultasPage() {
     ? (await prisma.lead.aggregate({ where: { storeId: store.id, status: "CONFIRMED" }, _sum: { commissionAmount: true } }))._sum.commissionAmount ?? 0
     : 0;
 
-  const tarjeta = "bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5";
-  const titulo = "text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-1";
+  /* En el celular son tres tarjetas de 100 px: en mayúsculas y con letra
+     espaciada las etiquetas no entraban y "Vendidas" se partía a la mitad
+     ("VENDIDA / S"). Ahí van en minúscula y sin cortar palabras, y el número
+     queda abajo de todo para que los tres se alineen aunque una etiqueta
+     ocupe dos renglones. */
+  const tarjeta = "flex flex-col justify-between gap-1 bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-3.5 sm:p-5";
+  const titulo = "text-[12px] sm:text-xs font-semibold leading-snug [overflow-wrap:normal] [word-break:normal] sm:uppercase sm:tracking-wide text-gray-500 sm:text-gray-400 panel-oscuro:text-gray-400 sm:panel-oscuro:text-gray-500";
 
   return (
     <DashboardLayout
@@ -67,7 +72,7 @@ export default async function ConsultasPage() {
         {conComisiones ? (
           <div className={tarjeta}>
             <p className={titulo}>Comisiones</p>
-            <p className="text-2xl sm:text-3xl font-black text-indigo-600 panel-oscuro:text-indigo-400">${totalComisiones.toLocaleString("es-AR")}</p>
+            <p className="text-lg sm:text-3xl font-black text-indigo-600 panel-oscuro:text-indigo-400 break-all">${totalComisiones.toLocaleString("es-AR")}</p>
           </div>
         ) : (
           <div className={tarjeta}>

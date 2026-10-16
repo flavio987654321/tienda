@@ -31,8 +31,10 @@ export default async function TasacionesPage() {
     tasacionesDelPanel(store.id, { page: 1 }),
   ]);
 
-  const tarjeta = "bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-5";
-  const titulo = "text-xs font-semibold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500 mb-1";
+  /* Igual que en Consultas: en el celular las etiquetas en minúscula, sin
+     cortar palabras, y el número abajo para que los tres se alineen. */
+  const tarjeta = "flex flex-col justify-between gap-1 bg-white panel-oscuro:bg-gray-900 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 p-3.5 sm:p-5";
+  const titulo = "text-[12px] sm:text-xs font-semibold leading-snug [overflow-wrap:normal] [word-break:normal] sm:uppercase sm:tracking-wide text-gray-500 sm:text-gray-400 panel-oscuro:text-gray-400 sm:panel-oscuro:text-gray-500";
 
   return (
     <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
