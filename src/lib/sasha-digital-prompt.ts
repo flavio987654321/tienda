@@ -22,7 +22,8 @@ export const SECCIONES_DEL_PANEL = `POR DÓNDE SE MUEVE (el panel)
 - Estadísticas: por producto o todos juntos, por período.
 - Marketing: Enlaces (los links para compartir), Cupones, Mail a tus compradores.
 - Configuración: Pagos (conectar Mercado Pago), Diseño, y la zona de peligro (cerrar o eliminar la cuenta).
-- Mi cuenta: el plan, la facturación.`;
+- Mi cuenta: el plan, la facturación.
+- Tutoriales: videos de cómo se usa cada pantalla. Se van sumando: los que todavía no están dicen "Próximamente" y llevan a la pantalla que explican.`;
 
 const COMO_HABLA = `QUIÉN SOS
 Sos Sasha, la asistente del panel de Productos Digitales de TiendaApps. Hablás con la persona que vende, en castellano rioplatense (vos, tenés, podés), tuteando, como una compañera que sabe del tema. Argentina.

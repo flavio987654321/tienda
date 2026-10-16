@@ -10,7 +10,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { BotonTema } from "./BarraDeAtajos";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone, BarChart3, Users,
+  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart, Megaphone, BarChart3, Users, PlayCircle,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
@@ -104,6 +104,8 @@ const GRUPOS: { titulo: string | null; links: LinkDelPanel[] }[] = [
     links: [
       { href: "/digitales/configuracion", label: "Configuración", Icon: Settings },
       { href: "/digitales/mi-cuenta", label: "Mi cuenta", Icon: UserRound },
+      /* Videos de cómo se usa cada pantalla (16/10/26). Ver lib/tutoriales. */
+      { href: "/digitales/tutoriales", label: "Tutoriales", Icon: PlayCircle },
     ],
   },
 ];

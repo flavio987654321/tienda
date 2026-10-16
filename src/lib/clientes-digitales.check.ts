@@ -109,7 +109,7 @@ check("CLI-I", /mensajeParaElComprador\(\{ nombre: c\.nombre, producto: c\.ultim
   "el mensaje es el mismo que el de Ventas (¿te llegó? si tiene algo sin bajar), y «Ver sus ventas» filtra Ventas por su mail");
 const links = [...barra.matchAll(/href: "\/digitales\/([a-z-]+)", label: "([^"]+)"/g)].map((m) => m[2]);
 /* Inicio tiene el href pelado (/digitales) y queda afuera del patrón a propósito. */
-check("CLI-J", links.join(" · ") === "Productos · Ventas · Clientes · Carritos · Estadísticas · Marketing · Configuración · Mi cuenta",
+check("CLI-J", links.join(" · ") === "Productos · Ventas · Clientes · Carritos · Estadísticas · Marketing · Configuración · Mi cuenta · Tutoriales",
   "el menú: Productos, Ventas, Clientes, Carritos, Estadísticas, Marketing — la plata, quién la puso, la que se escapó, si la página sirve, y cómo traer más", links);
 
 console.log(fallos === 0

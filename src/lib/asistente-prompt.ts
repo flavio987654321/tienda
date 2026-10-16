@@ -233,8 +233,8 @@ function seccionesDelPanel(tipoTienda: string, appsEnabled: boolean): string {
   // que esa dueña no tiene.
   const afiliados = soportaAfiliados(tipoTienda) ? "Afiliados, " : "";
   return esConsultas
-    ? `Inicio, Consultas (la gente que preguntó por un vehículo), Tasaciones (los que piden que les tasen su usado), Búsquedas (los "Avisame si entra"), Vehículos (el catálogo), Stock y ganancia, ${afiliados}Notificaciones, Diseño, Configuración, ${apps}Legal, Estadísticas, Mi plan, Perfil. Esta tienda no usa Pedidos, ni Cupones, ni Promociones, ni Carritos abandonados, ni Reseñas (es de tipo consultas, no de carrito de compra).${afiliados ? "" : " Tampoco tiene Afiliados: en autos y motos el programa está en pausa."} Y su sección "Pagos" se llama "Legal", porque no tiene cobros que configurar.`
-    : `Inicio, Pedidos, Productos, Cupones, Promociones, Carritos abandonados, ${afiliados}Reseñas, Notificaciones, Diseño, Configuración, ${apps}Pagos, Estadísticas, Mi plan, Perfil.`;
+    ? `Inicio, Consultas (la gente que preguntó por un vehículo), Tasaciones (los que piden que les tasen su usado), Búsquedas (los "Avisame si entra"), Vehículos (el catálogo), Stock y ganancia, ${afiliados}Notificaciones, Diseño, Configuración, ${apps}Legal, Estadísticas, Mi plan, Tutoriales (videos de cómo se usa cada pantalla; se van sumando, y los que faltan dicen "Próximamente"), Perfil. Esta tienda no usa Pedidos, ni Cupones, ni Promociones, ni Carritos abandonados, ni Reseñas (es de tipo consultas, no de carrito de compra).${afiliados ? "" : " Tampoco tiene Afiliados: en autos y motos el programa está en pausa."} Y su sección "Pagos" se llama "Legal", porque no tiene cobros que configurar.`
+    : `Inicio, Pedidos, Productos, Cupones, Promociones, Carritos abandonados, ${afiliados}Reseñas, Notificaciones, Diseño, Configuración, ${apps}Pagos, Estadísticas, Mi plan, Tutoriales (videos de cómo se usa cada pantalla; se van sumando, y los que faltan dicen "Próximamente"), Perfil.`;
 }
 
 /**

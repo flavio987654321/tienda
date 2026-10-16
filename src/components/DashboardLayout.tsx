@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight, Repeat, Warehouse, Target,
-  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent,
+  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent, PlayCircle,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useIsPwa } from "@/hooks/useIsPwa";
@@ -109,6 +109,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard/metricas",  label: "Estadísticas", icon: BarChart2,  tourId: "metricas" },
       { href: "/dashboard/mi-plan",   label: "Mi plan",      icon: CreditCard, tourId: "mi-plan" },
+      // Videos de cómo se usa cada pantalla (16/10/26). Ver lib/tutoriales.
+      { href: "/dashboard/tutoriales", label: "Tutoriales",  icon: PlayCircle },
     ],
   },
 ];
