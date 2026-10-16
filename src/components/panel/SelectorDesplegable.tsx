@@ -65,7 +65,6 @@ export default function SelectorDesplegable<T extends string>({
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-expanded={abierto}
-        aria-haspopup="true"
         aria-label={`${queSeElige}: ${actual.label}. Cambiar`}
         className="flex w-full items-center gap-2.5 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 px-4 py-3 text-left text-sm font-bold text-gray-900 panel-oscuro:text-gray-100"
       >

@@ -74,16 +74,16 @@ type Props = {
  * dejaría a alguien buscando dónde se hace algo que sí existe.
  */
 const PESTANAS = [
-  { id: "general", label: "General", Icon: Settings, lista: true },
-  { id: "pagos", label: "Pagos", Icon: CreditCard, lista: true },
-  { id: "meta", label: "Meta / Tracking", Icon: BarChart3, lista: true },
+  { id: "general", label: "General", Icon: Settings },
+  { id: "pagos", label: "Pagos", Icon: CreditCard },
+  { id: "meta", label: "Meta / Tracking", Icon: BarChart3 },
   /* Legales va DESPUES de lo que hace falta para vender y ANTES de Dominio: no
      es lo primero que alguien viene a hacer, pero tiene que estar antes de la
      primera venta. */
-  { id: "legales", label: "Legales", Icon: Scale, lista: true },
-  { id: "dominio", label: "Dominio", Icon: Globe, lista: true },
+  { id: "legales", label: "Legales", Icon: Scale },
+  { id: "dominio", label: "Dominio", Icon: Globe },
   /* La verificación en dos pasos y las sesiones abiertas. Ver `lib/seguridad-cuenta`. */
-  { id: "seguridad", label: "Seguridad", Icon: ShieldCheck, lista: true },
+  { id: "seguridad", label: "Seguridad", Icon: ShieldCheck },
 ] as const;
 
 type Pestana = (typeof PESTANAS)[number]["id"];
@@ -475,4 +475,3 @@ export default function ConfiguracionClient(p: Props) {
     </div>
   );
 }
-

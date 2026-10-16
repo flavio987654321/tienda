@@ -1657,9 +1657,14 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
 
      Y el nombre acortado es la otra mitad: con 144 px fijos, en 360 entraba UNA
      solapa por renglón y cinco páginas eran cinco renglones —una lista, no un
-     selector—. Las dos cosas van juntas o no van. */
-  chequear("las solapas envuelven y el nombre se acorta, así con 5 no se esconde ninguna",
-    /className="-mt-5 flex flex-wrap gap-2"/.test(pantallaProductos) &&
+     selector—. Las dos cosas van juntas o no van.
+
+     Desde el 15/10/26 eso vale para la compu; en el celular y la tablet es el
+     desplegable compartido, que al abrirse muestra las cinco con el nombre
+     entero (lo pidió Flavio). Ninguno de los dos esconde una página. */
+  chequear("con 5 no se esconde ninguna: en la compu las solapas envuelven, en el celular un desplegable con todas",
+    /className="-mt-5 hidden lg:flex flex-wrap gap-2"/.test(pantallaProductos) &&
+    /<SelectorDesplegable\s+className="-mt-5 lg:hidden"[\s\S]{0,200}opciones=\{principales\.map/.test(pantallaProductos) &&
     !/aria-label="Elegí qué página[\s\S]{0,600}overflow-x-auto/.test(pantallaProductos) &&
     /max-w-\[5rem\] truncate sm:max-w-\[7rem\] lg:max-w-\[9rem\]/.test(pantallaProductos));
 

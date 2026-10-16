@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
   }
   const { error: vErr } = await supabase.auth.mfa.verify({ factorId: app.id, challengeId: desafio.id, code });
   if (vErr) {
-    // Supabase caído no es un código errado: no se cuenta.
+    // Supabase caído no es un código errado: se avisa distinto. El intento igual
+    // quedó gastado arriba, en `reservarIntento`.
     if (esFallaDelServicio(vErr)) return NextResponse.json({ error: MENSAJE_SERVICIO_CAIDO }, { status: 503 });
     return NextResponse.json({ error: "El código no coincide. Fijate que sea el que muestra ahora la app.", restantes: restantesTrasFallo(bloqueo) }, { status: 401 });
   }
