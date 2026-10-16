@@ -153,8 +153,11 @@ export default function AvisosDeVenta() {
       {/* Dónde está parada: en la app instalada los avisos llegan con el
           navegador cerrado; en el navegador, no siempre. Se dice antes del
           botón, porque cambia qué conviene hacer primero. */}
+      {/* En el celular, el texto arriba y el botón abajo a todo el ancho: en
+          fila, el texto se achicaba para dejarle lugar al botón y quedaba una
+          columnita de cinco renglones. */}
       {instalada !== null && (
-        <div className={`flex flex-wrap items-center gap-3 rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed ${instalada
+        <div className={`flex flex-col gap-3 sm:flex-row sm:items-center rounded-xl px-3 py-2.5 text-[12.5px] leading-relaxed ${instalada
           ? "bg-green-50 panel-oscuro:bg-green-500/10 text-green-800 panel-oscuro:text-green-300"
           : "bg-gray-50 panel-oscuro:bg-gray-800/60 text-gray-600 panel-oscuro:text-gray-300"}`}>
           <span className="flex min-w-0 flex-1 items-start gap-2">
@@ -174,7 +177,7 @@ export default function AvisosDeVenta() {
               type="button"
               onClick={() => void instalar()}
               disabled={instalando}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-3.5 py-2 text-[12.5px] font-bold text-white panel-oscuro:text-gray-900 transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gray-900 panel-oscuro:bg-gray-100 px-3.5 py-2.5 sm:py-2 text-[12.5px] font-bold text-white panel-oscuro:text-gray-900 transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {instalando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
               Instalar la app
@@ -182,13 +185,13 @@ export default function AvisosDeVenta() {
           )}
         </div>
       )}
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
       <button
         type="button"
         onClick={() => void alternar()}
         disabled={estado === "cargando"}
         aria-pressed={activo}
-        className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-60 ${activo
+        className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 sm:py-2.5 text-sm font-bold transition-colors disabled:opacity-60 ${activo
           ? "border border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
           : "bg-orange-600 text-white hover:bg-orange-500"}`}
       >
@@ -208,7 +211,7 @@ export default function AvisosDeVenta() {
     {(activo || prueba === "error") && (
       <div className="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 p-3 sm:p-4">
         {activo && (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-gray-800 panel-oscuro:text-gray-100">Comprobá que llegan a este dispositivo</p>
               <p className="mt-0.5 text-xs leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
@@ -219,7 +222,7 @@ export default function AvisosDeVenta() {
               type="button"
               onClick={() => void probar()}
               disabled={prueba === "enviando"}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500 disabled:opacity-60"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-600 px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-500 disabled:opacity-60"
             >
               {prueba === "enviando" ? <Loader2 className="h-4 w-4 animate-spin" /> : prueba === "enviado" ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
               {prueba === "enviando" ? "Enviando…" : prueba === "enviado" ? "Volver a probar" : "Mandar prueba"}
