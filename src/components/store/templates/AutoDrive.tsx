@@ -24,19 +24,27 @@ import MarcaNav from "@/components/store/templates/shared/MarcaNav";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, fmtPrice, esReservado } from "@/components/store/auto/AutoVehicleShared";
 import { monedaDe, monedaDeTienda } from "@/lib/monedaVehiculo";
-import { opcionesDeFiltro, linkAVehiculo, filtrarVehiculos, filtroVacio, datosDe } from "@/lib/filtroVehiculos";
+import { opcionesDeFiltro, linkAVehiculo, filtrarVehiculos, filtroVacio, filtroAUrl, datosDe, type FiltroVehiculos } from "@/lib/filtroVehiculos";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { CAPAS } from "@/lib/capas-tienda";
 import { videosDeVehiculos } from "@/components/store/auto/videosDeVehiculos";
 import { armarPreguntasAutos } from "@/lib/preguntasFrecuentes";
-import { BuscadorDrive } from "@/components/store/templates/drive/BuscadorDrive";
 import { TarjetaDrive, DRIVE_TARJETA_CSS } from "@/components/store/templates/drive/TarjetaDrive";
 import { TiposDrive, TIPOS_DRIVE_CSS } from "@/components/store/templates/drive/TiposDrive";
 import { PresupuestoDrive, PRESUPUESTO_DRIVE_CSS, tramosDePrecio } from "@/components/store/templates/drive/PresupuestoDrive";
 import { VideosDrive, VIDEOS_DRIVE_CSS } from "@/components/store/templates/drive/VideosDrive";
 import { VenderDrive, VENDER_DRIVE_CSS } from "@/components/store/templates/drive/VenderDrive";
 import { PreguntasDrive } from "@/components/store/templates/drive/PreguntasDrive";
-import { FocoDrive } from "@/components/store/templates/drive/FocoDrive";
+/* De Auto Volt, en claro (16/10/26, a pedido de Flavio): la portada centrada,
+   el showroom que gira, el comparador y lo que pasa al bajar. Ver volt/temaVolt. */
+import { PortadaVolt, PORTADA_VOLT_CSS } from "@/components/store/templates/volt/PortadaVolt";
+import { EscenarioVolt, ESCENARIO_VOLT_CSS } from "@/components/store/templates/volt/EscenarioVolt";
+import { ComparadorVolt, COMPARADOR_VOLT_CSS } from "@/components/store/templates/volt/ComparadorVolt";
+import { TIRA_VOLT_CSS } from "@/components/store/templates/volt/TiraVolt";
+import { EscenaVolt, ESCENA_VOLT_CSS, conAlfa, MONO } from "@/components/store/templates/volt/EscenaVolt";
+import { useDesplazamientoVolt, LineaDeProgreso } from "@/components/store/templates/volt/desplazamientoVolt";
+import { TEMA_CLARO } from "@/components/store/templates/volt/temaVolt";
+import { irASeccion } from "@/components/store/templates/shared/irASeccion";
 import { CarteleraDrive } from "@/components/store/templates/drive/CarteleraDrive";
 import { hayFotosDeCartelera } from "@/components/store/auto/useCartelera";
 import { elegirFoco } from "@/lib/vehiculoFoco";
@@ -78,7 +86,7 @@ const FONDO = "#f4f6f9";
 const TINTA = "#0f172a";
 const LINEA = "#e8ebf0";
 
-const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-cartelera", "ad-foco", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
+const AD_SECTION_IDS = ["ad-comparar", "ad-filtros", "ad-catalogo", "ad-cartelera", "ad-presupuesto", "ad-tasar", "ad-novedades", "ad-videos", "ad-servicios", "ad-stats", "ad-nosotros", "ad-preguntas", "ad-contacto"];
 
 /** El título de cada bloque: etiqueta en pastilla y título grande. */
 function Titulo({ acento, tinta = TINTA, kicker, titulo, derecha, centrado }: { acento: string; tinta?: string; kicker: React.ReactNode; titulo: React.ReactNode; derecha?: React.ReactNode; centrado?: boolean }) {
@@ -154,11 +162,6 @@ export default function AutoDrive() {
   const faqUrl      = iovr["faqImage"]?.url
     ?? "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=900&q=80";
 
-  const heroBg      = sc["bgHero"]      ?? FONDO;
-  const heroImg     = iovr["sectionbg_bgHero"];
-  const heroText    = secText(heroImg, heroBg);
-  const heroMid     = secMid(heroImg, heroBg);
-
   const catsBg      = sc["bgCategorias"] ?? "#ffffff";
   const catsImg     = iovr["sectionbg_bgCategorias"];
   const catsText    = secText(catsImg, catsBg);
@@ -168,12 +171,12 @@ export default function AutoDrive() {
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
 
-  const focoBg = sc["bgFoco"] ?? "#ffffff";
   const carteleraBg = sc["bgCartelera"] ?? "#f5f7fa";
   const carteleraImg = iovr["sectionbg_bgCartelera"];
-  const focoImg = iovr["sectionbg_bgFoco"];
-  const focoText = secText(focoImg, focoBg);
-  const focoMid = secMid(focoImg, focoBg);
+  const compararBg = sc["bgComparar"] ?? "#ffffff";
+  const compararImg = iovr["sectionbg_bgComparar"];
+  const compararText = secText(compararImg, compararBg);
+  const compararMid = secMid(compararImg, compararBg);
   const presupuestoBg = sc["bgPresupuesto"] ?? "#ffffff";
   const presupuestoImg = iovr["sectionbg_bgPresupuesto"];
   const presupuestoText = secText(presupuestoImg, presupuestoBg);
@@ -226,6 +229,9 @@ export default function AutoDrive() {
   /** Cada vehículo tiene su página (07/10/26; antes, una ventana sobre la portada). */
   const paginaDe = (p: StorefrontProduct) => linkAVehiculo(slug, p.id, isPreview);
   const [scrolled,   setScrolled]   = useState(false);
+  /* Al bajar (de Volt): la línea de progreso de arriba, la foto de la portada que
+     va más lento y la barra que se esconde bajando y vuelve apenas se sube. */
+  const raizRef = useRef<HTMLDivElement>(null);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
@@ -280,6 +286,8 @@ export default function AutoDrive() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const { barraOculta } = useDesplazamientoVolt(raizRef, { activo: !isPreview, puedeEsconder: !menuOpen && !searchOpen && !userDropdownOpen && !favoritesOpen });
+
   // Favoritos: sin sesión quedan en este navegador (ver hooks/useFavoritosVehiculos).
   const fav = useFavoritosVehiculos(isPreview);
   const favorites = fav.favoritos;
@@ -307,12 +315,7 @@ export default function AutoDrive() {
   // "Recién ingresados": hasta 8, del tipo elegido (con las pestañas de los tipos que hay).
   const tiposVista = opciones.tipos.length > 1 ? opciones.tipos.slice(0, 5) : [];
   const delTipo = tipoVista ? products.filter(p => datosDe(p, currency).tipo === tipoVista) : products;
-  /* El destacado no se repite acá porque ya está en la vidriera; pero si la
-     dueña ocultó la vidriera (en todas las pantallas o en el celular), el mejor
-     auto desaparecía de la portada. Entonces se queda en la lista. */
-  const focoALaVista = !!foco && !ocultas.includes("ad-foco") && !ocultasCelu.includes("ad-foco");
-  const sinFoco = focoALaVista ? delTipo.filter(p => p.id !== foco?.id) : delTipo;
-  const showcased = sinFoco.slice(0, 8);
+  const showcased = delTipo.slice(0, 8);
   // Los reservados se ven en la lista, pero no son "disponibles".
   const disponibles = products.filter(p => !esReservado(p)).length;
   const linkTodos = `/tienda/${slug}/vehiculos${isPreview ? "?from=editor" : ""}`;
@@ -326,12 +329,40 @@ export default function AutoDrive() {
     { fv:"stat4", fl:"statLabel4", n:String(opciones.marcas.length), l:"Marcas", propio:false },
   ].filter(s => !!overrides[s.fv]?.text?.trim() || (s.propio ? editMode : s.n !== "0"));
 
+  /* Lo que se compara (igual que en Volt): mientras no eligió nada, los dos
+     primeros; al tocar "Comparar" en el showroom manda su elección, tres como
+     mucho. `null` = todavía no tocó nada. */
+  const [eleccion, setEleccion] = useState<string[] | null>(null);
+  const comparando = eleccion ?? [];
+  const idsComparados = (eleccion ?? products.slice(0, 2).map(p => p.id)).filter(id => products.some(p => p.id === id));
+  const alternarComparar = (id: string) => setEleccion(c => {
+    const antes = c ?? [];
+    if (antes.includes(id)) return antes.filter(x => x !== id);
+    if (!antes.length) { const otro = products.find(p => p.id !== id); return otro ? [id, otro.id] : [id]; }
+    return [...antes, id].slice(-3);
+  });
+
+  /* Los tres datos de abajo del buscador: salen del stock, nada inventado. */
+  const masBarato = products.filter(p => p.price > 0 && monedaDe(p, currency) === principal).reduce<number | null>((m, p) => m == null || p.price < m ? p.price : m, null);
+  const datosPortada = loadingProducts || !products.length ? [] : [
+    { valor: String(products.length), etiqueta: products.length === 1 ? "vehículo" : "vehículos" },
+    ...(opciones.marcas.length > 1 ? [{ valor: String(opciones.marcas.length), etiqueta: "marcas" }] : []),
+    ...(masBarato != null ? [{ valor: fmtPrice(masBarato, principal), etiqueta: "desde" }] : []),
+  ];
+  /* Buscar desde la portada lleva a /vehiculos con el filtro en la dirección. */
+  const buscar = (f: Partial<FiltroVehiculos>) => {
+    const sp = filtroAUrl({ ...filtroVacio(principal), ...f }, principal);
+    if (isPreview) sp.set("from", "editor");
+    const q = sp.toString();
+    router.push(`/tienda/${slug}/vehiculos${q ? `?${q}` : ""}`);
+  };
+
   const avisoVacio = (texto: string) => (
     <p style={{ margin:0, padding:"28px 22px", border:`1.5px dashed #cbd5e1`, borderRadius:18, color:"#475569", fontSize:14, lineHeight:1.6, background:"#fff" }}>{texto}</p>
   );
 
   return (
-    <div data-template-raiz style={{ background:FONDO, color:TINTA,
+    <div ref={raizRef} data-template-raiz style={{ background:FONDO, color:TINTA,
       fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh",
       // El candado del cambio de pantalla (ver useVistaTemplate): el segundo toque de un doble clic no cae en la pantalla nueva.
       pointerEvents: agenciaNav.cambiando ? "none" : undefined }}>
@@ -342,15 +373,17 @@ export default function AutoDrive() {
         ${PRESUPUESTO_DRIVE_CSS}
         ${VIDEOS_DRIVE_CSS}
         ${VENDER_DRIVE_CSS}
+        ${PORTADA_VOLT_CSS}
+        ${ESCENA_VOLT_CSS}
+        ${ESCENARIO_VOLT_CSS}
+        ${COMPARADOR_VOLT_CSS}
+        ${TIRA_VOLT_CSS}
         .ad-nav-links { display:none }
         @media(min-width:960px){ .ad-nav-links { display:flex } .ad-burger { display:none } .ad-menu { display:none !important } }
         /* Seguir y Novedades: en celulares angostos no entraban en la barra junto al nombre (lo dejaban en 0-30 px). Ahí pasan al menú. */
         @media(max-width:479px){ .ad-push { display:none !important } }
         .ad-push-menu { display:none }
         @media(max-width:479px){ .ad-push-menu { display:flex; flex-direction:column } }
-        .ad-hero { grid-template-columns:1fr }
-        .ad-hero-foto { display:none }
-        @media(min-width:1000px){ .ad-hero { grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr) } .ad-hero-foto { display:block } }
         .bd-grilla { grid-template-columns:1fr }
         @media(min-width:560px){ .bd-grilla { grid-template-columns:repeat(2,minmax(0,1fr)) } .bd-q { grid-column:1 / -1 } }
         .ad-grilla { display:grid; gap:16px; grid-template-columns:1fr }
@@ -410,9 +443,12 @@ export default function AutoDrive() {
         @media (prefers-reduced-motion: reduce) { .ad-entra, .ad-esqueleto { animation:none } .ad-svc-card:hover { transform:none } }
       `}</style>
 
+      <LineaDeProgreso acento={accent} enPanel={isPreview} capa={isPreview ? CAPAS.previaNavAlto + 1 : 120} />
+
       {/* ── BARRA DE AVISOS ── */}
       {showAnn && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
+          transform: barraOculta ? "translateY(-100%)" : "none", transition: "transform .4s cubic-bezier(.2,.8,.2,1)",
           left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
           zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:PROMO_H, background:TINTA,
           display:"flex", alignItems:"center", justifyContent:"center", padding:"0 40px" }}>
@@ -442,7 +478,8 @@ export default function AutoDrive() {
         background: navBg,
         borderBottom: `1px solid ${scrolled ? navBorderColor : "transparent"}`,
         boxShadow: scrolled ? (navDark ? "0 2px 16px rgba(0,0,0,0.25)" : "0 4px 20px rgba(15,23,42,0.06)") : "none",
-        transition: "box-shadow .3s, border-color .3s", padding:"0 clamp(16px,3vw,28px)" }}>
+        transform: barraOculta ? `translateY(-${(showAnn ? PROMO_H : 0) + NAV_H + 8}px)` : "none",
+        transition: "box-shadow .3s, border-color .3s, transform .4s cubic-bezier(.2,.8,.2,1)", padding:"0 clamp(16px,3vw,28px)" }}>
         <div style={{ maxWidth:1240, margin:"0 auto", height: scrolled && !isPreview ? NAV_H - 12 : NAV_H, transition:"height .3s cubic-bezier(.2,.7,.2,1)", gap:12,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0,
@@ -601,67 +638,57 @@ export default function AutoDrive() {
           </div>
         </section>
       ) : (<>
-      {/* ── PORTADA: el buscador manda ── */}
-      <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H),
-        position:"relative", ...secBg(heroImg, heroBg), overflow:"hidden" }}>
-        <BgDragHandle imgKey="sectionbg_bgHero" />
-        <SectionOverlay ov={heroImg} />
-        <EditableSectionBg field="bgHero" label="Fondo de la portada" nombreBloque="Banner principal" />
-        {/* Dos manchas suaves del color de la tienda, de fondo. */}
-        <span aria-hidden="true" style={{ position:"absolute", width:520, height:520, borderRadius:"50%", top:-220, right:-160, background:accent, opacity:0.08, filter:"blur(10px)", zIndex:0 }} />
-        <span aria-hidden="true" style={{ position:"absolute", width:340, height:340, borderRadius:"50%", bottom:-180, left:-120, background:accent, opacity:0.06, zIndex:0 }} />
-        <div className="ad-hero" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:"28px clamp(28px,4vw,56px)",
-          alignItems:"center", padding:"clamp(28px,5vw,64px) clamp(16px,3vw,28px) clamp(40px,6vw,80px)" }}>
-          <div className="ad-entra" style={{ minWidth:0 }}>
-            {!loadingProducts && disponibles > 0 && (
-              <p style={{ margin:"0 0 18px", display:"inline-flex", alignItems:"center", gap:8, background:"#fff", borderRadius:999, padding:"7px 14px 7px 10px",
-                boxShadow:"0 2px 10px rgba(15,23,42,0.06)", fontSize:13, fontWeight:700, color:TINTA }}>
-                <span aria-hidden="true" style={{ width:8, height:8, borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 0 4px rgba(34,197,94,0.18)" }} />
-                {disponibles} {disponibles === 1 ? "vehículo disponible" : "vehículos disponibles"}
-              </p>
-            )}
-            <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:800, color:accent }}>
-              <EditableZone field="heroKicker" label="Etiqueta de la portada">Usados y 0 km</EditableZone>
-            </p>
-            <h1 style={{ margin:"0 0 16px", fontSize:"clamp(34px,5.4vw,64px)", fontWeight:900, color:heroText, letterSpacing:"-0.04em", lineHeight:1 }}>
-              <EditableZone field="heroHeading" label="Título de la portada">Encontrá tu próximo vehículo</EditableZone>
-            </h1>
-            <p style={{ margin:"0 0 28px", fontSize:"clamp(15px,1.5vw,17px)", color:heroMid, lineHeight:1.65, maxWidth:520 }}>
-              <EditableZone field="heroSubtext" label="Subtítulo de la portada">Con la ficha técnica completa y el precio a la vista. Buscá, tasá tu usado o dejanos lo que buscás y te avisamos.</EditableZone>
-            </p>
-            <BuscadorDrive slug={slug} productos={products} opciones={opciones} principal={principal} acento={accent} enEditor={isPreview}
-              storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
-          </div>
-          <div className="ad-hero-foto" style={{ position:"relative", alignSelf:"stretch", minHeight:460 }}>
-            <div style={{ position:"absolute", inset:0, borderRadius:32, overflow:"hidden", boxShadow:"0 30px 60px rgba(15,23,42,0.18)" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- foto elegida por el dueño */}
-              <img src={fotoLiviana(heroImgUrl, 1920)} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-              {(() => {
-                const ov = iovr["heroImage"];
-                if (!ov?.overlayType || ov.overlayType==="none") return null;
-                return <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-                  background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
-              })()}
-              <EditableImageButton field="heroImage" label="Foto de la portada" />
+      {/* ── PORTADA ── la de Volt en claro: centrada, buscador en cápsula y tres datos del stock. */}
+      <PortadaVolt tema={TEMA_CLARO} campoFoto="heroImage" ov={iovr["heroImage"]} fotoDeFabrica={heroImgUrl}
+        textos={{ etiqueta: "Usados y 0 km", titulo: "Encontrá tu próximo vehículo", bajada: "Con la ficha técnica completa y el precio a la vista. Buscá, tasá tu usado o dejanos lo que buscás y te avisamos." }}
+        acento={accent} opciones={opciones} principal={principal} cuantos={loadingProducts ? 0 : products.length} waLink={waLink} datos={datosPortada}
+        arriba={isPreview ? 0 : (showAnn ? PROMO_H : 0) + NAV_H} onBuscar={buscar} onVerTodos={() => {}} todosHref={linkTodos} />
+
+      {/* ── EL SHOWROOM ── los vehículos giran y el elegido muestra sus datos. Arranca
+           con el vehículo para destacar (reemplaza a la vieja vidriera). */}
+      <section id="showroom" aria-label="Showroom" style={{ position:"relative", overflow:"hidden", background:TEMA_CLARO.fondo, paddingTop:"clamp(40px,6vw,72px)" }}>
+        <EscenaVolt acento={accent} quieta={isPreview} />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", padding:"clamp(12px,2.5vh,32px) clamp(16px,3vw,28px) clamp(48px,8vh,88px)", boxSizing:"border-box" }}>
+          {loadingProducts ? (
+            <div role="status" aria-label="Cargando vehículos" style={{ minHeight:"40vh", display:"grid", placeItems:"center" }}>
+              <div className="ad-esqueleto" style={{ width:"min(600px,74vw)", aspectRatio:"16/10", borderRadius:22 }} />
             </div>
-            {/* Tarjetitas flotantes: lo que la tienda tiene, contado de verdad. */}
-            {opciones.marcas.length > 1 && (
-              <div style={{ position:"absolute", left:-24, bottom:40, background:"#fff", borderRadius:18, padding:"14px 18px", boxShadow:"0 16px 40px rgba(15,23,42,0.16)" }}>
-                <p style={{ margin:0, fontSize:26, fontWeight:900, color:TINTA, lineHeight:1, letterSpacing:-1 }}>{opciones.marcas.length}</p>
-                <p style={{ margin:"4px 0 0", fontSize:12, fontWeight:600, color:"#64748b" }}>marcas para elegir</p>
-              </div>
-            )}
-            <div style={{ position:"absolute", right:20, top:20, display:"flex", alignItems:"center", gap:10, background:"#fff", borderRadius:14, padding:"10px 14px", boxShadow:"0 12px 30px rgba(15,23,42,0.14)" }}>
-              <span aria-hidden="true" style={{ width:32, height:32, borderRadius:10, background:`${accent}1a`, color:accent, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
-              </span>
-              <span style={{ fontSize:13, fontWeight:700, color:TINTA }}>Ficha técnica<br/><span style={{ fontWeight:500, color:"#64748b" }}>en cada vehículo</span></span>
-            </div>
-          </div>
+          ) : (
+            <EscenarioVolt tema={TEMA_CLARO} productos={products} opciones={opciones} inicialId={foco?.id} acento={accent} moneda={currency} whatsapp={whatsapp} hrefDe={paginaDe}
+              favoritos={favorites} onFavorito={toggleFavorite} comparando={comparando} onComparar={ocultas.includes("ad-comparar") ? undefined : alternarComparar}
+              selector={editMode && isPreview ? <div style={{ marginBottom:16 }}><SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} onChange={setFeaturedVehicleId} /></div> : undefined}
+              cabecera={<>
+                <Titulo acento={accent}
+                  kicker={<EditableZone field="showroomKicker" label="Etiqueta del showroom">Showroom</EditableZone>}
+                  titulo={<EditableZone field="showroomHeading" label="Título del showroom">Recorré el showroom</EditableZone>} />
+                <p style={{ margin:"-14px 0 0", fontSize:"clamp(14px,1.4vw,16px)", color:"#475569", lineHeight:1.6 }}>
+                  <EditableZone field="showroomSubtext" label="Subtítulo del showroom">Pasalos con las flechas o deslizando, y tocá el que te guste para ver todo.</EditableZone>
+                </p>
+              </>} />
+          )}
         </div>
       </section>
 
       <div style={{ display:"flex", flexDirection:"column" }}>
+      {/* ── COMPARADOR ── hasta tres lado a lado (ver volt/ComparadorVolt). */}
+      <SectionBlock id="ad-comparar" label="Comparador" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
+      {products.length >= 2 ? (
+        <section id="comparar" style={{ padding:"clamp(48px,7vw,88px) clamp(16px,3vw,28px)", position:"relative", ...secBg(compararImg, compararBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgComparar" /><SectionOverlay ov={compararImg} />
+          <EditableSectionBg field="bgComparar" label="Fondo del comparador" />
+          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+            <Titulo acento={accent} tinta={compararText}
+              kicker={<EditableZone field="compararKicker" label="Etiqueta del comparador">Comparador</EditableZone>}
+              titulo={<EditableZone field="compararHeading" label="Título del comparador">Ponelos lado a lado</EditableZone>}
+              derecha={<p style={{ margin:0, maxWidth:340, fontSize:14, lineHeight:1.55, color:compararMid }}>Sumá vehículos con <strong style={{ color:compararText }}>⇄ Comparar</strong> en el showroom, o elegilos acá.</p>} />
+            <ComparadorVolt tema={TEMA_CLARO} productos={products} ids={idsComparados} acento={accent} moneda={currency} hrefDe={paginaDe}
+              onQuitar={id => setEleccion(idsComparados.filter(x => x !== id))}
+              onAgregar={id => setEleccion([...idsComparados, id].slice(-3))} />
+          </div>
+        </section>
+      ) : null}
+      </SectionBlock>
+
       {/* ── EXPLORÁ POR TIPO ── */}
       <SectionBlock id="ad-filtros" label="Explorá por tipo" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       {(opciones.tipos.length > 1 || opciones.marcas.length > 1) ? (
@@ -730,10 +757,10 @@ export default function AutoDrive() {
             </ul>
           ) : (
             <div style={{ textAlign:"center", padding:"56px 24px", border:`1.5px dashed #cbd5e1`, borderRadius:20, background:"#fff" }}>
-              <p style={{ margin:0, color:catMid, fontSize:15 }}>{foco ? "El vehículo destacado está en la vidriera." : "Todavía no hay vehículos publicados."}</p>
+              <p style={{ margin:0, color:catMid, fontSize:15 }}>Todavía no hay vehículos publicados.</p>
             </div>
           )}
-          {sinFoco.length > showcased.length && (
+          {delTipo.length > showcased.length && (
             <div style={{ textAlign:"center", marginTop:28 }}>
               <Link href={linkTodos}
                 style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minHeight:52, padding:"0 32px", borderRadius:14,
@@ -756,29 +783,6 @@ export default function AutoDrive() {
           <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
             <CarteleraDrive fotos={[iovr["promoBanner1"], iovr["promoBanner2"], iovr["promoBanner3"]]} acento={accent}
               intervalMs={carruselMs("auto-drive", config?.bannerInterval)} editMode={editMode && isPreview} ejemplosEnTienda={isPreview} hrefStock={linkTodos} />
-          </div>
-        </section>
-      ) : null}
-      </SectionBlock>
-
-      {/* ── VIDRIERA: una unidad elegida por la agencia. */}
-      <SectionBlock id="ad-foco" label="Vehículo destacado" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
-      {(foco || (editMode && isPreview)) ? (
-        <section style={{ padding:"clamp(44px,6vw,72px) clamp(16px,3vw,28px)", position:"relative", ...secBg(focoImg, focoBg) }}>
-          <BgDragHandle imgKey="sectionbg_bgFoco" /><SectionOverlay ov={focoImg} />
-          <EditableSectionBg field="bgFoco" label="Fondo de la vidriera" />
-          <div data-ef="sube" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
-            {editMode && isPreview && <div style={{ marginBottom:18 }}>
-              <SelectorVehiculoFoco productos={products} seleccionado={config?.featuredVehicleId} onChange={setFeaturedVehicleId} />
-            </div>}
-            {foco ? <>
-              <Titulo acento={accent} tinta={focoText}
-                kicker={<EditableZone field="focoDriveKicker" label="Etiqueta de la vidriera">Nuestra selección</EditableZone>}
-                titulo={<EditableZone field="focoDriveHeading" label="Título de la vidriera">Un vehículo para destacar</EditableZone>} />
-              <FocoDrive p={foco} acento={accent} moneda={currency} href={paginaDe(foco)} whatsapp={whatsapp} />
-            </> : <p style={{ margin:0, padding:24, color:focoText, border:`1px dashed ${focoMid}`, borderRadius:16, textAlign:"center" }}>
-              {loadingProducts ? "Cargando vehículos…" : "Todavía no hay vehículos para mostrar en la vidriera."}
-            </p>}
           </div>
         </section>
       ) : null}
@@ -1116,6 +1120,16 @@ export default function AutoDrive() {
       </section>
       </SectionBlock>
       </div>
+
+      {/* La barra de comparación (de Volt): aparece con dos o más elegidos y baja al comparador. */}
+      {comparando.length > 1 && !editMode && !searchOpen && !ocultas.includes("ad-comparar") && (
+        <div role="status" data-cel-bloque-oculto={ocultasCelu.includes("ad-comparar") ? "" : undefined} style={{ position:"fixed", left:16, bottom:24, zIndex: isPreview ? CAPAS.previaModal : CAPAS.panel,
+          display:"flex", alignItems:"center", gap:10, padding:"8px 8px 8px 14px", borderRadius:16, background:"rgba(255,255,255,0.94)", backdropFilter:"blur(14px)",
+          border:`1px solid ${conAlfa(accent, 0.35)}`, boxShadow:"0 18px 40px -16px rgba(15,23,42,0.35)", maxWidth:"calc(100vw - 104px)", boxSizing:"border-box" }}>
+          <span style={{ fontFamily:MONO, fontSize:12, color:TINTA, whiteSpace:"nowrap" }}><span style={{ color:accent }}>⇄</span> {comparando.length} para comparar</span>
+          <button type="button" onClick={() => irASeccion("comparar")} style={{ minHeight:38, padding:"0 14px", borderRadius:10, border:"none", background:accent, color:sobreAcento, fontWeight:800, fontSize:13, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>Ver</button>
+        </div>
+      )}
       </>)}
 
       {/* ── PIE ── */}

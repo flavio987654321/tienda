@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { conAlfa } from "./EscenaVolt";
+import { TEMA_OSCURO, type TemaVolt } from "./temaVolt";
 
 /**
  * Una fila que se desliza de costado, SIN barra de scroll a la vista (13/10/26:
@@ -18,8 +19,9 @@ export const TIRA_VOLT_CSS = `
   @media (prefers-reduced-motion: reduce) { .tiv-pista { scroll-behavior:auto } }
 `;
 
-export function TiraVolt({ acento, gap = 8, etiqueta, children }: {
+export function TiraVolt({ acento, gap = 8, etiqueta, children, tema = TEMA_OSCURO }: {
   acento: string;
+  tema?: TemaVolt;
   gap?: number;
   etiqueta: string;
   children: React.ReactNode;
@@ -58,8 +60,8 @@ export function TiraVolt({ acento, gap = 8, etiqueta, children }: {
       <button type="button" className="tiv-flecha" onClick={() => mover(lado)} aria-label={lado === 1 ? "Ver más" : "Ver los anteriores"}
         tabIndex={visible ? 0 : -1} aria-hidden={!visible}
         style={{ position: "absolute", top: "50%", [lado === 1 ? "right" : "left"]: 0, transform: `translateY(-50%) scale(${visible ? 1 : 0.8})`, zIndex: 2,
-          width: 38, height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(8,11,21,0.82)", backdropFilter: "blur(8px)",
-          color: "#fff", fontSize: 20, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+          width: 38, height: 38, borderRadius: 12, border: `1px solid ${tema.linea(0.2)}`, background: tema.vidrio(0.82), backdropFilter: "blur(8px)",
+          color: tema.tinta, fontSize: 20, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
           opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none", boxShadow: `0 0 18px ${conAlfa(acento, 0.35)}` }}>
         {lado === 1 ? "›" : "‹"}
       </button>

@@ -8,6 +8,7 @@ import { entero } from "@/lib/filtroVehiculos";
 import { usaHoras } from "@/lib/fichaVehiculo";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { conAlfa, MONO } from "./EscenaVolt";
+import { TEMA_OSCURO, type TemaVolt } from "./temaVolt";
 
 /**
  * El comparador de Auto Volt (13/10/26): hasta tres vehículos lado a lado, con
@@ -31,7 +32,7 @@ export const COMPARADOR_VOLT_CSS = `
 
 const MAX = 3;
 
-export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, moneda, hrefDe }: {
+export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, moneda, hrefDe, tema = TEMA_OSCURO }: {
   productos: StorefrontProduct[];
   ids: string[];
   onQuitar: (id: string) => void;
@@ -39,6 +40,8 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
   acento: string;
   moneda: string;
   hrefDe: (p: StorefrontProduct) => string;
+  /** Oscuro en Volt; claro en Drive (ver temaVolt). */
+  tema?: TemaVolt;
 }) {
   const elegidos = ids.map(id => productos.find(p => p.id === id)).filter((p): p is StorefrontProduct => !!p);
   const libres = productos.filter(p => !ids.includes(p.id));
@@ -70,14 +73,14 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
     { etiqueta: "Ubicación", valor: p => vehicleLocation(p) },
   ] as Fila[]).filter(f => elegidos.some(p => f.valor(p)));
 
-  const celda: React.CSSProperties = { padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", minWidth: 0, fontSize: 15, color: "#fff", overflowWrap: "anywhere" };
-  const etiqueta: React.CSSProperties = { ...celda, fontFamily: MONO, fontSize: 10.5, letterSpacing: 2, textTransform: "uppercase", color: "rgba(232,236,246,0.5)", background: "#0a0e19" };
+  const celda: React.CSSProperties = { padding: "14px 16px", borderBottom: `1px solid ${tema.linea(0.07)}`, minWidth: 0, fontSize: 15, color: tema.tinta, overflowWrap: "anywhere" };
+  const etiqueta: React.CSSProperties = { ...celda, fontFamily: MONO, fontSize: 10.5, letterSpacing: 2, textTransform: "uppercase", color: tema.tenue(0.5), background: tema.panel };
   const plantilla = `minmax(104px, 140px) repeat(${columnas}, minmax(0, 1fr))`;
 
   return (
     <>
-    <ComparadorCelu elegidos={elegidos} libres={libres} filas={filas} acento={acento} hrefDe={hrefDe} onQuitar={onQuitar} onAgregar={onAgregar} />
-    <div className="cmv-tabla cmv-escritorio" style={{ background: "#0a0e19", border: `1px solid ${conAlfa(acento, 0.25)}` }}>
+    <ComparadorCelu tema={tema} elegidos={elegidos} libres={libres} filas={filas} acento={acento} hrefDe={hrefDe} onQuitar={onQuitar} onAgregar={onAgregar} />
+    <div className="cmv-tabla cmv-escritorio" style={{ background: tema.panel, border: `1px solid ${conAlfa(acento, 0.25)}` }}>
       <div className="cmv-grilla" role="table" aria-label="Comparación de vehículos" style={{ gridTemplateColumns: plantilla, width: "100%",
         // Ancho del contenedor, salvo que no entren: recién ahí se desliza de costado (en el celular).
         minWidth: 120 + columnas * 190 }}>
@@ -86,23 +89,23 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
           <div role="columnheader" className="cmv-etq" style={{ ...etiqueta, alignContent: "end" }}>Vehículo</div>
           {elegidos.map(p => (
             <div key={p.id} role="columnheader" style={{ ...celda, display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ position: "relative", aspectRatio: "16/10", borderRadius: 14, overflow: "hidden", background: "#03040a" }}>
+              <div style={{ position: "relative", aspectRatio: "16/10", borderRadius: 14, overflow: "hidden", background: tema.hondo }}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- foto de la tienda */}
                 {p.images[0] && <img src={fotoLiviana(p.images[0], 384)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
                 <button type="button" onClick={() => onQuitar(p.id)} aria-label={`Sacar ${p.name} de la comparación`}
-                  style={{ position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(5,7,13,0.7)", color: "#fff", fontSize: 18, cursor: "pointer" }}>×</button>
+                  style={{ position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: 10, border: `1px solid ${tema.linea(0.2)}`, background: tema.vidrio(0.7), color: tema.tinta, fontSize: 18, cursor: "pointer" }}>×</button>
               </div>
-              <Link href={hrefDe(p)} style={{ color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{p.name}</Link>
+              <Link href={hrefDe(p)} style={{ color: tema.tinta, textDecoration: "none", fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{p.name}</Link>
             </div>
           ))}
           {columnas > elegidos.length && (
             <div role="columnheader" style={{ ...celda, display: "flex", flexDirection: "column", justifyContent: "center", gap: 10 }}>
               <label style={{ display: "flex", flexDirection: "column", gap: 8, aspectRatio: "16/10", justifyContent: "center", alignItems: "center", textAlign: "center",
-                borderRadius: 14, border: `1px dashed ${conAlfa(acento, 0.5)}`, padding: 12, boxSizing: "border-box", color: "rgba(232,236,246,0.7)", fontSize: 13 }}>
+                borderRadius: 14, border: `1px dashed ${conAlfa(acento, 0.5)}`, padding: 12, boxSizing: "border-box", color: tema.tenue(0.7), fontSize: 13 }}>
                 <span aria-hidden="true" style={{ fontSize: 26, color: acento, lineHeight: 1 }}>+</span>
                 Sumar otro
                 <select value="" onChange={e => e.target.value && onAgregar(e.target.value)}
-                  style={{ width: "100%", maxWidth: 220, minHeight: 40, borderRadius: 10, background: "#05070d", color: "#fff", border: "1px solid rgba(255,255,255,0.16)", padding: "0 8px", fontFamily: "inherit", fontSize: 13 }}>
+                  style={{ width: "100%", maxWidth: 220, minHeight: 40, borderRadius: 10, background: tema.fondo, color: tema.tinta, border: `1px solid ${tema.linea(0.16)}`, padding: "0 8px", fontFamily: "inherit", fontSize: 13 }}>
                   <option value="">Elegí un vehículo</option>
                   {libres.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -117,7 +120,7 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
               const v = f.valor(p);
               const gana = f.mejor === i;
               return (
-                <div key={p.id} role="cell" style={{ ...celda, color: v ? "#fff" : "rgba(232,236,246,0.35)", fontWeight: gana ? 800 : 500,
+                <div key={p.id} role="cell" style={{ ...celda, color: v ? tema.tinta : tema.tenue(0.35), fontWeight: gana ? 800 : 500,
                   background: gana ? conAlfa(acento, 0.1) : undefined }}>
                   {v || "—"}
                   {gana && <span style={{ marginLeft: 8, fontFamily: MONO, fontSize: 9.5, letterSpacing: 1.5, color: acento, whiteSpace: "nowrap" }}>● MEJOR</span>}
@@ -134,7 +137,8 @@ export function ComparadorVolt({ productos, ids, onQuitar, onAgregar, acento, mo
 }
 
 /** El comparador en el celular: hasta tres columnas parejas, sin deslizar de costado. */
-function ComparadorCelu({ elegidos, libres, filas, acento, hrefDe, onQuitar, onAgregar }: {
+function ComparadorCelu({ tema, elegidos, libres, filas, acento, hrefDe, onQuitar, onAgregar }: {
+  tema: TemaVolt;
   elegidos: StorefrontProduct[];
   libres: StorefrontProduct[];
   filas: { etiqueta: string; valor: (p: StorefrontProduct) => string; mejor?: number }[];
@@ -145,37 +149,37 @@ function ComparadorCelu({ elegidos, libres, filas, acento, hrefDe, onQuitar, onA
 }) {
   const cols = `repeat(${Math.max(1, elegidos.length)}, minmax(0, 1fr))`;
   return (
-    <div className="cmv-celu" style={{ borderRadius: 20, padding: 12, background: "#0a0e19", border: `1px solid ${conAlfa(acento, 0.25)}` }}>
+    <div className="cmv-celu" style={{ borderRadius: 20, padding: 12, background: tema.panel, border: `1px solid ${conAlfa(acento, 0.25)}` }}>
       <div style={{ display: "grid", gridTemplateColumns: cols, gap: 8 }}>
         {elegidos.map(p => (
           <div key={p.id} style={{ minWidth: 0 }}>
-            <div style={{ position: "relative", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: "#03040a" }}>
+            <div style={{ position: "relative", aspectRatio: "4/3", borderRadius: 12, overflow: "hidden", background: tema.hondo }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- foto de la tienda */}
               {p.images[0] && <img src={fotoLiviana(p.images[0], 256)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
               <button type="button" onClick={() => onQuitar(p.id)} aria-label={`Sacar ${p.name} de la comparación`}
-                style={{ position: "absolute", top: 4, right: 4, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(5,7,13,0.75)", color: "#fff", fontSize: 16, cursor: "pointer", padding: 0 }}>×</button>
+                style={{ position: "absolute", top: 4, right: 4, width: 28, height: 28, borderRadius: 8, border: `1px solid ${tema.linea(0.2)}`, background: tema.vidrio(0.75), color: tema.tinta, fontSize: 16, cursor: "pointer", padding: 0 }}>×</button>
             </div>
-            <Link href={hrefDe(p)} style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginTop: 6, color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: 12.5, lineHeight: 1.3 }}>{p.name}</Link>
+            <Link href={hrefDe(p)} style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginTop: 6, color: tema.tinta, textDecoration: "none", fontWeight: 700, fontSize: 12.5, lineHeight: 1.3 }}>{p.name}</Link>
           </div>
         ))}
       </div>
       {elegidos.length < 3 && libres.length > 0 && (
         <select value="" onChange={e => e.target.value && onAgregar(e.target.value)} aria-label="Sumar otro vehículo a la comparación"
-          style={{ width: "100%", minHeight: 44, marginTop: 12, borderRadius: 12, background: "#05070d", color: "#fff", border: `1px dashed ${conAlfa(acento, 0.5)}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14 }}>
+          style={{ width: "100%", minHeight: 44, marginTop: 12, borderRadius: 12, background: tema.fondo, color: tema.tinta, border: `1px dashed ${conAlfa(acento, 0.5)}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14 }}>
           <option value="">+ Sumar otro vehículo</option>
           {libres.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       )}
       <dl style={{ margin: "12px 0 0" }}>
         {filas.map(f => (
-          <div key={f.etiqueta} style={{ padding: "10px 0", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-            <dt style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: "rgba(232,236,246,0.5)", marginBottom: 6 }}>{f.etiqueta}</dt>
+          <div key={f.etiqueta} style={{ padding: "10px 0", borderTop: `1px solid ${tema.linea(0.07)}` }}>
+            <dt style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: 2, textTransform: "uppercase", color: tema.tenue(0.5), marginBottom: 6 }}>{f.etiqueta}</dt>
             <dd style={{ margin: 0, display: "grid", gridTemplateColumns: cols, gap: 8 }}>
               {elegidos.map((p, i) => {
                 const v = f.valor(p);
                 const gana = f.mejor === i;
                 return (
-                  <span key={p.id} style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: 13.5, fontWeight: gana ? 800 : 500, color: v ? "#fff" : "rgba(232,236,246,0.35)",
+                  <span key={p.id} style={{ minWidth: 0, overflowWrap: "anywhere", fontSize: 13.5, fontWeight: gana ? 800 : 500, color: v ? tema.tinta : tema.tenue(0.35),
                     padding: gana ? "4px 6px" : "4px 0", borderRadius: 8, background: gana ? conAlfa(acento, 0.14) : undefined }}>
                     {v || "—"}
                     {gana && <span style={{ display: "block", fontFamily: MONO, fontSize: 8.5, letterSpacing: 1.5, color: acento, marginTop: 2 }}>● MEJOR</span>}

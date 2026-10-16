@@ -7,6 +7,7 @@ import { conPuntos, sinPuntos, type Moneda } from "@/lib/monedaVehiculo";
 import type { ImageOverride } from "@/types/store-config";
 import { fotoLiviana } from "@/lib/foto-liviana";
 import { conAlfa, MONO } from "./EscenaVolt";
+import { TEMA_OSCURO, type TemaVolt } from "./temaVolt";
 
 /**
  * La portada de Auto Volt (13/10/26): foto entera, título y buscador, como en
@@ -28,7 +29,7 @@ export const PORTADA_VOLT_CSS = `
   @media (min-width: 640px) { .pv-capsula { grid-template-columns:repeat(2,minmax(0,1fr)) } .pv-boton { grid-column:1 / -1 } .pv-seg:nth-of-type(odd):last-of-type { grid-column:1 / -1 } }
   @media (min-width: 900px) {
     .pv-capsula { display:flex; align-items:stretch; gap:0; padding:6px; border-radius:999px }
-    .pv-seg { flex:1 1 0; padding:8px 20px 6px; border-right:1px solid rgba(255,255,255,0.1) }
+    .pv-seg { flex:1 1 0; padding:8px 20px 6px; border-right:1px solid var(--pv-linea, rgba(255,255,255,0.1)) }
     .pv-seg:last-of-type { border-right:none }
     .pv-seg .pv-campo { border:none !important; background:transparent !important; padding:0 !important; min-height:30px !important }
     .pv-boton { border-radius:999px !important; padding:0 30px !important }
@@ -46,9 +47,15 @@ export const PORTADA_VOLT_CSS = `
   @media (prefers-reduced-motion: reduce) { .pv-entra, .pv-barrido { animation:none } .pv-boton:hover { transform:none } }
 `;
 
+const TEXTOS_VOLT = {
+  etiqueta: "Showroom en línea",
+  titulo: "Tu próximo vehículo está acá",
+  bajada: "Autos, camionetas, motos y más, con la ficha técnica completa y el precio a la vista.",
+};
+
 const FOTO_DE_FABRICA = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1920&q=80";
 
-export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, waLink, arriba, onBuscar, onVerTodos, todosHref }: {
+export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, waLink, arriba, onBuscar, onVerTodos, todosHref, tema = TEMA_OSCURO, campoFoto = "heroBackground", fotoDeFabrica = FOTO_DE_FABRICA, textos = TEXTOS_VOLT }: {
   ov: ImageOverride | undefined;
   acento: string;
   opciones: OpcionesDeFiltro;
@@ -62,14 +69,21 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
   onBuscar: (f: Partial<FiltroVehiculos>) => void;
   onVerTodos: (e: React.MouseEvent) => void;
   todosHref: string;
+  /** Oscuro en Volt; claro en Drive (ver temaVolt). */
+  tema?: TemaVolt;
+  /** Dónde guarda la foto cada template: Volt en `heroBackground`, Drive en `heroImage` (lo que la dueña ya subió). */
+  campoFoto?: string;
+  fotoDeFabrica?: string;
+  /** Los textos de fábrica (los que se ven si la dueña no escribió los suyos): cada template dice lo suyo. */
+  textos?: { etiqueta: string; titulo: string; bajada: string };
 }) {
   const [tipo, setTipo] = useState("");
   const [marca, setMarca] = useState("");
   const [precio, setPrecio] = useState("");
   const [moneda, setMoneda] = useState<Moneda>(principal);
   const sobreAcento = getContrastColor(acento) === "dark" ? "#05070d" : "#fff";
-  const url = ov?.url ?? FOTO_DE_FABRICA;
-  const velo = ov?.overlayType ?? "dark";
+  const url = ov?.url ?? fotoDeFabrica;
+  const velo = ov?.overlayType ?? (tema.claro ? "light" : "dark");
   const opacidad = ov?.overlayOpacity ?? 0.55;
 
   const buscar = (e: React.FormEvent) => {
@@ -78,10 +92,10 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
     onBuscar({ ...filtroVacio(principal), tipo: tipo || null, marca: marca || null, precioHasta: n > 0 ? n : null, moneda });
   };
 
-  const campo: React.CSSProperties = { width: "100%", minHeight: 48, boxSizing: "border-box", borderRadius: 12, border: "1px solid rgba(255,255,255,0.16)",
-    background: "rgba(5,7,13,0.6)", color: "#fff", padding: "0 12px", fontSize: 15, fontFamily: "inherit", outline: "none" };
-  const etiqueta: React.CSSProperties = { display: "block", marginBottom: 4, fontFamily: MONO, fontSize: 9.5, letterSpacing: 2.2, textTransform: "uppercase", color: "rgba(232,236,246,0.55)" };
-  const opcion: React.CSSProperties = { background: "#0a0e19", color: "#fff" };
+  const campo: React.CSSProperties = { width: "100%", minHeight: 48, boxSizing: "border-box", borderRadius: 12, border: `1px solid ${tema.linea(0.16)}`,
+    background: tema.vidrio(0.6), color: tema.tinta, padding: "0 12px", fontSize: 15, fontFamily: "inherit", outline: "none" };
+  const etiqueta: React.CSSProperties = { display: "block", marginBottom: 4, fontFamily: MONO, fontSize: 9.5, letterSpacing: 2.2, textTransform: "uppercase", color: tema.tenue(0.55) };
+  const opcion: React.CSSProperties = { background: tema.panel, color: tema.tinta };
   const esquina = (pos: React.CSSProperties, bordes: string) => (
     <span aria-hidden="true" className="pv-esquina" style={{ ...pos, borderColor: acento, borderStyle: "solid", borderWidth: bordes, borderRadius: 6, filter: `drop-shadow(0 0 8px ${acento})` }} />
   );
@@ -89,12 +103,15 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
 
   return (
     <section aria-label="Portada" style={{ position: "relative", overflow: "hidden", minHeight: "min(100svh, 920px)", display: "flex", flexDirection: "column", justifyContent: "center",
-      background: "#05070d", paddingTop: arriba, boxSizing: "border-box", ...({ "--pv-acento": acento } as React.CSSProperties) }}>
+      background: tema.fondo, paddingTop: arriba, boxSizing: "border-box", ...({ "--pv-acento": acento, "--pv-linea": tema.linea(0.1) } as React.CSSProperties) }}>
       {/* Profundidad al bajar: la foto va más lento que la página (`--av-y` lo escribe volt/desplazamientoVolt). */}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, backgroundImage: `url(${fotoLiviana(url, 1920)})`, backgroundSize: "cover",
         backgroundPosition: `${ov?.posX ?? 50}% ${ov?.posY ?? 50}%`, transform: "translate3d(0, calc(var(--av-y, 0) * 0.35px), 0)", willChange: "transform" }} />
       {velo !== "none" && (
-        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: velo === "light"
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: tema.claro && velo !== "dark"
+          // En claro: blanco en el medio, donde va el texto, y fundido al fondo abajo.
+          ? `radial-gradient(70% 60% at 50% 55%, rgba(244,247,251,${Math.min(0.95, opacidad + 0.35)}), rgba(244,247,251,${opacidad * 0.75}) 75%), linear-gradient(to top, ${tema.fondo} 0%, transparent 30%)`
+          : velo === "light"
           ? `rgba(255,255,255,${opacidad})`
           // Centrada: el velo es más oscuro en el medio, donde va el texto, y en los bordes de abajo.
           : `radial-gradient(70% 60% at 50% 55%, rgba(5,7,13,${Math.min(0.94, opacidad + 0.32)}), rgba(5,7,13,${opacidad * 0.7}) 75%), linear-gradient(to top, #05070d 0%, transparent 30%)` }} />
@@ -108,31 +125,31 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
       {esquina({ top: `calc(${arriba}px + ${margen})`, right: margen }, "2px 2px 0 0")}
       {esquina({ bottom: margen, left: margen }, "0 0 2px 2px")}
       {esquina({ bottom: margen, right: margen }, "0 2px 2px 0")}
-      <EditableImageButton field="heroBackground" label="Imagen de fondo de la portada" />
+      <EditableImageButton field={campoFoto} label="Imagen de fondo de la portada" />
 
       {/* ...y el contenido sube un poco y se desvanece, como alejándose del visor. */}
       <div style={{ position: "relative", zIndex: 2, maxWidth: 1100, width: "100%", margin: "0 auto", boxSizing: "border-box", textAlign: "center",
         transform: "translate3d(0, calc(var(--av-y, 0) * -0.12px), 0)", opacity: "calc(1 - var(--av-y, 0) / 700)" as unknown as number,
         padding: "clamp(48px,10vh,110px) clamp(16px,5vw,48px) clamp(40px,8vh,80px)" }}>
         <p className="pv-entra" style={{ margin: "0 0 20px", display: "inline-flex", alignItems: "center", gap: 10, fontFamily: MONO, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase",
-          color: "rgba(232,236,246,0.85)", padding: "7px 14px", borderRadius: 999, border: `1px solid ${conAlfa(acento, 0.4)}`, background: "rgba(5,7,13,0.45)", backdropFilter: "blur(8px)",
+          color: tema.tenue(0.85), padding: "7px 14px", borderRadius: 999, border: `1px solid ${conAlfa(acento, 0.4)}`, background: tema.vidrio(0.45), backdropFilter: "blur(8px)",
           maxWidth: "100%", boxSizing: "border-box" }}>
           <span aria-hidden="true" style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: acento, boxShadow: `0 0 10px ${acento}` }} />
-          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}><EditableZone field="heroKicker" label="Etiqueta de la portada">Showroom en línea</EditableZone></span>
+          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}><EditableZone field="heroKicker" label="Etiqueta de la portada">{textos.etiqueta}</EditableZone></span>
         </p>
         <h1 className="pv-entra" style={{ margin: "0 auto 18px", maxWidth: "15ch", fontSize: "clamp(40px,7.6vw,104px)", fontWeight: 800, letterSpacing: "-0.045em", lineHeight: 0.95, animationDelay: ".08s",
-          backgroundImage: `linear-gradient(180deg, #ffffff 45%, ${conAlfa(acento, 0.95)} 140%)`, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "#fff",
+          backgroundImage: `linear-gradient(180deg, ${tema.tinta} 45%, ${conAlfa(acento, 0.95)} 140%)`, WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: tema.tinta,
           textWrap: "balance" } as React.CSSProperties}>
-          <EditableZone field="heroHeading" label="Título de la portada">Tu próximo vehículo está acá</EditableZone>
+          <EditableZone field="heroHeading" label="Título de la portada">{textos.titulo}</EditableZone>
         </h1>
-        <p className="pv-entra" style={{ margin: "0 auto 34px", maxWidth: 560, fontSize: "clamp(15px,1.6vw,18px)", lineHeight: 1.6, color: "rgba(232,236,246,0.86)", animationDelay: ".16s", textShadow: "0 2px 14px rgba(5,7,13,0.95)" }}>
-          <EditableZone field="heroSubtext" label="Subtítulo de la portada">Autos, camionetas, motos y más, con la ficha técnica completa y el precio a la vista.</EditableZone>
+        <p className="pv-entra" style={{ margin: "0 auto 34px", maxWidth: 560, fontSize: "clamp(15px,1.6vw,18px)", lineHeight: 1.6, color: tema.tenue(0.86), animationDelay: ".16s", textShadow: `0 2px 14px ${tema.vidrio(0.95)}` }}>
+          <EditableZone field="heroSubtext" label="Subtítulo de la portada">{textos.bajada}</EditableZone>
         </p>
 
         {/* ── El buscador: una cápsula en la compu, una tarjeta en el celular ── */}
         <form onSubmit={buscar} role="search" aria-label="Buscar vehículos" className="pv-capsula pv-entra"
-          style={{ animationDelay: ".24s", maxWidth: 900, margin: "0 auto", background: "rgba(8,11,21,0.66)", backdropFilter: "blur(16px) saturate(1.3)",
-            border: `1px solid ${conAlfa(acento, 0.35)}`, boxShadow: `0 30px 80px -40px ${conAlfa(acento, 0.8)}, inset 0 1px 0 rgba(255,255,255,0.06)` }}>
+          style={{ animationDelay: ".24s", maxWidth: 900, margin: "0 auto", background: tema.vidrio(0.66), backdropFilter: "blur(16px) saturate(1.3)",
+            border: `1px solid ${conAlfa(acento, 0.35)}`, boxShadow: `0 30px 80px -40px ${conAlfa(acento, 0.8)}, inset 0 1px 0 ${tema.claro ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.06)"}` }}>
           {opciones.tipos.length > 1 && (
             <div className="pv-seg">
               <label htmlFor="pv-tipo" style={etiqueta}>Tipo</label>
@@ -160,7 +177,7 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
                   <option value="USD" style={opcion}>USD</option>
                 </select>
               ) : (
-                <span aria-hidden="true" style={{ fontFamily: MONO, color: "rgba(232,236,246,0.6)", fontSize: 14, flexShrink: 0 }}>{moneda === "USD" ? "USD" : "$"}</span>
+                <span aria-hidden="true" style={{ fontFamily: MONO, color: tema.tenue(0.6), fontSize: 14, flexShrink: 0 }}>{moneda === "USD" ? "USD" : "$"}</span>
               )}
               <input id="pv-precio" className="pv-campo" inputMode="numeric" autoComplete="off" placeholder="Sin tope" maxLength={16}
                 value={precio} onChange={e => setPrecio(conPuntos(e.target.value).slice(0, 15))} style={{ ...campo, minWidth: 0 }} />
@@ -179,8 +196,8 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
           <ul className="pv-entra" style={{ listStyle: "none", margin: "30px auto 0", padding: 0, display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "10px clamp(18px,4vw,44px)", animationDelay: ".32s" }}>
             {datos.map(d => (
               <li key={d.etiqueta} data-ef-contar style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
-                <span style={{ fontFamily: MONO, fontSize: "clamp(18px,2.2vw,24px)", fontWeight: 700, color: "#fff", textShadow: `0 0 16px ${conAlfa(acento, 0.7)}`, whiteSpace: "nowrap" }}>{d.valor}</span>
-                <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: 2, textTransform: "uppercase", color: "rgba(232,236,246,0.6)" }}>{d.etiqueta}</span>
+                <span style={{ fontFamily: MONO, fontSize: "clamp(18px,2.2vw,24px)", fontWeight: 700, color: tema.tinta, textShadow: tema.brillo ? `0 0 16px ${conAlfa(acento, 0.7)}` : "none", whiteSpace: "nowrap" }}>{d.valor}</span>
+                <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: 2, textTransform: "uppercase", color: tema.tenue(0.6) }}>{d.etiqueta}</span>
               </li>
             ))}
           </ul>
@@ -188,13 +205,13 @@ export function PortadaVolt({ ov, acento, opciones, principal, cuantos, datos, w
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px 26px", flexWrap: "wrap", marginTop: 16 }}>
           {cuantos > 0 && (
-            <a href={todosHref} onClick={onVerTodos} className="pv-link" style={{ color: "rgba(232,236,246,0.85)", fontSize: 14, fontWeight: 600, textDecoration: "none", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
+            <a href={todosHref} onClick={onVerTodos} className="pv-link" style={{ color: tema.tenue(0.85), fontSize: 14, fontWeight: 600, textDecoration: "none", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
               Ver todos los vehículos →
             </a>
           )}
           {waLink && (
             <a href={waLink} target="_blank" rel="noopener noreferrer" className="pv-link"
-              style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 44, color: "rgba(232,236,246,0.85)", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 44, color: tema.tenue(0.85), textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
               <WaIcon size={16} /> Hablar con un asesor
             </a>
           )}

@@ -505,13 +505,13 @@ En una tienda de vehículos la pantalla es otra: arriba "Consultas", "Autos vend
 ### Tiendas de vehículos — los cuatro diseños y sus bloques
 Hay cuatro diseños para autos y motos, y se eligen en "Diseño" como cualquier otro:
 - "Auto Motor": oscuro, de concesionaria premium.
-- "Auto Drive": claro, tipo marketplace.
+- "Auto Drive": claro, tipo marketplace; la portada es centrada con el buscador, y abajo los vehículos giran en un showroom (como Volt, pero claro) y se comparan lado a lado ("Comparador").
 - "Auto Volt": oscuro y futurista; los vehículos giran en un showroom 3D y se comparan lado a lado ("Comparador").
 - "Auto Ruta": claro, para camiones, utilitarios y maquinaria; la portada pregunta "¿Para qué lo necesitás?" (por trabajo) y tiene una planilla de flota para comparar.
 Cambiar de diseño no toca los vehículos ni las consultas. Los textos y fotos que se ven mientras eligen uno que no tienen guardado son de ejemplo, no de su tienda.
 
 Bloques que hay que saber ubicar (se ocultan y se reordenan en el editor de Diseño como cualquier bloque):
-- El vehículo destacado: en Motor se llama "Vehículo en foco", en Drive "Vehículo destacado", en Ruta "Unidad de la semana" (con forma de orden de trabajo, con sello y número), y en Volt es el que arranca girando en el showroom. En el editor, arriba de ese bloque, aparece el selector "Vehículo para destacar": por defecto está en "Automático: recomendado para destacar", y se puede elegir uno a mano (sólo los que no están vendidos ni reservados).
+- El vehículo destacado: en Motor se llama "Vehículo en foco", en Drive y en Volt es el que arranca girando en el showroom, en Ruta "Unidad de la semana" (con forma de orden de trabajo, con sello y número). En el editor, arriba de ese bloque, aparece el selector "Vehículo para destacar": por defecto está en "Automático: recomendado para destacar", y se puede elegir uno a mano (sólo los que no están vendidos ni reservados).
 - "Cartelera": hasta tres carteles con foto grande, título, texto y botón, que pasan solos. Cada uno se edita tocándolo en el editor (la foto, el título, el texto y el botón); al tocar la foto aparece "Cada cuánto pasa". En la tienda publicada, en Motor, Drive y Volt la cartelera aparece recién cuando hay al menos una foto propia cargada (sin fotos no se muestra nada); en Ruta, sin fotos propias se ven tres de ejemplo de camiones.
 - "La agencia": una página con dónde está, cuándo atiende, cómo se paga, quién atiende, la garantía y fotos del salón. La dirección y los horarios se cargan en Configuración → "Contacto y redes", en "La agencia: dirección y horarios" (admite horario cortado). Lo demás (pagos, equipo, garantía, fotos del salón) se edita en Diseño, entrando a "La agencia" desde el menú de la tienda en la vista previa.
 - "Tasá tu usado y Avisame si entra" (en Ruta, "Tomamos tu usado y Avisame si entra"), "Videos", "Preguntas frecuentes" y "Recibí los ingresos por mail" están en los cuatro.
